@@ -124,6 +124,8 @@ message CreateServerRequest {
   bool use_base_url = 16;
   repeated AdditionalPort additional_ports = 17;
   DockerOverrides docker_overrides = 18;
+  string node_id = 19;
+  string placement_strategy = 20;
 }
 
 // Created server instance
