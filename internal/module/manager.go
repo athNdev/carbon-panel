@@ -64,9 +64,74 @@ func (m *Manager) Start() error {
 		m.logger.Error("Failed to initialize built-in module templates: %v", err)
 	}
 
+	// Restore proxy routes for running modules
+	m.restoreProxyRoutes()
+
 	m.running = true
 	m.logger.Info("Module manager started")
 	return nil
+}
+
+// restoreProxyRoutes restores proxy routes for running modules upon startup
+func (m *Manager) restoreProxyRoutes() {
+	if m.proxyManager == nil {
+		return
+	}
+
+	ctx := context.Background()
+	modules, err := m.store.ListModules(ctx)
+	if err != nil {
+		m.logger.Error("Failed to list modules for proxy route restoration: %v", err)
+		return
+	}
+
+	for _, module := range modules {
+		if module.ContainerID == "" {
+			continue
+		}
+
+		// Check if module has proxy-enabled ports
+		hasProxyPort := false
+		for _, port := range module.Ports {
+			if port != nil && port.ProxyEnabled && port.HostPort > 0 {
+				hasProxyPort = true
+				break
+			}
+		}
+		if !hasProxyPort {
+			continue
+		}
+
+		// Verify whether the module is currently running
+		isRunning := module.Status == storage.ModuleStatusRunning
+		if m.docker != nil {
+			status, err := m.docker.GetContainerStatus(ctx, module.ContainerID)
+			if err == nil {
+				isRunning = (status == storage.StatusRunning)
+			}
+		}
+
+		if !isRunning {
+			continue
+		}
+
+		// Get parent server to retrieve ProxyHostname
+		server, err := m.store.GetServer(ctx, module.ServerID)
+		if err != nil {
+			m.logger.Warn("Failed to get server %s for module %s proxy route restoration: %v", module.ServerID, module.Name, err)
+			continue
+		}
+
+		if server.ProxyHostname == "" {
+			continue
+		}
+
+		if err := m.proxyManager.AddModuleRoute(module, server); err != nil {
+			m.logger.Error("Failed to restore proxy route for module %s: %v", module.Name, err)
+		} else {
+			m.logger.Info("Restored proxy route for module %s on server %s (%s)", module.Name, server.Name, server.ProxyHostname)
+		}
+	}
 }
 
 // Stop gracefully stops all managed modules
