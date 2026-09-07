@@ -30,6 +30,7 @@ func allModels() []any {
 		&ModuleTemplate{},
 		&Module{},
 		&SystemSetting{},
+		&Node{},
 	}
 }
 
@@ -67,6 +68,7 @@ func seeds(s *Store) error {
 	for _, seed := range []func() error{
 		s.SeedSystemRoles,
 		s.SeedGlobalSettings,
+		s.SeedDefaultNode,
 	} {
 		if err := seed(); err != nil {
 			return err
@@ -116,6 +118,22 @@ func migrations() []*gormigrate.Migration {
 			},
 			Rollback: func(tx *gorm.DB) error {
 				return tx.Where("source = ?", "migration").Delete(&UserRole{}).Error
+			},
+		},
+		{
+			ID: "20260307_001_multinode_default_node",
+			Migrate: func(tx *gorm.DB) error {
+				// Backfill node_id on servers and modules if empty
+				if err := tx.Model(&Server{}).Where("node_id IS NULL OR node_id = ''").Update("node_id", "default").Error; err != nil {
+					return err
+				}
+				if err := tx.Model(&Module{}).Where("node_id IS NULL OR node_id = ''").Update("node_id", "default").Error; err != nil {
+					return err
+				}
+				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				return nil
 			},
 		},
 	}

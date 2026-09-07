@@ -75,6 +75,7 @@ type Server struct {
 	Description     string               `json:"description"`
 	ModLoader       ModLoader            `json:"mod_loader" gorm:"not null"`
 	MCVersion       string               `json:"mc_version" gorm:"not null;column:mc_version"`
+	NodeID          string               `json:"node_id" gorm:"column:node_id;default:'default'"`
 	ContainerID     string               `json:"container_id" gorm:"column:container_id"`
 	Status          ServerStatus         `json:"status" gorm:"not null"`
 	Port            int                  `json:"port"`
@@ -642,6 +643,7 @@ type Module struct {
 	Name        string       `json:"name" gorm:"not null"`
 	ServerID    string       `json:"server_id" gorm:"not null;index;column:server_id"`
 	TemplateID  string       `json:"template_id" gorm:"not null;index;column:template_id"`
+	NodeID      string       `json:"node_id" gorm:"column:node_id;default:'default'"`
 	ContainerID string       `json:"container_id" gorm:"column:container_id"`
 	Status      ModuleStatus `json:"status" gorm:"not null;default:stopped"`
 
@@ -709,4 +711,39 @@ type Module struct {
 	// Runtime stats (not persisted)
 	MemoryUsage float64 `json:"memory_usage" gorm:"-"`
 	CPUPercent  float64 `json:"cpu_percent" gorm:"-"`
+}
+
+// NodeStatus defines the health and connectivity status of a Docker node
+type NodeStatus string
+
+const (
+	NodeStatusOnline  NodeStatus = "online"
+	NodeStatusOffline NodeStatus = "offline"
+	NodeStatusError   NodeStatus = "error"
+)
+
+// Node represents a remote or local Docker daemon host
+type Node struct {
+	ID            string     `json:"id" gorm:"primaryKey"`
+	Name          string     `json:"name" gorm:"not null;uniqueIndex"`
+	Host          string     `json:"host" gorm:"not null"` // e.g. "unix:///var/run/docker.sock", "tcp://192.168.1.50:2376", "ssh://user@host"
+	AdvertisedIP  string     `json:"advertised_ip" gorm:"column:advertised_ip"`
+	TLSCACert     string     `json:"tls_ca_cert,omitempty" gorm:"column:tls_ca_cert;type:text"`
+	TLSCert       string     `json:"tls_cert,omitempty" gorm:"column:tls_cert;type:text"`
+	TLSKey        string     `json:"tls_key,omitempty" gorm:"column:tls_key;type:text"`
+	TLSEnabled    bool       `json:"tls_enabled" gorm:"column:tls_enabled;default:false"`
+	TLSSkipVerify bool       `json:"tls_skip_verify" gorm:"column:tls_skip_verify;default:false"`
+	MaxMemoryMB   int64      `json:"max_memory_mb" gorm:"column:max_memory_mb;default:0"` // 0 = unlimited
+	MaxServers    int        `json:"max_servers" gorm:"column:max_servers;default:0"`     // 0 = unlimited
+	Enabled       bool       `json:"enabled" gorm:"not null;default:true"`
+	Status        NodeStatus `json:"status" gorm:"not null;default:'offline'"`
+	IsLocal       bool       `json:"is_local" gorm:"column:is_local;default:false"`
+	LastHeartbeat *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
+	CreatedAt     time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt     time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+
+	// Runtime stats (not persisted to DB)
+	AllocatedMemoryMB int64 `json:"allocated_memory_mb" gorm:"-"`
+	ServerCount       int   `json:"server_count" gorm:"-"`
+	RunningCount      int   `json:"running_count" gorm:"-"`
 }
