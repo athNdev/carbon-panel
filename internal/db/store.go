@@ -1148,6 +1148,161 @@ func (s *Store) DeleteTaskExecutions(ctx context.Context, taskID string) error {
 	return s.db.WithContext(ctx).Where("task_id = ?", taskID).Delete(&TaskExecution{}).Error
 }
 
+// Node operations
+
+func (s *Store) CreateNode(ctx context.Context, node *Node) error {
+	if node.ID == "" {
+		node.ID = uuid.New().String()
+	}
+	if node.Status == "" {
+		node.Status = NodeStatusOffline
+	}
+	err := s.db.WithContext(ctx).Create(node).Error
+	if err != nil {
+		return fmt.Errorf("failed to create node: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
+	var node Node
+	err := s.db.WithContext(ctx).First(&node, "id = ?", id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("node not found")
+		}
+		return nil, err
+	}
+	return &node, nil
+}
+
+func (s *Store) ListNodes(ctx context.Context) ([]*Node, error) {
+	var nodes []*Node
+	err := s.db.WithContext(ctx).Order("is_local DESC, name ASC").Find(&nodes).Error
+	return nodes, err
+}
+
+func (s *Store) UpdateNode(ctx context.Context, node *Node) error {
+	return s.db.WithContext(ctx).Save(node).Error
+}
+
+func (s *Store) DeleteNode(ctx context.Context, id string) error {
+	if id == "default" {
+		return fmt.Errorf("cannot delete default node")
+	}
+	var node Node
+	if err := s.db.WithContext(ctx).First(&node, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("node not found")
+		}
+		return err
+	}
+	if node.IsLocal {
+		return fmt.Errorf("cannot delete local node")
+	}
+
+	var serverCount int64
+	if err := s.db.WithContext(ctx).Model(&Server{}).Where("node_id = ?", id).Count(&serverCount).Error; err != nil {
+		return err
+	}
+	if serverCount > 0 {
+		return fmt.Errorf("cannot delete node with %d active servers", serverCount)
+	}
+
+	var moduleCount int64
+	if err := s.db.WithContext(ctx).Model(&Module{}).Where("node_id = ?", id).Count(&moduleCount).Error; err != nil {
+		return err
+	}
+	if moduleCount > 0 {
+		return fmt.Errorf("cannot delete node with %d active modules", moduleCount)
+	}
+
+	return s.db.WithContext(ctx).Delete(&node).Error
+}
+
+func (s *Store) EnsureDefaultNode(ctx context.Context) (*Node, error) {
+	var node Node
+	err := s.db.WithContext(ctx).First(&node, "id = ?", "default").Error
+	if err == nil {
+		return &node, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	host := "unix:///var/run/docker.sock"
+	if s.cfg != nil && s.cfg.Docker.Host != "" {
+		host = s.cfg.Docker.Host
+	}
+
+	defaultNode := &Node{
+		ID:           "default",
+		Name:         "Default Node (Local)",
+		Host:         host,
+		AdvertisedIP: "127.0.0.1",
+		Enabled:      true,
+		Status:       NodeStatusOnline,
+		IsLocal:      true,
+	}
+	if err := s.db.WithContext(ctx).Create(defaultNode).Error; err != nil {
+		return nil, fmt.Errorf("failed to create default node: %w", err)
+	}
+	return defaultNode, nil
+}
+
+func (s *Store) SeedDefaultNode() error {
+	_, err := s.EnsureDefaultNode(context.Background())
+	return err
+}
+
+func (s *Store) GetNodeStats(ctx context.Context, nodeID string) (allocatedMemMB int64, serverCount int, runningCount int, err error) {
+	type serverAgg struct {
+		ServerCount  int
+		TotalMemory  int64
+		RunningCount int
+	}
+	var agg serverAgg
+	err = s.db.WithContext(ctx).Model(&Server{}).
+		Select("COUNT(*) as server_count, COALESCE(SUM(memory), 0) as total_memory, COALESCE(SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END), 0) as running_count").
+		Where("node_id = ?", nodeID).
+		Scan(&agg).Error
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return agg.TotalMemory, agg.ServerCount, agg.RunningCount, nil
+}
+
+func (s *Store) ListNodesWithStats(ctx context.Context) ([]*Node, error) {
+	nodes, err := s.ListNodes(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, node := range nodes {
+		mem, count, running, err := s.GetNodeStats(ctx, node.ID)
+		if err != nil {
+			return nil, err
+		}
+		node.AllocatedMemoryMB = mem
+		node.ServerCount = count
+		node.RunningCount = running
+	}
+
+	return nodes, nil
+}
+
+func (s *Store) ListServersByNode(ctx context.Context, nodeID string) ([]*Server, error) {
+	var servers []*Server
+	err := s.db.WithContext(ctx).Where("node_id = ?", nodeID).Order("created_at DESC").Find(&servers).Error
+	return servers, err
+}
+
+func (s *Store) ListModulesByNode(ctx context.Context, nodeID string) ([]*Module, error) {
+	var modules []*Module
+	err := s.db.WithContext(ctx).Where("node_id = ?", nodeID).Order("created_at DESC").Find(&modules).Error
+	return modules, err
+}
+
 func (s *Store) CleanOldTaskExecutions(ctx context.Context, olderThan time.Time, keepMinimum int) error {
 	// Get all task IDs
 	var taskIDs []string
