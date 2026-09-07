@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT AND MPL-2.0
+# This file includes DiscoPanel material under the MIT License,
+# Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+# and still applies to that inherited material.
+# Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain
+# one at https://mozilla.org/MPL/2.0/.
+
+
 ---
 # DiscoPanel - Authelia Configuration                
 #                                                       
@@ -18,7 +27,7 @@ totp:
 
 identity_validation:
   reset_password:
-    jwt_secret: 'discopanel-dev-jwt-reset-secret-change-me-in-production'
+    jwt_secret: "REDACTED"
 
 # User accounts are stored in ./users_database.yml
 authentication_backend:
@@ -36,7 +45,7 @@ authentication_backend:
 
 # Authelia needs a cookie domain for its login portal. ../docker-compose.yaml for instruction
 session:
-  secret: 'discopanel-dev-session-secret-change-me-in-production'
+  secret: "REDACTED"
   cookies:
     - name: 'authelia_session'
       domain: 'traefik.me'
@@ -45,7 +54,7 @@ session:
       inactivity: '5 minutes'
 
 storage:
-  encryption_key: 'discopanel-dev-storage-encryption-key-change-me'
+  encryption_key: "REDACTED"
   local:
     path: '/config/db.sqlite3'
 
@@ -63,7 +72,7 @@ regulation:
 
 identity_providers:
   oidc:
-    hmac_secret: 'discopanel-dev-hmac-secret-must-be-at-least-sixty-four-characters-long-so-here-is-padding'
+    hmac_secret: "REDACTED"
     enable_client_debug_messages: true
     minimum_parameter_entropy: 8
     enforce_pkce: 'public_clients_only'
@@ -72,35 +81,7 @@ identity_providers:
       - key_id: 'discopanel-dev'
         algorithm: 'RS256'
         use: 'sig'
-        key: |
-          -----BEGIN PRIVATE KEY-----
-          MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCwvYB+KRmfkaiV
-          KN/wRNdPekLl4XXu8ATxhxerg2KOE31lUcrlyezH/OLEOmd0VToPnMXBUKgIMDWP
-          bMdsAkeXrwAdzYOZM+Ls6bFy9lr70DD4SU4yc//6vNQfqBbQ5oR3IAURS6u9Atu9
-          XF+84RU/d46Sc3BhT7Z7U3VFDEt3MVLpFNLg6/YhRyguCQD24ZCE5orIwtmkSGpk
-          8dxcM2Bpj9y9wdkFLEeCWSI2owpCGEENldV09oPK+a8Xqz59XBvJki4Ax3BxOAhu
-          EKh5qe7d40ltQn3l1a8GM6gmKNwtKK4jNo/Gl5P0+4/wwoFdxT55w1GHijHW1OnT
-          rDwYEb15AgMBAAECggEAAlISqFVo0TgL4x18xz5YJ2J/E16g+kirf/JapLVea2gl
-          Gtn2lIrQsZWH8rSjnBrsXr0buZySAD2FzoLKoYfsIbk6Aqoqoq3UOnEdE9nZOvoy
-          Umg//xiX0VZ+YIYH+qk0Lw48EsyQDjTF5tgaJ7Q637D1rcWXQafWyQrA/O2a5g85
-          lGY4ExRXOsei+6bB1ygaYUQ1tEDyjV3VhkRNV6pfnSQljBvxVC1Xynod2mzFdzjk
-          AY6VRoYZ9Y5pw+V2vjiX+aI6gfwHgh4K5ogsEMUEWaPautxeKiPku+DXJ1Tb3xh0
-          RVDb8VoNxxlVUf21j/0ZUwgrFX0sYLXG4r8sj3H2wwKBgQD4yrajiSkpAk71o+t8
-          W2zfXYDUzjxojeCb7JraK4OzdkqGs+zSJERXcm4Q3scffBipiQ/s0sYErGCCKWo+
-          Z+FU9mU0edJf+QImk3tDXKkDVXaReK69tq/T7ug6vD0lKOFCDY9HF7D/+Jh6jpiH
-          TX1dnYgN82UYPSO05fqsd1QgwwKBgQC13GHpV1cDhyKDX8xzhsvZWvyznAX6lqmW
-          NlicwHbFCyRn9g0f1UCaSV0PsdDxK+91eCZ16jiu0lPDE6vDCoVHk00QEuux+B74
-          JO/0hr2mKxjcof3Na6wRAbQjbvl9BHrH7qRhdjpJRH+E2ZoectrAPrToWQOrtVBX
-          bn5yvBqFEwKBgCoWqSUrXBI6+L6nl3v3P4jeGaBmr2OEtP3L3jqQZ/xhQ6RcJfE6
-          /3DHxAUImykhZk6wCEipM6SwwLbkaLvb+QvVjzN8dHGV/54lDxJLR7BvsdpUT0N6
-          923kGddt5u41Zz40awu8302+cZUyMG2bV10R/GVXyr96AGNnEKxCl7HfAoGAC81C
-          eV8WoX76iWYFIZYk0nUqIwnEBZATb1EVjQ6cZosjkK+SCHfRWnHaXTNf6Na+EnR6
-          onpRtV6m2ukC44RiQ9PWU2225/S/JcFX5Rl9YzQ2x9KnYtZS80OWChqgjDFnOmRN
-          PJnsjGaqk9d/PeycL4+iM9Xa/CCnFxVvlUiJvAsCgYBbZPSgQtHlODNluqpr6i68
-          yKfDO2hrrvSA1Y8WteM52Gpmn5b1QlopZ0/4gYmWM4qMqQmtH3uWC7NDvQmqMeFW
-          VPt3B7EmnT9ugKE6L9sgHtY54fIrSr8DDLl6WNLWTey4ivfhlU6o/SxMjNb8VXL3
-          v0jKQTZz1R2wLqdxs1KRbg==
-          -----END PRIVATE KEY-----
+        key: ""
         certificate_chain: |
           -----BEGIN CERTIFICATE-----
           MIIDMTCCAhmgAwIBAgIUCQjLyj/HNDk2e4KdiOgmBH5dtOswDQYJKoZIhvcNAQEL
@@ -151,8 +132,8 @@ identity_providers:
     clients:
       - client_id: 'discopanel'
         client_name: 'DiscoPanel'
-        # Plaintext secret: discopanel-dev-secret
-        client_secret: '$pbkdf2-sha512$310000$rjIc/fKRSBnSAe/FKJa.aQ$KIJjfQsCOexmk52nLb73HmJrcMkiDl3GRuWWpmdJN.talWSB.p7cq7zbiiVj4P0xV3YMeJtdlMfzWSVU2XSblw'
+        # Plaintext secret: REDACTED
+        client_secret: "REDACTED"
         public: false
         authorization_policy: 'one_factor'
         claims_policy: 'discopanel'

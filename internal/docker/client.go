@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package docker
 
 import (
@@ -16,6 +25,7 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
@@ -235,12 +245,23 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 }
 
 func (c *Client) Close() error {
+	if c == nil || c.docker == nil {
+		return nil
+	}
 	return c.docker.Close()
 }
 
 // Get the docker client instance from the client object
 func (c *Client) GetDockerClient() *client.Client {
 	return c.docker
+}
+
+// Ping checks connectivity to the Docker daemon
+func (c *Client) Ping(ctx context.Context) (types.Ping, error) {
+	if c == nil || c.docker == nil {
+		return types.Ping{}, fmt.Errorf("docker client is nil")
+	}
+	return c.docker.Ping(ctx)
 }
 
 // ApplyOverrides applies DockerOverrides to container and host configs
