@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/nickheyer/discopanel/internal/command"
 	"github.com/nickheyer/discopanel/internal/config"
 	storage "github.com/nickheyer/discopanel/internal/db"
@@ -456,7 +457,11 @@ func (c *Collector) collectSLPData() {
 		}
 
 		// Get container IP
-		containerIP, err := proxy.GetContainerIP(server.ContainerID, c.config.Docker.NetworkName)
+		var cli client.CommonAPIClient
+		if c.docker != nil {
+			cli = c.docker.GetDockerClient()
+		}
+		containerIP, err := proxy.GetContainerIP(cli, server.ContainerID, c.config.Docker.NetworkName)
 		if err != nil {
 			c.log.Debug("Metrics collector SLP: failed to get container IP for %s: %v", server.ID, err)
 			c.updateMetrics(server.ID, func(m *ServerMetrics) {
