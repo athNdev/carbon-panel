@@ -136,8 +136,8 @@ func GetModLoaderInfo(loader models.ModLoader) ModLoaderInfo {
 	case models.ModLoaderFolia:
 		return ModLoaderInfo{
 			Name:            string(loader),
-			DisplayName:     "Pufferfish",
-			Description:     "Performance-focused fork of Paper",
+			DisplayName:     "Folia",
+			Description:     "Regionized multi-threaded server software fork of Paper",
 			Category:        "Paper",
 			ModsDirectory:   "plugins",
 			ConfigDirectory: "plugins",
