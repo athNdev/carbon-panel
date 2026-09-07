@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package metrics
 
 import (
@@ -7,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/nickheyer/discopanel/internal/command"
 	"github.com/nickheyer/discopanel/internal/config"
 	storage "github.com/nickheyer/discopanel/internal/db"
@@ -456,7 +466,11 @@ func (c *Collector) collectSLPData() {
 		}
 
 		// Get container IP
-		containerIP, err := proxy.GetContainerIP(server.ContainerID, c.config.Docker.NetworkName)
+		var cli client.CommonAPIClient
+		if c.docker != nil {
+			cli = c.docker.GetDockerClient()
+		}
+		containerIP, err := proxy.GetContainerIP(cli, server.ContainerID, c.config.Docker.NetworkName)
 		if err != nil {
 			c.log.Debug("Metrics collector SLP: failed to get container IP for %s: %v", server.ID, err)
 			c.updateMetrics(server.ID, func(m *ServerMetrics) {

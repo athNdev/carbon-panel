@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package command
 
 import (
@@ -6,6 +15,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/nickheyer/discopanel/internal/config"
 	storage "github.com/nickheyer/discopanel/internal/db"
 	"github.com/nickheyer/discopanel/internal/proxy"
@@ -89,7 +99,11 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 		rconPassword = *serverCfg.RCONPassword
 	}
 
-	ip, err := proxy.GetContainerIP(server.ContainerID, s.config.Docker.NetworkName)
+	var cli client.CommonAPIClient
+	if dc, ok := s.docker.(interface{ GetDockerClient() *client.Client }); ok {
+		cli = dc.GetDockerClient()
+	}
+	ip, err := proxy.GetContainerIP(cli, server.ContainerID, s.config.Docker.NetworkName)
 	if err != nil {
 		return dockerExec(fmt.Errorf("failed to resolve container ip: %w", err))
 	}
