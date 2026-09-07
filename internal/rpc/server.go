@@ -38,6 +38,8 @@ import (
 type Server struct {
 	store            *storage.Store
 	docker           *docker.Client
+	clientPool       *docker.ClientPool
+	placementEngine  *docker.PlacementEngine
 	sender           *command.Sender
 	config           *config.Config
 	log              *logger.Logger
@@ -57,7 +59,20 @@ type Server struct {
 }
 
 // Creates new Connect RPC server
-func NewServer(store *storage.Store, docker *docker.Client, sender *command.Sender, cfg *config.Config, proxyManager *proxy.Manager, sched *scheduler.Scheduler, metricsCollector *metrics.Collector, moduleManager *module.Manager, bus *events.Bus, log *logger.Logger) *Server {
+func NewServer(
+	store *storage.Store,
+	dockerCli *docker.Client,
+	sender *command.Sender,
+	cfg *config.Config,
+	proxyManager *proxy.Manager,
+	sched *scheduler.Scheduler,
+	metricsCollector *metrics.Collector,
+	moduleManager *module.Manager,
+	bus *events.Bus,
+	log *logger.Logger,
+	clientPool *docker.ClientPool,
+	placementEngine *docker.PlacementEngine,
+) *Server {
 	// Initialize RBAC enforcer
 	enforcer, err := rbac.NewEnforcer(store.DB())
 	if err != nil {
@@ -83,8 +98,11 @@ func NewServer(store *storage.Store, docker *docker.Client, sender *command.Send
 	}
 
 	// Initialize log streamer
-	logStreamer := logger.NewLogStreamer(docker.GetDockerClient(), log, 10000)
-	docker.SetLogStreamer(logStreamer)
+	var logStreamer *logger.LogStreamer
+	if dockerCli != nil {
+		logStreamer = logger.NewLogStreamer(dockerCli.GetDockerClient(), log, 10000)
+		dockerCli.SetLogStreamer(logStreamer)
+	}
 
 	// Initialize upload manager
 	uploadTTL := time.Duration(cfg.Upload.SessionTTL) * time.Minute
@@ -94,12 +112,21 @@ func NewServer(store *storage.Store, docker *docker.Client, sender *command.Send
 	downloadManager := download.NewManager(cfg.Storage.TempDir, uploadTTL, log)
 
 	// Initialize WebSocket hub
-	wsHub := ws.NewHub(logStreamer, authManager, enforcer, store, docker, sender, log)
+	wsHub := ws.NewHub(logStreamer, authManager, enforcer, store, dockerCli, sender, log)
 	go wsHub.Run()
+
+	if clientPool == nil && dockerCli != nil {
+		clientPool = docker.NewClientPool(store, dockerCli, log)
+	}
+	if placementEngine == nil && store != nil {
+		placementEngine = docker.NewPlacementEngine(store)
+	}
 
 	s := &Server{
 		store:            store,
-		docker:           docker,
+		docker:           dockerCli,
+		clientPool:       clientPool,
+		placementEngine:  placementEngine,
 		sender:           sender,
 		config:           cfg,
 		log:              log,
@@ -196,8 +223,9 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	minecraftService := services.NewMinecraftService(s.store, s.docker, s.log)
 	modService := services.NewModService(s.store, s.docker, s.uploadManager, s.log)
 	modpackService := services.NewModpackService(s.store, s.config, s.uploadManager, s.log)
+	nodeService := services.NewNodeService(s.store, s.clientPool, s.log)
 	proxyService := services.NewProxyService(s.store, s.docker, s.proxyManager, s.config, s.logStreamer, s.log)
-	serverService := services.NewServerService(s.store, s.docker, s.sender, s.config, s.proxyManager, s.logStreamer, s.metricsCollector, s.moduleManager, s.bus, s.log)
+	serverService := services.NewServerService(s.store, s.docker, s.sender, s.config, s.proxyManager, s.logStreamer, s.metricsCollector, s.moduleManager, s.bus, s.log, s.clientPool, s.placementEngine)
 	supportService := services.NewSupportService(s.store, s.docker, s.config, s.log)
 	taskService := services.NewTaskService(s.store, s.scheduler, s.log)
 	userService := services.NewUserService(s.store, s.authManager, s.log)
@@ -229,6 +257,9 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 
 	serverPath, serverHandler := discopanelv1connect.NewServerServiceHandler(serverService, opts...)
 	mux.Handle(serverPath, serverHandler)
+
+	nodePath, nodeHandler := discopanelv1connect.NewNodeServiceHandler(nodeService, opts...)
+	mux.Handle(nodePath, nodeHandler)
 
 	supportPath, supportHandler := discopanelv1connect.NewSupportServiceHandler(supportService, opts...)
 	mux.Handle(supportPath, supportHandler)
