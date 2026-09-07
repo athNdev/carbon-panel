@@ -11,6 +11,7 @@ discopanel
 web/discopanel/src/lib/proto/gnostic/
 !cmd/discopanel
 !web/discopanel
+!pkg/proto/discopanel
 data/
 *.db
 config.yaml

@@ -102,6 +102,7 @@ message Server {
   repeated string player_sample = 36;
   int32 max_players_slp = 37;
   string favicon = 38; // Base64 PNG
+  string node_id = 40;
 }
 
 // Extra port mapping for container
