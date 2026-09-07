@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package docker
 
 import (
@@ -187,6 +196,7 @@ type ContainerLogStreamer interface {
 	StartStreaming(containerID string) error
 	StopStreaming(containerID string)
 	MigrateSubscribers(oldContainerID, newContainerID string)
+	RemoveContainer(containerID string)
 }
 
 type Client struct {
@@ -553,6 +563,9 @@ func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, e
 }
 
 func (c *Client) RemoveContainer(ctx context.Context, containerID string) error {
+	if c.logStreamer != nil {
+		c.logStreamer.RemoveContainer(containerID)
+	}
 	return c.docker.ContainerRemove(ctx, containerID, container.RemoveOptions{
 		Force: true,
 	})
@@ -602,8 +615,8 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 			}
 		}
 
-		// Remove old container
-		if err := c.RemoveContainer(ctx, oldContainerID); err != nil {
+		// Remove old container directly from Docker to preserve log subscribers for migration
+		if err := c.docker.ContainerRemove(ctx, oldContainerID, container.RemoveOptions{Force: true}); err != nil {
 			// Log but continue - container may already be removed
 			c.log.Debug("Could not remove old container (may not exist): %v", err)
 		}

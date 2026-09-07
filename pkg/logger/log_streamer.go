@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package logger
 
 import (
@@ -78,15 +87,45 @@ func (ls *LogStreamer) StartStreaming(containerID string) error {
 	return nil
 }
 
-// StopStreaming stops streaming logs for a container
+// StopStreaming stops streaming logs for a container and frees its log buffer
 func (ls *LogStreamer) StopStreaming(containerID string) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 
-	if stream, exists := ls.streams[containerID]; exists && stream.active {
-		stream.cancelFunc()
-		stream.active = false
+	if stream, exists := ls.streams[containerID]; exists {
+		if stream.active && stream.cancelFunc != nil {
+			stream.cancelFunc()
+			stream.active = false
+		}
+		stream.mu.Lock()
+		stream.logs = nil
+		stream.mu.Unlock()
+		delete(ls.streams, containerID)
 	}
+}
+
+// RemoveContainer stops streaming, frees log buffers, and cleans up subscribers for a container
+func (ls *LogStreamer) RemoveContainer(containerID string) {
+	ls.StopStreaming(containerID)
+
+	ls.subMu.Lock()
+	if subs, exists := ls.subscribers[containerID]; exists {
+		for ch := range subs {
+			close(ch)
+		}
+		delete(ls.subscribers, containerID)
+	}
+	ls.subMu.Unlock()
+}
+
+// RemoveStream removes a container's log stream and cleans up its resources
+func (ls *LogStreamer) RemoveStream(containerID string) {
+	ls.RemoveContainer(containerID)
+}
+
+// CleanupContainer removes all log resources associated with a container
+func (ls *LogStreamer) CleanupContainer(containerID string) {
+	ls.RemoveContainer(containerID)
 }
 
 // streamLogs sets up and starts streaming of logs from Docker in the background
@@ -343,7 +382,7 @@ func (ls *LogStreamer) ClearLogs(containerID string) {
 
 	if exists {
 		stream.mu.Lock()
-		stream.logs = make([]*v1.LogEntry, 0, stream.maxEntries)
+		stream.logs = nil
 		stream.mu.Unlock()
 	}
 }
