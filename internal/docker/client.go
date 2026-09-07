@@ -187,6 +187,7 @@ type ContainerLogStreamer interface {
 	StartStreaming(containerID string) error
 	StopStreaming(containerID string)
 	MigrateSubscribers(oldContainerID, newContainerID string)
+	RemoveContainer(containerID string)
 }
 
 type Client struct {
@@ -553,6 +554,9 @@ func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, e
 }
 
 func (c *Client) RemoveContainer(ctx context.Context, containerID string) error {
+	if c.logStreamer != nil {
+		c.logStreamer.RemoveContainer(containerID)
+	}
 	return c.docker.ContainerRemove(ctx, containerID, container.RemoveOptions{
 		Force: true,
 	})
@@ -602,8 +606,8 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 			}
 		}
 
-		// Remove old container
-		if err := c.RemoveContainer(ctx, oldContainerID); err != nil {
+		// Remove old container directly from Docker to preserve log subscribers for migration
+		if err := c.docker.ContainerRemove(ctx, oldContainerID, container.RemoveOptions{Force: true}); err != nil {
 			// Log but continue - container may already be removed
 			c.log.Debug("Could not remove old container (may not exist): %v", err)
 		}
