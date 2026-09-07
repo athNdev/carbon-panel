@@ -39,6 +39,8 @@ var _ discopanelv1connect.ServerServiceHandler = (*ServerService)(nil)
 type ServerService struct {
 	store            *storage.Store
 	docker           *docker.Client
+	pool             *docker.ClientPool
+	placementEngine  *docker.PlacementEngine
 	sender           *command.Sender
 	config           *config.Config
 	proxy            *proxy.Manager
@@ -49,11 +51,51 @@ type ServerService struct {
 	bus              *events.Bus
 }
 
+func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
+	if s.pool != nil {
+		if cli, err := s.pool.GetClient(nodeID); err == nil && cli != nil {
+			return cli
+		}
+	}
+	return s.docker
+}
+
+// SetClientPool sets the client pool on the service
+func (s *ServerService) SetClientPool(pool *docker.ClientPool) {
+	s.pool = pool
+}
+
+// SetPlacementEngine sets the placement engine on the service
+func (s *ServerService) SetPlacementEngine(engine *docker.PlacementEngine) {
+	s.placementEngine = engine
+}
+
 // NewServerService creates a new server service
-func NewServerService(store *storage.Store, docker *docker.Client, sender *command.Sender, config *config.Config, proxy *proxy.Manager, logStreamer *logger.LogStreamer, metricsCollector *metrics.Collector, moduleManager *module.Manager, bus *events.Bus, log *logger.Logger) *ServerService {
+func NewServerService(
+	store *storage.Store,
+	dockerCli *docker.Client,
+	sender *command.Sender,
+	config *config.Config,
+	proxy *proxy.Manager,
+	logStreamer *logger.LogStreamer,
+	metricsCollector *metrics.Collector,
+	moduleManager *module.Manager,
+	bus *events.Bus,
+	log *logger.Logger,
+	pool *docker.ClientPool,
+	placementEngine *docker.PlacementEngine,
+) *ServerService {
+	if pool == nil && dockerCli != nil {
+		pool = docker.NewClientPool(store, dockerCli, log)
+	}
+	if placementEngine == nil && store != nil {
+		placementEngine = docker.NewPlacementEngine(store)
+	}
 	return &ServerService{
 		store:            store,
-		docker:           docker,
+		docker:           dockerCli,
+		pool:             pool,
+		placementEngine:  placementEngine,
 		sender:           sender,
 		config:           config,
 		proxy:            proxy,
@@ -112,6 +154,7 @@ func dbServerToProto(server *storage.Server) *v1.Server {
 		PlayerSample:    server.PlayerSample,
 		MaxPlayersSlp:   int32(server.MaxPlayersSLP),
 		Favicon:         server.Favicon,
+		NodeId:          server.NodeID,
 	}
 
 	// Apply overrides
@@ -263,7 +306,8 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 		}
 
 		if server.ContainerID != "" {
-			status, err := s.docker.GetContainerStatus(ctx, server.ContainerID)
+			dockerCli := s.getDockerClient(server.NodeID)
+			status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 			if err == nil {
 				server.Status = status
 			}
@@ -320,7 +364,8 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 
 	// Update status from Docker
 	if server.ContainerID != "" {
-		status, err := s.docker.GetContainerStatus(ctx, server.ContainerID)
+		dockerCli := s.getDockerClient(server.NodeID)
+		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 		if err == nil {
 			server.Status = status
 		}
@@ -573,6 +618,32 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
+	// Determine node placement
+	nodeID := msg.NodeId
+	if nodeID == "" && msg.PlacementStrategy != "" && s.placementEngine != nil {
+		strategy := docker.PlacementStrategy(strings.ToLower(msg.PlacementStrategy))
+		selectedNode, err := s.placementEngine.SelectNode(ctx, strategy, int64(server.Memory))
+		if err != nil {
+			s.log.Error("Failed to select node using strategy %s: %v", msg.PlacementStrategy, err)
+			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("placement failed: %w", err))
+		}
+		nodeID = selectedNode.ID
+	} else if nodeID != "" {
+		if s.store != nil {
+			node, err := s.store.GetNode(ctx, nodeID)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("specified node %s not found: %w", nodeID, err))
+			}
+			if !node.Enabled {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("specified node %s is disabled", node.Name))
+			}
+		}
+	}
+	if nodeID == "" {
+		nodeID = "default"
+	}
+	server.NodeID = nodeID
+
 	// Create data directory
 	if err := os.MkdirAll(server.DataPath, 0755); err != nil {
 		s.log.Error("Failed to create data directory: %v", err)
@@ -675,7 +746,8 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		bgCtx := context.Background()
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
 
-		containerID, err := s.docker.CreateContainer(bgCtx, server, serverConfig)
+		dockerCli := s.getDockerClient(server.NodeID)
+		containerID, err := dockerCli.CreateContainer(bgCtx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
 			server.Status = storage.StatusError
@@ -696,7 +768,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 		// Start the container immediately if requested
 		if msg.StartImmediately {
-			if err := s.docker.StartContainer(bgCtx, containerID); err != nil {
+			if err := dockerCli.StartContainer(bgCtx, containerID); err != nil {
 				s.log.Error("Failed to start container: %v", err)
 				server.Status = storage.StatusError
 			} else {
@@ -948,7 +1020,8 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		}
 
 		// Recreate container
-		result, err := s.docker.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+		dockerCli := s.getDockerClient(server.NodeID)
+		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to recreate container: %v", err)
 			if result != nil && result.NewContainerID != "" {
@@ -1014,10 +1087,11 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 	// Stop and remove container
 	if server.ContainerID != "" {
-		if _, err := s.docker.StopContainer(ctx, server.ContainerID); err != nil {
+		dockerCli := s.getDockerClient(server.NodeID)
+		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
 			s.log.Error("Failed to stop container: %v", err)
 		}
-		if err := s.docker.RemoveContainer(ctx, server.ContainerID); err != nil {
+		if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil {
 			s.log.Error("Failed to remove container: %v", err)
 		}
 	}
@@ -1043,6 +1117,8 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
+	dockerCli := s.getDockerClient(server.NodeID)
+
 	// If container doesn't exist, create it first
 	if server.ContainerID == "" {
 		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
@@ -1051,7 +1127,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration"))
 		}
 
-		containerID, err := s.docker.CreateContainer(ctx, server, serverConfig)
+		containerID, err := dockerCli.CreateContainer(ctx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server container"))
@@ -1065,7 +1141,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	}
 
 	// Start container
-	if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
+	if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 		s.log.Error("Failed to start container, attempting to recreate: %v", err)
 
 		// Get server config for container creation
@@ -1076,7 +1152,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		}
 
 		// Recreate container
-		result, err := s.docker.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to recreate container: %v", err)
 			if result != nil && result.NewContainerID != "" {
@@ -1157,7 +1233,8 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	}
 
 	// Stop container
-	found, err := s.docker.StopContainer(ctx, server.ContainerID)
+	dockerCli := s.getDockerClient(server.NodeID)
+	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
 	if err != nil {
 		s.log.Error("Failed to stop container: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop server"))
@@ -1207,6 +1284,8 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
+	dockerCli := s.getDockerClient(server.NodeID)
+
 	// If container doesn't exist, create it and start it
 	if server.ContainerID == "" {
 		// Get server config for container creation
@@ -1217,7 +1296,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		}
 
 		// Create container
-		containerID, err := s.docker.CreateContainer(ctx, server, serverConfig)
+		containerID, err := dockerCli.CreateContainer(ctx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server container"))
@@ -1230,7 +1309,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		}
 
 		// Now start the container
-		if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
+		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 			s.log.Error("Failed to start container: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server"))
 		}
@@ -1263,7 +1342,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	}
 
 	// Restart container
-	if err := s.docker.RestartContainer(ctx, server.ContainerID, 2*time.Second); err != nil {
+	if err := dockerCli.RestartContainer(ctx, server.ContainerID, 2*time.Second); err != nil {
 		s.log.Error("Failed to restart container: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restart server"))
 	}
@@ -1309,7 +1388,8 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	}
 
 	// Recreate container
-	result, err := s.docker.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+	dockerCli := s.getDockerClient(server.NodeID)
+	result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 	if err != nil {
 		s.log.Error("Failed to recreate container: %v", err)
 		server.Status = storage.StatusError
@@ -1369,7 +1449,8 @@ func (s *ServerService) SendCommand(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("server container not found"))
 	}
 
-	status, err := s.docker.GetContainerStatus(ctx, server.ContainerID)
+	dockerCli := s.getDockerClient(server.NodeID)
+	status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 	if err != nil || status != storage.StatusRunning {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("server is not running"))
 	}

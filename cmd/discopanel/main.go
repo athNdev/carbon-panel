@@ -203,8 +203,15 @@ func main() {
 	}
 	defer metricsCollector.Stop()
 
+	// Initialize Docker client pool and placement engine for multi-node support
+	clientPool := docker.NewClientPool(store, dockerClient, log)
+	clientPool.StartHealthChecker(30 * time.Second)
+	defer clientPool.StopHealthChecker()
+
+	placementEngine := docker.NewPlacementEngine(store)
+
 	// Initialize RPC server with full configuration
-	rpcServer := rpc.NewServer(store, dockerClient, sender, cfg, proxyManager, taskScheduler, metricsCollector, moduleManager, eventBus, log)
+	rpcServer := rpc.NewServer(store, dockerClient, sender, cfg, proxyManager, taskScheduler, metricsCollector, moduleManager, eventBus, log, clientPool, placementEngine)
 
 	// Print recovery key
 	if key := rpcServer.RecoveryKey(); key != "" {

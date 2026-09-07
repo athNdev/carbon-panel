@@ -110,7 +110,7 @@ func (m *Manager) Start() error {
 
 	for _, server := range servers {
 		// Add routes for servers with proxy hostname that are either running or have a container
-		if server.ProxyHostname != "" && server.ContainerID != "" && server.ProxyListenerID != "" {
+		if server.ProxyHostname != "" && server.ProxyListenerID != "" && (server.ContainerID != "" || server.Status == db.StatusRunning || server.NodeID != "") {
 			// Find which listener this server uses
 			listener, ok := listenerMap[server.ProxyListenerID]
 			if !ok || !listener.Enabled {
@@ -125,21 +125,20 @@ func (m *Manager) Start() error {
 				continue
 			}
 
-			// Get container IP address
-			containerIP, err := m.GetContainerIP(server.ContainerID)
+			backendHost, backendPort, err := m.resolveBackend(server)
 			if err != nil {
-				m.logger.Error("Failed to get container IP for server %s: %v", server.Name, err)
+				m.logger.Error("Failed to resolve backend for server %s: %v", server.Name, err)
 				continue
 			}
 
 			proxy.AddRoute(
 				server.ID,
 				server.ProxyHostname,
-				containerIP, // Use IP address instead of container name
-				25565,       // Internal Minecraft port
+				backendHost,
+				backendPort,
 			)
-			m.logger.Info("Added proxy route for server %s: %s -> %s:25565 on listener port %d",
-				server.Name, server.ProxyHostname, containerIP, listener.Port)
+			m.logger.Info("Added proxy route for server %s: %s -> %s:%d on listener port %d",
+				server.Name, server.ProxyHostname, backendHost, backendPort, listener.Port)
 		}
 	}
 
@@ -214,33 +213,63 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 
 	// Add or update route for servers that are starting or running with proxy hostname
 	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting) && server.ProxyHostname != "" {
-		// Get the container's IP address on the Docker network
-		containerIP := ""
-		if server.ContainerID != "" {
-			if ip, err := m.GetContainerIP(server.ContainerID); err == nil {
-				containerIP = ip
-			} else {
-				m.logger.Error("Failed to get container IP for %s: %v", server.Name, err)
-				return fmt.Errorf("failed to get container IP: %w", err)
-			}
-		} else {
-			m.logger.Error("Server %s has no container ID", server.Name)
-			return fmt.Errorf("server has no container")
+		backendHost, backendPort, err := m.resolveBackend(server)
+		if err != nil {
+			m.logger.Error("Failed to resolve backend for %s: %v", server.Name, err)
+			return err
 		}
 
 		routes := proxy.GetRoutes()
 		if _, exists := routes[hostname]; exists {
-			proxy.UpdateRoute(hostname, containerIP, 25565)
+			proxy.UpdateRoute(hostname, backendHost, backendPort)
 		} else {
-			proxy.AddRoute(server.ID, hostname, containerIP, 25565)
+			proxy.AddRoute(server.ID, hostname, backendHost, backendPort)
 		}
-		m.logger.Info("Updated route for server %s on port %d", server.Name, listener.Port)
+		m.logger.Info("Updated route for server %s (%s -> %s:%d) on port %d", server.Name, hostname, backendHost, backendPort, listener.Port)
 	} else if server.Status == db.StatusStopped || server.Status == db.StatusStopping {
 		// Remove route if server is stopped or stopping
 		proxy.RemoveRoute(hostname)
 	}
 
 	return nil
+}
+
+// resolveBackend determines the backend host and port for a server.
+// If the server belongs to a remote node (!node.IsLocal), it proxies directly to node.AdvertisedIP:server.Port.
+// If the server is on the local node, it proxies to the local bridge containerIP:25565.
+func (m *Manager) resolveBackend(server *db.Server) (string, int, error) {
+	if server.NodeID != "" && m.store != nil {
+		node, err := m.store.GetNode(context.Background(), server.NodeID)
+		if err == nil && node != nil && !node.IsLocal {
+			backendHost := node.AdvertisedIP
+			if backendHost == "" {
+				backendHost = node.Host
+			}
+			backendHost = strings.TrimPrefix(backendHost, "tcp://")
+			backendHost = strings.TrimPrefix(backendHost, "http://")
+			backendHost = strings.TrimPrefix(backendHost, "https://")
+			if idx := strings.Index(backendHost, ":"); idx != -1 {
+				backendHost = backendHost[:idx]
+			}
+			backendPort := server.Port
+			if backendPort == 0 {
+				backendPort = 25565
+			}
+			return backendHost, backendPort, nil
+		}
+	}
+
+	// Local node: resolve container IP
+	if server.ContainerID == "" {
+		return "", 0, fmt.Errorf("server %s has no container ID", server.Name)
+	}
+
+	containerIP, err := m.GetContainerIP(server.ContainerID)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to get container IP for %s: %w", server.Name, err)
+	}
+
+	return containerIP, 25565, nil
 }
 
 // RemoveServerRoute removes a route for a server
