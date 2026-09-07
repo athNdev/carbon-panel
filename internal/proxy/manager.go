@@ -15,23 +15,48 @@ import (
 
 // Manager handles the lifecycle of the proxy and manages routes
 type Manager struct {
-	proxies     map[int]Proxier // Map of port -> Proxy instance (TCP or UDP)
-	store       *db.Store
-	config      *config.ProxyConfig
-	logger      *logger.Logger
-	mu          sync.Mutex
-	networkName string
+	proxies          map[int]Proxier // Map of port -> Proxy instance (TCP or UDP)
+	store            *db.Store
+	config           *config.ProxyConfig
+	logger           *logger.Logger
+	mu               sync.Mutex
+	networkName      string
+	dockerClient     client.CommonAPIClient
+	ownsDockerClient bool
 }
 
 // NewManager creates a new proxy manager
-func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger) *Manager {
-	return &Manager{
+func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...client.CommonAPIClient) *Manager {
+	m := &Manager{
 		proxies:     make(map[int]Proxier),
 		store:       store,
 		config:      &cfg.Proxy,
 		logger:      logger,
 		networkName: cfg.Docker.NetworkName,
 	}
+
+	if len(dockerCli) > 0 && dockerCli[0] != nil {
+		m.dockerClient = dockerCli[0]
+	} else {
+		// Initialize Docker client using configured Docker host/version
+		opts := []client.Opt{client.WithAPIVersionNegotiation()}
+		if cfg.Docker.Host != "" {
+			opts = append(opts, client.WithHost(cfg.Docker.Host))
+		} else {
+			opts = append(opts, client.FromEnv)
+		}
+		if cfg.Docker.Version != "" {
+			opts = append(opts, client.WithVersion(cfg.Docker.Version))
+		}
+		if cli, err := client.NewClientWithOpts(opts...); err == nil {
+			m.dockerClient = cli
+			m.ownsDockerClient = true
+		} else if logger != nil {
+			logger.Error("Failed to initialize Docker client in proxy manager: %v", err)
+		}
+	}
+
+	return m
 }
 
 // Start initializes and starts the proxy if enabled
@@ -101,7 +126,7 @@ func (m *Manager) Start() error {
 			}
 
 			// Get container IP address
-			containerIP, err := GetContainerIP(server.ContainerID, m.networkName)
+			containerIP, err := m.GetContainerIP(server.ContainerID)
 			if err != nil {
 				m.logger.Error("Failed to get container IP for server %s: %v", server.Name, err)
 				continue
@@ -147,6 +172,11 @@ func (m *Manager) Stop() error {
 	}
 
 	m.proxies = make(map[int]Proxier)
+	if m.ownsDockerClient && m.dockerClient != nil {
+		if closer, ok := m.dockerClient.(interface{ Close() error }); ok {
+			closer.Close()
+		}
+	}
 	m.logger.Info("Proxy manager stopped")
 	return lastErr
 }
@@ -187,7 +217,7 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 		// Get the container's IP address on the Docker network
 		containerIP := ""
 		if server.ContainerID != "" {
-			if ip, err := GetContainerIP(server.ContainerID, m.networkName); err == nil {
+			if ip, err := m.GetContainerIP(server.ContainerID); err == nil {
 				containerIP = ip
 			} else {
 				m.logger.Error("Failed to get container IP for %s: %v", server.Name, err)
@@ -403,7 +433,7 @@ func (m *Manager) AddModuleRoute(module *db.Module, server *db.Server) error {
 		return fmt.Errorf("module has no container ID")
 	}
 
-	containerIP, err := GetContainerIP(module.ContainerID, m.networkName)
+	containerIP, err := m.GetContainerIP(module.ContainerID)
 	if err != nil {
 		return fmt.Errorf("failed to get module container IP: %w", err)
 	}
@@ -544,7 +574,7 @@ func (m *Manager) UpdateModuleRoute(module *db.Module, server *db.Server) error 
 	}
 
 	// Get the container IP
-	containerIP, err := GetContainerIP(module.ContainerID, m.networkName)
+	containerIP, err := m.GetContainerIP(module.ContainerID)
 	if err != nil {
 		return fmt.Errorf("failed to get module container IP: %w", err)
 	}
@@ -645,13 +675,21 @@ func (m *Manager) ensureDefaultListenerLocked() (*db.ProxyListener, error) {
 	return defaultListener, nil
 }
 
-// GetContainerIP gets the IP address of a container on the specified network
-func GetContainerIP(containerID string, networkName string) (string, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return "", err
+// GetContainerIP gets the IP address of a container using the Manager's Docker client
+func (m *Manager) GetContainerIP(containerID string) (string, error) {
+	return GetContainerIP(m.dockerClient, containerID, m.networkName)
+}
+
+// GetContainerIP gets the IP address of a container on the specified network using the provided Docker client
+func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName string) (string, error) {
+	if cli == nil {
+		c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		if err != nil {
+			return "", err
+		}
+		defer c.Close()
+		cli = c
 	}
-	defer cli.Close()
 
 	ctx := context.Background()
 	containerInfo, err := cli.ContainerInspect(ctx, containerID)

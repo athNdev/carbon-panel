@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/docker/docker/client"
 	"github.com/nickheyer/discopanel/internal/config"
 	storage "github.com/nickheyer/discopanel/internal/db"
 	"github.com/nickheyer/discopanel/internal/proxy"
@@ -89,7 +90,11 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 		rconPassword = *serverCfg.RCONPassword
 	}
 
-	ip, err := proxy.GetContainerIP(server.ContainerID, s.config.Docker.NetworkName)
+	var cli client.CommonAPIClient
+	if dc, ok := s.docker.(interface{ GetDockerClient() *client.Client }); ok {
+		cli = dc.GetDockerClient()
+	}
+	ip, err := proxy.GetContainerIP(cli, server.ContainerID, s.config.Docker.NetworkName)
 	if err != nil {
 		return dockerExec(fmt.Errorf("failed to resolve container ip: %w", err))
 	}
