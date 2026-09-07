@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package scheduler
 
 import (
@@ -41,6 +50,10 @@ type Scheduler struct {
 	runningExecutions map[string]context.CancelFunc // executionID -> cancel func
 	executionMu       sync.RWMutex
 
+	// In-flight task tracking to prevent double-dispatching
+	runningTasks   map[string]bool // taskID -> bool
+	runningTasksMu sync.Mutex
+
 	// Cron parser
 	cronParser cron.Parser
 
@@ -78,6 +91,7 @@ func NewScheduler(store *storage.Store, docker *docker.Client, sender *command.S
 		checkInterval:     cfg.CheckInterval,
 		stopChan:          make(chan struct{}),
 		runningExecutions: make(map[string]context.CancelFunc),
+		runningTasks:      make(map[string]bool),
 		cronParser:        cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow),
 	}
 }
@@ -208,10 +222,27 @@ func (s *Scheduler) checkAndRunDueTasks() {
 	}
 
 	for _, task := range tasks {
+		s.runningTasksMu.Lock()
+		if s.runningTasks[task.ID] {
+			s.runningTasksMu.Unlock()
+			s.log.Debug("Task %s is already running, skipping duplicate dispatch", task.Name)
+			continue
+		}
+		s.runningTasks[task.ID] = true
+		s.runningTasksMu.Unlock()
+
+		// Update next run time immediately to prevent re-querying from DB if check runs again before task finishes
+		s.updateNextRun(task)
+
 		// Execute task asynchronously
 		s.wg.Add(1)
 		go func(t *storage.ScheduledTask) {
 			defer s.wg.Done()
+			defer func() {
+				s.runningTasksMu.Lock()
+				delete(s.runningTasks, t.ID)
+				s.runningTasksMu.Unlock()
+			}()
 			s.executeTask(t, "scheduled", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 		}(task)
 	}
@@ -226,6 +257,13 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 
 	execution, err := s.executeTask(task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 	return execution, err
+}
+
+// IsTaskRunning checks if a task is currently executing
+func (s *Scheduler) IsTaskRunning(taskID string) bool {
+	s.runningTasksMu.Lock()
+	defer s.runningTasksMu.Unlock()
+	return s.runningTasks[taskID]
 }
 
 // Schedulers subscription to the central event bus
@@ -283,8 +321,10 @@ func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eve
 		execution.EndedAt = &now
 		s.store.CreateTaskExecution(ctx, execution)
 
-		// Update next run time
-		s.updateNextRun(task)
+		// Update next run time if not already updated at dispatch
+		if trigger != "scheduled" {
+			s.updateNextRun(task)
+		}
 		return execution, nil
 	}
 
@@ -374,8 +414,10 @@ func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eve
 
 	s.store.UpdateTaskExecution(ctx, execution)
 
-	// Update next run time
-	s.updateNextRun(task)
+	// Update next run time if not already updated at dispatch
+	if trigger != "scheduled" {
+		s.updateNextRun(task)
+	}
 
 	return execution, execErr
 }
