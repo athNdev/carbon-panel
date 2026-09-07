@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
@@ -235,12 +236,23 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 }
 
 func (c *Client) Close() error {
+	if c == nil || c.docker == nil {
+		return nil
+	}
 	return c.docker.Close()
 }
 
 // Get the docker client instance from the client object
 func (c *Client) GetDockerClient() *client.Client {
 	return c.docker
+}
+
+// Ping checks connectivity to the Docker daemon
+func (c *Client) Ping(ctx context.Context) (types.Ping, error) {
+	if c == nil || c.docker == nil {
+		return types.Ping{}, fmt.Errorf("docker client is nil")
+	}
+	return c.docker.Ping(ctx)
 }
 
 // ApplyOverrides applies DockerOverrides to container and host configs
