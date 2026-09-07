@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package db
 
 import (
@@ -30,6 +39,7 @@ func allModels() []any {
 		&ModuleTemplate{},
 		&Module{},
 		&SystemSetting{},
+		&Node{},
 	}
 }
 
@@ -67,6 +77,7 @@ func seeds(s *Store) error {
 	for _, seed := range []func() error{
 		s.SeedSystemRoles,
 		s.SeedGlobalSettings,
+		s.SeedDefaultNode,
 	} {
 		if err := seed(); err != nil {
 			return err
@@ -116,6 +127,22 @@ func migrations() []*gormigrate.Migration {
 			},
 			Rollback: func(tx *gorm.DB) error {
 				return tx.Where("source = ?", "migration").Delete(&UserRole{}).Error
+			},
+		},
+		{
+			ID: "20260307_001_multinode_default_node",
+			Migrate: func(tx *gorm.DB) error {
+				// Backfill node_id on servers and modules if empty
+				if err := tx.Model(&Server{}).Where("node_id IS NULL OR node_id = ''").Update("node_id", "default").Error; err != nil {
+					return err
+				}
+				if err := tx.Model(&Module{}).Where("node_id IS NULL OR node_id = ''").Update("node_id", "default").Error; err != nil {
+					return err
+				}
+				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				return nil
 			},
 		},
 	}
