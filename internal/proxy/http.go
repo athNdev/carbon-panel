@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package proxy
 
 import (
@@ -185,6 +194,17 @@ func (p *HTTPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 		route.BackendHost = backendHost
 		route.BackendPort = backendPort
 		p.logger.Info("HTTP proxy updated route: hostname=%s backend=%s:%d", hostname, backendHost, backendPort)
+	}
+}
+
+// SetRouteHibernated sets the hibernation state for a route
+func (p *HTTPProxy) SetRouteHibernated(hostname string, hibernated bool) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+
+	hostname = strings.ToLower(strings.Split(hostname, ":")[0])
+	if route, exists := p.routes[hostname]; exists {
+		route.Hibernated = hibernated
 	}
 }
 
