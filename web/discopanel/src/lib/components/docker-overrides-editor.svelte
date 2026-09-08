@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -34,6 +45,7 @@
 		if (overrides.environment && Object.keys(overrides.environment).length > 0) count++;
 		if (overrides.volumes && overrides.volumes.length > 0) count++;
 		if (overrides.cpuLimit) count++;
+		if (overrides.cpusetCpus) count++;
 		if (overrides.memoryLimit) count++;
 		if (overrides.networkMode) count++;
 		if (overrides.privileged) count++;
@@ -105,6 +117,7 @@
 		if (overrides.user) updates.user = overrides.user;
 		if (overrides.memoryLimit) updates.memoryLimit = overrides.memoryLimit;
 		if (overrides.cpuLimit) updates.cpuLimit = overrides.cpuLimit;
+		if (overrides.cpusetCpus) updates.cpusetCpus = overrides.cpusetCpus;
 		if (overrides.restartPolicy) updates.restartPolicy = overrides.restartPolicy;
 		if (overrides.entrypoint && overrides.entrypoint.length > 0)
 			updates.entrypoint = [...overrides.entrypoint];
@@ -498,7 +511,7 @@
 					</div>
 
 					<!-- Resource Limits -->
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-3 gap-4">
 						<div class="space-y-2">
 							<Label for="cpu-limit" class="text-sm">CPU Limit (cores)</Label>
 							<Input
@@ -515,6 +528,22 @@
 									)}
 								{disabled}
 								class="h-8 text-xs"
+							/>
+						</div>
+						<div class="space-y-2">
+							<Label for="cpuset-cpus" class="text-sm">CPU Pinning (Cpuset)</Label>
+							<Input
+								id="cpuset-cpus"
+								type="text"
+								placeholder="e.g., 0,1 or 0-3"
+								value={overrides?.cpusetCpus || ''}
+								onchange={(e) =>
+									updateOverride(
+										'cpusetCpus',
+										e.currentTarget.value ? e.currentTarget.value.trim() : undefined
+									)}
+								{disabled}
+								class="h-8 text-xs font-mono"
 							/>
 						</div>
 						<div class="space-y-2">
