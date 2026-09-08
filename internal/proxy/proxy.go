@@ -10,6 +10,8 @@
 package proxy
 
 import (
+	"context"
+
 	"github.com/nickheyer/discopanel/pkg/logger"
 )
 
@@ -20,6 +22,7 @@ type Proxier interface {
 	AddRoute(serverID, hostname, backendHost string, backendPort int)
 	RemoveRoute(hostname string)
 	UpdateRoute(hostname, backendHost string, backendPort int)
+	SetRouteHibernated(hostname string, hibernated bool)
 	GetRoutes() map[string]*Route
 	IsRunning() bool
 }
@@ -31,11 +34,16 @@ type Route struct {
 	BackendHost string
 	BackendPort int
 	Active      bool
+	Hibernated  bool
 }
+
+// WakeHandler defines a callback for waking/unfreezing a hibernated server container
+type WakeHandler func(ctx context.Context, serverID string) error
 
 // Config holds proxy configuration
 type Config struct {
 	ListenAddr    string // Address to listen on (e.g., ":25565" or ":8080")
 	Logger        *logger.Logger
 	ProxyProtocol bool // Whether PROXY protocol v2 support is enabled on this listener
+	WakeHandler   WakeHandler // Callback to unpause hibernated container upon player connect (MINE-18)
 }
