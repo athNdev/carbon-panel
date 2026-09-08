@@ -60,6 +60,15 @@ const (
 	// ProxyServiceUpdateServerRoutingProcedure is the fully-qualified name of the ProxyService's
 	// UpdateServerRouting RPC.
 	ProxyServiceUpdateServerRoutingProcedure = "/discopanel.v1.ProxyService/UpdateServerRouting"
+	// ProxyServiceGetVelocitySecretProcedure is the fully-qualified name of the ProxyService's
+	// GetVelocitySecret RPC.
+	ProxyServiceGetVelocitySecretProcedure = "/discopanel.v1.ProxyService/GetVelocitySecret"
+	// ProxyServiceRotateVelocitySecretProcedure is the fully-qualified name of the ProxyService's
+	// RotateVelocitySecret RPC.
+	ProxyServiceRotateVelocitySecretProcedure = "/discopanel.v1.ProxyService/RotateVelocitySecret"
+	// ProxyServiceSyncVelocitySecretToServerProcedure is the fully-qualified name of the ProxyService's
+	// SyncVelocitySecretToServer RPC.
+	ProxyServiceSyncVelocitySecretToServerProcedure = "/discopanel.v1.ProxyService/SyncVelocitySecretToServer"
 )
 
 // ProxyServiceClient is a client for the discopanel.v1.ProxyService service.
@@ -82,6 +91,12 @@ type ProxyServiceClient interface {
 	GetServerRouting(context.Context, *connect.Request[v1.GetServerRoutingRequest]) (*connect.Response[v1.GetServerRoutingResponse], error)
 	// Update server proxy hostname
 	UpdateServerRouting(context.Context, *connect.Request[v1.UpdateServerRoutingRequest]) (*connect.Response[v1.UpdateServerRoutingResponse], error)
+	// Get current Velocity modern forwarding secret
+	GetVelocitySecret(context.Context, *connect.Request[v1.GetVelocitySecretRequest]) (*connect.Response[v1.GetVelocitySecretResponse], error)
+	// Rotate or regenerate Velocity modern forwarding secret and sync to backend Paper/Folia servers
+	RotateVelocitySecret(context.Context, *connect.Request[v1.RotateVelocitySecretRequest]) (*connect.Response[v1.RotateVelocitySecretResponse], error)
+	// Sync Velocity modern forwarding secret to a specific server's config files
+	SyncVelocitySecretToServer(context.Context, *connect.Request[v1.SyncVelocitySecretToServerRequest]) (*connect.Response[v1.SyncVelocitySecretToServerResponse], error)
 }
 
 // NewProxyServiceClient constructs a client for the discopanel.v1.ProxyService service. By default,
@@ -149,20 +164,41 @@ func NewProxyServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(proxyServiceMethods.ByName("UpdateServerRouting")),
 			connect.WithClientOptions(opts...),
 		),
+		getVelocitySecret: connect.NewClient[v1.GetVelocitySecretRequest, v1.GetVelocitySecretResponse](
+			httpClient,
+			baseURL+ProxyServiceGetVelocitySecretProcedure,
+			connect.WithSchema(proxyServiceMethods.ByName("GetVelocitySecret")),
+			connect.WithClientOptions(opts...),
+		),
+		rotateVelocitySecret: connect.NewClient[v1.RotateVelocitySecretRequest, v1.RotateVelocitySecretResponse](
+			httpClient,
+			baseURL+ProxyServiceRotateVelocitySecretProcedure,
+			connect.WithSchema(proxyServiceMethods.ByName("RotateVelocitySecret")),
+			connect.WithClientOptions(opts...),
+		),
+		syncVelocitySecretToServer: connect.NewClient[v1.SyncVelocitySecretToServerRequest, v1.SyncVelocitySecretToServerResponse](
+			httpClient,
+			baseURL+ProxyServiceSyncVelocitySecretToServerProcedure,
+			connect.WithSchema(proxyServiceMethods.ByName("SyncVelocitySecretToServer")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // proxyServiceClient implements ProxyServiceClient.
 type proxyServiceClient struct {
-	getProxyRoutes      *connect.Client[v1.GetProxyRoutesRequest, v1.GetProxyRoutesResponse]
-	getProxyStatus      *connect.Client[v1.GetProxyStatusRequest, v1.GetProxyStatusResponse]
-	updateProxyConfig   *connect.Client[v1.UpdateProxyConfigRequest, v1.UpdateProxyConfigResponse]
-	getProxyListeners   *connect.Client[v1.GetProxyListenersRequest, v1.GetProxyListenersResponse]
-	createProxyListener *connect.Client[v1.CreateProxyListenerRequest, v1.CreateProxyListenerResponse]
-	updateProxyListener *connect.Client[v1.UpdateProxyListenerRequest, v1.UpdateProxyListenerResponse]
-	deleteProxyListener *connect.Client[v1.DeleteProxyListenerRequest, v1.DeleteProxyListenerResponse]
-	getServerRouting    *connect.Client[v1.GetServerRoutingRequest, v1.GetServerRoutingResponse]
-	updateServerRouting *connect.Client[v1.UpdateServerRoutingRequest, v1.UpdateServerRoutingResponse]
+	getProxyRoutes             *connect.Client[v1.GetProxyRoutesRequest, v1.GetProxyRoutesResponse]
+	getProxyStatus             *connect.Client[v1.GetProxyStatusRequest, v1.GetProxyStatusResponse]
+	updateProxyConfig          *connect.Client[v1.UpdateProxyConfigRequest, v1.UpdateProxyConfigResponse]
+	getProxyListeners          *connect.Client[v1.GetProxyListenersRequest, v1.GetProxyListenersResponse]
+	createProxyListener        *connect.Client[v1.CreateProxyListenerRequest, v1.CreateProxyListenerResponse]
+	updateProxyListener        *connect.Client[v1.UpdateProxyListenerRequest, v1.UpdateProxyListenerResponse]
+	deleteProxyListener        *connect.Client[v1.DeleteProxyListenerRequest, v1.DeleteProxyListenerResponse]
+	getServerRouting           *connect.Client[v1.GetServerRoutingRequest, v1.GetServerRoutingResponse]
+	updateServerRouting        *connect.Client[v1.UpdateServerRoutingRequest, v1.UpdateServerRoutingResponse]
+	getVelocitySecret          *connect.Client[v1.GetVelocitySecretRequest, v1.GetVelocitySecretResponse]
+	rotateVelocitySecret       *connect.Client[v1.RotateVelocitySecretRequest, v1.RotateVelocitySecretResponse]
+	syncVelocitySecretToServer *connect.Client[v1.SyncVelocitySecretToServerRequest, v1.SyncVelocitySecretToServerResponse]
 }
 
 // GetProxyRoutes calls discopanel.v1.ProxyService.GetProxyRoutes.
@@ -210,6 +246,21 @@ func (c *proxyServiceClient) UpdateServerRouting(ctx context.Context, req *conne
 	return c.updateServerRouting.CallUnary(ctx, req)
 }
 
+// GetVelocitySecret calls discopanel.v1.ProxyService.GetVelocitySecret.
+func (c *proxyServiceClient) GetVelocitySecret(ctx context.Context, req *connect.Request[v1.GetVelocitySecretRequest]) (*connect.Response[v1.GetVelocitySecretResponse], error) {
+	return c.getVelocitySecret.CallUnary(ctx, req)
+}
+
+// RotateVelocitySecret calls discopanel.v1.ProxyService.RotateVelocitySecret.
+func (c *proxyServiceClient) RotateVelocitySecret(ctx context.Context, req *connect.Request[v1.RotateVelocitySecretRequest]) (*connect.Response[v1.RotateVelocitySecretResponse], error) {
+	return c.rotateVelocitySecret.CallUnary(ctx, req)
+}
+
+// SyncVelocitySecretToServer calls discopanel.v1.ProxyService.SyncVelocitySecretToServer.
+func (c *proxyServiceClient) SyncVelocitySecretToServer(ctx context.Context, req *connect.Request[v1.SyncVelocitySecretToServerRequest]) (*connect.Response[v1.SyncVelocitySecretToServerResponse], error) {
+	return c.syncVelocitySecretToServer.CallUnary(ctx, req)
+}
+
 // ProxyServiceHandler is an implementation of the discopanel.v1.ProxyService service.
 type ProxyServiceHandler interface {
 	// List active proxy routes
@@ -230,6 +281,12 @@ type ProxyServiceHandler interface {
 	GetServerRouting(context.Context, *connect.Request[v1.GetServerRoutingRequest]) (*connect.Response[v1.GetServerRoutingResponse], error)
 	// Update server proxy hostname
 	UpdateServerRouting(context.Context, *connect.Request[v1.UpdateServerRoutingRequest]) (*connect.Response[v1.UpdateServerRoutingResponse], error)
+	// Get current Velocity modern forwarding secret
+	GetVelocitySecret(context.Context, *connect.Request[v1.GetVelocitySecretRequest]) (*connect.Response[v1.GetVelocitySecretResponse], error)
+	// Rotate or regenerate Velocity modern forwarding secret and sync to backend Paper/Folia servers
+	RotateVelocitySecret(context.Context, *connect.Request[v1.RotateVelocitySecretRequest]) (*connect.Response[v1.RotateVelocitySecretResponse], error)
+	// Sync Velocity modern forwarding secret to a specific server's config files
+	SyncVelocitySecretToServer(context.Context, *connect.Request[v1.SyncVelocitySecretToServerRequest]) (*connect.Response[v1.SyncVelocitySecretToServerResponse], error)
 }
 
 // NewProxyServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -293,6 +350,24 @@ func NewProxyServiceHandler(svc ProxyServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(proxyServiceMethods.ByName("UpdateServerRouting")),
 		connect.WithHandlerOptions(opts...),
 	)
+	proxyServiceGetVelocitySecretHandler := connect.NewUnaryHandler(
+		ProxyServiceGetVelocitySecretProcedure,
+		svc.GetVelocitySecret,
+		connect.WithSchema(proxyServiceMethods.ByName("GetVelocitySecret")),
+		connect.WithHandlerOptions(opts...),
+	)
+	proxyServiceRotateVelocitySecretHandler := connect.NewUnaryHandler(
+		ProxyServiceRotateVelocitySecretProcedure,
+		svc.RotateVelocitySecret,
+		connect.WithSchema(proxyServiceMethods.ByName("RotateVelocitySecret")),
+		connect.WithHandlerOptions(opts...),
+	)
+	proxyServiceSyncVelocitySecretToServerHandler := connect.NewUnaryHandler(
+		ProxyServiceSyncVelocitySecretToServerProcedure,
+		svc.SyncVelocitySecretToServer,
+		connect.WithSchema(proxyServiceMethods.ByName("SyncVelocitySecretToServer")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/discopanel.v1.ProxyService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProxyServiceGetProxyRoutesProcedure:
@@ -313,6 +388,12 @@ func NewProxyServiceHandler(svc ProxyServiceHandler, opts ...connect.HandlerOpti
 			proxyServiceGetServerRoutingHandler.ServeHTTP(w, r)
 		case ProxyServiceUpdateServerRoutingProcedure:
 			proxyServiceUpdateServerRoutingHandler.ServeHTTP(w, r)
+		case ProxyServiceGetVelocitySecretProcedure:
+			proxyServiceGetVelocitySecretHandler.ServeHTTP(w, r)
+		case ProxyServiceRotateVelocitySecretProcedure:
+			proxyServiceRotateVelocitySecretHandler.ServeHTTP(w, r)
+		case ProxyServiceSyncVelocitySecretToServerProcedure:
+			proxyServiceSyncVelocitySecretToServerHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -356,4 +437,16 @@ func (UnimplementedProxyServiceHandler) GetServerRouting(context.Context, *conne
 
 func (UnimplementedProxyServiceHandler) UpdateServerRouting(context.Context, *connect.Request[v1.UpdateServerRoutingRequest]) (*connect.Response[v1.UpdateServerRoutingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ProxyService.UpdateServerRouting is not implemented"))
+}
+
+func (UnimplementedProxyServiceHandler) GetVelocitySecret(context.Context, *connect.Request[v1.GetVelocitySecretRequest]) (*connect.Response[v1.GetVelocitySecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ProxyService.GetVelocitySecret is not implemented"))
+}
+
+func (UnimplementedProxyServiceHandler) RotateVelocitySecret(context.Context, *connect.Request[v1.RotateVelocitySecretRequest]) (*connect.Response[v1.RotateVelocitySecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ProxyService.RotateVelocitySecret is not implemented"))
+}
+
+func (UnimplementedProxyServiceHandler) SyncVelocitySecretToServer(context.Context, *connect.Request[v1.SyncVelocitySecretToServerRequest]) (*connect.Response[v1.SyncVelocitySecretToServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ProxyService.SyncVelocitySecretToServer is not implemented"))
 }
