@@ -35,6 +35,7 @@ const (
 	TaskType_TASK_TYPE_SCRIPT         TaskType = 6 // Run a custom script
 	TaskType_TASK_TYPE_WEBHOOK        TaskType = 7 // Send an HTTP webhook
 	TaskType_TASK_TYPE_MODPACK_UPDATE TaskType = 8 // Check and pull modpack updates from source (e.g. Git)
+	TaskType_TASK_TYPE_CHUNKY_PREGEN  TaskType = 9 // Automated background Chunky radius pre-generation task runner
 )
 
 // Enum value maps for TaskType.
@@ -49,6 +50,7 @@ var (
 		6: "TASK_TYPE_SCRIPT",
 		7: "TASK_TYPE_WEBHOOK",
 		8: "TASK_TYPE_MODPACK_UPDATE",
+		9: "TASK_TYPE_CHUNKY_PREGEN",
 	}
 	TaskType_value = map[string]int32{
 		"TASK_TYPE_UNSPECIFIED":    0,
@@ -60,6 +62,7 @@ var (
 		"TASK_TYPE_SCRIPT":         6,
 		"TASK_TYPE_WEBHOOK":        7,
 		"TASK_TYPE_MODPACK_UPDATE": 8,
+		"TASK_TYPE_CHUNKY_PREGEN":  9,
 	}
 )
 
@@ -2512,7 +2515,7 @@ const file_discopanel_v1_task_proto_rawDesc = "" +
 	"\n" +
 	"last_check\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tlastCheck\x129\n" +
 	"\n" +
-	"next_check\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tnextCheck*\xdd\x01\n" +
+	"next_check\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tnextCheck*\xfa\x01\n" +
 	"\bTaskType\x12\x19\n" +
 	"\x15TASK_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11TASK_TYPE_COMMAND\x10\x01\x12\x14\n" +
@@ -2522,7 +2525,8 @@ const file_discopanel_v1_task_proto_rawDesc = "" +
 	"\x0eTASK_TYPE_STOP\x10\x05\x12\x14\n" +
 	"\x10TASK_TYPE_SCRIPT\x10\x06\x12\x15\n" +
 	"\x11TASK_TYPE_WEBHOOK\x10\a\x12\x1c\n" +
-	"\x18TASK_TYPE_MODPACK_UPDATE\x10\b*t\n" +
+	"\x18TASK_TYPE_MODPACK_UPDATE\x10\b\x12\x1b\n" +
+	"\x17TASK_TYPE_CHUNKY_PREGEN\x10\t*t\n" +
 	"\n" +
 	"TaskStatus\x12\x1b\n" +
 	"\x17TASK_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +

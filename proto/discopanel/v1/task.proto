@@ -46,6 +46,7 @@ enum TaskType {
   TASK_TYPE_SCRIPT = 6;    // Run a custom script
   TASK_TYPE_WEBHOOK = 7;   // Send an HTTP webhook
   TASK_TYPE_MODPACK_UPDATE = 8; // Check and pull modpack updates from source (e.g. Git)
+  TASK_TYPE_CHUNKY_PREGEN = 9;  // Automated background Chunky radius pre-generation task runner
 }
 
 // Task status enumeration

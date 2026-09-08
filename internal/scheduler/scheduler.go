@@ -436,6 +436,8 @@ func (s *Scheduler) runTaskType(ctx context.Context, server *storage.Server, tas
 		return s.executeWebhookTask(ctx, server, task, eventType, eventData)
 	case storage.TaskTypeModpackUpdate:
 		return s.executeModpackUpdateTask(ctx, server, task)
+	case storage.TaskTypeChunkyPregen:
+		return s.executeChunkyPregen(ctx, server, task)
 	default:
 		return "", fmt.Errorf("unknown task type: %s", task.TaskType)
 	}
@@ -836,3 +838,57 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 	return "No updates found", nil
 }
+
+// ChunkyPregenTaskConfig represents configuration for Chunky radius pre-generation tasks
+type ChunkyPregenTaskConfig struct {
+	World   string `json:"world,omitempty"`
+	Radius  int    `json:"radius,omitempty"`
+	Shape   string `json:"shape,omitempty"`
+	CenterX int    `json:"center_x,omitempty"`
+	CenterZ int    `json:"center_z,omitempty"`
+}
+
+// executeChunkyPregen runs an automated background Chunky radius pregeneration sequence via RCON
+func (s *Scheduler) executeChunkyPregen(ctx context.Context, server *storage.Server, task *storage.ScheduledTask) (string, error) {
+	if server.ContainerID == "" {
+		return "", fmt.Errorf("server has no container")
+	}
+
+	var cfg ChunkyPregenTaskConfig
+	if task.Config != "" {
+		_ = json.Unmarshal([]byte(task.Config), &cfg)
+	}
+
+	world := cfg.World
+	if world == "" {
+		world = "world"
+	}
+	radius := cfg.Radius
+	if radius <= 0 {
+		radius = 2500
+	}
+	shape := cfg.Shape
+	if shape == "" {
+		shape = "circle"
+	}
+
+	commands := []string{
+		fmt.Sprintf("chunky world %s", world),
+		fmt.Sprintf("chunky shape %s", shape),
+		fmt.Sprintf("chunky center %d %d", cfg.CenterX, cfg.CenterZ),
+		fmt.Sprintf("chunky radius %d", radius),
+		"chunky start",
+	}
+
+	var results []string
+	for _, cmd := range commands {
+		out, err := s.sender.SendCommand(ctx, server.ID, cmd)
+		if err != nil {
+			return strings.Join(results, "\n"), fmt.Errorf("chunky command '%s' failed: %w", cmd, err)
+		}
+		results = append(results, fmt.Sprintf("> %s: %s", cmd, strings.TrimSpace(out)))
+	}
+
+	return strings.Join(results, "\n"), nil
+}
+
