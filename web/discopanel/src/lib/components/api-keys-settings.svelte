@@ -28,6 +28,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		Save
 	} from '@lucide/svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { apiFetch } from '$lib/api/fetch';
 
 	let cfApiKey = $state('');
 	let modrinthToken = $state('');
@@ -77,7 +78,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		testingCf = true;
 		cfTestResult = null;
 		try {
-			const res = await fetch('/api/v1/settings/validate-key', {
+			const res = await apiFetch('/api/v1/settings/validate-key', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -104,7 +105,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		testingModrinth = true;
 		modrinthTestResult = null;
 		try {
-			const res = await fetch('/api/v1/settings/validate-key', {
+			const res = await apiFetch('/api/v1/settings/validate-key', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

@@ -50,6 +50,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		AlertTriangle
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import { apiFetch } from '$lib/api/fetch';
 	import ModpackDeployDialog from '$lib/components/modpack-deploy-dialog.svelte';
 	import { formatBytes } from '$lib/utils';
 
@@ -126,7 +127,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	async function loadPack() {
 		loading = true;
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}`);
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			pack = await res.json();
 		} catch (err) {
@@ -141,7 +142,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		if (!pack) return;
 		saving = true;
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}`, {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(pack)
@@ -166,7 +167,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		const newSide = nextSide[mod.side] || 'both';
 
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}/mods/${mod.slug}`, {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/mods/${mod.slug}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ side: newSide, pinned: mod.pinned ?? false })
@@ -184,7 +185,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		if (!pack) return;
 		const newPinned = !mod.pinned;
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}/mods/${mod.slug}`, {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/mods/${mod.slug}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ side: mod.side, pinned: newPinned })
@@ -201,7 +202,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	async function removeMod(mod: ModItem) {
 		if (!pack) return;
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}/mods/${mod.slug}`, {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/mods/${mod.slug}`, {
 				method: 'DELETE'
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -227,7 +228,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				mc_version: pack.mc_version
 			});
 
-			const res = await fetch(`/api/v1/servers/none/mods/search?${params.toString()}`);
+			const res = await apiFetch(`/api/v1/servers/none/mods/search?${params.toString()}`);
 			const data = await res.json();
 			if (!res.ok) {
 				searchError = data.error || 'Search request failed';
@@ -252,7 +253,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				loader: pack.mod_loader.toLowerCase(),
 				mc_version: pack.mc_version
 			});
-			const vRes = await fetch(`/api/v1/servers/none/mods/${item.slug || item.id}/versions?${vParams.toString()}`);
+			const vRes = await apiFetch(`/api/v1/servers/none/mods/${item.slug || item.id}/versions?${vParams.toString()}`);
 			if (!vRes.ok) throw new Error('No compatible versions found');
 			const vData = await vRes.json();
 			const versions = vData.versions || [];
@@ -275,7 +276,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				pinned: false
 			};
 
-			const addRes = await fetch(`/api/v1/packwiz/packs/${packId}/mods`, {
+			const addRes = await apiFetch(`/api/v1/packwiz/packs/${packId}/mods`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(newMod)
@@ -405,7 +406,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 					<div class="space-y-1.5">
 						<Label for="metaMcVer" class="text-xs">Minecraft Version</Label>
-						<Select value={pack.mc_version} onValueChange={(val) => (pack!.mc_version = val)}>
+						<Select type="single" bind:value={pack.mc_version}>
 							<SelectTrigger id="metaMcVer" class="h-8 text-xs">
 								<span>{pack.mc_version}</span>
 							</SelectTrigger>
@@ -419,7 +420,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 					<div class="space-y-1.5">
 						<Label for="metaLoader" class="text-xs">Mod Loader</Label>
-						<Select value={pack.mod_loader} onValueChange={(val) => (pack!.mod_loader = val)}>
+						<Select type="single" bind:value={pack.mod_loader}>
 							<SelectTrigger id="metaLoader" class="h-8 text-xs">
 								<span class="capitalize">{pack.mod_loader}</span>
 							</SelectTrigger>
