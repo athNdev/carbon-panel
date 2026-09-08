@@ -37,6 +37,8 @@ service ServerService {
   rpc SendCommand(SendCommandRequest) returns (SendCommandResponse);
   // Upload server logs to mclo.gs
   rpc UploadToMCLogs(UploadToMCLogsRequest) returns (UploadToMCLogsResponse);
+  // Migrate server instance to a target Docker node
+  rpc MigrateServer(MigrateServerRequest) returns (MigrateServerResponse);
 }
 
 // Server list options
@@ -229,3 +231,21 @@ message UploadToMCLogsRequest {
 message UploadToMCLogsResponse {
   string url = 1;
 }
+
+// Migrate server request
+message MigrateServerRequest {
+  string id = 1;
+  string target_node_id = 2;
+  optional bool force = 3;
+}
+
+// Migrate server response
+message MigrateServerResponse {
+  bool success = 1;
+  string message = 2;
+  string source_node_id = 3;
+  string target_node_id = 4;
+  int64 duration_ms = 5;
+  Server server = 6;
+}
+

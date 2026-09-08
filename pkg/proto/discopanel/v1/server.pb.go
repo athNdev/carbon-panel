@@ -1724,6 +1724,152 @@ func (x *UploadToMCLogsResponse) GetUrl() string {
 	return ""
 }
 
+// Migrate server request
+type MigrateServerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TargetNodeId  string                 `protobuf:"bytes,2,opt,name=target_node_id,json=targetNodeId,proto3" json:"target_node_id,omitempty"`
+	Force         *bool                  `protobuf:"varint,3,opt,name=force,proto3,oneof" json:"force,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MigrateServerRequest) Reset() {
+	*x = MigrateServerRequest{}
+	mi := &file_discopanel_v1_server_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MigrateServerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MigrateServerRequest) ProtoMessage() {}
+
+func (x *MigrateServerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_server_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MigrateServerRequest.ProtoReflect.Descriptor instead.
+func (*MigrateServerRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_server_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *MigrateServerRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MigrateServerRequest) GetTargetNodeId() string {
+	if x != nil {
+		return x.TargetNodeId
+	}
+	return ""
+}
+
+func (x *MigrateServerRequest) GetForce() bool {
+	if x != nil && x.Force != nil {
+		return *x.Force
+	}
+	return false
+}
+
+// Migrate server response
+type MigrateServerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	SourceNodeId  string                 `protobuf:"bytes,3,opt,name=source_node_id,json=sourceNodeId,proto3" json:"source_node_id,omitempty"`
+	TargetNodeId  string                 `protobuf:"bytes,4,opt,name=target_node_id,json=targetNodeId,proto3" json:"target_node_id,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,5,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Server        *Server                `protobuf:"bytes,6,opt,name=server,proto3" json:"server,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MigrateServerResponse) Reset() {
+	*x = MigrateServerResponse{}
+	mi := &file_discopanel_v1_server_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MigrateServerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MigrateServerResponse) ProtoMessage() {}
+
+func (x *MigrateServerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_server_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MigrateServerResponse.ProtoReflect.Descriptor instead.
+func (*MigrateServerResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_server_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *MigrateServerResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *MigrateServerResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *MigrateServerResponse) GetSourceNodeId() string {
+	if x != nil {
+		return x.SourceNodeId
+	}
+	return ""
+}
+
+func (x *MigrateServerResponse) GetTargetNodeId() string {
+	if x != nil {
+		return x.TargetNodeId
+	}
+	return ""
+}
+
+func (x *MigrateServerResponse) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *MigrateServerResponse) GetServer() *Server {
+	if x != nil {
+		return x.Server
+	}
+	return nil
+}
+
 var File_discopanel_v1_server_proto protoreflect.FileDescriptor
 
 const file_discopanel_v1_server_proto_rawDesc = "" +
@@ -1854,7 +2000,20 @@ const file_discopanel_v1_server_proto_rawDesc = "" +
 	"\x15UploadToMCLogsRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"*\n" +
 	"\x16UploadToMCLogsResponse\x12\x10\n" +
-	"\x03url\x18\x01 \x01(\tR\x03url2\x88\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\"q\n" +
+	"\x14MigrateServerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
+	"\x0etarget_node_id\x18\x02 \x01(\tR\ftargetNodeId\x12\x19\n" +
+	"\x05force\x18\x03 \x01(\bH\x00R\x05force\x88\x01\x01B\b\n" +
+	"\x06_force\"\xe7\x01\n" +
+	"\x15MigrateServerResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12$\n" +
+	"\x0esource_node_id\x18\x03 \x01(\tR\fsourceNodeId\x12$\n" +
+	"\x0etarget_node_id\x18\x04 \x01(\tR\ftargetNodeId\x12\x1f\n" +
+	"\vduration_ms\x18\x05 \x01(\x03R\n" +
+	"durationMs\x12-\n" +
+	"\x06server\x18\x06 \x01(\v2\x15.discopanel.v1.ServerR\x06server2\xe4\n" +
 	"\n" +
 	"\rServerService\x12T\n" +
 	"\vListServers\x12!.discopanel.v1.ListServersRequest\x1a\".discopanel.v1.ListServersResponse\x12N\n" +
@@ -1871,7 +2030,8 @@ const file_discopanel_v1_server_proto_rawDesc = "" +
 	"\rRestartServer\x12#.discopanel.v1.RestartServerRequest\x1a$.discopanel.v1.RestartServerResponse\x12]\n" +
 	"\x0eRecreateServer\x12$.discopanel.v1.RecreateServerRequest\x1a%.discopanel.v1.RecreateServerResponse\x12T\n" +
 	"\vSendCommand\x12!.discopanel.v1.SendCommandRequest\x1a\".discopanel.v1.SendCommandResponse\x12]\n" +
-	"\x0eUploadToMCLogs\x12$.discopanel.v1.UploadToMCLogsRequest\x1a%.discopanel.v1.UploadToMCLogsResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
+	"\x0eUploadToMCLogs\x12$.discopanel.v1.UploadToMCLogsRequest\x1a%.discopanel.v1.UploadToMCLogsResponse\x12Z\n" +
+	"\rMigrateServer\x12#.discopanel.v1.MigrateServerRequest\x1a$.discopanel.v1.MigrateServerResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
 
 var (
 	file_discopanel_v1_server_proto_rawDescOnce sync.Once
@@ -1885,7 +2045,7 @@ func file_discopanel_v1_server_proto_rawDescGZIP() []byte {
 	return file_discopanel_v1_server_proto_rawDescData
 }
 
-var file_discopanel_v1_server_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_discopanel_v1_server_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_discopanel_v1_server_proto_goTypes = []any{
 	(*ListServersRequest)(nil),           // 0: discopanel.v1.ListServersRequest
 	(*ListServersResponse)(nil),          // 1: discopanel.v1.ListServersResponse
@@ -1917,58 +2077,63 @@ var file_discopanel_v1_server_proto_goTypes = []any{
 	(*SendCommandResponse)(nil),          // 27: discopanel.v1.SendCommandResponse
 	(*UploadToMCLogsRequest)(nil),        // 28: discopanel.v1.UploadToMCLogsRequest
 	(*UploadToMCLogsResponse)(nil),       // 29: discopanel.v1.UploadToMCLogsResponse
-	(*Server)(nil),                       // 30: discopanel.v1.Server
-	(*timestamppb.Timestamp)(nil),        // 31: google.protobuf.Timestamp
-	(ModLoader)(0),                       // 32: discopanel.v1.ModLoader
-	(*AdditionalPort)(nil),               // 33: discopanel.v1.AdditionalPort
-	(*DockerOverrides)(nil),              // 34: discopanel.v1.DockerOverrides
+	(*MigrateServerRequest)(nil),         // 30: discopanel.v1.MigrateServerRequest
+	(*MigrateServerResponse)(nil),        // 31: discopanel.v1.MigrateServerResponse
+	(*Server)(nil),                       // 32: discopanel.v1.Server
+	(*timestamppb.Timestamp)(nil),        // 33: google.protobuf.Timestamp
+	(ModLoader)(0),                       // 34: discopanel.v1.ModLoader
+	(*AdditionalPort)(nil),               // 35: discopanel.v1.AdditionalPort
+	(*DockerOverrides)(nil),              // 36: discopanel.v1.DockerOverrides
 }
 var file_discopanel_v1_server_proto_depIdxs = []int32{
-	30, // 0: discopanel.v1.ListServersResponse.servers:type_name -> discopanel.v1.Server
-	30, // 1: discopanel.v1.GetServerResponse.server:type_name -> discopanel.v1.Server
-	31, // 2: discopanel.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
+	32, // 0: discopanel.v1.ListServersResponse.servers:type_name -> discopanel.v1.Server
+	32, // 1: discopanel.v1.GetServerResponse.server:type_name -> discopanel.v1.Server
+	33, // 2: discopanel.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
 	5,  // 3: discopanel.v1.GetServerLogsResponse.logs:type_name -> discopanel.v1.LogEntry
 	10, // 4: discopanel.v1.GetNextAvailablePortResponse.used_ports:type_name -> discopanel.v1.UsedPort
-	32, // 5: discopanel.v1.CreateServerRequest.mod_loader:type_name -> discopanel.v1.ModLoader
-	33, // 6: discopanel.v1.CreateServerRequest.additional_ports:type_name -> discopanel.v1.AdditionalPort
-	34, // 7: discopanel.v1.CreateServerRequest.docker_overrides:type_name -> discopanel.v1.DockerOverrides
-	30, // 8: discopanel.v1.CreateServerResponse.server:type_name -> discopanel.v1.Server
-	33, // 9: discopanel.v1.UpdateServerRequest.additional_ports:type_name -> discopanel.v1.AdditionalPort
-	34, // 10: discopanel.v1.UpdateServerRequest.docker_overrides:type_name -> discopanel.v1.DockerOverrides
-	30, // 11: discopanel.v1.UpdateServerResponse.server:type_name -> discopanel.v1.Server
-	0,  // 12: discopanel.v1.ServerService.ListServers:input_type -> discopanel.v1.ListServersRequest
-	2,  // 13: discopanel.v1.ServerService.GetServer:input_type -> discopanel.v1.GetServerRequest
-	4,  // 14: discopanel.v1.ServerService.GetServerLogs:input_type -> discopanel.v1.GetServerLogsRequest
-	7,  // 15: discopanel.v1.ServerService.ClearServerLogs:input_type -> discopanel.v1.ClearServerLogsRequest
-	9,  // 16: discopanel.v1.ServerService.GetNextAvailablePort:input_type -> discopanel.v1.GetNextAvailablePortRequest
-	12, // 17: discopanel.v1.ServerService.CreateServer:input_type -> discopanel.v1.CreateServerRequest
-	14, // 18: discopanel.v1.ServerService.UpdateServer:input_type -> discopanel.v1.UpdateServerRequest
-	16, // 19: discopanel.v1.ServerService.DeleteServer:input_type -> discopanel.v1.DeleteServerRequest
-	18, // 20: discopanel.v1.ServerService.StartServer:input_type -> discopanel.v1.StartServerRequest
-	20, // 21: discopanel.v1.ServerService.StopServer:input_type -> discopanel.v1.StopServerRequest
-	22, // 22: discopanel.v1.ServerService.RestartServer:input_type -> discopanel.v1.RestartServerRequest
-	24, // 23: discopanel.v1.ServerService.RecreateServer:input_type -> discopanel.v1.RecreateServerRequest
-	26, // 24: discopanel.v1.ServerService.SendCommand:input_type -> discopanel.v1.SendCommandRequest
-	28, // 25: discopanel.v1.ServerService.UploadToMCLogs:input_type -> discopanel.v1.UploadToMCLogsRequest
-	1,  // 26: discopanel.v1.ServerService.ListServers:output_type -> discopanel.v1.ListServersResponse
-	3,  // 27: discopanel.v1.ServerService.GetServer:output_type -> discopanel.v1.GetServerResponse
-	6,  // 28: discopanel.v1.ServerService.GetServerLogs:output_type -> discopanel.v1.GetServerLogsResponse
-	8,  // 29: discopanel.v1.ServerService.ClearServerLogs:output_type -> discopanel.v1.ClearServerLogsResponse
-	11, // 30: discopanel.v1.ServerService.GetNextAvailablePort:output_type -> discopanel.v1.GetNextAvailablePortResponse
-	13, // 31: discopanel.v1.ServerService.CreateServer:output_type -> discopanel.v1.CreateServerResponse
-	15, // 32: discopanel.v1.ServerService.UpdateServer:output_type -> discopanel.v1.UpdateServerResponse
-	17, // 33: discopanel.v1.ServerService.DeleteServer:output_type -> discopanel.v1.DeleteServerResponse
-	19, // 34: discopanel.v1.ServerService.StartServer:output_type -> discopanel.v1.StartServerResponse
-	21, // 35: discopanel.v1.ServerService.StopServer:output_type -> discopanel.v1.StopServerResponse
-	23, // 36: discopanel.v1.ServerService.RestartServer:output_type -> discopanel.v1.RestartServerResponse
-	25, // 37: discopanel.v1.ServerService.RecreateServer:output_type -> discopanel.v1.RecreateServerResponse
-	27, // 38: discopanel.v1.ServerService.SendCommand:output_type -> discopanel.v1.SendCommandResponse
-	29, // 39: discopanel.v1.ServerService.UploadToMCLogs:output_type -> discopanel.v1.UploadToMCLogsResponse
-	26, // [26:40] is the sub-list for method output_type
-	12, // [12:26] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	34, // 5: discopanel.v1.CreateServerRequest.mod_loader:type_name -> discopanel.v1.ModLoader
+	35, // 6: discopanel.v1.CreateServerRequest.additional_ports:type_name -> discopanel.v1.AdditionalPort
+	36, // 7: discopanel.v1.CreateServerRequest.docker_overrides:type_name -> discopanel.v1.DockerOverrides
+	32, // 8: discopanel.v1.CreateServerResponse.server:type_name -> discopanel.v1.Server
+	35, // 9: discopanel.v1.UpdateServerRequest.additional_ports:type_name -> discopanel.v1.AdditionalPort
+	36, // 10: discopanel.v1.UpdateServerRequest.docker_overrides:type_name -> discopanel.v1.DockerOverrides
+	32, // 11: discopanel.v1.UpdateServerResponse.server:type_name -> discopanel.v1.Server
+	32, // 12: discopanel.v1.MigrateServerResponse.server:type_name -> discopanel.v1.Server
+	0,  // 13: discopanel.v1.ServerService.ListServers:input_type -> discopanel.v1.ListServersRequest
+	2,  // 14: discopanel.v1.ServerService.GetServer:input_type -> discopanel.v1.GetServerRequest
+	4,  // 15: discopanel.v1.ServerService.GetServerLogs:input_type -> discopanel.v1.GetServerLogsRequest
+	7,  // 16: discopanel.v1.ServerService.ClearServerLogs:input_type -> discopanel.v1.ClearServerLogsRequest
+	9,  // 17: discopanel.v1.ServerService.GetNextAvailablePort:input_type -> discopanel.v1.GetNextAvailablePortRequest
+	12, // 18: discopanel.v1.ServerService.CreateServer:input_type -> discopanel.v1.CreateServerRequest
+	14, // 19: discopanel.v1.ServerService.UpdateServer:input_type -> discopanel.v1.UpdateServerRequest
+	16, // 20: discopanel.v1.ServerService.DeleteServer:input_type -> discopanel.v1.DeleteServerRequest
+	18, // 21: discopanel.v1.ServerService.StartServer:input_type -> discopanel.v1.StartServerRequest
+	20, // 22: discopanel.v1.ServerService.StopServer:input_type -> discopanel.v1.StopServerRequest
+	22, // 23: discopanel.v1.ServerService.RestartServer:input_type -> discopanel.v1.RestartServerRequest
+	24, // 24: discopanel.v1.ServerService.RecreateServer:input_type -> discopanel.v1.RecreateServerRequest
+	26, // 25: discopanel.v1.ServerService.SendCommand:input_type -> discopanel.v1.SendCommandRequest
+	28, // 26: discopanel.v1.ServerService.UploadToMCLogs:input_type -> discopanel.v1.UploadToMCLogsRequest
+	30, // 27: discopanel.v1.ServerService.MigrateServer:input_type -> discopanel.v1.MigrateServerRequest
+	1,  // 28: discopanel.v1.ServerService.ListServers:output_type -> discopanel.v1.ListServersResponse
+	3,  // 29: discopanel.v1.ServerService.GetServer:output_type -> discopanel.v1.GetServerResponse
+	6,  // 30: discopanel.v1.ServerService.GetServerLogs:output_type -> discopanel.v1.GetServerLogsResponse
+	8,  // 31: discopanel.v1.ServerService.ClearServerLogs:output_type -> discopanel.v1.ClearServerLogsResponse
+	11, // 32: discopanel.v1.ServerService.GetNextAvailablePort:output_type -> discopanel.v1.GetNextAvailablePortResponse
+	13, // 33: discopanel.v1.ServerService.CreateServer:output_type -> discopanel.v1.CreateServerResponse
+	15, // 34: discopanel.v1.ServerService.UpdateServer:output_type -> discopanel.v1.UpdateServerResponse
+	17, // 35: discopanel.v1.ServerService.DeleteServer:output_type -> discopanel.v1.DeleteServerResponse
+	19, // 36: discopanel.v1.ServerService.StartServer:output_type -> discopanel.v1.StartServerResponse
+	21, // 37: discopanel.v1.ServerService.StopServer:output_type -> discopanel.v1.StopServerResponse
+	23, // 38: discopanel.v1.ServerService.RestartServer:output_type -> discopanel.v1.RestartServerResponse
+	25, // 39: discopanel.v1.ServerService.RecreateServer:output_type -> discopanel.v1.RecreateServerResponse
+	27, // 40: discopanel.v1.ServerService.SendCommand:output_type -> discopanel.v1.SendCommandResponse
+	29, // 41: discopanel.v1.ServerService.UploadToMCLogs:output_type -> discopanel.v1.UploadToMCLogsResponse
+	31, // 42: discopanel.v1.ServerService.MigrateServer:output_type -> discopanel.v1.MigrateServerResponse
+	28, // [28:43] is the sub-list for method output_type
+	13, // [13:28] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_discopanel_v1_server_proto_init() }
@@ -1979,13 +2144,14 @@ func file_discopanel_v1_server_proto_init() {
 	file_discopanel_v1_common_proto_init()
 	file_discopanel_v1_server_proto_msgTypes[14].OneofWrappers = []any{}
 	file_discopanel_v1_server_proto_msgTypes[26].OneofWrappers = []any{}
+	file_discopanel_v1_server_proto_msgTypes[30].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_discopanel_v1_server_proto_rawDesc), len(file_discopanel_v1_server_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   30,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

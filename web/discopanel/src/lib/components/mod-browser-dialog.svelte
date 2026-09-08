@@ -28,6 +28,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 	import { formatBytes } from '$lib/utils';
+	import { apiFetch } from '$lib/api/fetch';
 
 	interface Props {
 		open: boolean;
@@ -84,15 +85,24 @@
 	let selectedDependencies = $state<Record<string, boolean>>({});
 	let installing = $state(false);
 
+	let filterByVersion = $state(true);
+
 	function getLoaderString(val: number | string): string {
-		if (typeof val === 'string') return val.toLowerCase();
-		switch (val) {
-			case 1: return 'forge';
-			case 2: return 'fabric';
-			case 3: return 'quilt';
-			case 4: return 'neoforge';
-			default: return 'fabric';
+		if (typeof val === 'number') {
+			switch (val) {
+				case 1: return 'forge';
+				case 2: return 'fabric';
+				case 3: return 'quilt';
+				case 4: return 'neoforge';
+				default: return 'fabric';
+			}
 		}
+		const s = String(val || '').toLowerCase().replace('mod_loader_', '');
+		if (s.includes('neoforge')) return 'neoforge';
+		if (s.includes('forge') || s.includes('curseforge')) return 'forge';
+		if (s.includes('quilt')) return 'quilt';
+		if (s.includes('fabric')) return 'fabric';
+		return s || 'fabric';
 	}
 
 	async function searchMods() {
@@ -105,12 +115,13 @@
 				query: searchQuery.trim(),
 				platform,
 				loader,
-				mc_version: server.mcVersion || ''
+				mc_version: filterByVersion ? (server.mcVersion || '') : ''
 			});
 
-			const res = await fetch(`/api/v1/servers/${server.id}/mods/search?${params.toString()}`);
+			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/search?${params.toString()}`);
 			if (!res.ok) {
-				throw new Error(`HTTP ${res.status}`);
+				const errorText = await res.text();
+				throw new Error(errorText || `HTTP ${res.status}`);
 			}
 			const data = await res.json();
 			if (data.error) {
@@ -120,11 +131,17 @@
 			}
 		} catch (err: any) {
 			console.error('Failed to search mods:', err);
-			searchError = 'Failed to search mods. Please verify server connection.';
+			searchError = `Failed to search mods: ${err.message || 'Please verify server connection.'}`;
 		} finally {
 			searching = false;
 		}
 	}
+
+	$effect(() => {
+		if (open && mods.length === 0 && !searching) {
+			searchMods();
+		}
+	});
 
 	async function viewModVersions(mod: SearchMod) {
 		selectedMod = mod;
@@ -138,12 +155,13 @@
 			const params = new URLSearchParams({
 				platform: mod.platform,
 				loader,
-				mc_version: server.mcVersion || ''
+				mc_version: filterByVersion ? (server.mcVersion || '') : ''
 			});
 
-			const res = await fetch(`/api/v1/servers/${server.id}/mods/${mod.slug || mod.id}/versions?${params.toString()}`);
+			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/${mod.slug || mod.id}/versions?${params.toString()}`);
 			if (!res.ok) {
-				throw new Error(`HTTP ${res.status}`);
+				const errorText = await res.text();
+				throw new Error(errorText || `HTTP ${res.status}`);
 			}
 			const data = await res.json();
 			versions = data.versions || [];
@@ -177,7 +195,7 @@
 				}
 			];
 
-			const res = await fetch(`/api/v1/servers/${server.id}/mods/install`, {
+			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/install`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ items })
@@ -238,7 +256,12 @@
 							{selectedMod ? selectedMod.title : 'Browse & Install Online Mods'}
 						</DialogTitle>
 						<DialogDescription>
-							Auto-locked to Minecraft <span class="font-semibold text-foreground">{server.mcVersion}</span> on <span class="font-semibold text-foreground">{getLoaderString(server.modLoader).toUpperCase()}</span>
+							Loader: <span class="font-semibold text-foreground">{getLoaderString(server.modLoader).toUpperCase()}</span>
+							{#if filterByVersion && server.mcVersion}
+								· Filtering for MC <span class="font-semibold text-foreground">{server.mcVersion}</span>
+							{:else}
+								· <span class="text-muted-foreground">All MC versions</span>
+							{/if}
 						</DialogDescription>
 					</div>
 				</div>
@@ -246,9 +269,19 @@
 					<Badge variant="outline" class="font-mono text-xs uppercase">
 						{getLoaderString(server.modLoader)}
 					</Badge>
-					<Badge variant="secondary" class="font-mono text-xs">
-						MC {server.mcVersion}
-					</Badge>
+					{#if server.mcVersion}
+						<button
+							type="button"
+							onclick={() => {
+								filterByVersion = !filterByVersion;
+								searchMods();
+							}}
+							class="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-mono font-semibold transition-colors cursor-pointer {filterByVersion ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted text-muted-foreground border border-dashed hover:text-foreground'}"
+							title="Click to toggle version filter"
+						>
+							MC {server.mcVersion} {filterByVersion ? '✓' : '(any)'}
+						</button>
+					{/if}
 				</div>
 			</div>
 		</DialogHeader>

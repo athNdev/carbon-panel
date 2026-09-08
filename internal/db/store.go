@@ -1160,7 +1160,7 @@ func (s *Store) CreateNode(ctx context.Context, node *Node) error {
 	if node.Status == "" {
 		node.Status = NodeStatusOffline
 	}
-	err := s.db.WithContext(ctx).Create(node).Error
+	err := s.db.WithContext(ctx).Select("ID", "Name", "Host", "AdvertisedIP", "TLSCACert", "TLSCert", "TLSKey", "TLSEnabled", "TLSSkipVerify", "MaxMemoryMB", "MaxServers", "Enabled", "Status", "IsLocal", "LastHeartbeat", "CreatedAt", "UpdatedAt").Create(node).Error
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}

@@ -30,7 +30,8 @@
 		ExternalLink,
 		Trash2,
 		Cpu,
-		Info
+		Info,
+		Network
 	} from '@lucide/svelte';
 	import {
 		DropdownMenu,
@@ -240,11 +241,19 @@
 					<Package class="h-6 w-6 text-primary sm:h-8 sm:w-8" />
 				</div>
 				<div class="space-y-1">
-					<h2
-						class="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl lg:text-4xl"
-					>
-						{server.name}
-					</h2>
+					<div class="flex flex-wrap items-center gap-2.5">
+						<h2
+							class="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl lg:text-4xl"
+						>
+							{server.name}
+						</h2>
+						{#if server.nodeId}
+							<Badge variant="outline" class="gap-1.5 border-primary/30 bg-primary/5 text-primary text-xs font-mono py-0.5">
+								<Network class="h-3 w-3" />
+								Node: {server.nodeId}
+							</Badge>
+						{/if}
+					</div>
 					<p class="text-sm text-muted-foreground sm:text-base">{server.description || ''}</p>
 					{#if server.description || !server.description || server.description === ''}
 						<p class="mt-1 text-xs text-muted-foreground/70">

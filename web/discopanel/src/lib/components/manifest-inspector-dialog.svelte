@@ -117,9 +117,9 @@
 </script>
 
 <Dialog bind:open {onOpenChange}>
-	<DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+	<DialogContent class="max-w-4xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
 		<DialogHeader>
-			<DialogTitle className="flex items-center gap-2 text-xl font-bold">
+			<DialogTitle class="flex items-center gap-2 text-xl font-bold">
 				<FileSearch class="h-5 w-5 text-primary" />
 				CurseForge & Modrinth Manifest Inspector
 			</DialogTitle>

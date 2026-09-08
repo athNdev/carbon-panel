@@ -25,6 +25,7 @@
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { apiFetch } from '$lib/api/fetch';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 
 	interface Props {
@@ -77,7 +78,7 @@
 		deploying = true;
 		deployResult = null;
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}/deploy`, {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/deploy`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -92,7 +93,7 @@
 			}
 
 			deployResult = data.message || 'Deployed successfully!';
-			toast.success(deployResult);
+			toast.success(deployResult || 'Deployed successfully!');
 			if (onSuccess) {
 				onSuccess();
 			}
@@ -143,8 +144,8 @@
 					</Alert>
 				{:else}
 					<Select
-						value={selectedServerId}
-						onValueChange={(val) => (selectedServerId = val)}
+						type="single"
+						bind:value={selectedServerId}
 					>
 						<SelectTrigger class="w-full">
 							<div class="flex items-center gap-2 truncate">

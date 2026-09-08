@@ -17,13 +17,15 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
-	import { ArrowLeft, Loader2, Package, Settings, HardDrive } from '@lucide/svelte';
+	import { ArrowLeft, Loader2, Package, Settings, HardDrive, Server as ServerIcon, Network, Cpu, Activity, CheckCircle2, AlertCircle } from '@lucide/svelte';
 	import { create } from '@bufbuild/protobuf';
 	import type { CreateServerRequest } from '$lib/proto/discopanel/v1/server_pb';
 	import { CreateServerRequestSchema } from '$lib/proto/discopanel/v1/server_pb';
 	import { ModLoader, type ProxyListener } from '$lib/proto/discopanel/v1/common_pb';
 	import type { ModLoaderInfo, DockerImage } from '$lib/proto/discopanel/v1/minecraft_pb';
 	import type { IndexedModpack, Version } from '$lib/proto/discopanel/v1/modpack_pb';
+	import type { Node } from '$lib/proto/discopanel/v1/node_pb';
+	import { NodeStatus } from '$lib/proto/discopanel/v1/node_pb';
 	import { Badge } from '$lib/components/ui/badge';
 	import {
 		Dialog,
@@ -50,6 +52,13 @@
 	let usedPorts = $state<Record<number, boolean>>({});
 	let portError = $state('');
 	let useProxyMode = $state(false); // Track connection mode separately
+
+	// Cluster node placement state
+	let nodes = $state<Node[]>([]);
+	let loadingNodes = $state(true);
+	let nodePlacementMode = $state<'auto' | 'manual'>('auto');
+	let selectedNodeId = $state<string>('default');
+	let placementStrategy = $state<string>('least_memory');
 
 	// Modpack selection
 	let showModpackDialog = $state(false);
@@ -151,6 +160,20 @@
 
 			// Load favorite modpacks
 			await loadFavoriteModpacks();
+
+			// Load cluster nodes for placement
+			try {
+				const nodesData = await rpcClient.node.listNodes({});
+				nodes = nodesData.nodes || [];
+				if (nodes.length > 0) {
+					const localNode = nodes.find((n) => n.isLocal) || nodes[0];
+					selectedNodeId = localNode.id;
+				}
+			} catch (nodeErr) {
+				console.error('Failed to load cluster nodes:', nodeErr);
+			} finally {
+				loadingNodes = false;
+			}
 
 			// Check if modpack was passed in URL
 			const urlParams = new URLSearchParams(window.location.search);
@@ -295,6 +318,8 @@
 
 			const createRequest = {
 				...formData,
+				nodeId: nodePlacementMode === 'manual' ? selectedNodeId : '',
+				placementStrategy: nodePlacementMode === 'auto' ? placementStrategy : '',
 				modpackId: selectedModpack?.id || '',
 				modpackVersionId: versionToSend || '',
 				// When using proxy with hostname, set port to 0 to indicate proxy usage
@@ -965,6 +990,173 @@
 						</div>
 					</CardContent>
 				</Card>
+
+				<!-- Cluster Node Placement Card -->
+				<div class="lg:col-span-2">
+					<Card class="border-2 bg-linear-to-br from-card to-card/90 shadow-xl transition-colors hover:border-primary/30">
+						<CardHeader class="pb-4">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-3">
+									<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+										<Network class="h-5 w-5" />
+									</div>
+									<div>
+										<CardTitle class="text-xl font-bold">Cluster Node Placement</CardTitle>
+										<CardDescription>
+											Choose which node in your cluster will host this server instance or let the placement engine balance load automatically
+										</CardDescription>
+									</div>
+								</div>
+								{#if nodes.length > 0}
+									<Badge variant="outline" class="font-mono text-xs">
+										{nodes.length} {nodes.length === 1 ? 'Node' : 'Nodes'} Available
+									</Badge>
+								{/if}
+							</div>
+						</CardHeader>
+						<CardContent class="space-y-5">
+							<!-- Placement Mode Toggle -->
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+								<Button
+									type="button"
+									variant={nodePlacementMode === 'auto' ? 'default' : 'outline'}
+									onclick={() => (nodePlacementMode = 'auto')}
+									class="h-auto justify-start p-4 text-left transition-all"
+								>
+									<div class="space-y-1">
+										<div class="flex items-center gap-2 font-semibold">
+											<Activity class="h-4 w-4" />
+											Auto-Placement (Load Balanced)
+										</div>
+										<p class="text-xs text-muted-foreground font-normal">
+											Dynamic selection based on cluster memory capacity and server density
+										</p>
+									</div>
+								</Button>
+
+								<Button
+									type="button"
+									variant={nodePlacementMode === 'manual' ? 'default' : 'outline'}
+									onclick={() => (nodePlacementMode = 'manual')}
+									class="h-auto justify-start p-4 text-left transition-all"
+								>
+									<div class="space-y-1">
+										<div class="flex items-center gap-2 font-semibold">
+											<ServerIcon class="h-4 w-4" />
+											Target Specific Node
+										</div>
+										<p class="text-xs text-muted-foreground font-normal">
+											Pin this server directly to a designated Docker host or controller daemon
+										</p>
+									</div>
+								</Button>
+							</div>
+
+							{#if nodePlacementMode === 'auto'}
+								<div class="rounded-lg bg-muted/40 p-4 border border-border/60 space-y-3">
+									<div class="space-y-1.5">
+										<Label for="placement_strategy" class="text-sm font-medium">Placement Algorithm</Label>
+										<Select type="single" bind:value={placementStrategy}>
+											<SelectTrigger id="placement_strategy" class="w-full bg-background">
+												<span class="capitalize">
+													{placementStrategy === 'least_memory' ? 'Least Memory Allocated (Recommended)' :
+													 placementStrategy === 'least_servers' ? 'Least Active Server Count' :
+													 'Round Robin Distribution'}
+												</span>
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="least_memory">Least Memory Allocated (Recommended)</SelectItem>
+												<SelectItem value="least_servers">Least Active Server Count</SelectItem>
+												<SelectItem value="round_robin">Round Robin Distribution</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+									<p class="text-xs text-muted-foreground">
+										The placement engine inspects available RAM, health heartbeats, and daemon limits across all active cluster nodes before spawning the container.
+									</p>
+								</div>
+							{:else}
+								<div class="space-y-3">
+									<Label class="text-sm font-medium">Available Cluster Nodes</Label>
+									{#if loadingNodes}
+										<div class="flex items-center justify-center py-6 text-sm text-muted-foreground gap-2">
+											<Loader2 class="h-4 w-4 animate-spin text-primary" />
+											Scanning cluster nodes...
+										</div>
+									{:else if nodes.length === 0}
+										<div class="rounded-lg border border-border/80 bg-muted/30 p-4 text-center">
+											<p class="text-sm font-medium text-foreground">Local Controller Daemon</p>
+											<p class="text-xs text-muted-foreground mt-0.5">
+												No remote worker nodes registered. Server will be placed on the local controller daemon.
+											</p>
+										</div>
+									{:else}
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+											{#each nodes as node (node.id)}
+												<button
+													type="button"
+													onclick={() => { if (node.enabled) selectedNodeId = node.id; }}
+													class="flex flex-col justify-between p-3.5 rounded-lg border text-left transition-all {selectedNodeId === node.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border/60 bg-muted/20 hover:border-border'} {!node.enabled ? 'opacity-50 cursor-not-allowed' : ''}"
+												>
+													<div class="flex items-start justify-between gap-2 w-full">
+														<div class="min-w-0 flex-1">
+															<div class="flex items-center gap-2">
+																<span class="font-medium text-sm text-foreground truncate">{node.name}</span>
+																{#if node.isLocal}
+																	<Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4">Local</Badge>
+																{/if}
+															</div>
+															<p class="text-xs font-mono text-muted-foreground truncate mt-0.5">
+																{node.host || node.advertisedIp || 'local socket'}
+															</p>
+														</div>
+														<div class="flex items-center gap-1.5 flex-shrink-0">
+															{#if node.status === NodeStatus.ONLINE}
+																<Badge variant="outline" class="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1">
+																	<span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+																	Online
+																</Badge>
+															{:else}
+																<Badge variant="outline" class="border-rose-500/30 bg-rose-500/10 text-rose-400 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1">
+																	<span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>
+																	Offline
+																</Badge>
+															{/if}
+															{#if selectedNodeId === node.id}
+																<CheckCircle2 class="h-4 w-4 text-primary ml-1" />
+															{/if}
+														</div>
+													</div>
+
+													<div class="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-border/40 text-[11px] text-muted-foreground w-full">
+														<div>
+															<span>Allocated RAM:</span>
+															<span class="font-medium text-foreground ml-1">
+																{(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB
+																{#if Number(node.maxMemoryMb) > 0}
+																	/ {(Number(node.maxMemoryMb) / 1024).toFixed(0)} GB
+																{/if}
+															</span>
+														</div>
+														<div>
+															<span>Instances:</span>
+															<span class="font-medium text-foreground ml-1">
+																{node.serverCount}
+																{#if node.maxServers > 0}
+																	/ {node.maxServers}
+																{/if}
+															</span>
+														</div>
+													</div>
+												</button>
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{/if}
+						</CardContent>
+					</Card>
+				</div>
 
 				<!-- Docker Overrides - Advanced Configuration -->
 				<div class="lg:col-span-2">

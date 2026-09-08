@@ -34,6 +34,7 @@
 		Calendar
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import { apiFetch } from '$lib/api/fetch';
 	import ModpackDeployDialog from '$lib/components/modpack-deploy-dialog.svelte';
 
 	interface PackSummary {
@@ -81,7 +82,7 @@
 	async function loadPacks() {
 		loading = true;
 		try {
-			const res = await fetch('/api/v1/packwiz/packs');
+			const res = await apiFetch('/api/v1/packwiz/packs');
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
 			packs = data.packs || [];
@@ -101,7 +102,7 @@
 
 		creating = true;
 		try {
-			const res = await fetch('/api/v1/packwiz/packs', {
+			const res = await apiFetch('/api/v1/packwiz/packs', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -133,7 +134,7 @@
 		}
 
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${pack.id}`, { method: 'DELETE' });
+			const res = await apiFetch(`/api/v1/packwiz/packs/${pack.id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success(`Deleted modpack "${pack.name}"`);
 			packs = packs.filter((p) => p.id !== pack.id);
@@ -328,7 +329,7 @@
 			<div class="grid grid-cols-2 gap-3">
 				<div class="space-y-1.5">
 					<Label for="mcVersion">Minecraft Version</Label>
-					<Select value={newMcVersion} onValueChange={(val) => (newMcVersion = val)}>
+					<Select type="single" bind:value={newMcVersion}>
 						<SelectTrigger id="mcVersion">
 							<span>{newMcVersion}</span>
 						</SelectTrigger>
@@ -342,7 +343,7 @@
 
 				<div class="space-y-1.5">
 					<Label for="loader">Mod Loader</Label>
-					<Select value={newLoader} onValueChange={(val) => (newLoader = val)}>
+					<Select type="single" bind:value={newLoader}>
 						<SelectTrigger id="loader">
 							<span class="capitalize">{newLoader}</span>
 						</SelectTrigger>

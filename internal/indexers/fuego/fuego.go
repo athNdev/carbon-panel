@@ -194,7 +194,14 @@ func (c *Client) SearchModpacks(ctx context.Context, query string, gameVersion s
 	}
 
 	var result SearchModsResponse
-	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/search?%s", c.baseURL, params.Encode()), &result); err != nil {
+	urlStr := fmt.Sprintf("%s/mods/search?%s", c.baseURL, params.Encode())
+	if err := c.http.DoJSON(ctx, urlStr, &result); err != nil {
+		if c.baseURL != KeylessBaseURL {
+			fallbackURL := fmt.Sprintf("%s/mods/search?%s", KeylessBaseURL, params.Encode())
+			if fbErr := c.http.DoJSON(ctx, fallbackURL, &result); fbErr == nil {
+				return &result, nil
+			}
+		}
 		return nil, err
 	}
 
@@ -205,8 +212,16 @@ func (c *Client) GetModpackFiles(ctx context.Context, modID int) ([]File, error)
 	var result struct {
 		Data []File `json:"data"`
 	}
-	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/%d/files", c.baseURL, modID), &result); err != nil {
-		return nil, err
+	urlStr := fmt.Sprintf("%s/mods/%d/files", c.baseURL, modID)
+	if err := c.http.DoJSON(ctx, urlStr, &result); err != nil {
+		if c.baseURL != KeylessBaseURL {
+			fallbackURL := fmt.Sprintf("%s/mods/%d/files", KeylessBaseURL, modID)
+			if fbErr := c.http.DoJSON(ctx, fallbackURL, &result); fbErr != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	// Ensure each file has a download URL, falling back to CurseForge edge CDN if missing
@@ -224,7 +239,14 @@ func (c *Client) GetModpack(ctx context.Context, modID int) (*Modpack, error) {
 	var result struct {
 		Data Modpack `json:"data"`
 	}
-	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/%d", c.baseURL, modID), &result); err != nil {
+	urlStr := fmt.Sprintf("%s/mods/%d", c.baseURL, modID)
+	if err := c.http.DoJSON(ctx, urlStr, &result); err != nil {
+		if c.baseURL != KeylessBaseURL {
+			fallbackURL := fmt.Sprintf("%s/mods/%d", KeylessBaseURL, modID)
+			if fbErr := c.http.DoJSON(ctx, fallbackURL, &result); fbErr == nil {
+				return &result.Data, nil
+			}
+		}
 		return nil, err
 	}
 

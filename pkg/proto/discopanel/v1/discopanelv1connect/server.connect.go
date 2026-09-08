@@ -74,6 +74,9 @@ const (
 	// ServerServiceUploadToMCLogsProcedure is the fully-qualified name of the ServerService's
 	// UploadToMCLogs RPC.
 	ServerServiceUploadToMCLogsProcedure = "/discopanel.v1.ServerService/UploadToMCLogs"
+	// ServerServiceMigrateServerProcedure is the fully-qualified name of the ServerService's
+	// MigrateServer RPC.
+	ServerServiceMigrateServerProcedure = "/discopanel.v1.ServerService/MigrateServer"
 )
 
 // ServerServiceClient is a client for the discopanel.v1.ServerService service.
@@ -106,6 +109,8 @@ type ServerServiceClient interface {
 	SendCommand(context.Context, *connect.Request[v1.SendCommandRequest]) (*connect.Response[v1.SendCommandResponse], error)
 	// Upload server logs to mclo.gs
 	UploadToMCLogs(context.Context, *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error)
+	// Migrate server instance to a target Docker node
+	MigrateServer(context.Context, *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error)
 }
 
 // NewServerServiceClient constructs a client for the discopanel.v1.ServerService service. By
@@ -203,6 +208,12 @@ func NewServerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(serverServiceMethods.ByName("UploadToMCLogs")),
 			connect.WithClientOptions(opts...),
 		),
+		migrateServer: connect.NewClient[v1.MigrateServerRequest, v1.MigrateServerResponse](
+			httpClient,
+			baseURL+ServerServiceMigrateServerProcedure,
+			connect.WithSchema(serverServiceMethods.ByName("MigrateServer")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -222,6 +233,7 @@ type serverServiceClient struct {
 	recreateServer       *connect.Client[v1.RecreateServerRequest, v1.RecreateServerResponse]
 	sendCommand          *connect.Client[v1.SendCommandRequest, v1.SendCommandResponse]
 	uploadToMCLogs       *connect.Client[v1.UploadToMCLogsRequest, v1.UploadToMCLogsResponse]
+	migrateServer        *connect.Client[v1.MigrateServerRequest, v1.MigrateServerResponse]
 }
 
 // ListServers calls discopanel.v1.ServerService.ListServers.
@@ -294,6 +306,11 @@ func (c *serverServiceClient) UploadToMCLogs(ctx context.Context, req *connect.R
 	return c.uploadToMCLogs.CallUnary(ctx, req)
 }
 
+// MigrateServer calls discopanel.v1.ServerService.MigrateServer.
+func (c *serverServiceClient) MigrateServer(ctx context.Context, req *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error) {
+	return c.migrateServer.CallUnary(ctx, req)
+}
+
 // ServerServiceHandler is an implementation of the discopanel.v1.ServerService service.
 type ServerServiceHandler interface {
 	// Get all servers with optional stats
@@ -324,6 +341,8 @@ type ServerServiceHandler interface {
 	SendCommand(context.Context, *connect.Request[v1.SendCommandRequest]) (*connect.Response[v1.SendCommandResponse], error)
 	// Upload server logs to mclo.gs
 	UploadToMCLogs(context.Context, *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error)
+	// Migrate server instance to a target Docker node
+	MigrateServer(context.Context, *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error)
 }
 
 // NewServerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -417,6 +436,12 @@ func NewServerServiceHandler(svc ServerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(serverServiceMethods.ByName("UploadToMCLogs")),
 		connect.WithHandlerOptions(opts...),
 	)
+	serverServiceMigrateServerHandler := connect.NewUnaryHandler(
+		ServerServiceMigrateServerProcedure,
+		svc.MigrateServer,
+		connect.WithSchema(serverServiceMethods.ByName("MigrateServer")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/discopanel.v1.ServerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ServerServiceListServersProcedure:
@@ -447,6 +472,8 @@ func NewServerServiceHandler(svc ServerServiceHandler, opts ...connect.HandlerOp
 			serverServiceSendCommandHandler.ServeHTTP(w, r)
 		case ServerServiceUploadToMCLogsProcedure:
 			serverServiceUploadToMCLogsHandler.ServeHTTP(w, r)
+		case ServerServiceMigrateServerProcedure:
+			serverServiceMigrateServerHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -510,4 +537,8 @@ func (UnimplementedServerServiceHandler) SendCommand(context.Context, *connect.R
 
 func (UnimplementedServerServiceHandler) UploadToMCLogs(context.Context, *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ServerService.UploadToMCLogs is not implemented"))
+}
+
+func (UnimplementedServerServiceHandler) MigrateServer(context.Context, *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ServerService.MigrateServer is not implemented"))
 }
