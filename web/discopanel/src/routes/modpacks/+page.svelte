@@ -42,8 +42,10 @@ one at https://mozilla.org/MPL/2.0/.
 		X,
 		Globe,
 		Loader2,
-		Sparkles
+		Sparkles,
+		FileSearch
 	} from '@lucide/svelte';
+	import ManifestInspectorDialog from '$lib/components/manifest-inspector-dialog.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import {
 		Dialog,
@@ -84,6 +86,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let syncing = $state(false);
 	let showFavorites = $state(false);
 	let showUploaded = $state(false);
+	let showManifestInspector = $state(false);
 	let indexerStatus = $state<GetIndexerStatusResponse | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let uploading = $state(false);
@@ -477,6 +480,14 @@ one at https://mozilla.org/MPL/2.0/.
 			>
 				<Sparkles class="mr-2 h-5 w-5" />
 				Modpack Studio
+			</Button>
+			<Button
+				variant="outline"
+				onclick={() => (showManifestInspector = true)}
+				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
+			>
+				<FileSearch class="mr-2 h-5 w-5" />
+				Inspect Manifest
 			</Button>
 		</div>
 	</div>
@@ -913,4 +924,9 @@ one at https://mozilla.org/MPL/2.0/.
 			</p>
 		</div>
 	{/if}
+
+	<ManifestInspectorDialog
+		bind:open={showManifestInspector}
+		onOpenChange={(v) => (showManifestInspector = v)}
+	/>
 </div>
