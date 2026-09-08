@@ -35,14 +35,15 @@ const (
 type TaskType int32
 
 const (
-	TaskType_TASK_TYPE_UNSPECIFIED TaskType = 0
-	TaskType_TASK_TYPE_COMMAND     TaskType = 1 // Execute an RCON command
-	TaskType_TASK_TYPE_BACKUP      TaskType = 2 // Create a backup
-	TaskType_TASK_TYPE_RESTART     TaskType = 3 // Restart the server
-	TaskType_TASK_TYPE_START       TaskType = 4 // Start the server
-	TaskType_TASK_TYPE_STOP        TaskType = 5 // Stop the server
-	TaskType_TASK_TYPE_SCRIPT      TaskType = 6 // Run a custom script
-	TaskType_TASK_TYPE_WEBHOOK     TaskType = 7 // Send an HTTP webhook
+	TaskType_TASK_TYPE_UNSPECIFIED    TaskType = 0
+	TaskType_TASK_TYPE_COMMAND        TaskType = 1 // Execute an RCON command
+	TaskType_TASK_TYPE_BACKUP         TaskType = 2 // Create a backup
+	TaskType_TASK_TYPE_RESTART        TaskType = 3 // Restart the server
+	TaskType_TASK_TYPE_START          TaskType = 4 // Start the server
+	TaskType_TASK_TYPE_STOP           TaskType = 5 // Stop the server
+	TaskType_TASK_TYPE_SCRIPT         TaskType = 6 // Run a custom script
+	TaskType_TASK_TYPE_WEBHOOK        TaskType = 7 // Send an HTTP webhook
+	TaskType_TASK_TYPE_MODPACK_UPDATE TaskType = 8 // Check and pull modpack updates from source (e.g. Git)
 )
 
 // Enum value maps for TaskType.
@@ -56,16 +57,18 @@ var (
 		5: "TASK_TYPE_STOP",
 		6: "TASK_TYPE_SCRIPT",
 		7: "TASK_TYPE_WEBHOOK",
+		8: "TASK_TYPE_MODPACK_UPDATE",
 	}
 	TaskType_value = map[string]int32{
-		"TASK_TYPE_UNSPECIFIED": 0,
-		"TASK_TYPE_COMMAND":     1,
-		"TASK_TYPE_BACKUP":      2,
-		"TASK_TYPE_RESTART":     3,
-		"TASK_TYPE_START":       4,
-		"TASK_TYPE_STOP":        5,
-		"TASK_TYPE_SCRIPT":      6,
-		"TASK_TYPE_WEBHOOK":     7,
+		"TASK_TYPE_UNSPECIFIED":    0,
+		"TASK_TYPE_COMMAND":        1,
+		"TASK_TYPE_BACKUP":         2,
+		"TASK_TYPE_RESTART":        3,
+		"TASK_TYPE_START":          4,
+		"TASK_TYPE_STOP":           5,
+		"TASK_TYPE_SCRIPT":         6,
+		"TASK_TYPE_WEBHOOK":        7,
+		"TASK_TYPE_MODPACK_UPDATE": 8,
 	}
 )
 
@@ -888,6 +891,83 @@ func (x *WebhookTaskConfig) GetTimeoutMs() int32 {
 	return 0
 }
 
+// Configuration for Git/source modpack update tasks. Stored serialized as JSON in ScheduledTask.config.
+type ModpackUpdateTaskConfig struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	GitUrl             string                 `protobuf:"bytes,1,opt,name=git_url,json=gitUrl,proto3" json:"git_url,omitempty"`                                      // Git repository URL (e.g. https://github.com/user/modpack.git)
+	Branch             string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty"`                                                    // Git branch/tag (default "main" or "master")
+	TargetSubfolder    string                 `protobuf:"bytes,3,opt,name=target_subfolder,json=targetSubfolder,proto3" json:"target_subfolder,omitempty"`           // Optional subdirectory inside the git repo to sync
+	RestartImmediately bool                   `protobuf:"varint,4,opt,name=restart_immediately,json=restartImmediately,proto3" json:"restart_immediately,omitempty"` // If true, restart immediately when updates found; otherwise rely on scheduled maintenance
+	AuthToken          string                 `protobuf:"bytes,5,opt,name=auth_token,json=authToken,proto3" json:"auth_token,omitempty"`                             // Optional GitHub token or personal access token for private repositories
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ModpackUpdateTaskConfig) Reset() {
+	*x = ModpackUpdateTaskConfig{}
+	mi := &file_discopanel_v1_task_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModpackUpdateTaskConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModpackUpdateTaskConfig) ProtoMessage() {}
+
+func (x *ModpackUpdateTaskConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_task_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModpackUpdateTaskConfig.ProtoReflect.Descriptor instead.
+func (*ModpackUpdateTaskConfig) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ModpackUpdateTaskConfig) GetGitUrl() string {
+	if x != nil {
+		return x.GitUrl
+	}
+	return ""
+}
+
+func (x *ModpackUpdateTaskConfig) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *ModpackUpdateTaskConfig) GetTargetSubfolder() string {
+	if x != nil {
+		return x.TargetSubfolder
+	}
+	return ""
+}
+
+func (x *ModpackUpdateTaskConfig) GetRestartImmediately() bool {
+	if x != nil {
+		return x.RestartImmediately
+	}
+	return false
+}
+
+func (x *ModpackUpdateTaskConfig) GetAuthToken() string {
+	if x != nil {
+		return x.AuthToken
+	}
+	return ""
+}
+
 // List tasks request
 type ListTasksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -898,7 +978,7 @@ type ListTasksRequest struct {
 
 func (x *ListTasksRequest) Reset() {
 	*x = ListTasksRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[6]
+	mi := &file_discopanel_v1_task_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +990,7 @@ func (x *ListTasksRequest) String() string {
 func (*ListTasksRequest) ProtoMessage() {}
 
 func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[6]
+	mi := &file_discopanel_v1_task_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,7 +1003,7 @@ func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListTasksRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{6}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListTasksRequest) GetServerId() string {
@@ -943,7 +1023,7 @@ type ListTasksResponse struct {
 
 func (x *ListTasksResponse) Reset() {
 	*x = ListTasksResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[7]
+	mi := &file_discopanel_v1_task_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -955,7 +1035,7 @@ func (x *ListTasksResponse) String() string {
 func (*ListTasksResponse) ProtoMessage() {}
 
 func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[7]
+	mi := &file_discopanel_v1_task_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -968,7 +1048,7 @@ func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListTasksResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{7}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListTasksResponse) GetTasks() []*ScheduledTask {
@@ -988,7 +1068,7 @@ type GetTaskRequest struct {
 
 func (x *GetTaskRequest) Reset() {
 	*x = GetTaskRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[8]
+	mi := &file_discopanel_v1_task_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1000,7 +1080,7 @@ func (x *GetTaskRequest) String() string {
 func (*GetTaskRequest) ProtoMessage() {}
 
 func (x *GetTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[8]
+	mi := &file_discopanel_v1_task_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1013,7 +1093,7 @@ func (x *GetTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskRequest.ProtoReflect.Descriptor instead.
 func (*GetTaskRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{8}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetTaskRequest) GetId() string {
@@ -1033,7 +1113,7 @@ type GetTaskResponse struct {
 
 func (x *GetTaskResponse) Reset() {
 	*x = GetTaskResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[9]
+	mi := &file_discopanel_v1_task_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1045,7 +1125,7 @@ func (x *GetTaskResponse) String() string {
 func (*GetTaskResponse) ProtoMessage() {}
 
 func (x *GetTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[9]
+	mi := &file_discopanel_v1_task_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1058,7 +1138,7 @@ func (x *GetTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskResponse.ProtoReflect.Descriptor instead.
 func (*GetTaskResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{9}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetTaskResponse) GetTask() *ScheduledTask {
@@ -1096,7 +1176,7 @@ type CreateTaskRequest struct {
 
 func (x *CreateTaskRequest) Reset() {
 	*x = CreateTaskRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[10]
+	mi := &file_discopanel_v1_task_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1108,7 +1188,7 @@ func (x *CreateTaskRequest) String() string {
 func (*CreateTaskRequest) ProtoMessage() {}
 
 func (x *CreateTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[10]
+	mi := &file_discopanel_v1_task_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1121,7 +1201,7 @@ func (x *CreateTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskRequest.ProtoReflect.Descriptor instead.
 func (*CreateTaskRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{10}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateTaskRequest) GetServerId() string {
@@ -1239,7 +1319,7 @@ type CreateTaskResponse struct {
 
 func (x *CreateTaskResponse) Reset() {
 	*x = CreateTaskResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[11]
+	mi := &file_discopanel_v1_task_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1251,7 +1331,7 @@ func (x *CreateTaskResponse) String() string {
 func (*CreateTaskResponse) ProtoMessage() {}
 
 func (x *CreateTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[11]
+	mi := &file_discopanel_v1_task_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1264,7 +1344,7 @@ func (x *CreateTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskResponse.ProtoReflect.Descriptor instead.
 func (*CreateTaskResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{11}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateTaskResponse) GetTask() *ScheduledTask {
@@ -1303,7 +1383,7 @@ type UpdateTaskRequest struct {
 
 func (x *UpdateTaskRequest) Reset() {
 	*x = UpdateTaskRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[12]
+	mi := &file_discopanel_v1_task_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1315,7 +1395,7 @@ func (x *UpdateTaskRequest) String() string {
 func (*UpdateTaskRequest) ProtoMessage() {}
 
 func (x *UpdateTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[12]
+	mi := &file_discopanel_v1_task_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1328,7 +1408,7 @@ func (x *UpdateTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTaskRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{12}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateTaskRequest) GetId() string {
@@ -1453,7 +1533,7 @@ type UpdateTaskResponse struct {
 
 func (x *UpdateTaskResponse) Reset() {
 	*x = UpdateTaskResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[13]
+	mi := &file_discopanel_v1_task_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1465,7 +1545,7 @@ func (x *UpdateTaskResponse) String() string {
 func (*UpdateTaskResponse) ProtoMessage() {}
 
 func (x *UpdateTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[13]
+	mi := &file_discopanel_v1_task_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1478,7 +1558,7 @@ func (x *UpdateTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskResponse.ProtoReflect.Descriptor instead.
 func (*UpdateTaskResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{13}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *UpdateTaskResponse) GetTask() *ScheduledTask {
@@ -1498,7 +1578,7 @@ type DeleteTaskRequest struct {
 
 func (x *DeleteTaskRequest) Reset() {
 	*x = DeleteTaskRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[14]
+	mi := &file_discopanel_v1_task_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1510,7 +1590,7 @@ func (x *DeleteTaskRequest) String() string {
 func (*DeleteTaskRequest) ProtoMessage() {}
 
 func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[14]
+	mi := &file_discopanel_v1_task_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1523,7 +1603,7 @@ func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTaskRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTaskRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{14}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DeleteTaskRequest) GetId() string {
@@ -1542,7 +1622,7 @@ type DeleteTaskResponse struct {
 
 func (x *DeleteTaskResponse) Reset() {
 	*x = DeleteTaskResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[15]
+	mi := &file_discopanel_v1_task_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1554,7 +1634,7 @@ func (x *DeleteTaskResponse) String() string {
 func (*DeleteTaskResponse) ProtoMessage() {}
 
 func (x *DeleteTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[15]
+	mi := &file_discopanel_v1_task_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1567,7 +1647,7 @@ func (x *DeleteTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTaskResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTaskResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{15}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{16}
 }
 
 // Toggle task request
@@ -1581,7 +1661,7 @@ type ToggleTaskRequest struct {
 
 func (x *ToggleTaskRequest) Reset() {
 	*x = ToggleTaskRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[16]
+	mi := &file_discopanel_v1_task_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1593,7 +1673,7 @@ func (x *ToggleTaskRequest) String() string {
 func (*ToggleTaskRequest) ProtoMessage() {}
 
 func (x *ToggleTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[16]
+	mi := &file_discopanel_v1_task_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1606,7 +1686,7 @@ func (x *ToggleTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleTaskRequest.ProtoReflect.Descriptor instead.
 func (*ToggleTaskRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{16}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ToggleTaskRequest) GetId() string {
@@ -1633,7 +1713,7 @@ type ToggleTaskResponse struct {
 
 func (x *ToggleTaskResponse) Reset() {
 	*x = ToggleTaskResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[17]
+	mi := &file_discopanel_v1_task_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1645,7 +1725,7 @@ func (x *ToggleTaskResponse) String() string {
 func (*ToggleTaskResponse) ProtoMessage() {}
 
 func (x *ToggleTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[17]
+	mi := &file_discopanel_v1_task_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1658,7 +1738,7 @@ func (x *ToggleTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleTaskResponse.ProtoReflect.Descriptor instead.
 func (*ToggleTaskResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{17}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ToggleTaskResponse) GetTask() *ScheduledTask {
@@ -1678,7 +1758,7 @@ type TriggerTaskRequest struct {
 
 func (x *TriggerTaskRequest) Reset() {
 	*x = TriggerTaskRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[18]
+	mi := &file_discopanel_v1_task_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1690,7 +1770,7 @@ func (x *TriggerTaskRequest) String() string {
 func (*TriggerTaskRequest) ProtoMessage() {}
 
 func (x *TriggerTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[18]
+	mi := &file_discopanel_v1_task_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1703,7 +1783,7 @@ func (x *TriggerTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerTaskRequest.ProtoReflect.Descriptor instead.
 func (*TriggerTaskRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{18}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TriggerTaskRequest) GetId() string {
@@ -1723,7 +1803,7 @@ type TriggerTaskResponse struct {
 
 func (x *TriggerTaskResponse) Reset() {
 	*x = TriggerTaskResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[19]
+	mi := &file_discopanel_v1_task_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1735,7 +1815,7 @@ func (x *TriggerTaskResponse) String() string {
 func (*TriggerTaskResponse) ProtoMessage() {}
 
 func (x *TriggerTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[19]
+	mi := &file_discopanel_v1_task_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1748,7 +1828,7 @@ func (x *TriggerTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TriggerTaskResponse.ProtoReflect.Descriptor instead.
 func (*TriggerTaskResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{19}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *TriggerTaskResponse) GetExecution() *TaskExecution {
@@ -1769,7 +1849,7 @@ type ListTaskExecutionsRequest struct {
 
 func (x *ListTaskExecutionsRequest) Reset() {
 	*x = ListTaskExecutionsRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[20]
+	mi := &file_discopanel_v1_task_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1781,7 +1861,7 @@ func (x *ListTaskExecutionsRequest) String() string {
 func (*ListTaskExecutionsRequest) ProtoMessage() {}
 
 func (x *ListTaskExecutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[20]
+	mi := &file_discopanel_v1_task_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1794,7 +1874,7 @@ func (x *ListTaskExecutionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskExecutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListTaskExecutionsRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{20}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListTaskExecutionsRequest) GetTaskId() string {
@@ -1821,7 +1901,7 @@ type ListTaskExecutionsResponse struct {
 
 func (x *ListTaskExecutionsResponse) Reset() {
 	*x = ListTaskExecutionsResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[21]
+	mi := &file_discopanel_v1_task_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1833,7 +1913,7 @@ func (x *ListTaskExecutionsResponse) String() string {
 func (*ListTaskExecutionsResponse) ProtoMessage() {}
 
 func (x *ListTaskExecutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[21]
+	mi := &file_discopanel_v1_task_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1846,7 +1926,7 @@ func (x *ListTaskExecutionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskExecutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListTaskExecutionsResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{21}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListTaskExecutionsResponse) GetExecutions() []*TaskExecution {
@@ -1867,7 +1947,7 @@ type ListServerExecutionsRequest struct {
 
 func (x *ListServerExecutionsRequest) Reset() {
 	*x = ListServerExecutionsRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[22]
+	mi := &file_discopanel_v1_task_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1879,7 +1959,7 @@ func (x *ListServerExecutionsRequest) String() string {
 func (*ListServerExecutionsRequest) ProtoMessage() {}
 
 func (x *ListServerExecutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[22]
+	mi := &file_discopanel_v1_task_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1892,7 +1972,7 @@ func (x *ListServerExecutionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServerExecutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListServerExecutionsRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{22}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListServerExecutionsRequest) GetServerId() string {
@@ -1919,7 +1999,7 @@ type ListServerExecutionsResponse struct {
 
 func (x *ListServerExecutionsResponse) Reset() {
 	*x = ListServerExecutionsResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[23]
+	mi := &file_discopanel_v1_task_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1931,7 +2011,7 @@ func (x *ListServerExecutionsResponse) String() string {
 func (*ListServerExecutionsResponse) ProtoMessage() {}
 
 func (x *ListServerExecutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[23]
+	mi := &file_discopanel_v1_task_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1944,7 +2024,7 @@ func (x *ListServerExecutionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListServerExecutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListServerExecutionsResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{23}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListServerExecutionsResponse) GetExecutions() []*TaskExecution {
@@ -1964,7 +2044,7 @@ type GetTaskExecutionRequest struct {
 
 func (x *GetTaskExecutionRequest) Reset() {
 	*x = GetTaskExecutionRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[24]
+	mi := &file_discopanel_v1_task_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1976,7 +2056,7 @@ func (x *GetTaskExecutionRequest) String() string {
 func (*GetTaskExecutionRequest) ProtoMessage() {}
 
 func (x *GetTaskExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[24]
+	mi := &file_discopanel_v1_task_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1989,7 +2069,7 @@ func (x *GetTaskExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskExecutionRequest.ProtoReflect.Descriptor instead.
 func (*GetTaskExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{24}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetTaskExecutionRequest) GetId() string {
@@ -2009,7 +2089,7 @@ type GetTaskExecutionResponse struct {
 
 func (x *GetTaskExecutionResponse) Reset() {
 	*x = GetTaskExecutionResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[25]
+	mi := &file_discopanel_v1_task_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2021,7 +2101,7 @@ func (x *GetTaskExecutionResponse) String() string {
 func (*GetTaskExecutionResponse) ProtoMessage() {}
 
 func (x *GetTaskExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[25]
+	mi := &file_discopanel_v1_task_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2034,7 +2114,7 @@ func (x *GetTaskExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskExecutionResponse.ProtoReflect.Descriptor instead.
 func (*GetTaskExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{25}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetTaskExecutionResponse) GetExecution() *TaskExecution {
@@ -2054,7 +2134,7 @@ type CancelExecutionRequest struct {
 
 func (x *CancelExecutionRequest) Reset() {
 	*x = CancelExecutionRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[26]
+	mi := &file_discopanel_v1_task_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2066,7 +2146,7 @@ func (x *CancelExecutionRequest) String() string {
 func (*CancelExecutionRequest) ProtoMessage() {}
 
 func (x *CancelExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[26]
+	mi := &file_discopanel_v1_task_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2079,7 +2159,7 @@ func (x *CancelExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelExecutionRequest.ProtoReflect.Descriptor instead.
 func (*CancelExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{26}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *CancelExecutionRequest) GetId() string {
@@ -2099,7 +2179,7 @@ type CancelExecutionResponse struct {
 
 func (x *CancelExecutionResponse) Reset() {
 	*x = CancelExecutionResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[27]
+	mi := &file_discopanel_v1_task_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2111,7 +2191,7 @@ func (x *CancelExecutionResponse) String() string {
 func (*CancelExecutionResponse) ProtoMessage() {}
 
 func (x *CancelExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[27]
+	mi := &file_discopanel_v1_task_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2124,7 +2204,7 @@ func (x *CancelExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelExecutionResponse.ProtoReflect.Descriptor instead.
 func (*CancelExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{27}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CancelExecutionResponse) GetExecution() *TaskExecution {
@@ -2143,7 +2223,7 @@ type GetSchedulerStatusRequest struct {
 
 func (x *GetSchedulerStatusRequest) Reset() {
 	*x = GetSchedulerStatusRequest{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[28]
+	mi := &file_discopanel_v1_task_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2155,7 +2235,7 @@ func (x *GetSchedulerStatusRequest) String() string {
 func (*GetSchedulerStatusRequest) ProtoMessage() {}
 
 func (x *GetSchedulerStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[28]
+	mi := &file_discopanel_v1_task_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2168,7 +2248,7 @@ func (x *GetSchedulerStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSchedulerStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetSchedulerStatusRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{28}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{29}
 }
 
 // Current scheduler status
@@ -2185,7 +2265,7 @@ type GetSchedulerStatusResponse struct {
 
 func (x *GetSchedulerStatusResponse) Reset() {
 	*x = GetSchedulerStatusResponse{}
-	mi := &file_discopanel_v1_task_proto_msgTypes[29]
+	mi := &file_discopanel_v1_task_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2197,7 +2277,7 @@ func (x *GetSchedulerStatusResponse) String() string {
 func (*GetSchedulerStatusResponse) ProtoMessage() {}
 
 func (x *GetSchedulerStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_task_proto_msgTypes[29]
+	mi := &file_discopanel_v1_task_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2210,7 +2290,7 @@ func (x *GetSchedulerStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSchedulerStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetSchedulerStatusResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{29}
+	return file_discopanel_v1_task_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetSchedulerStatusResponse) GetRunning() bool {
@@ -2323,7 +2403,14 @@ const file_discopanel_v1_task_proto_rawDesc = "" +
 	"timeout_ms\x18\a \x01(\x05R\ttimeoutMs\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"/\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc5\x01\n" +
+	"\x17ModpackUpdateTaskConfig\x12\x17\n" +
+	"\agit_url\x18\x01 \x01(\tR\x06gitUrl\x12\x16\n" +
+	"\x06branch\x18\x02 \x01(\tR\x06branch\x12)\n" +
+	"\x10target_subfolder\x18\x03 \x01(\tR\x0ftargetSubfolder\x12/\n" +
+	"\x13restart_immediately\x18\x04 \x01(\bR\x12restartImmediately\x12\x1d\n" +
+	"\n" +
+	"auth_token\x18\x05 \x01(\tR\tauthToken\"/\n" +
 	"\x10ListTasksRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\"G\n" +
 	"\x11ListTasksResponse\x122\n" +
@@ -2434,7 +2521,7 @@ const file_discopanel_v1_task_proto_rawDesc = "" +
 	"\n" +
 	"last_check\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tlastCheck\x129\n" +
 	"\n" +
-	"next_check\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tnextCheck*\xbf\x01\n" +
+	"next_check\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tnextCheck*\xdd\x01\n" +
 	"\bTaskType\x12\x19\n" +
 	"\x15TASK_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11TASK_TYPE_COMMAND\x10\x01\x12\x14\n" +
@@ -2443,7 +2530,8 @@ const file_discopanel_v1_task_proto_rawDesc = "" +
 	"\x0fTASK_TYPE_START\x10\x04\x12\x12\n" +
 	"\x0eTASK_TYPE_STOP\x10\x05\x12\x14\n" +
 	"\x10TASK_TYPE_SCRIPT\x10\x06\x12\x15\n" +
-	"\x11TASK_TYPE_WEBHOOK\x10\a*t\n" +
+	"\x11TASK_TYPE_WEBHOOK\x10\a\x12\x1c\n" +
+	"\x18TASK_TYPE_MODPACK_UPDATE\x10\b*t\n" +
 	"\n" +
 	"TaskStatus\x12\x1b\n" +
 	"\x17TASK_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -2496,7 +2584,7 @@ func file_discopanel_v1_task_proto_rawDescGZIP() []byte {
 }
 
 var file_discopanel_v1_task_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_discopanel_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_discopanel_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_discopanel_v1_task_proto_goTypes = []any{
 	(TaskType)(0),                        // 0: discopanel.v1.TaskType
 	(TaskStatus)(0),                      // 1: discopanel.v1.TaskStatus
@@ -2508,59 +2596,60 @@ var file_discopanel_v1_task_proto_goTypes = []any{
 	(*BackupTaskConfig)(nil),             // 7: discopanel.v1.BackupTaskConfig
 	(*ScriptTaskConfig)(nil),             // 8: discopanel.v1.ScriptTaskConfig
 	(*WebhookTaskConfig)(nil),            // 9: discopanel.v1.WebhookTaskConfig
-	(*ListTasksRequest)(nil),             // 10: discopanel.v1.ListTasksRequest
-	(*ListTasksResponse)(nil),            // 11: discopanel.v1.ListTasksResponse
-	(*GetTaskRequest)(nil),               // 12: discopanel.v1.GetTaskRequest
-	(*GetTaskResponse)(nil),              // 13: discopanel.v1.GetTaskResponse
-	(*CreateTaskRequest)(nil),            // 14: discopanel.v1.CreateTaskRequest
-	(*CreateTaskResponse)(nil),           // 15: discopanel.v1.CreateTaskResponse
-	(*UpdateTaskRequest)(nil),            // 16: discopanel.v1.UpdateTaskRequest
-	(*UpdateTaskResponse)(nil),           // 17: discopanel.v1.UpdateTaskResponse
-	(*DeleteTaskRequest)(nil),            // 18: discopanel.v1.DeleteTaskRequest
-	(*DeleteTaskResponse)(nil),           // 19: discopanel.v1.DeleteTaskResponse
-	(*ToggleTaskRequest)(nil),            // 20: discopanel.v1.ToggleTaskRequest
-	(*ToggleTaskResponse)(nil),           // 21: discopanel.v1.ToggleTaskResponse
-	(*TriggerTaskRequest)(nil),           // 22: discopanel.v1.TriggerTaskRequest
-	(*TriggerTaskResponse)(nil),          // 23: discopanel.v1.TriggerTaskResponse
-	(*ListTaskExecutionsRequest)(nil),    // 24: discopanel.v1.ListTaskExecutionsRequest
-	(*ListTaskExecutionsResponse)(nil),   // 25: discopanel.v1.ListTaskExecutionsResponse
-	(*ListServerExecutionsRequest)(nil),  // 26: discopanel.v1.ListServerExecutionsRequest
-	(*ListServerExecutionsResponse)(nil), // 27: discopanel.v1.ListServerExecutionsResponse
-	(*GetTaskExecutionRequest)(nil),      // 28: discopanel.v1.GetTaskExecutionRequest
-	(*GetTaskExecutionResponse)(nil),     // 29: discopanel.v1.GetTaskExecutionResponse
-	(*CancelExecutionRequest)(nil),       // 30: discopanel.v1.CancelExecutionRequest
-	(*CancelExecutionResponse)(nil),      // 31: discopanel.v1.CancelExecutionResponse
-	(*GetSchedulerStatusRequest)(nil),    // 32: discopanel.v1.GetSchedulerStatusRequest
-	(*GetSchedulerStatusResponse)(nil),   // 33: discopanel.v1.GetSchedulerStatusResponse
-	nil,                                  // 34: discopanel.v1.WebhookTaskConfig.HeadersEntry
-	(*timestamppb.Timestamp)(nil),        // 35: google.protobuf.Timestamp
-	(TriggeredEventType)(0),              // 36: discopanel.v1.TriggeredEventType
+	(*ModpackUpdateTaskConfig)(nil),      // 10: discopanel.v1.ModpackUpdateTaskConfig
+	(*ListTasksRequest)(nil),             // 11: discopanel.v1.ListTasksRequest
+	(*ListTasksResponse)(nil),            // 12: discopanel.v1.ListTasksResponse
+	(*GetTaskRequest)(nil),               // 13: discopanel.v1.GetTaskRequest
+	(*GetTaskResponse)(nil),              // 14: discopanel.v1.GetTaskResponse
+	(*CreateTaskRequest)(nil),            // 15: discopanel.v1.CreateTaskRequest
+	(*CreateTaskResponse)(nil),           // 16: discopanel.v1.CreateTaskResponse
+	(*UpdateTaskRequest)(nil),            // 17: discopanel.v1.UpdateTaskRequest
+	(*UpdateTaskResponse)(nil),           // 18: discopanel.v1.UpdateTaskResponse
+	(*DeleteTaskRequest)(nil),            // 19: discopanel.v1.DeleteTaskRequest
+	(*DeleteTaskResponse)(nil),           // 20: discopanel.v1.DeleteTaskResponse
+	(*ToggleTaskRequest)(nil),            // 21: discopanel.v1.ToggleTaskRequest
+	(*ToggleTaskResponse)(nil),           // 22: discopanel.v1.ToggleTaskResponse
+	(*TriggerTaskRequest)(nil),           // 23: discopanel.v1.TriggerTaskRequest
+	(*TriggerTaskResponse)(nil),          // 24: discopanel.v1.TriggerTaskResponse
+	(*ListTaskExecutionsRequest)(nil),    // 25: discopanel.v1.ListTaskExecutionsRequest
+	(*ListTaskExecutionsResponse)(nil),   // 26: discopanel.v1.ListTaskExecutionsResponse
+	(*ListServerExecutionsRequest)(nil),  // 27: discopanel.v1.ListServerExecutionsRequest
+	(*ListServerExecutionsResponse)(nil), // 28: discopanel.v1.ListServerExecutionsResponse
+	(*GetTaskExecutionRequest)(nil),      // 29: discopanel.v1.GetTaskExecutionRequest
+	(*GetTaskExecutionResponse)(nil),     // 30: discopanel.v1.GetTaskExecutionResponse
+	(*CancelExecutionRequest)(nil),       // 31: discopanel.v1.CancelExecutionRequest
+	(*CancelExecutionResponse)(nil),      // 32: discopanel.v1.CancelExecutionResponse
+	(*GetSchedulerStatusRequest)(nil),    // 33: discopanel.v1.GetSchedulerStatusRequest
+	(*GetSchedulerStatusResponse)(nil),   // 34: discopanel.v1.GetSchedulerStatusResponse
+	nil,                                  // 35: discopanel.v1.WebhookTaskConfig.HeadersEntry
+	(*timestamppb.Timestamp)(nil),        // 36: google.protobuf.Timestamp
+	(TriggeredEventType)(0),              // 37: discopanel.v1.TriggeredEventType
 }
 var file_discopanel_v1_task_proto_depIdxs = []int32{
 	0,  // 0: discopanel.v1.ScheduledTask.task_type:type_name -> discopanel.v1.TaskType
 	1,  // 1: discopanel.v1.ScheduledTask.status:type_name -> discopanel.v1.TaskStatus
 	2,  // 2: discopanel.v1.ScheduledTask.schedule:type_name -> discopanel.v1.ScheduleType
-	35, // 3: discopanel.v1.ScheduledTask.run_at:type_name -> google.protobuf.Timestamp
-	35, // 4: discopanel.v1.ScheduledTask.next_run:type_name -> google.protobuf.Timestamp
-	35, // 5: discopanel.v1.ScheduledTask.last_run:type_name -> google.protobuf.Timestamp
-	35, // 6: discopanel.v1.ScheduledTask.created_at:type_name -> google.protobuf.Timestamp
-	35, // 7: discopanel.v1.ScheduledTask.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 8: discopanel.v1.ScheduledTask.event_triggers:type_name -> discopanel.v1.TriggeredEventType
+	36, // 3: discopanel.v1.ScheduledTask.run_at:type_name -> google.protobuf.Timestamp
+	36, // 4: discopanel.v1.ScheduledTask.next_run:type_name -> google.protobuf.Timestamp
+	36, // 5: discopanel.v1.ScheduledTask.last_run:type_name -> google.protobuf.Timestamp
+	36, // 6: discopanel.v1.ScheduledTask.created_at:type_name -> google.protobuf.Timestamp
+	36, // 7: discopanel.v1.ScheduledTask.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 8: discopanel.v1.ScheduledTask.event_triggers:type_name -> discopanel.v1.TriggeredEventType
 	3,  // 9: discopanel.v1.TaskExecution.status:type_name -> discopanel.v1.ExecutionStatus
-	35, // 10: discopanel.v1.TaskExecution.started_at:type_name -> google.protobuf.Timestamp
-	35, // 11: discopanel.v1.TaskExecution.ended_at:type_name -> google.protobuf.Timestamp
-	34, // 12: discopanel.v1.WebhookTaskConfig.headers:type_name -> discopanel.v1.WebhookTaskConfig.HeadersEntry
+	36, // 10: discopanel.v1.TaskExecution.started_at:type_name -> google.protobuf.Timestamp
+	36, // 11: discopanel.v1.TaskExecution.ended_at:type_name -> google.protobuf.Timestamp
+	35, // 12: discopanel.v1.WebhookTaskConfig.headers:type_name -> discopanel.v1.WebhookTaskConfig.HeadersEntry
 	4,  // 13: discopanel.v1.ListTasksResponse.tasks:type_name -> discopanel.v1.ScheduledTask
 	4,  // 14: discopanel.v1.GetTaskResponse.task:type_name -> discopanel.v1.ScheduledTask
 	0,  // 15: discopanel.v1.CreateTaskRequest.task_type:type_name -> discopanel.v1.TaskType
 	2,  // 16: discopanel.v1.CreateTaskRequest.schedule:type_name -> discopanel.v1.ScheduleType
-	35, // 17: discopanel.v1.CreateTaskRequest.run_at:type_name -> google.protobuf.Timestamp
-	36, // 18: discopanel.v1.CreateTaskRequest.event_triggers:type_name -> discopanel.v1.TriggeredEventType
+	36, // 17: discopanel.v1.CreateTaskRequest.run_at:type_name -> google.protobuf.Timestamp
+	37, // 18: discopanel.v1.CreateTaskRequest.event_triggers:type_name -> discopanel.v1.TriggeredEventType
 	4,  // 19: discopanel.v1.CreateTaskResponse.task:type_name -> discopanel.v1.ScheduledTask
 	0,  // 20: discopanel.v1.UpdateTaskRequest.task_type:type_name -> discopanel.v1.TaskType
 	2,  // 21: discopanel.v1.UpdateTaskRequest.schedule:type_name -> discopanel.v1.ScheduleType
-	35, // 22: discopanel.v1.UpdateTaskRequest.run_at:type_name -> google.protobuf.Timestamp
-	36, // 23: discopanel.v1.UpdateTaskRequest.event_triggers:type_name -> discopanel.v1.TriggeredEventType
+	36, // 22: discopanel.v1.UpdateTaskRequest.run_at:type_name -> google.protobuf.Timestamp
+	37, // 23: discopanel.v1.UpdateTaskRequest.event_triggers:type_name -> discopanel.v1.TriggeredEventType
 	4,  // 24: discopanel.v1.UpdateTaskResponse.task:type_name -> discopanel.v1.ScheduledTask
 	1,  // 25: discopanel.v1.ToggleTaskRequest.status:type_name -> discopanel.v1.TaskStatus
 	4,  // 26: discopanel.v1.ToggleTaskResponse.task:type_name -> discopanel.v1.ScheduledTask
@@ -2569,32 +2658,32 @@ var file_discopanel_v1_task_proto_depIdxs = []int32{
 	5,  // 29: discopanel.v1.ListServerExecutionsResponse.executions:type_name -> discopanel.v1.TaskExecution
 	5,  // 30: discopanel.v1.GetTaskExecutionResponse.execution:type_name -> discopanel.v1.TaskExecution
 	5,  // 31: discopanel.v1.CancelExecutionResponse.execution:type_name -> discopanel.v1.TaskExecution
-	35, // 32: discopanel.v1.GetSchedulerStatusResponse.last_check:type_name -> google.protobuf.Timestamp
-	35, // 33: discopanel.v1.GetSchedulerStatusResponse.next_check:type_name -> google.protobuf.Timestamp
-	10, // 34: discopanel.v1.TaskService.ListTasks:input_type -> discopanel.v1.ListTasksRequest
-	12, // 35: discopanel.v1.TaskService.GetTask:input_type -> discopanel.v1.GetTaskRequest
-	14, // 36: discopanel.v1.TaskService.CreateTask:input_type -> discopanel.v1.CreateTaskRequest
-	16, // 37: discopanel.v1.TaskService.UpdateTask:input_type -> discopanel.v1.UpdateTaskRequest
-	18, // 38: discopanel.v1.TaskService.DeleteTask:input_type -> discopanel.v1.DeleteTaskRequest
-	20, // 39: discopanel.v1.TaskService.ToggleTask:input_type -> discopanel.v1.ToggleTaskRequest
-	22, // 40: discopanel.v1.TaskService.TriggerTask:input_type -> discopanel.v1.TriggerTaskRequest
-	24, // 41: discopanel.v1.TaskService.ListTaskExecutions:input_type -> discopanel.v1.ListTaskExecutionsRequest
-	26, // 42: discopanel.v1.TaskService.ListServerExecutions:input_type -> discopanel.v1.ListServerExecutionsRequest
-	28, // 43: discopanel.v1.TaskService.GetTaskExecution:input_type -> discopanel.v1.GetTaskExecutionRequest
-	30, // 44: discopanel.v1.TaskService.CancelExecution:input_type -> discopanel.v1.CancelExecutionRequest
-	32, // 45: discopanel.v1.TaskService.GetSchedulerStatus:input_type -> discopanel.v1.GetSchedulerStatusRequest
-	11, // 46: discopanel.v1.TaskService.ListTasks:output_type -> discopanel.v1.ListTasksResponse
-	13, // 47: discopanel.v1.TaskService.GetTask:output_type -> discopanel.v1.GetTaskResponse
-	15, // 48: discopanel.v1.TaskService.CreateTask:output_type -> discopanel.v1.CreateTaskResponse
-	17, // 49: discopanel.v1.TaskService.UpdateTask:output_type -> discopanel.v1.UpdateTaskResponse
-	19, // 50: discopanel.v1.TaskService.DeleteTask:output_type -> discopanel.v1.DeleteTaskResponse
-	21, // 51: discopanel.v1.TaskService.ToggleTask:output_type -> discopanel.v1.ToggleTaskResponse
-	23, // 52: discopanel.v1.TaskService.TriggerTask:output_type -> discopanel.v1.TriggerTaskResponse
-	25, // 53: discopanel.v1.TaskService.ListTaskExecutions:output_type -> discopanel.v1.ListTaskExecutionsResponse
-	27, // 54: discopanel.v1.TaskService.ListServerExecutions:output_type -> discopanel.v1.ListServerExecutionsResponse
-	29, // 55: discopanel.v1.TaskService.GetTaskExecution:output_type -> discopanel.v1.GetTaskExecutionResponse
-	31, // 56: discopanel.v1.TaskService.CancelExecution:output_type -> discopanel.v1.CancelExecutionResponse
-	33, // 57: discopanel.v1.TaskService.GetSchedulerStatus:output_type -> discopanel.v1.GetSchedulerStatusResponse
+	36, // 32: discopanel.v1.GetSchedulerStatusResponse.last_check:type_name -> google.protobuf.Timestamp
+	36, // 33: discopanel.v1.GetSchedulerStatusResponse.next_check:type_name -> google.protobuf.Timestamp
+	11, // 34: discopanel.v1.TaskService.ListTasks:input_type -> discopanel.v1.ListTasksRequest
+	13, // 35: discopanel.v1.TaskService.GetTask:input_type -> discopanel.v1.GetTaskRequest
+	15, // 36: discopanel.v1.TaskService.CreateTask:input_type -> discopanel.v1.CreateTaskRequest
+	17, // 37: discopanel.v1.TaskService.UpdateTask:input_type -> discopanel.v1.UpdateTaskRequest
+	19, // 38: discopanel.v1.TaskService.DeleteTask:input_type -> discopanel.v1.DeleteTaskRequest
+	21, // 39: discopanel.v1.TaskService.ToggleTask:input_type -> discopanel.v1.ToggleTaskRequest
+	23, // 40: discopanel.v1.TaskService.TriggerTask:input_type -> discopanel.v1.TriggerTaskRequest
+	25, // 41: discopanel.v1.TaskService.ListTaskExecutions:input_type -> discopanel.v1.ListTaskExecutionsRequest
+	27, // 42: discopanel.v1.TaskService.ListServerExecutions:input_type -> discopanel.v1.ListServerExecutionsRequest
+	29, // 43: discopanel.v1.TaskService.GetTaskExecution:input_type -> discopanel.v1.GetTaskExecutionRequest
+	31, // 44: discopanel.v1.TaskService.CancelExecution:input_type -> discopanel.v1.CancelExecutionRequest
+	33, // 45: discopanel.v1.TaskService.GetSchedulerStatus:input_type -> discopanel.v1.GetSchedulerStatusRequest
+	12, // 46: discopanel.v1.TaskService.ListTasks:output_type -> discopanel.v1.ListTasksResponse
+	14, // 47: discopanel.v1.TaskService.GetTask:output_type -> discopanel.v1.GetTaskResponse
+	16, // 48: discopanel.v1.TaskService.CreateTask:output_type -> discopanel.v1.CreateTaskResponse
+	18, // 49: discopanel.v1.TaskService.UpdateTask:output_type -> discopanel.v1.UpdateTaskResponse
+	20, // 50: discopanel.v1.TaskService.DeleteTask:output_type -> discopanel.v1.DeleteTaskResponse
+	22, // 51: discopanel.v1.TaskService.ToggleTask:output_type -> discopanel.v1.ToggleTaskResponse
+	24, // 52: discopanel.v1.TaskService.TriggerTask:output_type -> discopanel.v1.TriggerTaskResponse
+	26, // 53: discopanel.v1.TaskService.ListTaskExecutions:output_type -> discopanel.v1.ListTaskExecutionsResponse
+	28, // 54: discopanel.v1.TaskService.ListServerExecutions:output_type -> discopanel.v1.ListServerExecutionsResponse
+	30, // 55: discopanel.v1.TaskService.GetTaskExecution:output_type -> discopanel.v1.GetTaskExecutionResponse
+	32, // 56: discopanel.v1.TaskService.CancelExecution:output_type -> discopanel.v1.CancelExecutionResponse
+	34, // 57: discopanel.v1.TaskService.GetSchedulerStatus:output_type -> discopanel.v1.GetSchedulerStatusResponse
 	46, // [46:58] is the sub-list for method output_type
 	34, // [34:46] is the sub-list for method input_type
 	34, // [34:34] is the sub-list for extension type_name
@@ -2608,14 +2697,14 @@ func file_discopanel_v1_task_proto_init() {
 		return
 	}
 	file_discopanel_v1_event_proto_init()
-	file_discopanel_v1_task_proto_msgTypes[12].OneofWrappers = []any{}
+	file_discopanel_v1_task_proto_msgTypes[13].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_discopanel_v1_task_proto_rawDesc), len(file_discopanel_v1_task_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   31,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

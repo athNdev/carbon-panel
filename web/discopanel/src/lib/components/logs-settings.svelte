@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import {
@@ -65,7 +76,7 @@
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
-		a.download = filename || 'discopanel.log';
+		a.download = filename || 'mineserver.log';
 		a.click();
 		URL.revokeObjectURL(url);
 		toast.success('Logs downloaded');
@@ -109,7 +120,7 @@
 			<div>
 				<CardTitle class="text-2xl font-semibold">Application Logs</CardTitle>
 				<CardDescription class="mt-2 text-base">
-					View real-time DiscoPanel application logs for debugging and monitoring.
+					View real-time MineServer application logs for debugging and monitoring.
 				</CardDescription>
 			</div>
 			<div class="flex items-center gap-2">

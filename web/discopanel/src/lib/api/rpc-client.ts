@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 import {
 	createClient,
 	type Client,
@@ -28,6 +37,7 @@ import { UploadService } from '$lib/proto/discopanel/v1/upload_pb';
 import { UserService } from '$lib/proto/discopanel/v1/user_pb';
 import { RoleService } from '$lib/proto/discopanel/v1/role_pb';
 import { ModuleService } from '$lib/proto/discopanel/v1/module_pb';
+import { NodeService } from '$lib/proto/discopanel/v1/node_pb';
 
 // Header to mark requests as silent / no loader
 const SILENT_HEADER = 'X-Silent-Request';
@@ -106,6 +116,7 @@ export class RpcClient {
 	public readonly user: Client<typeof UserService>;
 	public readonly role: Client<typeof RoleService>;
 	public readonly module: Client<typeof ModuleService>;
+	public readonly node: Client<typeof NodeService>;
 
 	constructor() {
 		this.auth = createClient(AuthService, transport);
@@ -122,6 +133,7 @@ export class RpcClient {
 		this.user = createClient(UserService, transport);
 		this.role = createClient(RoleService, transport);
 		this.module = createClient(ModuleService, transport);
+		this.node = createClient(NodeService, transport);
 	}
 }
 

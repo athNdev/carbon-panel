@@ -1,8 +1,18 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package handlers
 
 import (
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -24,15 +34,24 @@ func NewOpenAPIHandler(log *logger.Logger, isAuthEnabled func() bool) http.Handl
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		once.Do(func() {
-			buildFS, err := web.BuildFS()
-			if err != nil {
-				log.Error("Failed to get frontend FS for OpenAPI spec: %v", err)
-				return
+			var raw []byte
+			if buildFS, err := web.BuildFS(); err == nil {
+				raw, _ = fs.ReadFile(buildFS, "schemav1.yaml")
 			}
-
-			raw, err := fs.ReadFile(buildFS, "schemav1.yaml")
-			if err != nil {
-				log.Error("Failed to read OpenAPI spec: %v", err)
+			if len(raw) == 0 {
+				for _, fallbackPath := range []string{
+					"web/discopanel/static/schemav1.yaml",
+					"static/schemav1.yaml",
+					"/workspace/discopanel/web/discopanel/static/schemav1.yaml",
+				} {
+					if data, err := os.ReadFile(fallbackPath); err == nil && len(data) > 0 {
+						raw = data
+						break
+					}
+				}
+			}
+			if len(raw) == 0 {
+				log.Error("Failed to read OpenAPI spec from build or static directory")
 				return
 			}
 

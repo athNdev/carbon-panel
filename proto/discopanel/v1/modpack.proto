@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 syntax = "proto3";
 
 package discopanel.v1;
@@ -20,6 +29,8 @@ service ModpackService {
   rpc SyncModpacks(SyncModpacksRequest) returns (SyncModpacksResponse);
   // Import modpack from chunked upload session
   rpc ImportUploadedModpack(ImportUploadedModpackRequest) returns (ImportUploadedModpackResponse);
+  // Import modpack from external URL (GitHub release, CDN, static host)
+  rpc ImportRemoteModpack(ImportRemoteModpackRequest) returns (ImportRemoteModpackResponse);
   // Remove indexed modpack
   rpc DeleteModpack(DeleteModpackRequest) returns (DeleteModpackResponse);
   // Mark modpack as favorite
@@ -149,6 +160,22 @@ message ImportUploadedModpackRequest {
 
 // Import result
 message ImportUploadedModpackResponse {
+  IndexedModpack modpack = 1;
+  string message = 2;
+}
+
+// Import modpack from external URL (GitHub release, CDN, static file host)
+message ImportRemoteModpackRequest {
+  string url = 1;
+  string name = 2;
+  string description = 3;
+  string mc_version = 4;
+  string mod_loader = 5;
+  string auth_token = 6;
+}
+
+// Remote import result
+message ImportRemoteModpackResponse {
   IndexedModpack modpack = 1;
   string message = 2;
 }
