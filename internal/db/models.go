@@ -310,6 +310,8 @@ type ServerConfig struct {
 	ModrinthDownloadDependencies       *string `json:"modrinthDownloadDependencies" env:"MODRINTH_DOWNLOAD_DEPENDENCIES" default:"none" desc:"Dependency download mode (none, required, optional)" input:"select" label:"Modrinth Download Dependencies"`
 	ModrinthProjectsDefaultVersionType *string `json:"modrinthProjectsDefaultVersionType" env:"MODRINTH_PROJECTS_DEFAULT_VERSION_TYPE" default:"release" desc:"Default version type to select (release, beta, alpha)" input:"select" label:"Modrinth Default Version Type"`
 	VersionFromModrinthProjects        *bool   `json:"versionFromModrinthProjects" env:"VERSION_FROM_MODRINTH_PROJECTS" default:"false" desc:"Automatically set VERSION from Modrinth project compatibility" input:"checkbox" label:"Version From Modrinth Projects"`
+	ModrinthToken                      *string `json:"modrinthToken" env:"MODRINTH_TOKEN" default:"" desc:"Modrinth Personal Access Token (PAT) for increased rate limits" input:"password" label:"Modrinth Token"`
+	ModrinthUserAgent                  *string `json:"modrinthUserAgent" env:"MODRINTH_USER_AGENT" default:"" desc:"Custom User-Agent header for Modrinth API requests" input:"text" label:"Modrinth User-Agent"`
 }
 
 type Mod struct {
