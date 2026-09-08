@@ -13,7 +13,8 @@
 		ToggleRight,
 		Package,
 		FileText,
-		X
+		X,
+		Sparkles
 	} from '@lucide/svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
@@ -21,6 +22,7 @@
 	import type { Mod } from '$lib/proto/discopanel/v1/mod_pb';
 	import { formatBytes } from '$lib/utils';
 	import { uploadFile, cancelUpload, type UploadProgress } from '$lib/utils/chunked-upload';
+	import ModBrowserDialog from '$lib/components/mod-browser-dialog.svelte';
 
 	interface Props {
 		server: Server;
@@ -36,6 +38,7 @@
 	let currentUploadFilename = $state('');
 	let uploadAbortController = $state<AbortController | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
+	let browserDialogOpen = $state(false);
 
 	let hasLoaded = false;
 	let previousServerId = $state(server.id);
@@ -228,22 +231,28 @@
 						</p>
 					</div>
 					{#if canHaveMods()}
-						<Button onclick={() => fileInput?.click()} disabled={uploading}>
-							{#if uploading}
-								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-							{:else}
-								<Upload class="mr-2 h-4 w-4" />
-							{/if}
-							Upload Mods
-						</Button>
-						<input
-							bind:this={fileInput}
-							type="file"
-							multiple
-							accept=".jar,.zip"
-							onchange={handleFileSelect}
-							class="hidden"
-						/>
+						<div class="flex items-center gap-2">
+							<Button variant="default" onclick={() => (browserDialogOpen = true)}>
+								<Sparkles class="mr-2 h-4 w-4" />
+								Browse & Install Mods
+							</Button>
+							<Button variant="outline" onclick={() => fileInput?.click()} disabled={uploading}>
+								{#if uploading}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								{:else}
+									<Upload class="mr-2 h-4 w-4" />
+								{/if}
+								Upload Mods
+							</Button>
+							<input
+								bind:this={fileInput}
+								type="file"
+								multiple
+								accept=".jar,.zip"
+								onchange={handleFileSelect}
+								class="hidden"
+							/>
+						</div>
 					{/if}
 				</div>
 			</CardHeader>
@@ -361,3 +370,5 @@
 		</Card>
 	</ResizablePane>
 </ResizablePaneGroup>
+
+<ModBrowserDialog bind:open={browserDialogOpen} {server} onInstalled={loadMods} />
