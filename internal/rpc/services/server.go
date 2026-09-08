@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -746,6 +747,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		bgCtx := context.Background()
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
 
+		s.prepareServerConfig(bgCtx, server, serverConfig)
 		dockerCli := s.getDockerClient(server.NodeID)
 		containerID, err := dockerCli.CreateContainer(bgCtx, server, serverConfig)
 		if err != nil {
@@ -1127,6 +1129,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration"))
 		}
 
+		s.prepareServerConfig(ctx, server, serverConfig)
 		containerID, err := dockerCli.CreateContainer(ctx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
@@ -1296,6 +1299,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		}
 
 		// Create container
+		s.prepareServerConfig(ctx, server, serverConfig)
 		containerID, err := dockerCli.CreateContainer(ctx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
@@ -1655,4 +1659,39 @@ func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.R
 		Port:      nextPort,
 		UsedPorts: usedPorts,
 	}), nil
+}
+
+// prepareServerConfig fills in global settings and defaults for server config before container launch
+func (s *ServerService) prepareServerConfig(ctx context.Context, server *storage.Server, serverConfig *storage.ServerConfig) {
+	if serverConfig == nil {
+		return
+	}
+	// Inherit global CF API Key if not set on server
+	if serverConfig.CFAPIKey == nil || *serverConfig.CFAPIKey == "" {
+		if globalSettings, _, err := s.store.GetGlobalSettings(ctx); err == nil && globalSettings != nil && globalSettings.CFAPIKey != nil && *globalSettings.CFAPIKey != "" {
+			serverConfig.CFAPIKey = globalSettings.CFAPIKey
+		}
+	}
+	// Inherit global Modrinth Token if not set on server
+	if serverConfig.ModrinthToken == nil || *serverConfig.ModrinthToken == "" {
+		if globalSettings, _, err := s.store.GetGlobalSettings(ctx); err == nil && globalSettings != nil && globalSettings.ModrinthToken != nil && *globalSettings.ModrinthToken != "" {
+			serverConfig.ModrinthToken = globalSettings.ModrinthToken
+		}
+	}
+	// Auto-assume CF slug from server name if AUTO_CURSEFORGE and no slug or page URL is set
+	if server != nil && server.ModLoader == storage.ModLoaderAutoCurseForge {
+		if (serverConfig.CFSlug == nil || *serverConfig.CFSlug == "") && (serverConfig.CFPageURL == nil || *serverConfig.CFPageURL == "") && server.Name != "" {
+			slug := slugifyName(server.Name)
+			if slug != "" {
+				serverConfig.CFSlug = &slug
+			}
+		}
+	}
+}
+
+func slugifyName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	re := regexp.MustCompile(`[^a-z0-9]+`)
+	slug := re.ReplaceAllString(name, "-")
+	return strings.Trim(slug, "-")
 }

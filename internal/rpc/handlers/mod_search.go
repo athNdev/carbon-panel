@@ -181,14 +181,6 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 		if globalSettings != nil && globalSettings.CFAPIKey != nil {
 			apiKey = *globalSettings.CFAPIKey
 		}
-		if apiKey == "" {
-			writeJSON(w, http.StatusOK, map[string]any{
-				"results": []SearchModResult{},
-				"error":   "CurseForge API key not configured. Please set it in Settings -> API Keys.",
-			})
-			return
-		}
-
 		results = m.searchCurseForge(r.Context(), apiKey, query, loader, mcVersion, installedMods)
 	} else {
 		// Modrinth
@@ -304,7 +296,12 @@ func (m *ModOnlineManager) searchCurseForge(ctx context.Context, apiKey, query, 
 		cfLoaderType = 6
 	}
 
-	reqURL := fmt.Sprintf("https://api.curseforge.com/v1/mods/search?gameId=432&classId=6&searchFilter=%s&pageSize=25", url.QueryEscape(query))
+	var reqURL string
+	if apiKey != "" {
+		reqURL = fmt.Sprintf("https://api.curseforge.com/v1/mods/search?gameId=432&classId=6&searchFilter=%s&pageSize=25", url.QueryEscape(query))
+	} else {
+		reqURL = fmt.Sprintf("https://api.curse.tools/v1/cf/mods/search?gameId=432&classId=6&searchFilter=%s&pageSize=25", url.QueryEscape(query))
+	}
 	if mcVersion != "" {
 		reqURL += fmt.Sprintf("&gameVersion=%s", url.QueryEscape(mcVersion))
 	}
@@ -316,7 +313,9 @@ func (m *ModOnlineManager) searchCurseForge(ctx context.Context, apiKey, query, 
 	if err != nil {
 		return []SearchModResult{}
 	}
-	req.Header.Set("x-api-key", apiKey)
+	if apiKey != "" {
+		req.Header.Set("x-api-key", apiKey)
+	}
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := m.httpClient.Do(req)
@@ -536,12 +535,12 @@ func (m *ModOnlineManager) handleModrinthVersions(w http.ResponseWriter, r *http
 }
 
 func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *http.Request, apiKey, modID, loader, mcVersion string) {
-	if apiKey == "" {
-		http.Error(w, "curseforge api key not configured", http.StatusBadRequest)
-		return
+	var reqURL string
+	if apiKey != "" {
+		reqURL = fmt.Sprintf("https://api.curseforge.com/v1/mods/%s/files?pageSize=20", modID)
+	} else {
+		reqURL = fmt.Sprintf("https://api.curse.tools/v1/cf/mods/%s/files?pageSize=20", modID)
 	}
-
-	reqURL := fmt.Sprintf("https://api.curseforge.com/v1/mods/%s/files?pageSize=20", modID)
 	if mcVersion != "" {
 		reqURL += fmt.Sprintf("&gameVersion=%s", url.QueryEscape(mcVersion))
 	}
@@ -565,7 +564,9 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	req.Header.Set("x-api-key", apiKey)
+	if apiKey != "" {
+		req.Header.Set("x-api-key", apiKey)
+	}
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := m.httpClient.Do(req)
@@ -621,13 +622,18 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 			})
 		}
 
+		downloadURL := f.DownloadURL
+		if downloadURL == "" && f.FileName != "" {
+			downloadURL = fmt.Sprintf("https://edge.forgecdn.net/files/%d/%d/%s", f.ID/1000, f.ID%1000, url.PathEscape(f.FileName))
+		}
+
 		versions = append(versions, ModVersionItem{
 			ID:            fmt.Sprintf("%d", f.ID),
 			VersionNumber: f.DisplayName,
 			Name:          f.DisplayName,
 			VersionType:   vType,
 			FileName:      f.FileName,
-			DownloadURL:   f.DownloadURL,
+			DownloadURL:   downloadURL,
 			FileSize:      f.FileLength,
 			Dependencies:  deps,
 		})
