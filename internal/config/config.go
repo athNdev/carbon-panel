@@ -92,6 +92,7 @@ type ProxyConfig struct {
 	ListenPorts  []int  `mapstructure:"listen_ports" json:"listen_ports"` // Multiple listen ports
 	PortRangeMin int    `mapstructure:"port_range_min" json:"port_range_min"`
 	PortRangeMax int    `mapstructure:"port_range_max" json:"port_range_max"`
+	ValkeyURL    string `mapstructure:"valkey_url" json:"valkey_url"` // Valkey / Dragonfly Redis KV URL (e.g. redis://127.0.0.1:6379)
 }
 
 type ModuleConfig struct {
