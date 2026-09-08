@@ -1,4 +1,4 @@
-package minecraft
+package utils
 
 import (
 	"fmt"
@@ -31,8 +31,6 @@ func CalculateMemoryAllocation(allocatedRAMMB int) MemoryAllocation {
 		allocatedRAMMB = 2048
 	}
 
-	// Calculate Max JVM Heap such that:
-	// ContainerLimit >= MaxHeap * 1.28 + 384MB
 	var maxHeapMB int
 	if allocatedRAMMB > (OffHeapBufferMB + 256) {
 		maxHeapMB = int(math.Floor(float64(allocatedRAMMB-OffHeapBufferMB) / HeadroomRatio))
@@ -44,13 +42,11 @@ func CalculateMemoryAllocation(allocatedRAMMB int) MemoryAllocation {
 		maxHeapMB = 256
 	}
 
-	// Dynamic -Xms set to 50% of -Xmx for smooth initial startup and garbage collection
 	initHeapMB := int(float64(maxHeapMB) * 0.5)
 	if initHeapMB < 128 {
 		initHeapMB = 128
 	}
 
-	// Container memory limit exceeds -Xmx by 28% plus 384MB off-heap buffer
 	guardedContainerLimitMB := int(math.Ceil(float64(maxHeapMB)*HeadroomRatio)) + OffHeapBufferMB
 	if guardedContainerLimitMB < allocatedRAMMB {
 		guardedContainerLimitMB = allocatedRAMMB

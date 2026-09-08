@@ -9,7 +9,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
 	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/internal/minecraft"
+	"github.com/nickheyer/discopanel/pkg/utils"
 	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -167,7 +167,7 @@ func (s *Store) UpdateServerConfigMemory(ctx context.Context, serverID string, m
 	}
 
 	// Update memory and max memory dynamically with headroom (MINE-4)
-	alloc := minecraft.CalculateMemoryAllocation(memory)
+	alloc := utils.CalculateMemoryAllocation(memory)
 	config.MaxMemory = &alloc.MaxMemoryStr
 	config.InitMemory = &alloc.InitMemoryStr
 
