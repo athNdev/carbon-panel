@@ -468,6 +468,15 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		},
 	}
 
+	// Apply dynamic memory headroom & OOM-kill (exit 137) guard (MINE-4)
+	alloc := minecraft.CalculateMemoryAllocation(server.Memory)
+	containerLimitBytes := alloc.ContainerLimitBytes
+	if serverConfig.MaxMemory != nil && *serverConfig.MaxMemory != "" {
+		if customMaxMB, err := minecraft.ParseMemoryMB(*serverConfig.MaxMemory); err == nil && customMaxMB > 0 {
+			_, containerLimitBytes = minecraft.EnsureMemoryHeadroom(customMaxMB, alloc.ContainerLimitMB)
+		}
+	}
+
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
 		Mounts: []mount.Mount{
@@ -475,8 +484,8 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		},
 		RestartPolicy: container.RestartPolicy{Name: "unless-stopped"},
 		Resources: container.Resources{
-			Memory:     int64(server.Memory) * 1024 * 1024,
-			MemorySwap: int64(server.Memory) * 1024 * 1024,
+			Memory:     containerLimitBytes,
+			MemorySwap: containerLimitBytes,
 		},
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
