@@ -693,6 +693,335 @@ func (x *DeleteModResponse) GetMessage() string {
 	return ""
 }
 
+// Fabric optimization mod item
+type FabricOptimizationMod struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	ModId                   string                 `protobuf:"bytes,1,opt,name=mod_id,json=modId,proto3" json:"mod_id,omitempty"` // e.g. "lithium", "ferrite-core", "modernfix", "c2me-fabric"
+	Name                    string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                // e.g. "Lithium", "FerriteCore", "ModernFix", "C2ME"
+	Description             string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`  // Mod optimization description
+	Installed               bool                   `protobuf:"varint,4,opt,name=installed,proto3" json:"installed,omitempty"`
+	Compatible              bool                   `protobuf:"varint,5,opt,name=compatible,proto3" json:"compatible,omitempty"`
+	InstalledVersion        string                 `protobuf:"bytes,6,opt,name=installed_version,json=installedVersion,proto3" json:"installed_version,omitempty"`
+	LatestCompatibleVersion string                 `protobuf:"bytes,7,opt,name=latest_compatible_version,json=latestCompatibleVersion,proto3" json:"latest_compatible_version,omitempty"`
+	FileName                string                 `protobuf:"bytes,8,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	DownloadUrl             string                 `protobuf:"bytes,9,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *FabricOptimizationMod) Reset() {
+	*x = FabricOptimizationMod{}
+	mi := &file_discopanel_v1_mod_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FabricOptimizationMod) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FabricOptimizationMod) ProtoMessage() {}
+
+func (x *FabricOptimizationMod) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_mod_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FabricOptimizationMod.ProtoReflect.Descriptor instead.
+func (*FabricOptimizationMod) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_mod_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *FabricOptimizationMod) GetModId() string {
+	if x != nil {
+		return x.ModId
+	}
+	return ""
+}
+
+func (x *FabricOptimizationMod) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *FabricOptimizationMod) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *FabricOptimizationMod) GetInstalled() bool {
+	if x != nil {
+		return x.Installed
+	}
+	return false
+}
+
+func (x *FabricOptimizationMod) GetCompatible() bool {
+	if x != nil {
+		return x.Compatible
+	}
+	return false
+}
+
+func (x *FabricOptimizationMod) GetInstalledVersion() string {
+	if x != nil {
+		return x.InstalledVersion
+	}
+	return ""
+}
+
+func (x *FabricOptimizationMod) GetLatestCompatibleVersion() string {
+	if x != nil {
+		return x.LatestCompatibleVersion
+	}
+	return ""
+}
+
+func (x *FabricOptimizationMod) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *FabricOptimizationMod) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
+}
+
+// Get Fabric optimization stack request
+type GetFabricOptimizationStackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFabricOptimizationStackRequest) Reset() {
+	*x = GetFabricOptimizationStackRequest{}
+	mi := &file_discopanel_v1_mod_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFabricOptimizationStackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFabricOptimizationStackRequest) ProtoMessage() {}
+
+func (x *GetFabricOptimizationStackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_mod_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFabricOptimizationStackRequest.ProtoReflect.Descriptor instead.
+func (*GetFabricOptimizationStackRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_mod_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetFabricOptimizationStackRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+// Get Fabric optimization stack response
+type GetFabricOptimizationStackResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	IsFabric      bool                     `protobuf:"varint,1,opt,name=is_fabric,json=isFabric,proto3" json:"is_fabric,omitempty"`
+	McVersion     string                   `protobuf:"bytes,2,opt,name=mc_version,json=mcVersion,proto3" json:"mc_version,omitempty"`
+	Mods          []*FabricOptimizationMod `protobuf:"bytes,3,rep,name=mods,proto3" json:"mods,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFabricOptimizationStackResponse) Reset() {
+	*x = GetFabricOptimizationStackResponse{}
+	mi := &file_discopanel_v1_mod_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFabricOptimizationStackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFabricOptimizationStackResponse) ProtoMessage() {}
+
+func (x *GetFabricOptimizationStackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_mod_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFabricOptimizationStackResponse.ProtoReflect.Descriptor instead.
+func (*GetFabricOptimizationStackResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_mod_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetFabricOptimizationStackResponse) GetIsFabric() bool {
+	if x != nil {
+		return x.IsFabric
+	}
+	return false
+}
+
+func (x *GetFabricOptimizationStackResponse) GetMcVersion() string {
+	if x != nil {
+		return x.McVersion
+	}
+	return ""
+}
+
+func (x *GetFabricOptimizationStackResponse) GetMods() []*FabricOptimizationMod {
+	if x != nil {
+		return x.Mods
+	}
+	return nil
+}
+
+// Install Fabric optimization stack request
+type InstallFabricOptimizationStackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ModIds        []string               `protobuf:"bytes,2,rep,name=mod_ids,json=modIds,proto3" json:"mod_ids,omitempty"` // Optional filter; empty installs all 4
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstallFabricOptimizationStackRequest) Reset() {
+	*x = InstallFabricOptimizationStackRequest{}
+	mi := &file_discopanel_v1_mod_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstallFabricOptimizationStackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstallFabricOptimizationStackRequest) ProtoMessage() {}
+
+func (x *InstallFabricOptimizationStackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_mod_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstallFabricOptimizationStackRequest.ProtoReflect.Descriptor instead.
+func (*InstallFabricOptimizationStackRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_mod_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *InstallFabricOptimizationStackRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *InstallFabricOptimizationStackRequest) GetModIds() []string {
+	if x != nil {
+		return x.ModIds
+	}
+	return nil
+}
+
+// Install Fabric optimization stack response
+type InstallFabricOptimizationStackResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	InstalledMods []*FabricOptimizationMod `protobuf:"bytes,1,rep,name=installed_mods,json=installedMods,proto3" json:"installed_mods,omitempty"`
+	Warnings      []string                 `protobuf:"bytes,2,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	Message       string                   `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstallFabricOptimizationStackResponse) Reset() {
+	*x = InstallFabricOptimizationStackResponse{}
+	mi := &file_discopanel_v1_mod_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstallFabricOptimizationStackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstallFabricOptimizationStackResponse) ProtoMessage() {}
+
+func (x *InstallFabricOptimizationStackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_mod_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstallFabricOptimizationStackResponse.ProtoReflect.Descriptor instead.
+func (*InstallFabricOptimizationStackResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_mod_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *InstallFabricOptimizationStackResponse) GetInstalledMods() []*FabricOptimizationMod {
+	if x != nil {
+		return x.InstalledMods
+	}
+	return nil
+}
+
+func (x *InstallFabricOptimizationStackResponse) GetWarnings() []string {
+	if x != nil {
+		return x.Warnings
+	}
+	return nil
+}
+
+func (x *InstallFabricOptimizationStackResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_discopanel_v1_mod_proto protoreflect.FileDescriptor
 
 const file_discopanel_v1_mod_proto_rawDesc = "" +
@@ -748,14 +1077,42 @@ const file_discopanel_v1_mod_proto_rawDesc = "" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x15\n" +
 	"\x06mod_id\x18\x02 \x01(\tR\x05modId\"-\n" +
 	"\x11DeleteModResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xa8\x03\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"\xcb\x02\n" +
+	"\x15FabricOptimizationMod\x12\x15\n" +
+	"\x06mod_id\x18\x01 \x01(\tR\x05modId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1c\n" +
+	"\tinstalled\x18\x04 \x01(\bR\tinstalled\x12\x1e\n" +
+	"\n" +
+	"compatible\x18\x05 \x01(\bR\n" +
+	"compatible\x12+\n" +
+	"\x11installed_version\x18\x06 \x01(\tR\x10installedVersion\x12:\n" +
+	"\x19latest_compatible_version\x18\a \x01(\tR\x17latestCompatibleVersion\x12\x1b\n" +
+	"\tfile_name\x18\b \x01(\tR\bfileName\x12!\n" +
+	"\fdownload_url\x18\t \x01(\tR\vdownloadUrl\"@\n" +
+	"!GetFabricOptimizationStackRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\"\x9a\x01\n" +
+	"\"GetFabricOptimizationStackResponse\x12\x1b\n" +
+	"\tis_fabric\x18\x01 \x01(\bR\bisFabric\x12\x1d\n" +
+	"\n" +
+	"mc_version\x18\x02 \x01(\tR\tmcVersion\x128\n" +
+	"\x04mods\x18\x03 \x03(\v2$.discopanel.v1.FabricOptimizationModR\x04mods\"]\n" +
+	"%InstallFabricOptimizationStackRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x17\n" +
+	"\amod_ids\x18\x02 \x03(\tR\x06modIds\"\xab\x01\n" +
+	"&InstallFabricOptimizationStackResponse\x12K\n" +
+	"\x0einstalled_mods\x18\x01 \x03(\v2$.discopanel.v1.FabricOptimizationModR\rinstalledMods\x12\x1a\n" +
+	"\bwarnings\x18\x02 \x03(\tR\bwarnings\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage2\xbc\x05\n" +
 	"\n" +
 	"ModService\x12K\n" +
 	"\bListMods\x12\x1e.discopanel.v1.ListModsRequest\x1a\x1f.discopanel.v1.ListModsResponse\x12E\n" +
 	"\x06GetMod\x12\x1c.discopanel.v1.GetModRequest\x1a\x1d.discopanel.v1.GetModResponse\x12f\n" +
 	"\x11ImportUploadedMod\x12'.discopanel.v1.ImportUploadedModRequest\x1a(.discopanel.v1.ImportUploadedModResponse\x12N\n" +
 	"\tUpdateMod\x12\x1f.discopanel.v1.UpdateModRequest\x1a .discopanel.v1.UpdateModResponse\x12N\n" +
-	"\tDeleteMod\x12\x1f.discopanel.v1.DeleteModRequest\x1a .discopanel.v1.DeleteModResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
+	"\tDeleteMod\x12\x1f.discopanel.v1.DeleteModRequest\x1a .discopanel.v1.DeleteModResponse\x12\x81\x01\n" +
+	"\x1aGetFabricOptimizationStack\x120.discopanel.v1.GetFabricOptimizationStackRequest\x1a1.discopanel.v1.GetFabricOptimizationStackResponse\x12\x8d\x01\n" +
+	"\x1eInstallFabricOptimizationStack\x124.discopanel.v1.InstallFabricOptimizationStackRequest\x1a5.discopanel.v1.InstallFabricOptimizationStackResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
 
 var (
 	file_discopanel_v1_mod_proto_rawDescOnce sync.Once
@@ -769,43 +1126,54 @@ func file_discopanel_v1_mod_proto_rawDescGZIP() []byte {
 	return file_discopanel_v1_mod_proto_rawDescData
 }
 
-var file_discopanel_v1_mod_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_discopanel_v1_mod_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_discopanel_v1_mod_proto_goTypes = []any{
-	(*Mod)(nil),                       // 0: discopanel.v1.Mod
-	(*ListModsRequest)(nil),           // 1: discopanel.v1.ListModsRequest
-	(*ListModsResponse)(nil),          // 2: discopanel.v1.ListModsResponse
-	(*GetModRequest)(nil),             // 3: discopanel.v1.GetModRequest
-	(*GetModResponse)(nil),            // 4: discopanel.v1.GetModResponse
-	(*ImportUploadedModRequest)(nil),  // 5: discopanel.v1.ImportUploadedModRequest
-	(*ImportUploadedModResponse)(nil), // 6: discopanel.v1.ImportUploadedModResponse
-	(*UpdateModRequest)(nil),          // 7: discopanel.v1.UpdateModRequest
-	(*UpdateModResponse)(nil),         // 8: discopanel.v1.UpdateModResponse
-	(*DeleteModRequest)(nil),          // 9: discopanel.v1.DeleteModRequest
-	(*DeleteModResponse)(nil),         // 10: discopanel.v1.DeleteModResponse
-	(*timestamppb.Timestamp)(nil),     // 11: google.protobuf.Timestamp
+	(*Mod)(nil),                                    // 0: discopanel.v1.Mod
+	(*ListModsRequest)(nil),                        // 1: discopanel.v1.ListModsRequest
+	(*ListModsResponse)(nil),                       // 2: discopanel.v1.ListModsResponse
+	(*GetModRequest)(nil),                          // 3: discopanel.v1.GetModRequest
+	(*GetModResponse)(nil),                         // 4: discopanel.v1.GetModResponse
+	(*ImportUploadedModRequest)(nil),               // 5: discopanel.v1.ImportUploadedModRequest
+	(*ImportUploadedModResponse)(nil),              // 6: discopanel.v1.ImportUploadedModResponse
+	(*UpdateModRequest)(nil),                       // 7: discopanel.v1.UpdateModRequest
+	(*UpdateModResponse)(nil),                      // 8: discopanel.v1.UpdateModResponse
+	(*DeleteModRequest)(nil),                       // 9: discopanel.v1.DeleteModRequest
+	(*DeleteModResponse)(nil),                      // 10: discopanel.v1.DeleteModResponse
+	(*FabricOptimizationMod)(nil),                  // 11: discopanel.v1.FabricOptimizationMod
+	(*GetFabricOptimizationStackRequest)(nil),      // 12: discopanel.v1.GetFabricOptimizationStackRequest
+	(*GetFabricOptimizationStackResponse)(nil),     // 13: discopanel.v1.GetFabricOptimizationStackResponse
+	(*InstallFabricOptimizationStackRequest)(nil),  // 14: discopanel.v1.InstallFabricOptimizationStackRequest
+	(*InstallFabricOptimizationStackResponse)(nil), // 15: discopanel.v1.InstallFabricOptimizationStackResponse
+	(*timestamppb.Timestamp)(nil),                  // 16: google.protobuf.Timestamp
 }
 var file_discopanel_v1_mod_proto_depIdxs = []int32{
-	11, // 0: discopanel.v1.Mod.uploaded_at:type_name -> google.protobuf.Timestamp
-	11, // 1: discopanel.v1.Mod.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 0: discopanel.v1.Mod.uploaded_at:type_name -> google.protobuf.Timestamp
+	16, // 1: discopanel.v1.Mod.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: discopanel.v1.ListModsResponse.mods:type_name -> discopanel.v1.Mod
 	0,  // 3: discopanel.v1.GetModResponse.mod:type_name -> discopanel.v1.Mod
 	0,  // 4: discopanel.v1.ImportUploadedModResponse.mod:type_name -> discopanel.v1.Mod
 	0,  // 5: discopanel.v1.UpdateModResponse.mod:type_name -> discopanel.v1.Mod
-	1,  // 6: discopanel.v1.ModService.ListMods:input_type -> discopanel.v1.ListModsRequest
-	3,  // 7: discopanel.v1.ModService.GetMod:input_type -> discopanel.v1.GetModRequest
-	5,  // 8: discopanel.v1.ModService.ImportUploadedMod:input_type -> discopanel.v1.ImportUploadedModRequest
-	7,  // 9: discopanel.v1.ModService.UpdateMod:input_type -> discopanel.v1.UpdateModRequest
-	9,  // 10: discopanel.v1.ModService.DeleteMod:input_type -> discopanel.v1.DeleteModRequest
-	2,  // 11: discopanel.v1.ModService.ListMods:output_type -> discopanel.v1.ListModsResponse
-	4,  // 12: discopanel.v1.ModService.GetMod:output_type -> discopanel.v1.GetModResponse
-	6,  // 13: discopanel.v1.ModService.ImportUploadedMod:output_type -> discopanel.v1.ImportUploadedModResponse
-	8,  // 14: discopanel.v1.ModService.UpdateMod:output_type -> discopanel.v1.UpdateModResponse
-	10, // 15: discopanel.v1.ModService.DeleteMod:output_type -> discopanel.v1.DeleteModResponse
-	11, // [11:16] is the sub-list for method output_type
-	6,  // [6:11] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	11, // 6: discopanel.v1.GetFabricOptimizationStackResponse.mods:type_name -> discopanel.v1.FabricOptimizationMod
+	11, // 7: discopanel.v1.InstallFabricOptimizationStackResponse.installed_mods:type_name -> discopanel.v1.FabricOptimizationMod
+	1,  // 8: discopanel.v1.ModService.ListMods:input_type -> discopanel.v1.ListModsRequest
+	3,  // 9: discopanel.v1.ModService.GetMod:input_type -> discopanel.v1.GetModRequest
+	5,  // 10: discopanel.v1.ModService.ImportUploadedMod:input_type -> discopanel.v1.ImportUploadedModRequest
+	7,  // 11: discopanel.v1.ModService.UpdateMod:input_type -> discopanel.v1.UpdateModRequest
+	9,  // 12: discopanel.v1.ModService.DeleteMod:input_type -> discopanel.v1.DeleteModRequest
+	12, // 13: discopanel.v1.ModService.GetFabricOptimizationStack:input_type -> discopanel.v1.GetFabricOptimizationStackRequest
+	14, // 14: discopanel.v1.ModService.InstallFabricOptimizationStack:input_type -> discopanel.v1.InstallFabricOptimizationStackRequest
+	2,  // 15: discopanel.v1.ModService.ListMods:output_type -> discopanel.v1.ListModsResponse
+	4,  // 16: discopanel.v1.ModService.GetMod:output_type -> discopanel.v1.GetModResponse
+	6,  // 17: discopanel.v1.ModService.ImportUploadedMod:output_type -> discopanel.v1.ImportUploadedModResponse
+	8,  // 18: discopanel.v1.ModService.UpdateMod:output_type -> discopanel.v1.UpdateModResponse
+	10, // 19: discopanel.v1.ModService.DeleteMod:output_type -> discopanel.v1.DeleteModResponse
+	13, // 20: discopanel.v1.ModService.GetFabricOptimizationStack:output_type -> discopanel.v1.GetFabricOptimizationStackResponse
+	15, // 21: discopanel.v1.ModService.InstallFabricOptimizationStack:output_type -> discopanel.v1.InstallFabricOptimizationStackResponse
+	15, // [15:22] is the sub-list for method output_type
+	8,  // [8:15] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_discopanel_v1_mod_proto_init() }
@@ -820,7 +1188,7 @@ func file_discopanel_v1_mod_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_discopanel_v1_mod_proto_rawDesc), len(file_discopanel_v1_mod_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
