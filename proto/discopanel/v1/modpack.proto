@@ -163,6 +163,7 @@ message ImportRemoteModpackRequest {
   string mc_version = 4;
   string mod_loader = 5;
   string auth_token = 6;
+  bool allow_private_network = 7; // Optional override to permit private RFC1918 addresses (loopback & link-local always blocked)
 }
 
 // Remote import result
