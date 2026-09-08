@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package proxy
 
 import (
@@ -133,6 +142,9 @@ func (p *UDPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 	p.backendPort = backendPort
 	p.logger.Info("UDP proxy route updated: %s -> %s:%d", p.listenAddr, backendHost, backendPort)
 }
+
+// SetRouteHibernated is a no-op for UDPProxy
+func (p *UDPProxy) SetRouteHibernated(hostname string, hibernated bool) {}
 
 // GetRoutes returns the current route (UDP only has one)
 func (p *UDPProxy) GetRoutes() map[string]*Route {
