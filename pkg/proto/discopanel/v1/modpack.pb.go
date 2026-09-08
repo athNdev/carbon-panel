@@ -1014,15 +1014,16 @@ func (x *ImportUploadedModpackResponse) GetMessage() string {
 
 // Import modpack from external URL (GitHub release, CDN, static file host)
 type ImportRemoteModpackRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	McVersion     string                 `protobuf:"bytes,4,opt,name=mc_version,json=mcVersion,proto3" json:"mc_version,omitempty"`
-	ModLoader     string                 `protobuf:"bytes,5,opt,name=mod_loader,json=modLoader,proto3" json:"mod_loader,omitempty"`
-	AuthToken     string                 `protobuf:"bytes,6,opt,name=auth_token,json=authToken,proto3" json:"auth_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Url                 string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Name                string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description         string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	McVersion           string                 `protobuf:"bytes,4,opt,name=mc_version,json=mcVersion,proto3" json:"mc_version,omitempty"`
+	ModLoader           string                 `protobuf:"bytes,5,opt,name=mod_loader,json=modLoader,proto3" json:"mod_loader,omitempty"`
+	AuthToken           string                 `protobuf:"bytes,6,opt,name=auth_token,json=authToken,proto3" json:"auth_token,omitempty"`
+	AllowPrivateNetwork bool                   `protobuf:"varint,7,opt,name=allow_private_network,json=allowPrivateNetwork,proto3" json:"allow_private_network,omitempty"` // Optional override to permit private RFC1918 addresses (loopback & link-local always blocked)
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ImportRemoteModpackRequest) Reset() {
@@ -1095,6 +1096,13 @@ func (x *ImportRemoteModpackRequest) GetAuthToken() string {
 		return x.AuthToken
 	}
 	return ""
+}
+
+func (x *ImportRemoteModpackRequest) GetAllowPrivateNetwork() bool {
+	if x != nil {
+		return x.AllowPrivateNetwork
+	}
+	return false
 }
 
 // Remote import result
@@ -2077,7 +2085,7 @@ const file_discopanel_v1_modpack_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\"r\n" +
 	"\x1dImportUploadedModpackResponse\x127\n" +
 	"\amodpack\x18\x01 \x01(\v2\x1d.discopanel.v1.IndexedModpackR\amodpack\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xc1\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xf5\x01\n" +
 	"\x1aImportRemoteModpackRequest\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -2087,7 +2095,8 @@ const file_discopanel_v1_modpack_proto_rawDesc = "" +
 	"\n" +
 	"mod_loader\x18\x05 \x01(\tR\tmodLoader\x12\x1d\n" +
 	"\n" +
-	"auth_token\x18\x06 \x01(\tR\tauthToken\"p\n" +
+	"auth_token\x18\x06 \x01(\tR\tauthToken\x122\n" +
+	"\x15allow_private_network\x18\a \x01(\bR\x13allowPrivateNetwork\"p\n" +
 	"\x1bImportRemoteModpackResponse\x127\n" +
 	"\amodpack\x18\x01 \x01(\v2\x1d.discopanel.v1.IndexedModpackR\amodpack\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"&\n" +

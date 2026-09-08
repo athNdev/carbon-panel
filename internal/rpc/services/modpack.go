@@ -30,6 +30,7 @@ import (
 	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
 	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
 	"github.com/nickheyer/discopanel/pkg/upload"
+	"github.com/nickheyer/discopanel/pkg/utils"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -728,17 +729,16 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("url is required"))
 	}
 
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid URL: must be http or https"))
+	// Enforce SSRF validation (MINE-12): validate URL, scheme, and DNS resolution
+	if _, err := utils.ValidateURL(rawURL, msg.GetAllowPrivateNetwork()); err != nil {
+		s.log.Warn("SSRF check blocked remote modpack URL %s: %v", rawURL, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("SSRF guard blocked URL: %w", err))
 	}
 
 	s.log.Info("Starting remote modpack download from URL: %s", rawURL)
 
-	// Create HTTP client with redirect support and timeout
-	client := &http.Client{
-		Timeout: 10 * time.Minute,
-	}
+	// Create hardened HTTP client with SSRF guards at connect & redirect time
+	client := utils.NewSafeHTTPClient(10*time.Minute, msg.GetAllowPrivateNetwork())
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
