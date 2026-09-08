@@ -58,15 +58,10 @@ func NewModpackService(store *storage.Store, cfg *config.Config, uploadManager *
 func (s *ModpackService) getIndexer(ctx context.Context, name string) (indexers.ModpackIndexer, error) {
 	apiKey := ""
 	if name == "fuego" {
-		globalSettings, _, err := s.store.GetGlobalSettings(ctx)
-		if err != nil || globalSettings == nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get global settings"))
-		}
-		if globalSettings.CFAPIKey != nil {
-			apiKey = *globalSettings.CFAPIKey
-		}
-		if apiKey == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("CurseForge API key not configured"))
+		if globalSettings, _, err := s.store.GetGlobalSettings(ctx); err == nil && globalSettings != nil {
+			if globalSettings.CFAPIKey != nil {
+				apiKey = *globalSettings.CFAPIKey
+			}
 		}
 	}
 	idx, err := indexers.NewIndexer(name, apiKey, s.config)
@@ -1129,18 +1124,6 @@ func (s *ModpackService) ListFavorites(ctx context.Context, req *connect.Request
 
 // GetIndexerStatus gets indexer status
 func (s *ModpackService) GetIndexerStatus(ctx context.Context, req *connect.Request[v1.GetIndexerStatusRequest]) (*connect.Response[v1.GetIndexerStatusResponse], error) {
-	// Get global settings to check API key
-	globalSettings, _, err := s.store.GetGlobalSettings(ctx)
-	if err != nil {
-		s.log.Error("Failed to get global settings: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get global settings"))
-	}
-
-	apiKeyConfigured := false
-	if globalSettings.CFAPIKey != nil && *globalSettings.CFAPIKey != "" {
-		apiKeyConfigured = true
-	}
-
 	// Get all modpacks and count
 	modpacksByIndexer := make(map[string]int32)
 	totalModpacks := int32(0)
@@ -1160,7 +1143,7 @@ func (s *ModpackService) GetIndexerStatus(ctx context.Context, req *connect.Requ
 	}
 
 	indexersAvailable := map[string]bool{
-		"fuego":    apiKeyConfigured,
+		"fuego":    true, // Available via API key or keyless community proxy
 		"modrinth": true, // Modrinth doesn't require API key
 		"manual":   true, // Manual uploads always available
 	}

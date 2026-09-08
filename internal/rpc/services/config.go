@@ -282,6 +282,18 @@ func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.S
 		return err
 	}
 
+	// Inherit global settings if server-specific keys are unset
+	if config.CFAPIKey == nil || *config.CFAPIKey == "" {
+		if globalSettings, _, err := s.store.GetGlobalSettings(ctx); err == nil && globalSettings != nil && globalSettings.CFAPIKey != nil && *globalSettings.CFAPIKey != "" {
+			config.CFAPIKey = globalSettings.CFAPIKey
+		}
+	}
+	if config.ModrinthToken == nil || *config.ModrinthToken == "" {
+		if globalSettings, _, err := s.store.GetGlobalSettings(ctx); err == nil && globalSettings != nil && globalSettings.ModrinthToken != nil && *globalSettings.ModrinthToken != "" {
+			config.ModrinthToken = globalSettings.ModrinthToken
+		}
+	}
+
 	newContainerID, err := s.docker.CreateContainer(ctx, server, config)
 	if err != nil {
 		return err
@@ -590,7 +602,7 @@ func getCategoryIndex(key string) int {
 		return 10
 
 	// CurseForge (11)
-	case "cfApiKey", "cfApiKeyFile", "cfPageUrl", "cfSlug", "cfFileId", "cfFilenameMatcher",
+	case "cfApiKey", "cfApiKeyFile", "cfPageUrl", "cfSlug", "cfFileId", "cfModpackZip", "cfFilenameMatcher",
 		"cfExcludeIncludeFile", "cfExcludeMods", "cfForceIncludeMods", "cfForceSynchronize",
 		"cfSetLevelFrom", "cfParallelDownloads", "cfOverridesSkipExisting", "cfForceReinstallModloader":
 		return 11

@@ -481,28 +481,22 @@
 		</div>
 	</div>
 
-	{#if selectedIndexer === 'fuego' && indexerStatus && !indexerStatus.indexersAvailable['fuego']}
-		<Alert>
-			<AlertCircle class="h-4 w-4" />
-			<AlertTitle>CurseForge API Key Required</AlertTitle>
-			<AlertDescription>
-				<div class="space-y-2">
-					<p>
-						To sync modpacks from CurseForge, you need to <a
-							href="https://console.curseforge.com/#/api-keys"
-							target="_blank"
-							rel="noopener noreferrer">generate a CurseForge API key</a
-						> and add it to your server defaults.
-					</p>
-					<div class="mt-2 flex items-center gap-2">
-						<Button size="sm" href="/settings?tab=api-keys">
-							<Settings class="mr-2 h-4 w-4" />
-							Configure in Settings
-						</Button>
-					</div>
+	{#if selectedIndexer === 'fuego'}
+		<div class="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-2 font-medium text-primary">
+					<Sparkles class="h-4 w-4" />
+					CurseForge Keyless Mode Active
 				</div>
-			</AlertDescription>
-		</Alert>
+				<Button size="sm" variant="ghost" class="h-7 text-xs" href="/settings?tab=api-keys">
+					<Settings class="mr-1 h-3.5 w-3.5" />
+					Custom API Key (Optional)
+				</Button>
+			</div>
+			<p class="mt-1 text-xs text-muted-foreground">
+				Syncing and browsing CurseForge modpacks works out-of-the-box via community proxies. If you have your own API key, you can configure it in Settings.
+			</p>
+		</div>
 	{/if}
 
 	{#if !showFavorites && !showUploaded}
@@ -525,7 +519,7 @@
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="">All Versions</SelectItem>
-						{#each gameVersions as version (version)}
+						{#each gameVersions as version}
 							<SelectItem value={version}>{version}</SelectItem>
 						{/each}
 					</SelectContent>
@@ -536,17 +530,15 @@
 					onValueChange={(v: string | undefined) => (searchParams.modLoader = v || '')}
 					disabled={loading}
 				>
-					<SelectTrigger class="w-45">
-						<span
-							>{searchParams.modLoader
-								? modLoaders.find((l) => l.value === searchParams.modLoader)?.label
-								: 'All Loaders'}</span
-						>
+					<SelectTrigger class="w-40">
+						<span>{searchParams.modLoader ? searchParams.modLoader.toUpperCase() : 'All Loaders'}</span>
 					</SelectTrigger>
 					<SelectContent>
-						{#each modLoaders as loader (loader.value)}
-							<SelectItem value={loader.value}>{loader.label}</SelectItem>
-						{/each}
+						<SelectItem value="">All Loaders</SelectItem>
+						<SelectItem value="forge">Forge</SelectItem>
+						<SelectItem value="fabric">Fabric</SelectItem>
+						<SelectItem value="neoforge">NeoForge</SelectItem>
+						<SelectItem value="quilt">Quilt</SelectItem>
 					</SelectContent>
 				</Select>
 				<Select
@@ -576,10 +568,7 @@
 				</Button>
 				<Button
 					onclick={syncModpacks}
-					disabled={syncing ||
-						(selectedIndexer === 'fuego' &&
-							indexerStatus &&
-							!indexerStatus.indexersAvailable['fuego'])}
+					disabled={syncing}
 					variant="outline"
 					class="border-2 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
 				>

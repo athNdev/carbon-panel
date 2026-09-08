@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -969,8 +970,59 @@ func (c *Client) attachSelfToNetwork(ctx context.Context) {
 	c.log.Info("Attached DiscoPanel container to network %s", c.config.NetworkName)
 }
 
+var (
+	cfSlugRegex = regexp.MustCompile(`/(?:minecraft/(?:modpacks|mc-mods|customization|worlds|texture-packs)|projects)/([a-zA-Z0-9_\-]+)`)
+	cfFileRegex = regexp.MustCompile(`/files/(\d+)`)
+)
+
+func extractCurseForgeSlug(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	matches := cfSlugRegex.FindStringSubmatch(raw)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") && !strings.Contains(raw, "/") {
+		return raw
+	}
+	return ""
+}
+
+func extractCurseForgeFileID(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	matches := cfFileRegex.FindStringSubmatch(raw)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
+
 // Builds Docker environment variables from ServerConfig struct
 func buildEnvFromConfig(config *models.ServerConfig) []string {
+	// Auto-assume CurseForge slug and file ID if CFPageURL is present
+	if config.CFPageURL != nil && *config.CFPageURL != "" {
+		if config.CFSlug == nil || *config.CFSlug == "" {
+			if slug := extractCurseForgeSlug(*config.CFPageURL); slug != "" {
+				config.CFSlug = &slug
+			}
+		}
+		if config.CFFileID == nil || *config.CFFileID == "" {
+			if fileID := extractCurseForgeFileID(*config.CFPageURL); fileID != "" {
+				config.CFFileID = &fileID
+			}
+		}
+	}
+	// Sensible default for CFParallelDownloads if not explicitly set
+	if config.CFParallelDownloads == nil {
+		p := 4
+		config.CFParallelDownloads = &p
+	}
+
 	env := []string{
 		"DUMP_SERVER_PROPERTIES=true",
 	}

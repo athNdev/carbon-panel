@@ -279,19 +279,19 @@ type ServerConfig struct {
 	ForgeInstallerURL *string `json:"forgeInstallerUrl" env:"FORGE_INSTALLER_URL" default:"" desc:"URL to download Forge installer" input:"text" label:"Forge Installer URL"`
 
 	// CurseForge
-	CFAPIKey                  *string `json:"cfApiKey" env:"CF_API_KEY" default:"" desc:"CurseForge API Key (https://console.curseforge.com/#/api-keys)" input:"password" label:"CurseForge API Key"`
-	CFAPIKeyFile              *string `json:"cfApiKeyFile" env:"CF_API_KEY_FILE" default:"" desc:"Path to file containing CurseForge API Key (https://console.curseforge.com/#/api-keys)" input:"text" label:"CurseForge API Key File"`
-	CFPageURL                 *string `json:"cfPageUrl" env:"CF_PAGE_URL" default:"" desc:"URL to modpack or specific file" input:"text" label:"CurseForge Page URL"`
-	CFSlug                    *string `json:"cfSlug" env:"CF_SLUG" default:"" desc:"Modpack slug identifier" input:"text" label:"CurseForge Slug"`
-	CFFileID                  *string `json:"cfFileId" env:"CF_FILE_ID" default:"" desc:"Mod CurseForge numerical ID" input:"text" label:"CurseForge File ID"`
+	CFAPIKey                  *string `json:"cfApiKey" env:"CF_API_KEY" default:"" desc:"Optional CurseForge API Key. Inherits from Global Settings if empty, or uses keyless container fallback." input:"password" label:"CurseForge API Key"`
+	CFAPIKeyFile              *string `json:"cfApiKeyFile" env:"CF_API_KEY_FILE" default:"" desc:"Path to file containing CurseForge API Key" input:"text" label:"CurseForge API Key File"`
+	CFPageURL                 *string `json:"cfPageUrl" env:"CF_PAGE_URL" default:"" desc:"CurseForge modpack or file URL (e.g. https://www.curseforge.com/minecraft/modpacks/all-the-mods-9). Slug and File ID are assumed automatically." input:"text" label:"CurseForge Page URL"`
+	CFSlug                    *string `json:"cfSlug" env:"CF_SLUG" default:"" desc:"CurseForge modpack slug (auto-assumed from URL or server name)" input:"text" label:"CurseForge Slug"`
+	CFFileID                  *string `json:"cfFileId" env:"CF_FILE_ID" default:"" desc:"CurseForge numeric file ID (auto-extracted from URL if /files/... is present)" input:"text" label:"CurseForge File ID"`
 	CFModpackZip              *string `json:"cfModpackZip" env:"CF_MODPACK_ZIP" default:"" desc:"Container path to unpublished modpack zip" input:"text" label:"CurseForge Modpack Zip"`
 	CFFilenameMatcher         *string `json:"cfFilenameMatcher" env:"CF_FILENAME_MATCHER" default:"" desc:"Substring to match desired filename" input:"text" label:"CurseForge Filename Matcher"`
 	CFExcludeIncludeFile      *string `json:"cfExcludeIncludeFile" env:"CF_EXCLUDE_INCLUDE_FILE" default:"" desc:"JSON file for global/modpack exclusions" input:"text" label:"CurseForge Exclude/Include File"`
 	CFExcludeMods             *string `json:"cfExcludeMods" env:"CF_EXCLUDE_MODS" default:"" desc:"Comma/space delimited list of mod slugs/IDs to exclude" input:"text" label:"CurseForge Exclude Mods"`
 	CFForceIncludeMods        *string `json:"cfForceIncludeMods" env:"CF_FORCE_INCLUDE_MODS" default:"" desc:"Comma/space delimited list of mod slugs/IDs to include" input:"text" label:"CurseForge Force Include Mods"`
-	CFForceSynchronize        *bool   `json:"cfForceSynchronize" env:"CF_FORCE_SYNCHRONIZE" default:"false" desc:"Force re-evaluation of excludes/includes" input:"checkbox" label:"CurseForge Force Synchronize"`
+	CFForceSynchronize        *bool   `json:"cfForceSynchronize" env:"CF_FORCE_SYNCHRONIZE" default:"false" desc:"Re-sync and update modpack files on server startup" input:"checkbox" label:"CurseForge Force Synchronize"`
 	CFSetLevelFrom            *string `json:"cfSetLevelFrom" env:"CF_SET_LEVEL_FROM" default:"" desc:"Set LEVEL from WORLD_FILE or OVERRIDES" input:"select" label:"CurseForge Set Level From"`
-	CFParallelDownloads       *int    `json:"cfParallelDownloads" env:"CF_PARALLEL_DOWNLOADS" default:"4" desc:"Number of parallel mod downloads" input:"number" label:"CurseForge Parallel Downloads"`
+	CFParallelDownloads       *int    `json:"cfParallelDownloads" env:"CF_PARALLEL_DOWNLOADS" default:"4" desc:"Number of concurrent mod downloads (default: 4)" input:"number" label:"CurseForge Parallel Downloads"`
 	CFOverridesSkipExisting   *bool   `json:"cfOverridesSkipExisting" env:"CF_OVERRIDES_SKIP_EXISTING" default:"false" desc:"Skip existing files in overrides" input:"checkbox" label:"CurseForge Skip Existing Overrides"`
 	CFForceReinstallModloader *bool   `json:"cfForceReinstallModloader" env:"CF_FORCE_REINSTALL_MODLOADER" default:"false" desc:"Force reinstall modloader (cleared after start)" input:"checkbox" label:"Force Reinstall Modloader" ephemeral:"true"`
 

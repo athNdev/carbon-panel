@@ -12,22 +12,29 @@ import (
 )
 
 const (
-	BaseURL         = "https://api.curseforge.com/v1"
+	OfficialBaseURL = "https://api.curseforge.com/v1"
+	KeylessBaseURL  = "https://api.curse.tools/v1/cf"
 	MinecraftGameID = 432
 	ModpackClassID  = 4471
 )
 
 type Client struct {
-	apiKey string
-	http   *indexers.HTTPClient
+	apiKey  string
+	baseURL string
+	http    *indexers.HTTPClient
 }
 
 func NewClient(apiKey string, cfg *config.Config) *Client {
+	baseURL := KeylessBaseURL
+	headers := map[string]string{}
+	if apiKey != "" {
+		baseURL = OfficialBaseURL
+		headers["x-api-key"] = apiKey
+	}
 	return &Client{
-		apiKey: apiKey,
-		http: indexers.NewHTTPClient("fuego", cfg.Server.UserAgent, map[string]string{
-			"x-api-key": apiKey,
-		}),
+		apiKey:  apiKey,
+		baseURL: baseURL,
+		http:    indexers.NewHTTPClient("fuego", cfg.Server.UserAgent, headers),
 	}
 }
 
@@ -166,10 +173,6 @@ const (
 )
 
 func (c *Client) SearchModpacks(ctx context.Context, query string, gameVersion string, modLoader ModLoaderType, index, pageSize int) (*SearchModsResponse, error) {
-	if c.apiKey == "" {
-		return nil, indexers.NewAuthConfigError("fuego", "API key not configured")
-	}
-
 	params := url.Values{}
 	params.Set("gameId", strconv.Itoa(MinecraftGameID))
 	params.Set("classId", strconv.Itoa(ModpackClassID))
@@ -191,7 +194,7 @@ func (c *Client) SearchModpacks(ctx context.Context, query string, gameVersion s
 	}
 
 	var result SearchModsResponse
-	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/search?%s", BaseURL, params.Encode()), &result); err != nil {
+	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/search?%s", c.baseURL, params.Encode()), &result); err != nil {
 		return nil, err
 	}
 
@@ -199,29 +202,29 @@ func (c *Client) SearchModpacks(ctx context.Context, query string, gameVersion s
 }
 
 func (c *Client) GetModpackFiles(ctx context.Context, modID int) ([]File, error) {
-	if c.apiKey == "" {
-		return nil, indexers.NewAuthConfigError("fuego", "API key not configured")
-	}
-
 	var result struct {
 		Data []File `json:"data"`
 	}
-	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/%d/files", BaseURL, modID), &result); err != nil {
+	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/%d/files", c.baseURL, modID), &result); err != nil {
 		return nil, err
+	}
+
+	// Ensure each file has a download URL, falling back to CurseForge edge CDN if missing
+	for i := range result.Data {
+		if result.Data[i].DownloadURL == "" && result.Data[i].FileName != "" {
+			result.Data[i].DownloadURL = fmt.Sprintf("https://edge.forgecdn.net/files/%d/%d/%s",
+				result.Data[i].ID/1000, result.Data[i].ID%1000, url.PathEscape(result.Data[i].FileName))
+		}
 	}
 
 	return result.Data, nil
 }
 
 func (c *Client) GetModpack(ctx context.Context, modID int) (*Modpack, error) {
-	if c.apiKey == "" {
-		return nil, indexers.NewAuthConfigError("fuego", "API key not configured")
-	}
-
 	var result struct {
 		Data Modpack `json:"data"`
 	}
-	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/%d", BaseURL, modID), &result); err != nil {
+	if err := c.http.DoJSON(ctx, fmt.Sprintf("%s/mods/%d", c.baseURL, modID), &result); err != nil {
 		return nil, err
 	}
 

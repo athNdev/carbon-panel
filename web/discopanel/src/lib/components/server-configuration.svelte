@@ -8,8 +8,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from 'svelte-sonner';
-	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send } from '@lucide/svelte';
+	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send, Sparkles, ChevronDown, ChevronRight, Wand2 } from '@lucide/svelte';
 	import { copyToClipboard } from '$lib/utils/clipboard';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 	import { ServerStatus } from '$lib/proto/discopanel/v1/common_pb';
@@ -58,6 +59,93 @@
 		const cat = filteredCategories.find((c) => getCategoryId(c.name) === activeCategory);
 		return cat?.properties ?? [];
 	});
+
+	// CurseForge primary vs advanced fields separation
+	const cfPrimaryKeys = new Set(['cfPageUrl', 'cfSlug', 'cfFileId', 'cfForceSynchronize', 'cfApiKey']);
+	let showAdvancedCurseForge = $state(false);
+
+	let primaryCategoryProps = $derived.by(() => {
+		if (activeCategory === 'curseforge') {
+			return currentCategoryProps.filter((p) => cfPrimaryKeys.has(p.key));
+		}
+		return currentCategoryProps;
+	});
+
+	let advancedCategoryProps = $derived.by(() => {
+		if (activeCategory === 'curseforge') {
+			return currentCategoryProps.filter((p) => !cfPrimaryKeys.has(p.key));
+		}
+		return [];
+	});
+
+	function parseCurseForgeUrl(url: string): { slug: string; fileId: string } {
+		let slug = '';
+		let fileId = '';
+		if (!url) return { slug, fileId };
+		const trimmed = url.trim();
+
+		const fileMatch = trimmed.match(/\/files\/(\d+)/);
+		if (fileMatch) {
+			fileId = fileMatch[1];
+		}
+
+		const slugMatch = trimmed.match(
+			/\/(?:minecraft\/(?:modpacks|mc-mods|customization|worlds|texture-packs)|projects)\/([a-zA-Z0-9_\-]+)/
+		);
+		if (slugMatch) {
+			slug = slugMatch[1];
+		} else if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.includes('/')) {
+			slug = trimmed;
+		}
+
+		return { slug, fileId };
+	}
+
+	function handleExtractFromPageUrl(url: string) {
+		const { slug, fileId } = parseCurseForgeUrl(url);
+		const newValues = new SvelteMap(currentValues);
+		const newEnabled = new SvelteSet(currentEnabled);
+		let updated = false;
+
+		if (slug) {
+			newValues.set('cfSlug', slug);
+			newEnabled.add('cfSlug');
+			updated = true;
+		}
+		if (fileId) {
+			newValues.set('cfFileId', fileId);
+			newEnabled.add('cfFileId');
+			updated = true;
+		}
+
+		if (updated) {
+			currentValues = newValues;
+			currentEnabled = newEnabled;
+			toast.success(
+				`Extracted from URL: ${slug ? `Slug: ${slug}` : ''}${slug && fileId ? ', ' : ''}${fileId ? `File ID: ${fileId}` : ''}`
+			);
+		} else {
+			toast.info('Could not find slug or file ID in the entered URL');
+		}
+	}
+
+	function assumeCfSlugFromServerName() {
+		if (!server?.name) return;
+		const slug = server.name
+			.toLowerCase()
+			.trim()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
+		if (slug) {
+			const newValues = new SvelteMap(currentValues);
+			newValues.set('cfSlug', slug);
+			currentValues = newValues;
+			const newEnabled = new SvelteSet(currentEnabled);
+			newEnabled.add('cfSlug');
+			currentEnabled = newEnabled;
+			toast.success(`Assumed CurseForge slug from server name: "${slug}"`);
+		}
+	}
 
 	let currentCategoryName = $derived.by(() => {
 		const cat = filteredCategories.find((c) => getCategoryId(c.name) === activeCategory);
@@ -276,6 +364,29 @@
 		const strValue = typeof value === 'boolean' ? String(value) : value;
 		newValues.set(key, strValue || null);
 		currentValues = newValues;
+
+		// Auto-extract slug and file ID when user enters/pastes a CurseForge Page URL
+		if (key === 'cfPageUrl' && typeof strValue === 'string' && strValue.trim().length > 10) {
+			const { slug, fileId } = parseCurseForgeUrl(strValue);
+			let changed = false;
+			if (slug && !currentValues.get('cfSlug')) {
+				newValues.set('cfSlug', slug);
+				const newEnabled = new SvelteSet(currentEnabled);
+				newEnabled.add('cfSlug');
+				currentEnabled = newEnabled;
+				changed = true;
+			}
+			if (fileId && !currentValues.get('cfFileId')) {
+				newValues.set('cfFileId', fileId);
+				const newEnabled = new SvelteSet(currentEnabled);
+				newEnabled.add('cfFileId');
+				currentEnabled = newEnabled;
+				changed = true;
+			}
+			if (changed) {
+				currentValues = newValues;
+			}
+		}
 	}
 
 	function getDefaultForType(type: string): string {
@@ -471,152 +582,232 @@
 						<p class="text-xs text-muted-foreground">{currentCategoryProps.length} fields</p>
 					</div>
 
-					<!-- Fields Grid -->
-					<div class="flex-1 overflow-y-auto p-4">
-						<div class="grid gap-4 lg:grid-cols-2">
-							{#each currentCategoryProps as prop (prop.key)}
-								{@const isEnabled = currentEnabled.has(prop.key)}
-								{@const isModified = modifiedFields.has(prop.key)}
-								{@const isHighlighted = highlightedField === prop.key}
-								{@const canToggle = canToggleField(prop)}
+					{#snippet fieldCard(prop: ConfigProperty)}
+						{@const isEnabled = currentEnabled.has(prop.key)}
+						{@const isModified = modifiedFields.has(prop.key)}
+						{@const isHighlighted = highlightedField === prop.key}
+						{@const canToggle = canToggleField(prop)}
 
-								<div
-									id={prop.key}
-									data-field="true"
-									class="group rounded-lg border p-4 transition-all duration-300
-										{isHighlighted ? 'ring-2 ring-primary ring-offset-2' : ''}
-										{isModified ? 'border-orange-500/50 bg-orange-500/5' : 'bg-card'}
-										{!isEnabled ? 'bg-muted/30' : ''}"
-								>
-									<!-- Field Header -->
-									<div class="mb-3 flex items-start justify-between gap-2">
-										<div class="min-w-0 flex-1">
-											<div class="mb-1 flex flex-wrap items-center gap-2">
-												<Label
-													for={prop.key}
-													class="text-sm font-medium {!isEnabled ? 'text-muted-foreground' : ''}"
-												>
-													{prop.label}
-												</Label>
-												{#if prop.required}
-													<span class="text-xs font-medium text-red-500">required</span>
-												{/if}
-												{#if prop.system}
-													<span class="text-xs font-medium text-blue-500">system</span>
-												{/if}
-												{#if isModified}
-													<span class="text-xs font-medium text-orange-500">modified</span>
-												{/if}
-												{#if !isEnabled}
-													<span class="text-xs text-muted-foreground">(unset)</span>
-												{/if}
-											</div>
-											{#if prop.envVar}
-												<code class="font-mono text-xs text-muted-foreground">{prop.envVar}</code>
-											{/if}
-											{#if prop.description}
-												<p class="mt-1 text-xs text-muted-foreground">{prop.description}</p>
-											{/if}
-										</div>
-										<div class="flex items-center gap-1">
-											<!-- Set/Unset Toggle -->
-											<button
-												class="rounded p-1 transition-colors
-													{canToggle ? 'cursor-pointer hover:bg-muted' : 'cursor-not-allowed opacity-50'}"
-												onclick={() => canToggle && toggleFieldEnabled(prop.key, !isEnabled, prop)}
-												disabled={!canToggle}
-												title={isEnabled
-													? 'Click to unset (use default)'
-													: 'Click to set a custom value'}
-											>
-												{#if isEnabled}
-													<CircleDot class="h-4 w-4 text-green-500" />
-												{:else}
-													<Circle class="h-4 w-4 text-muted-foreground" />
-												{/if}
-											</button>
+						<div
+							id={prop.key}
+							data-field="true"
+							class="group rounded-lg border p-4 transition-all duration-300
+								{isHighlighted ? 'ring-2 ring-primary ring-offset-2' : ''}
+								{isModified ? 'border-orange-500/50 bg-orange-500/5' : 'bg-card'}
+								{!isEnabled ? 'bg-muted/30' : ''}"
+						>
+							<!-- Field Header -->
+							<div class="mb-3 flex items-start justify-between gap-2">
+								<div class="min-w-0 flex-1">
+									<div class="mb-1 flex flex-wrap items-center gap-2">
+										<Label
+											for={prop.key}
+											class="text-sm font-medium {!isEnabled ? 'text-muted-foreground' : ''}"
+										>
+											{prop.label}
+										</Label>
+										{#if prop.required}
+											<span class="text-xs font-medium text-red-500">required</span>
+										{/if}
+										{#if prop.system}
+											<span class="text-xs font-medium text-blue-500">system</span>
+										{/if}
+										{#if isModified}
+											<span class="text-xs font-medium text-orange-500">modified</span>
+										{/if}
+										{#if !isEnabled}
+											<span class="text-xs text-muted-foreground">(unset)</span>
+										{/if}
+										{#if prop.key === 'cfApiKey'}
+											<span class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+												Optional (Keyless Fallback)
+											</span>
+										{/if}
+									</div>
+									{#if prop.envVar}
+										<code class="font-mono text-xs text-muted-foreground">{prop.envVar}</code>
+									{/if}
+									{#if prop.description}
+										<p class="mt-1 text-xs text-muted-foreground">{prop.description}</p>
+									{/if}
+
+									<!-- Quick Actions for CurseForge Fields -->
+									{#if prop.key === 'cfSlug' && server?.name}
+										<div class="mt-2">
 											<Button
-												variant="ghost"
-												size="icon"
-												class="h-6 w-6 opacity-0 group-hover:opacity-100"
-												onclick={() => copyLinkToClipboard(prop.key)}
+												type="button"
+												variant="outline"
+												size="sm"
+												class="h-6 text-xs text-primary hover:bg-primary/10"
+												onclick={assumeCfSlugFromServerName}
 											>
-												<Link class="h-3 w-3" />
+												<Wand2 class="mr-1 h-3 w-3" />
+												Assume from Server Name ("{server.name}")
 											</Button>
 										</div>
-									</div>
-
-									<!-- Field Input -->
-									{#if prop.type === 'checkbox'}
-										<div class="flex items-center gap-3 py-1">
-											<Switch
-												id={prop.key}
-												checked={getBooleanValue(prop)}
-												onCheckedChange={(checked) => updateValue(prop.key, checked)}
-												disabled={prop.system || !isEnabled || isServerRunning}
-											/>
-											<span class="text-sm {!isEnabled ? 'text-muted-foreground' : ''}">
-												{getBooleanValue(prop) ? 'Enabled' : 'Disabled'}
-											</span>
-										</div>
-									{:else if prop.type === 'select' && prop.options?.length}
-										<Select
-											type="single"
-											value={getDisplayValue(prop)}
-											onValueChange={(value) => updateValue(prop.key, value ?? '')}
-											disabled={prop.system || !isEnabled || isServerRunning}
-										>
-											<SelectTrigger class="h-9 {!isEnabled ? 'opacity-60' : ''}">
-												<span class="truncate">
-													{getDisplayValue(prop) || 'Select...'}
-												</span>
-											</SelectTrigger>
-											<SelectContent>
-												{#each prop.options as option (option)}
-													<SelectItem value={option}>{option || '(empty)'}</SelectItem>
-												{/each}
-											</SelectContent>
-										</Select>
-									{:else if prop.type === 'number'}
-										<Input
-											id={prop.key}
-											type="number"
-											value={getDisplayValue(prop)}
-											placeholder={prop.defaultValue ?? ''}
-											oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-											disabled={prop.system || !isEnabled || isServerRunning}
-											class="h-9 {!isEnabled ? 'opacity-60' : ''}"
-										/>
-									{:else if prop.type === 'password'}
-										<Input
-											id={prop.key}
-											type="password"
-											value={getDisplayValue(prop)}
-											placeholder={prop.defaultValue ?? ''}
-											oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-											disabled={prop.system || !isEnabled || isServerRunning}
-											class="h-9 {!isEnabled ? 'opacity-60' : ''}"
-										/>
-									{:else}
-										<Input
-											id={prop.key}
-											type="text"
-											value={getDisplayValue(prop)}
-											placeholder={prop.defaultValue ?? ''}
-											oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-											disabled={prop.system || !isEnabled || isServerRunning}
-											class="h-9 {!isEnabled ? 'opacity-60' : ''}"
-										/>
 									{/if}
-
-									{#if prop.defaultValue !== undefined && prop.defaultValue !== ''}
-										<p class="mt-2 text-xs text-muted-foreground">
-											Default: <code class="rounded bg-muted px-1 py-0.5">{prop.defaultValue}</code>
-										</p>
+									{#if prop.key === 'cfPageUrl' && getDisplayValue(prop)}
+										<div class="mt-2">
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												class="h-6 text-xs text-primary hover:bg-primary/10"
+												onclick={() => handleExtractFromPageUrl(getDisplayValue(prop))}
+											>
+												<Sparkles class="mr-1 h-3 w-3" />
+												Extract Slug & File ID
+											</Button>
+										</div>
 									{/if}
 								</div>
+								<div class="flex items-center gap-1">
+									<!-- Set/Unset Toggle -->
+									<button
+										class="rounded p-1 transition-colors
+											{canToggle ? 'cursor-pointer hover:bg-muted' : 'cursor-not-allowed opacity-50'}"
+										onclick={() => canToggle && toggleFieldEnabled(prop.key, !isEnabled, prop)}
+										disabled={!canToggle}
+										title={isEnabled
+											? 'Click to unset (use default)'
+											: 'Click to set a custom value'}
+									>
+										{#if isEnabled}
+											<CircleDot class="h-4 w-4 text-green-500" />
+										{:else}
+											<Circle class="h-4 w-4 text-muted-foreground" />
+										{/if}
+									</button>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="h-6 w-6 opacity-0 group-hover:opacity-100"
+										onclick={() => copyLinkToClipboard(prop.key)}
+									>
+										<Link class="h-3 w-3" />
+									</Button>
+								</div>
+							</div>
+
+							<!-- Field Input -->
+							{#if prop.type === 'checkbox'}
+								<div class="flex items-center gap-3 py-1">
+									<Switch
+										id={prop.key}
+										checked={getBooleanValue(prop)}
+										onCheckedChange={(checked) => updateValue(prop.key, checked)}
+										disabled={prop.system || !isEnabled || isServerRunning}
+									/>
+									<span class="text-sm {!isEnabled ? 'text-muted-foreground' : ''}">
+										{getBooleanValue(prop) ? 'Enabled' : 'Disabled'}
+									</span>
+								</div>
+							{:else if prop.type === 'select' && prop.options?.length}
+								<Select
+									type="single"
+									value={getDisplayValue(prop)}
+									onValueChange={(value) => updateValue(prop.key, value ?? '')}
+									disabled={prop.system || !isEnabled || isServerRunning}
+								>
+									<SelectTrigger class="h-9 {!isEnabled ? 'opacity-60' : ''}">
+										<span class="truncate">
+											{getDisplayValue(prop) || 'Select...'}
+										</span>
+									</SelectTrigger>
+									<SelectContent>
+										{#each prop.options as option (option)}
+											<SelectItem value={option}>{option || '(empty)'}</SelectItem>
+										{/each}
+									</SelectContent>
+								</Select>
+							{:else if prop.type === 'number'}
+								<Input
+									id={prop.key}
+									type="number"
+									value={getDisplayValue(prop)}
+									placeholder={prop.defaultValue ?? ''}
+									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
+									disabled={prop.system || !isEnabled || isServerRunning}
+									class="h-9 {!isEnabled ? 'opacity-60' : ''}"
+								/>
+							{:else if prop.type === 'password'}
+								<Input
+									id={prop.key}
+									type="password"
+									value={getDisplayValue(prop)}
+									placeholder={prop.defaultValue ?? ''}
+									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
+									disabled={prop.system || !isEnabled || isServerRunning}
+									class="h-9 {!isEnabled ? 'opacity-60' : ''}"
+								/>
+							{:else}
+								<Input
+									id={prop.key}
+									type="text"
+									value={getDisplayValue(prop)}
+									placeholder={prop.defaultValue ?? ''}
+									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
+									disabled={prop.system || !isEnabled || isServerRunning}
+									class="h-9 {!isEnabled ? 'opacity-60' : ''}"
+								/>
+							{/if}
+
+							{#if prop.defaultValue !== undefined && prop.defaultValue !== ''}
+								<p class="mt-2 text-xs text-muted-foreground">
+									Default: <code class="rounded bg-muted px-1 py-0.5">{prop.defaultValue}</code>
+								</p>
+							{/if}
+						</div>
+					{/snippet}
+
+					<!-- Fields Grid -->
+					<div class="flex-1 overflow-y-auto p-4">
+						{#if activeCategory === 'curseforge'}
+							<div class="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+								<div class="flex items-center gap-2 font-medium text-primary">
+									<Sparkles class="h-4 w-4" />
+									CurseForge Keyless Mode & Defaults Active
+								</div>
+								<p class="mt-1 text-xs text-muted-foreground">
+									CurseForge modpacks and mods can be downloaded and searched without an API key via community proxies. If provided, slugs and file IDs can be auto-extracted directly from modpack URLs or assumed from the server name.
+								</p>
+							</div>
+						{/if}
+
+						<div class="grid gap-4 lg:grid-cols-2">
+							{#each primaryCategoryProps as prop (prop.key)}
+								{@render fieldCard(prop)}
 							{/each}
 						</div>
+
+						{#if activeCategory === 'curseforge' && advancedCategoryProps.length > 0}
+							<div class="mt-6 rounded-lg border bg-muted/10 p-4">
+								<button
+									type="button"
+									onclick={() => (showAdvancedCurseForge = !showAdvancedCurseForge)}
+									class="flex w-full items-center justify-between text-left text-sm font-medium text-foreground hover:text-primary transition-colors"
+								>
+									<span class="flex items-center gap-2">
+										{#if showAdvancedCurseForge}
+											<ChevronDown class="h-4 w-4 text-muted-foreground" />
+										{:else}
+											<ChevronRight class="h-4 w-4 text-muted-foreground" />
+										{/if}
+										Advanced CurseForge Options
+									</span>
+									<span class="text-xs text-muted-foreground">
+										{advancedCategoryProps.length} additional options
+									</span>
+								</button>
+								{#if showAdvancedCurseForge}
+									<div class="mt-4 grid gap-4 lg:grid-cols-2">
+										{#each advancedCategoryProps as prop (prop.key)}
+											{@render fieldCard(prop)}
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
