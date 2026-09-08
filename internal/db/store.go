@@ -233,9 +233,10 @@ func (s *Store) CreateDefaultServerConfig(serverID string) *ServerConfig {
 		RCONPort:     intPtr(25575),
 		Version:      stringPtr("LATEST"),
 		Type:         stringPtr("VANILLA"),
-		Difficulty:   stringPtr("easy"),
-		Mode:         stringPtr("survival"),
-		MaxPlayers:   intPtr(20),
+		Difficulty:      stringPtr("easy"),
+		Mode:            stringPtr("survival"),
+		MaxPlayers:      intPtr(20),
+		SyncChunkWrites: boolPtr(false),
 	}
 
 	// Don't try to get global settings if we're creating the global settings themselves
