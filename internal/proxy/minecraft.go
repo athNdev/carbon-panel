@@ -20,6 +20,7 @@ type MinecraftProxy struct {
 	logger        *logger.Logger
 	listenAddr    string
 	proxyProtocol bool
+	wakeHandler   WakeHandler
 	running       bool
 	runningMutex  sync.RWMutex
 	ctx           context.Context
@@ -29,13 +30,37 @@ type MinecraftProxy struct {
 // NewMinecraftProxy creates a new Minecraft proxy instance
 func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 	ctx, cancel := context.WithCancel(context.Background())
+	log := cfg.Logger
+	if log == nil {
+		log = logger.New()
+	}
 	return &MinecraftProxy{
 		routes:        make(map[string]*Route),
-		logger:        cfg.Logger,
+		logger:        log,
 		listenAddr:    cfg.ListenAddr,
 		proxyProtocol: cfg.ProxyProtocol,
+		wakeHandler:   cfg.WakeHandler,
 		ctx:           ctx,
 		cancel:        cancel,
+	}
+}
+
+// SetWakeHandler configures the wake callback for hibernated servers
+func (p *MinecraftProxy) SetWakeHandler(h WakeHandler) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+	p.wakeHandler = h
+}
+
+// SetRouteHibernated enables or disables hibernation state for a route
+func (p *MinecraftProxy) SetRouteHibernated(hostname string, hibernated bool) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+
+	hostname = strings.ToLower(strings.Split(hostname, ":")[0])
+	if route, exists := p.routes[hostname]; exists {
+		route.Hibernated = hibernated
+		p.logger.Info("Set route hibernated: hostname=%s hibernated=%v", hostname, hibernated)
 	}
 }
 
@@ -207,11 +232,37 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
-	// Connect to backend
+	// Wake hibernated server container if paused (MINE-18)
+	if route.Hibernated && p.wakeHandler != nil {
+		p.logger.Info("Target server %s for host %s is hibernated, waking via cgroup freezer...", route.ServerID, hostname)
+		wakeCtx, wakeCancel := context.WithTimeout(p.ctx, 5*time.Second)
+		if err := p.wakeHandler(wakeCtx, route.ServerID); err != nil {
+			wakeCancel()
+			p.logger.Error("Failed to wake hibernated server %s: %v", route.ServerID, err)
+			return
+		}
+		wakeCancel()
+
+		p.routesMutex.Lock()
+		if r, ok := p.routes[hostname]; ok {
+			r.Hibernated = false
+		}
+		p.routesMutex.Unlock()
+	}
+
+	// Connect to backend (with quick retries to allow socket bind right after unfreeze)
 	backendAddr := net.JoinHostPort(route.BackendHost, fmt.Sprintf("%d", route.BackendPort))
-	backendConn, err := net.DialTimeout("tcp", backendAddr, 5*time.Second)
-	if err != nil {
-		p.logger.Error("Failed to connect to backend %s: %v", backendAddr, err)
+	var backendConn net.Conn
+	var dialErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		backendConn, dialErr = net.DialTimeout("tcp", backendAddr, 2*time.Second)
+		if dialErr == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if dialErr != nil {
+		p.logger.Error("Failed to connect to backend %s: %v", backendAddr, dialErr)
 		return
 	}
 	defer backendConn.Close()
