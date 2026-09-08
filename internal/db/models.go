@@ -386,10 +386,11 @@ type ProxyListener struct {
 	Port        int       `json:"port" gorm:"not null;uniqueIndex"`
 	Name        string    `json:"name"` // e.g., "Primary", "Secondary", "Development"
 	Description string    `json:"description"`
-	Enabled     bool      `json:"enabled" gorm:"not null;default:true"`
-	IsDefault   bool      `json:"is_default" gorm:"not null;default:false"`
-	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	Enabled       bool      `json:"enabled" gorm:"not null;default:true"`
+	IsDefault     bool      `json:"is_default" gorm:"not null;default:false"`
+	ProxyProtocol bool      `json:"proxy_protocol" gorm:"not null;default:false"`
+	CreatedAt     time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt     time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // RegistrationInvite represents a shareable invite link for controlled registration
