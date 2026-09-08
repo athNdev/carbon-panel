@@ -67,6 +67,9 @@ func (p *TCPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 	p.logger.Info("TCP proxy route updated: %s -> %s:%d", p.listenAddr, backendHost, backendPort)
 }
 
+// SetRouteHibernated is a no-op for TCPProxy
+func (p *TCPProxy) SetRouteHibernated(hostname string, hibernated bool) {}
+
 // GetRoutes returns the current route (TCP only has one)
 func (p *TCPProxy) GetRoutes() map[string]*Route {
 	p.runningMutex.RLock()
