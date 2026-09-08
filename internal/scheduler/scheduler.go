@@ -20,6 +20,7 @@ import (
 	"github.com/nickheyer/discopanel/internal/docker"
 	"github.com/nickheyer/discopanel/internal/events"
 	"github.com/nickheyer/discopanel/internal/metrics"
+	"github.com/nickheyer/discopanel/internal/snapshot"
 	"github.com/nickheyer/discopanel/internal/webhook"
 	"github.com/nickheyer/discopanel/pkg/logger"
 	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
@@ -55,6 +56,9 @@ type Scheduler struct {
 	// Stats
 	lastCheck time.Time
 	nextCheck time.Time
+
+	// Snapshot engine for pre-update snapshots and rollback (MINE-23)
+	snapshotEngine *snapshot.Engine
 }
 
 // Config holds scheduler configuration
@@ -76,6 +80,13 @@ func NewScheduler(store *storage.Store, docker *docker.Client, sender *command.S
 		cfg = config[0]
 	}
 
+	var snapEngine *snapshot.Engine
+	if appCfg != nil {
+		snapEngine = snapshot.NewEngine(store, docker, sender, log, snapshot.Config{
+			BackupDir: appCfg.Storage.BackupDir,
+		})
+	}
+
 	return &Scheduler{
 		store:             store,
 		docker:            docker,
@@ -88,7 +99,15 @@ func NewScheduler(store *storage.Store, docker *docker.Client, sender *command.S
 		runningExecutions: make(map[string]context.CancelFunc),
 		runningTasks:      make(map[string]bool),
 		cronParser:        cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow),
+		snapshotEngine:    snapEngine,
 	}
+}
+
+// SetSnapshotEngine configures custom snapshot engine
+func (s *Scheduler) SetSnapshotEngine(e *snapshot.Engine) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.snapshotEngine = e
 }
 
 // Start begins the scheduler loop
@@ -736,6 +755,8 @@ type ModpackUpdateTaskConfig struct {
 	GracefulCountdownSeconds int    `json:"graceful_countdown_seconds"`
 	MaintenanceWindowCron    string `json:"maintenance_window_cron"`
 	StageConfigUpdates       bool   `json:"stage_config_updates"`
+	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`        // Create volume snapshot before applying updates (MINE-23)
+	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"`    // Automatically rollback snapshot if restart/update fails
 	AuthToken                string `json:"auth_token"`
 }
 
@@ -830,6 +851,19 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	if hasUpdates {
+		var createdSnapshot *storage.ServerSnapshot
+
+		// One-click pre-update volume snapshotting (MINE-23)
+		if s.snapshotEngine != nil {
+			snap, snapErr := s.snapshotEngine.CreatePreUpdateSnapshot(ctx, server, fmt.Sprintf("pre-update: %s", updateSummary))
+			if snapErr != nil {
+				s.log.Warn("ModpackTask %s: Failed to create pre-update volume snapshot: %v", task.Name, snapErr)
+			} else {
+				createdSnapshot = snap
+				s.log.Info("ModpackTask %s: Created pre-update snapshot %s (%s)", task.Name, snap.ID, snap.Name)
+			}
+		}
+
 		// Stage configuration updates if requested
 		if cfg.StageConfigUpdates {
 			stagedDir := filepath.Join(server.DataPath, ".discopanel_modpack_staged")
@@ -859,11 +893,16 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			"--exclude=.git",
 			"--exclude=.discopanel_modpack_git",
 			"--exclude=.discopanel_modpack_staged",
+			"--exclude=.discopanel_snapshots",
 			srcDir+"/", server.DataPath+"/")
 		if out, err := cmdRsync.CombinedOutput(); err != nil {
 			// Fallback to cp -rf if rsync is not installed
 			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
 			if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
+				// If copying failed and we took a snapshot, rollback if enabled
+				if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
+					_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
+				}
 				return string(out) + "\n" + string(cpOut), fmt.Errorf("failed to copy modpack files: %w", cpErr)
 			}
 		}
@@ -891,6 +930,10 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 				s.log.Info("ModpackTask %s: Executing graceful restart (countdown: %ds) for server %s", task.Name, countdown, server.Name)
 				restartOut, err := s.executeGracefulRestart(ctx, server, task, countdown)
 				if err != nil {
+					if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
+						s.log.Warn("ModpackTask %s: Restart failed, rolling back to pre-update snapshot %s", task.Name, createdSnapshot.ID)
+						_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
+					}
 					return fmt.Sprintf("%s\nModpack synced, but graceful restart failed: %v", updateSummary, err), err
 				}
 				return fmt.Sprintf("%s\n%s", updateSummary, restartOut), nil
@@ -899,6 +942,10 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			s.log.Info("ModpackTask %s: Restarting server %s immediately", task.Name, server.Name)
 			restartOut, err := s.executeRestartTask(ctx, server, task)
 			if err != nil {
+				if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
+					s.log.Warn("ModpackTask %s: Restart failed, rolling back to pre-update snapshot %s", task.Name, createdSnapshot.ID)
+					_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
+				}
 				return fmt.Sprintf("%s\nModpack synced, but server restart failed: %v", updateSummary, err), err
 			}
 			return fmt.Sprintf("%s\n%s", updateSummary, restartOut), nil
