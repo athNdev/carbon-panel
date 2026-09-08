@@ -44,6 +44,12 @@ const (
 	ModServiceUpdateModProcedure = "/discopanel.v1.ModService/UpdateMod"
 	// ModServiceDeleteModProcedure is the fully-qualified name of the ModService's DeleteMod RPC.
 	ModServiceDeleteModProcedure = "/discopanel.v1.ModService/DeleteMod"
+	// ModServiceGetFabricOptimizationStackProcedure is the fully-qualified name of the ModService's
+	// GetFabricOptimizationStack RPC.
+	ModServiceGetFabricOptimizationStackProcedure = "/discopanel.v1.ModService/GetFabricOptimizationStack"
+	// ModServiceInstallFabricOptimizationStackProcedure is the fully-qualified name of the ModService's
+	// InstallFabricOptimizationStack RPC.
+	ModServiceInstallFabricOptimizationStackProcedure = "/discopanel.v1.ModService/InstallFabricOptimizationStack"
 )
 
 // ModServiceClient is a client for the discopanel.v1.ModService service.
@@ -58,6 +64,10 @@ type ModServiceClient interface {
 	UpdateMod(context.Context, *connect.Request[v1.UpdateModRequest]) (*connect.Response[v1.UpdateModResponse], error)
 	// Delete mod file
 	DeleteMod(context.Context, *connect.Request[v1.DeleteModRequest]) (*connect.Response[v1.DeleteModResponse], error)
+	// Get Fabric optimization stack status and compatibility for a server
+	GetFabricOptimizationStack(context.Context, *connect.Request[v1.GetFabricOptimizationStackRequest]) (*connect.Response[v1.GetFabricOptimizationStackResponse], error)
+	// Install or update Fabric optimization stack mods (Lithium, FerriteCore, ModernFix, C2ME)
+	InstallFabricOptimizationStack(context.Context, *connect.Request[v1.InstallFabricOptimizationStackRequest]) (*connect.Response[v1.InstallFabricOptimizationStackResponse], error)
 }
 
 // NewModServiceClient constructs a client for the discopanel.v1.ModService service. By default, it
@@ -101,16 +111,30 @@ func NewModServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(modServiceMethods.ByName("DeleteMod")),
 			connect.WithClientOptions(opts...),
 		),
+		getFabricOptimizationStack: connect.NewClient[v1.GetFabricOptimizationStackRequest, v1.GetFabricOptimizationStackResponse](
+			httpClient,
+			baseURL+ModServiceGetFabricOptimizationStackProcedure,
+			connect.WithSchema(modServiceMethods.ByName("GetFabricOptimizationStack")),
+			connect.WithClientOptions(opts...),
+		),
+		installFabricOptimizationStack: connect.NewClient[v1.InstallFabricOptimizationStackRequest, v1.InstallFabricOptimizationStackResponse](
+			httpClient,
+			baseURL+ModServiceInstallFabricOptimizationStackProcedure,
+			connect.WithSchema(modServiceMethods.ByName("InstallFabricOptimizationStack")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // modServiceClient implements ModServiceClient.
 type modServiceClient struct {
-	listMods          *connect.Client[v1.ListModsRequest, v1.ListModsResponse]
-	getMod            *connect.Client[v1.GetModRequest, v1.GetModResponse]
-	importUploadedMod *connect.Client[v1.ImportUploadedModRequest, v1.ImportUploadedModResponse]
-	updateMod         *connect.Client[v1.UpdateModRequest, v1.UpdateModResponse]
-	deleteMod         *connect.Client[v1.DeleteModRequest, v1.DeleteModResponse]
+	listMods                       *connect.Client[v1.ListModsRequest, v1.ListModsResponse]
+	getMod                         *connect.Client[v1.GetModRequest, v1.GetModResponse]
+	importUploadedMod              *connect.Client[v1.ImportUploadedModRequest, v1.ImportUploadedModResponse]
+	updateMod                      *connect.Client[v1.UpdateModRequest, v1.UpdateModResponse]
+	deleteMod                      *connect.Client[v1.DeleteModRequest, v1.DeleteModResponse]
+	getFabricOptimizationStack     *connect.Client[v1.GetFabricOptimizationStackRequest, v1.GetFabricOptimizationStackResponse]
+	installFabricOptimizationStack *connect.Client[v1.InstallFabricOptimizationStackRequest, v1.InstallFabricOptimizationStackResponse]
 }
 
 // ListMods calls discopanel.v1.ModService.ListMods.
@@ -138,6 +162,16 @@ func (c *modServiceClient) DeleteMod(ctx context.Context, req *connect.Request[v
 	return c.deleteMod.CallUnary(ctx, req)
 }
 
+// GetFabricOptimizationStack calls discopanel.v1.ModService.GetFabricOptimizationStack.
+func (c *modServiceClient) GetFabricOptimizationStack(ctx context.Context, req *connect.Request[v1.GetFabricOptimizationStackRequest]) (*connect.Response[v1.GetFabricOptimizationStackResponse], error) {
+	return c.getFabricOptimizationStack.CallUnary(ctx, req)
+}
+
+// InstallFabricOptimizationStack calls discopanel.v1.ModService.InstallFabricOptimizationStack.
+func (c *modServiceClient) InstallFabricOptimizationStack(ctx context.Context, req *connect.Request[v1.InstallFabricOptimizationStackRequest]) (*connect.Response[v1.InstallFabricOptimizationStackResponse], error) {
+	return c.installFabricOptimizationStack.CallUnary(ctx, req)
+}
+
 // ModServiceHandler is an implementation of the discopanel.v1.ModService service.
 type ModServiceHandler interface {
 	// List server mods
@@ -150,6 +184,10 @@ type ModServiceHandler interface {
 	UpdateMod(context.Context, *connect.Request[v1.UpdateModRequest]) (*connect.Response[v1.UpdateModResponse], error)
 	// Delete mod file
 	DeleteMod(context.Context, *connect.Request[v1.DeleteModRequest]) (*connect.Response[v1.DeleteModResponse], error)
+	// Get Fabric optimization stack status and compatibility for a server
+	GetFabricOptimizationStack(context.Context, *connect.Request[v1.GetFabricOptimizationStackRequest]) (*connect.Response[v1.GetFabricOptimizationStackResponse], error)
+	// Install or update Fabric optimization stack mods (Lithium, FerriteCore, ModernFix, C2ME)
+	InstallFabricOptimizationStack(context.Context, *connect.Request[v1.InstallFabricOptimizationStackRequest]) (*connect.Response[v1.InstallFabricOptimizationStackResponse], error)
 }
 
 // NewModServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -189,6 +227,18 @@ func NewModServiceHandler(svc ModServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(modServiceMethods.ByName("DeleteMod")),
 		connect.WithHandlerOptions(opts...),
 	)
+	modServiceGetFabricOptimizationStackHandler := connect.NewUnaryHandler(
+		ModServiceGetFabricOptimizationStackProcedure,
+		svc.GetFabricOptimizationStack,
+		connect.WithSchema(modServiceMethods.ByName("GetFabricOptimizationStack")),
+		connect.WithHandlerOptions(opts...),
+	)
+	modServiceInstallFabricOptimizationStackHandler := connect.NewUnaryHandler(
+		ModServiceInstallFabricOptimizationStackProcedure,
+		svc.InstallFabricOptimizationStack,
+		connect.WithSchema(modServiceMethods.ByName("InstallFabricOptimizationStack")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/discopanel.v1.ModService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ModServiceListModsProcedure:
@@ -201,6 +251,10 @@ func NewModServiceHandler(svc ModServiceHandler, opts ...connect.HandlerOption) 
 			modServiceUpdateModHandler.ServeHTTP(w, r)
 		case ModServiceDeleteModProcedure:
 			modServiceDeleteModHandler.ServeHTTP(w, r)
+		case ModServiceGetFabricOptimizationStackProcedure:
+			modServiceGetFabricOptimizationStackHandler.ServeHTTP(w, r)
+		case ModServiceInstallFabricOptimizationStackProcedure:
+			modServiceInstallFabricOptimizationStackHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -228,4 +282,12 @@ func (UnimplementedModServiceHandler) UpdateMod(context.Context, *connect.Reques
 
 func (UnimplementedModServiceHandler) DeleteMod(context.Context, *connect.Request[v1.DeleteModRequest]) (*connect.Response[v1.DeleteModResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ModService.DeleteMod is not implemented"))
+}
+
+func (UnimplementedModServiceHandler) GetFabricOptimizationStack(context.Context, *connect.Request[v1.GetFabricOptimizationStackRequest]) (*connect.Response[v1.GetFabricOptimizationStackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ModService.GetFabricOptimizationStack is not implemented"))
+}
+
+func (UnimplementedModServiceHandler) InstallFabricOptimizationStack(context.Context, *connect.Request[v1.InstallFabricOptimizationStackRequest]) (*connect.Response[v1.InstallFabricOptimizationStackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ModService.InstallFabricOptimizationStack is not implemented"))
 }
