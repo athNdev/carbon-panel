@@ -600,7 +600,7 @@ func getCategoryIndex(key string) int {
 		"modrinthIgnoreMissingFiles", "modrinthExcludeFiles", "modrinthForceIncludeFiles",
 		"modrinthForceSynchronize", "modrinthDefaultExcludeIncludes", "modrinthOverridesExclusions",
 		"modrinthProjects", "modrinthDownloadDependencies", "modrinthProjectsDefaultVersionType",
-		"versionFromModrinthProjects":
+		"versionFromModrinthProjects", "modrinthToken", "modrinthUserAgent":
 		return 12
 
 	default:
