@@ -2,9 +2,16 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -482,5 +489,218 @@ func (s *ModService) DeleteMod(ctx context.Context, req *connect.Request[v1.Dele
 
 	return connect.NewResponse(&v1.DeleteModResponse{
 		Message: "Mod deleted successfully",
+	}), nil
+}
+
+type modrinthVersionFile struct {
+	URL      string `json:"url"`
+	Filename string `json:"filename"`
+	Primary  bool   `json:"primary"`
+}
+
+type modrinthVersionItem struct {
+	ID            string                `json:"id"`
+	VersionNumber string                `json:"version_number"`
+	Files         []modrinthVersionFile `json:"files"`
+}
+
+var fabricOptStackDefs = []struct {
+	ModID       string
+	Name        string
+	Description string
+	PrefixMatch string
+}{
+	{ModID: "lithium", Name: "Lithium", Description: "General physics, mob AI, and world ticking optimization", PrefixMatch: "lithium"},
+	{ModID: "ferrite-core", Name: "FerriteCore", Description: "Memory usage optimization (reduces RAM overhead)", PrefixMatch: "ferritecore"},
+	{ModID: "modernfix", Name: "ModernFix", Description: "All-in-one memory leak, launch time, and allocation optimization", PrefixMatch: "modernfix"},
+	{ModID: "c2me-fabric", Name: "C2ME", Description: "Concurrent chunk management and multithreaded world generation", PrefixMatch: "c2me"},
+}
+
+func fetchModrinthModVersion(ctx context.Context, slug string, mcVersion string) (*modrinthVersionItem, error) {
+	loadersJSON := url.QueryEscape(`["fabric"]`)
+	gameVersionsJSON := url.QueryEscape(fmt.Sprintf(`["%s"]`, mcVersion))
+	reqURL := fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version?loaders=%s&game_versions=%s", slug, loadersJSON, gameVersionsJSON)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Mineserver-DiscoPanel/1.0 (contact@mineserver.local)")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("modrinth returned status %d", resp.StatusCode)
+	}
+
+	var versions []modrinthVersionItem
+	if err := json.NewDecoder(resp.Body).Decode(&versions); err != nil {
+		return nil, err
+	}
+
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no versions found for mc %s", mcVersion)
+	}
+
+	return &versions[0], nil
+}
+
+// GetFabricOptimizationStack checks the status and compatibility of Lithium, FerriteCore, ModernFix, and C2ME
+func (s *ModService) GetFabricOptimizationStack(ctx context.Context, req *connect.Request[v1.GetFabricOptimizationStackRequest]) (*connect.Response[v1.GetFabricOptimizationStackResponse], error) {
+	msg := req.Msg
+	server, err := s.store.GetServer(ctx, msg.ServerId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
+	}
+
+	isFabric := server.ModLoader == storage.ModLoaderFabric || server.ModLoader == storage.ModLoaderQuilt
+	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+
+	// List files in mods directory to detect installed versions
+	installedFiles := make(map[string]string)
+	if entries, err := os.ReadDir(modsDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jar") {
+				lower := strings.ToLower(entry.Name())
+				for _, def := range fabricOptStackDefs {
+					if strings.Contains(lower, def.PrefixMatch) {
+						installedFiles[def.ModID] = entry.Name()
+					}
+				}
+			}
+		}
+	}
+
+	var resultMods []*v1.FabricOptimizationMod
+	for _, def := range fabricOptStackDefs {
+		modItem := &v1.FabricOptimizationMod{
+			ModId:       def.ModID,
+			Name:        def.Name,
+			Description: def.Description,
+		}
+
+		if fileName, ok := installedFiles[def.ModID]; ok {
+			modItem.Installed = true
+			modItem.FileName = fileName
+			modItem.InstalledVersion = fileName
+		}
+
+		if isFabric {
+			v, err := fetchModrinthModVersion(ctx, def.ModID, server.MCVersion)
+			if err == nil && v != nil && len(v.Files) > 0 {
+				modItem.Compatible = true
+				modItem.LatestCompatibleVersion = v.VersionNumber
+				modItem.DownloadUrl = v.Files[0].URL
+				if !modItem.Installed {
+					modItem.FileName = v.Files[0].Filename
+				}
+			} else {
+				modItem.Compatible = false
+			}
+		}
+
+		resultMods = append(resultMods, modItem)
+	}
+
+	return connect.NewResponse(&v1.GetFabricOptimizationStackResponse{
+		IsFabric:  isFabric,
+		McVersion: server.MCVersion,
+		Mods:      resultMods,
+	}), nil
+}
+
+// InstallFabricOptimizationStack installs or updates Lithium, FerriteCore, ModernFix, and/or C2ME
+func (s *ModService) InstallFabricOptimizationStack(ctx context.Context, req *connect.Request[v1.InstallFabricOptimizationStackRequest]) (*connect.Response[v1.InstallFabricOptimizationStackResponse], error) {
+	msg := req.Msg
+	server, err := s.store.GetServer(ctx, msg.ServerId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
+	}
+
+	if server.ModLoader != storage.ModLoaderFabric && server.ModLoader != storage.ModLoaderQuilt {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("server mod loader is not Fabric or Quilt"))
+	}
+
+	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	if err := os.MkdirAll(modsDir, 0755); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create mods directory: %w", err))
+	}
+
+	filter := make(map[string]bool)
+	for _, id := range msg.ModIds {
+		filter[id] = true
+	}
+
+	var installedMods []*v1.FabricOptimizationMod
+	var warnings []string
+
+	for _, def := range fabricOptStackDefs {
+		if len(filter) > 0 && !filter[def.ModID] {
+			continue
+		}
+
+		v, err := fetchModrinthModVersion(ctx, def.ModID, server.MCVersion)
+		if err != nil || v == nil || len(v.Files) == 0 {
+			warnings = append(warnings, fmt.Sprintf("%s is not compatible with Minecraft %s: %v", def.Name, server.MCVersion, err))
+			continue
+		}
+
+		targetFile := v.Files[0]
+		targetPath := filepath.Join(modsDir, targetFile.Filename)
+
+		// Remove existing older versions of this mod
+		if entries, err := os.ReadDir(modsDir); err == nil {
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.Contains(strings.ToLower(entry.Name()), def.PrefixMatch) && entry.Name() != targetFile.Filename {
+					_ = os.Remove(filepath.Join(modsDir, entry.Name()))
+				}
+			}
+		}
+
+		// Download latest compatible version
+		resp, err := http.Get(targetFile.URL)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("failed to download %s: %v", def.Name, err))
+			continue
+		}
+
+		out, err := os.Create(targetPath)
+		if err != nil {
+			resp.Body.Close()
+			warnings = append(warnings, fmt.Sprintf("failed to save %s: %v", def.Name, err))
+			continue
+		}
+
+		_, copyErr := io.Copy(out, resp.Body)
+		resp.Body.Close()
+		out.Close()
+
+		if copyErr != nil {
+			warnings = append(warnings, fmt.Sprintf("failed while saving %s: %v", def.Name, copyErr))
+			continue
+		}
+
+		installedMods = append(installedMods, &v1.FabricOptimizationMod{
+			ModId:                   def.ModID,
+			Name:                    def.Name,
+			Description:             def.Description,
+			Installed:               true,
+			Compatible:              true,
+			InstalledVersion:        v.VersionNumber,
+			LatestCompatibleVersion: v.VersionNumber,
+			FileName:                targetFile.Filename,
+			DownloadUrl:             targetFile.URL,
+		})
+	}
+
+	return connect.NewResponse(&v1.InstallFabricOptimizationStackResponse{
+		InstalledMods: installedMods,
+		Warnings:      warnings,
+		Message:       fmt.Sprintf("Installed %d Fabric optimization mod(s)", len(installedMods)),
 	}), nil
 }
