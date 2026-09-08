@@ -144,6 +144,7 @@ message DockerOverrides {
   repeated string entrypoint = 18; // Override default entrypoint
   repeated string command = 19; // Override default command
   repeated string dns = 20; // Custom DNS servers
+  int64 pids_limit = 21; // Maximum number of process IDs (fork bomb guard)
 }
 
 // TCP proxy listener endpoint

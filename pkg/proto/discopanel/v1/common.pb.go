@@ -823,6 +823,7 @@ type DockerOverrides struct {
 	Entrypoint    []string               `protobuf:"bytes,18,rep,name=entrypoint,proto3" json:"entrypoint,omitempty"`                                                                            // Override default entrypoint
 	Command       []string               `protobuf:"bytes,19,rep,name=command,proto3" json:"command,omitempty"`                                                                                  // Override default command
 	Dns           []string               `protobuf:"bytes,20,rep,name=dns,proto3" json:"dns,omitempty"`                                                                                          // Custom DNS servers
+	PidsLimit     int64                  `protobuf:"varint,21,opt,name=pids_limit,json=pidsLimit,proto3" json:"pids_limit,omitempty"`                                                            // Maximum number of process IDs (fork bomb guard)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -995,6 +996,13 @@ func (x *DockerOverrides) GetDns() []string {
 		return x.Dns
 	}
 	return nil
+}
+
+func (x *DockerOverrides) GetPidsLimit() int64 {
+	if x != nil {
+		return x.PidsLimit
+	}
+	return 0
 }
 
 // TCP proxy listener endpoint
@@ -1423,7 +1431,7 @@ const file_discopanel_v1_common_proto_rawDesc = "" +
 	"\tread_only\x18\x03 \x01(\bR\breadOnly\x12\x12\n" +
 	"\x04type\x18\x04 \x01(\tR\x04type\x12\x1d\n" +
 	"\n" +
-	"create_dir\x18\x05 \x01(\bR\tcreateDir\"\xce\x06\n" +
+	"create_dir\x18\x05 \x01(\bR\tcreateDir\"\xed\x06\n" +
 	"\x0fDockerOverrides\x12Q\n" +
 	"\venvironment\x18\x01 \x03(\v2/.discopanel.v1.DockerOverrides.EnvironmentEntryR\venvironment\x124\n" +
 	"\avolumes\x18\x02 \x03(\v2\x1a.discopanel.v1.VolumeMountR\avolumes\x12!\n" +
@@ -1451,7 +1459,9 @@ const file_discopanel_v1_common_proto_rawDesc = "" +
 	"entrypoint\x18\x12 \x03(\tR\n" +
 	"entrypoint\x12\x18\n" +
 	"\acommand\x18\x13 \x03(\tR\acommand\x12\x10\n" +
-	"\x03dns\x18\x14 \x03(\tR\x03dns\x1a>\n" +
+	"\x03dns\x18\x14 \x03(\tR\x03dns\x12\x1d\n" +
+	"\n" +
+	"pids_limit\x18\x15 \x01(\x03R\tpidsLimit\x1a>\n" +
 	"\x10EnvironmentEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a9\n" +
