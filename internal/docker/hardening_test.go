@@ -35,12 +35,16 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 	overrides := &v1.DockerOverrides{
 		CapAdd:      []string{"SYS_NICE"},
 		PidsLimit:   customPids,
+		CpusetCpus:  "0,1,2",
 		ReadOnly:    true,
 		SecurityOpt: []string{"no-new-privileges:true", "apparmor:unconfined"},
 	}
 
 	ApplyOverrides(overrides, config, hostConfig)
 
+	if hostConfig.Resources.CpusetCpus != "0,1,2" {
+		t.Errorf("expected CpusetCpus 0,1,2, got %s", hostConfig.Resources.CpusetCpus)
+	}
 	if !slices.Contains(hostConfig.CapAdd, "SYS_NICE") {
 		t.Errorf("expected SYS_NICE in CapAdd")
 	}
