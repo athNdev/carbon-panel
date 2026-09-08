@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/nickheyer/discopanel/internal/events"
 	"github.com/nickheyer/discopanel/internal/metrics"
 	"github.com/nickheyer/discopanel/internal/module"
+	"github.com/nickheyer/discopanel/internal/packwiz"
 	"github.com/nickheyer/discopanel/internal/proxy"
 	"github.com/nickheyer/discopanel/internal/rbac"
 	"github.com/nickheyer/discopanel/internal/rpc/handlers"
@@ -212,6 +214,11 @@ func (s *Server) setupHandler() {
 
 	// Online mod search and 1-click install endpoints (MINE-25)
 	mux.Handle("/api/v1/servers/", handlers.NewModOnlineManager(s.store, s.log, s.authManager, s.enforcer))
+
+	// Packwiz Modpack Studio and Server Deployment Engine (MINE-30, MINE-31)
+	packwizDir := filepath.Join(s.config.Storage.DataDir, "packwiz")
+	packwizManager := packwiz.NewManager(packwizDir, s.log)
+	mux.Handle("/api/v1/packwiz/", handlers.NewPackwizHandler(packwizManager, s.store, s.log, s.authManager, s.enforcer))
 
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
