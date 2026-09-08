@@ -40,6 +40,7 @@ func allModels() []any {
 		&Module{},
 		&SystemSetting{},
 		&Node{},
+		&ServerSnapshot{},
 	}
 }
 
