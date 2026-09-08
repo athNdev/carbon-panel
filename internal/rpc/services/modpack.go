@@ -730,7 +730,8 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 	}
 
 	// Enforce SSRF validation (MINE-12): validate URL, scheme, and DNS resolution
-	if _, err := utils.ValidateURL(rawURL, msg.GetAllowPrivateNetwork()); err != nil {
+	parsedURL, err := utils.ValidateURL(rawURL, msg.GetAllowPrivateNetwork())
+	if err != nil {
 		s.log.Warn("SSRF check blocked remote modpack URL %s: %v", rawURL, err)
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("SSRF guard blocked URL: %w", err))
 	}
