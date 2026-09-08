@@ -27,6 +27,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	models "github.com/nickheyer/discopanel/internal/db"
 	"github.com/nickheyer/discopanel/internal/minecraft"
+	"github.com/nickheyer/discopanel/pkg/utils"
 	"github.com/nickheyer/discopanel/pkg/logger"
 	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
 )
@@ -468,6 +469,15 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		},
 	}
 
+	// Apply dynamic memory headroom & OOM-kill (exit 137) guard (MINE-4)
+	alloc := utils.CalculateMemoryAllocation(server.Memory)
+	containerLimitBytes := alloc.ContainerLimitBytes
+	if serverConfig.MaxMemory != nil && *serverConfig.MaxMemory != "" {
+		if customMaxMB, err := utils.ParseMemoryMB(*serverConfig.MaxMemory); err == nil && customMaxMB > 0 {
+			_, containerLimitBytes = utils.EnsureMemoryHeadroom(customMaxMB, alloc.ContainerLimitMB)
+		}
+	}
+
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
 		Mounts: []mount.Mount{
@@ -475,8 +485,8 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		},
 		RestartPolicy: container.RestartPolicy{Name: "unless-stopped"},
 		Resources: container.Resources{
-			Memory:     int64(server.Memory) * 1024 * 1024,
-			MemorySwap: int64(server.Memory) * 1024 * 1024,
+			Memory:     containerLimitBytes,
+			MemorySwap: containerLimitBytes,
 		},
 		LogConfig: container.LogConfig{
 			Type:   "json-file",

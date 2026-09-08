@@ -9,6 +9,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
 	"github.com/nickheyer/discopanel/internal/config"
+	"github.com/nickheyer/discopanel/pkg/utils"
 	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -165,12 +166,13 @@ func (s *Store) UpdateServerConfigMemory(ctx context.Context, serverID string, m
 		return err
 	}
 
-	// Update memory and max memory (they're the same I THINK) ... Note: They are not...
-	strServerMem := fmt.Sprintf("%dM", int64(float64(memory)*.75))
-	config.MaxMemory = &strServerMem
+	// Update memory and max memory dynamically with headroom (MINE-4)
+	alloc := utils.CalculateMemoryAllocation(memory)
+	config.MaxMemory = &alloc.MaxMemoryStr
+	config.InitMemory = &alloc.InitMemoryStr
 
 	if config.Memory != nil {
-		config.Memory = &strServerMem
+		config.Memory = &alloc.MaxMemoryStr
 	}
 
 	return s.SaveServerConfig(ctx, config)
