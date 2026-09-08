@@ -475,7 +475,7 @@
 						> and add it to your server defaults.
 					</p>
 					<div class="mt-2 flex items-center gap-2">
-						<Button size="sm" href="/settings#cfApiKey">
+						<Button size="sm" href="/settings?tab=api-keys">
 							<Settings class="mr-2 h-4 w-4" />
 							Configure in Settings
 						</Button>
