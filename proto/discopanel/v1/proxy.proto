@@ -26,6 +26,12 @@ service ProxyService {
   rpc GetServerRouting(GetServerRoutingRequest) returns (GetServerRoutingResponse);
   // Update server proxy hostname
   rpc UpdateServerRouting(UpdateServerRoutingRequest) returns (UpdateServerRoutingResponse);
+  // Get current Velocity modern forwarding secret
+  rpc GetVelocitySecret(GetVelocitySecretRequest) returns (GetVelocitySecretResponse);
+  // Rotate or regenerate Velocity modern forwarding secret and sync to backend Paper/Folia servers
+  rpc RotateVelocitySecret(RotateVelocitySecretRequest) returns (RotateVelocitySecretResponse);
+  // Sync Velocity modern forwarding secret to a specific server's config files
+  rpc SyncVelocitySecretToServer(SyncVelocitySecretToServerRequest) returns (SyncVelocitySecretToServerResponse);
 }
 
 // Active proxy connection
@@ -164,3 +170,41 @@ message UpdateServerRoutingResponse {
   string hostname = 2;
   string proxy_listener_id = 3;
 }
+
+// Request to retrieve the current Velocity forwarding secret
+message GetVelocitySecretRequest {}
+
+// Response containing current Velocity forwarding secret
+message GetVelocitySecretResponse {
+  string secret = 1;
+  bool auto_generated = 2;
+  int32 synced_servers_count = 3;
+}
+
+// Request to rotate the Velocity forwarding secret
+message RotateVelocitySecretRequest {
+  optional string custom_secret = 1; // If empty, generates a cryptographically secure random 32-byte secret
+  bool sync_all_servers = 2;         // If true, automatically updates paper.yml / config/paper-global.yml on all backend servers
+}
+
+// Response with newly rotated secret details
+message RotateVelocitySecretResponse {
+  string new_secret = 1;
+  int32 synced_servers_count = 2;
+  repeated string synced_server_ids = 3;
+  string message = 4;
+}
+
+// Request to sync Velocity forwarding secret to a specific server
+message SyncVelocitySecretToServerRequest {
+  string server_id = 1;
+}
+
+// Response from syncing secret to a specific server
+message SyncVelocitySecretToServerResponse {
+  string server_id = 1;
+  bool success = 2;
+  string updated_file = 3;
+  string message = 4;
+}
+
