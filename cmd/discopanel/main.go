@@ -71,11 +71,14 @@ func main() {
 
 	// Initialize Docker client with configuration
 	dockerClient, err := docker.NewClient(cfg.Docker.Host, log, docker.ClientConfig{
-		APIVersion:  cfg.Docker.Version,
-		NetworkName: cfg.Docker.NetworkName,
-		RegistryURL: cfg.Docker.RegistryURL,
-		DNS:         cfg.Docker.DNS,
-		Labels:      cfg.Docker.Labels,
+		APIVersion:      cfg.Docker.Version,
+		NetworkName:     cfg.Docker.NetworkName,
+		RegistryURL:     cfg.Docker.RegistryURL,
+		DNS:             cfg.Docker.DNS,
+		Labels:          cfg.Docker.Labels,
+		EnableRateLimit: cfg.Docker.EnableRateLimit,
+		RateLimitPerMin: cfg.Docker.RateLimitPerMin,
+		RateLimitBurst:  cfg.Docker.RateLimitBurst,
 	})
 	if err != nil {
 		log.Fatal("Failed to initialize Docker client: %v", err)

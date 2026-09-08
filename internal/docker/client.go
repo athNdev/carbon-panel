@@ -179,11 +179,14 @@ func GetRequiredJavaVersion(mcVersion string, modLoader models.ModLoader) string
 }
 
 type ClientConfig struct {
-	APIVersion  string
-	NetworkName string
-	RegistryURL string
-	DNS         string
-	Labels      map[string]string
+	APIVersion      string
+	NetworkName     string
+	RegistryURL     string
+	DNS             string
+	Labels          map[string]string
+	EnableRateLimit bool
+	RateLimitPerMin int
+	RateLimitBurst  int
 }
 
 type ContainerLogStreamer interface {
@@ -198,6 +201,7 @@ type Client struct {
 	config      ClientConfig
 	logStreamer ContainerLogStreamer
 	log         *logger.Logger
+	firewall    *FirewallManager
 }
 
 // Auto manage streams at the client level when set
@@ -231,11 +235,20 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 	} else {
 		// Set defaults
 		c.config = ClientConfig{
-			NetworkName: "discopanel-network",
+			NetworkName:     "discopanel-network",
+			EnableRateLimit: true,
+			RateLimitPerMin: 10,
+			RateLimitBurst:  20,
 		}
 	}
+	c.firewall = NewFirewallManager(log, c.config.EnableRateLimit, c.config.RateLimitPerMin, c.config.RateLimitBurst)
 
 	return c, nil
+}
+
+// GetFirewallManager returns the firewall manager for DOCKER-USER rules
+func (c *Client) GetFirewallManager() *FirewallManager {
+	return c.firewall
 }
 
 func (c *Client) Close() error {
@@ -431,6 +444,11 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// Bind RCON to localhost only
 		portBindings[nat.Port(fmt.Sprintf("%d/tcp", DefaultRCONPort))] = []nat.PortBinding{
 			{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", server.Port+RCONPortOffset)},
+		}
+
+		// Apply DOCKER-USER iptables rate limiting & SYN flood protection (MINE-9)
+		if c.firewall != nil && server.Port > 0 {
+			_ = c.firewall.ApplyPortRateLimiting(ctx, server.Port, c.config.RateLimitPerMin, c.config.RateLimitBurst)
 		}
 	}
 	// Add additional port bindings
