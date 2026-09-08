@@ -188,6 +188,17 @@ func (p *HTTPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 	}
 }
 
+// SetRouteHibernated sets the hibernation state for a route
+func (p *HTTPProxy) SetRouteHibernated(hostname string, hibernated bool) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+
+	hostname = strings.ToLower(strings.Split(hostname, ":")[0])
+	if route, exists := p.routes[hostname]; exists {
+		route.Hibernated = hibernated
+	}
+}
+
 // GetRoutes returns a copy of all current routes
 func (p *HTTPProxy) GetRoutes() map[string]*Route {
 	p.routesMutex.RLock()

@@ -23,6 +23,7 @@ type Manager struct {
 	networkName      string
 	dockerClient     client.CommonAPIClient
 	ownsDockerClient bool
+	wakeHandler      WakeHandler
 }
 
 // NewManager creates a new proxy manager
@@ -59,6 +60,18 @@ func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dock
 	return m
 }
 
+// SetWakeHandler configures the wake callback for hibernated servers across proxies (MINE-18)
+func (m *Manager) SetWakeHandler(h WakeHandler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.wakeHandler = h
+	for _, p := range m.proxies {
+		if mcProxy, ok := p.(*MinecraftProxy); ok {
+			mcProxy.SetWakeHandler(h)
+		}
+	}
+}
+
 // Start initializes and starts the proxy if enabled
 func (m *Manager) Start() error {
 	m.mu.Lock()
@@ -91,6 +104,7 @@ func (m *Manager) Start() error {
 			ListenAddr:    listenAddr,
 			Logger:        m.logger,
 			ProxyProtocol: listener.ProxyProtocol,
+			WakeHandler:   m.wakeHandler,
 		})
 
 		m.proxies[listener.Port] = proxy
@@ -110,8 +124,8 @@ func (m *Manager) Start() error {
 	}
 
 	for _, server := range servers {
-		// Add routes for servers with proxy hostname that are either running or have a container
-		if server.ProxyHostname != "" && server.ProxyListenerID != "" && (server.ContainerID != "" || server.Status == db.StatusRunning || server.NodeID != "") {
+		// Add routes for servers with proxy hostname that are either running, paused, or have a container
+		if server.ProxyHostname != "" && server.ProxyListenerID != "" && (server.ContainerID != "" || server.Status == db.StatusRunning || server.Status == db.StatusPaused || server.NodeID != "") {
 			// Find which listener this server uses
 			listener, ok := listenerMap[server.ProxyListenerID]
 			if !ok || !listener.Enabled {
@@ -138,8 +152,11 @@ func (m *Manager) Start() error {
 				backendHost,
 				backendPort,
 			)
-			m.logger.Info("Added proxy route for server %s: %s -> %s:%d on listener port %d",
-				server.Name, server.ProxyHostname, backendHost, backendPort, listener.Port)
+			if server.Status == db.StatusPaused {
+				proxy.SetRouteHibernated(server.ProxyHostname, true)
+			}
+			m.logger.Info("Added proxy route for server %s: %s -> %s:%d on listener port %d (paused=%v)",
+				server.Name, server.ProxyHostname, backendHost, backendPort, listener.Port, server.Status == db.StatusPaused)
 		}
 	}
 
@@ -212,8 +229,8 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 
 	hostname := m.generateHostname(server)
 
-	// Add or update route for servers that are starting or running with proxy hostname
-	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting) && server.ProxyHostname != "" {
+	// Add or update route for servers that are starting, running, or hibernated (paused) with proxy hostname
+	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting || server.Status == db.StatusPaused) && server.ProxyHostname != "" {
 		backendHost, backendPort, err := m.resolveBackend(server)
 		if err != nil {
 			m.logger.Error("Failed to resolve backend for %s: %v", server.Name, err)
@@ -226,7 +243,12 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 		} else {
 			proxy.AddRoute(server.ID, hostname, backendHost, backendPort)
 		}
-		m.logger.Info("Updated route for server %s (%s -> %s:%d) on port %d", server.Name, hostname, backendHost, backendPort, listener.Port)
+		if server.Status == db.StatusPaused {
+			proxy.SetRouteHibernated(hostname, true)
+		} else {
+			proxy.SetRouteHibernated(hostname, false)
+		}
+		m.logger.Info("Updated route for server %s (%s -> %s:%d, paused=%v) on port %d", server.Name, hostname, backendHost, backendPort, server.Status == db.StatusPaused, listener.Port)
 	} else if server.Status == db.StatusStopped || server.Status == db.StatusStopping {
 		// Remove route if server is stopped or stopping
 		proxy.RemoveRoute(hostname)

@@ -134,6 +134,9 @@ func (p *UDPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 	p.logger.Info("UDP proxy route updated: %s -> %s:%d", p.listenAddr, backendHost, backendPort)
 }
 
+// SetRouteHibernated is a no-op for UDPProxy
+func (p *UDPProxy) SetRouteHibernated(hostname string, hibernated bool) {}
+
 // GetRoutes returns the current route (UDP only has one)
 func (p *UDPProxy) GetRoutes() map[string]*Route {
 	p.mu.RLock()
