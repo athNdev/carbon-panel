@@ -34,6 +34,10 @@ service FileService {
   rpc InitFileDownload(InitFileDownloadRequest) returns (InitFileDownloadResponse);
   // Poll extraction progress
   rpc GetExtractionStatus(GetExtractionStatusRequest) returns (GetExtractionStatusResponse);
+  // Download archive from remote URL (GitHub Releases, CDN, S3) with SHA256 verification and auto-extraction
+  rpc DownloadRemoteArchive(DownloadRemoteArchiveRequest) returns (DownloadRemoteArchiveResponse);
+  // Poll remote archive download progress
+  rpc GetRemoteArchiveProgress(GetRemoteArchiveProgressRequest) returns (GetRemoteArchiveProgressResponse);
 }
 
 // File metadata and tree
@@ -219,3 +223,35 @@ message InitFileDownloadResponse {
   string filename = 2;
   int64 total_size = 3;
 }
+
+// Download archive from remote URL request
+message DownloadRemoteArchiveRequest {
+  string server_id = 1;
+  string url = 2;
+  string destination_path = 3;
+  string sha256_checksum = 4;
+  bool auto_extract = 5;
+}
+
+// Download archive from remote URL response
+message DownloadRemoteArchiveResponse {
+  string task_id = 1;
+  string message = 2;
+}
+
+// Get remote archive download progress request
+message GetRemoteArchiveProgressRequest {
+  string server_id = 1;
+  string task_id = 2;
+}
+
+// Get remote archive download progress response
+message GetRemoteArchiveProgressResponse {
+  string task_id = 1;
+  string status = 2;
+  int64 bytes_downloaded = 3;
+  int64 total_bytes = 4;
+  int32 progress_percent = 5;
+  string error = 6;
+}
+
