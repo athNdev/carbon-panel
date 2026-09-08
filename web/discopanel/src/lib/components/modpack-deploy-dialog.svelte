@@ -33,6 +33,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { apiFetch } from '$lib/api/fetch';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 
 	interface Props {
@@ -85,7 +86,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		deploying = true;
 		deployResult = null;
 		try {
-			const res = await fetch(`/api/v1/packwiz/packs/${packId}/deploy`, {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/deploy`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -100,7 +101,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			}
 
 			deployResult = data.message || 'Deployed successfully!';
-			toast.success(deployResult);
+			toast.success(deployResult || 'Deployed successfully!');
 			if (onSuccess) {
 				onSuccess();
 			}
@@ -151,8 +152,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					</Alert>
 				{:else}
 					<Select
-						value={selectedServerId}
-						onValueChange={(val) => (selectedServerId = val)}
+						type="single"
+						bind:value={selectedServerId}
 					>
 						<SelectTrigger class="w-full">
 							<div class="flex items-center gap-2 truncate">

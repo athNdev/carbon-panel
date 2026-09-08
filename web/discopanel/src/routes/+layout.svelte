@@ -232,7 +232,7 @@ one at https://mozilla.org/MPL/2.0/.
 											{#snippet child({ props })}
 												<a href={resolvePath('/settings')} {...props}>
 													<Settings class="h-4 w-4" />
-													<span class="group-data-[collapsible=icon]:hidden">Settings</span>
+													<span class="group-data-[collapsible=icon]:hidden">Settings & Nodes</span>
 												</a>
 											{/snippet}
 										</SidebarMenuButton>
