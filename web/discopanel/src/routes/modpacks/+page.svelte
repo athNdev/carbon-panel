@@ -41,7 +41,8 @@ one at https://mozilla.org/MPL/2.0/.
 		Trash2,
 		X,
 		Globe,
-		Loader2
+		Loader2,
+		Sparkles
 	} from '@lucide/svelte';
 	import { Label } from '$lib/components/ui/label';
 	import {
@@ -468,6 +469,14 @@ one at https://mozilla.org/MPL/2.0/.
 					<Heart class="mr-2 h-5 w-5" />
 					Favorites ({favorites.length})
 				{/if}
+			</Button>
+			<Button
+				variant="default"
+				onclick={() => goto('/modpacks/studio')}
+				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
+			>
+				<Sparkles class="mr-2 h-5 w-5" />
+				Modpack Studio
 			</Button>
 		</div>
 	</div>
