@@ -60,6 +60,9 @@ const (
 	// ModpackServiceImportUploadedModpackProcedure is the fully-qualified name of the ModpackService's
 	// ImportUploadedModpack RPC.
 	ModpackServiceImportUploadedModpackProcedure = "/discopanel.v1.ModpackService/ImportUploadedModpack"
+	// ModpackServiceImportRemoteModpackProcedure is the fully-qualified name of the ModpackService's
+	// ImportRemoteModpack RPC.
+	ModpackServiceImportRemoteModpackProcedure = "/discopanel.v1.ModpackService/ImportRemoteModpack"
 	// ModpackServiceDeleteModpackProcedure is the fully-qualified name of the ModpackService's
 	// DeleteModpack RPC.
 	ModpackServiceDeleteModpackProcedure = "/discopanel.v1.ModpackService/DeleteModpack"
@@ -100,6 +103,8 @@ type ModpackServiceClient interface {
 	SyncModpacks(context.Context, *connect.Request[v1.SyncModpacksRequest]) (*connect.Response[v1.SyncModpacksResponse], error)
 	// Import modpack from chunked upload session
 	ImportUploadedModpack(context.Context, *connect.Request[v1.ImportUploadedModpackRequest]) (*connect.Response[v1.ImportUploadedModpackResponse], error)
+	// Import modpack from external URL (GitHub release, CDN, static host)
+	ImportRemoteModpack(context.Context, *connect.Request[v1.ImportRemoteModpackRequest]) (*connect.Response[v1.ImportRemoteModpackResponse], error)
 	// Remove indexed modpack
 	DeleteModpack(context.Context, *connect.Request[v1.DeleteModpackRequest]) (*connect.Response[v1.DeleteModpackResponse], error)
 	// Mark modpack as favorite
@@ -165,6 +170,12 @@ func NewModpackServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(modpackServiceMethods.ByName("ImportUploadedModpack")),
 			connect.WithClientOptions(opts...),
 		),
+		importRemoteModpack: connect.NewClient[v1.ImportRemoteModpackRequest, v1.ImportRemoteModpackResponse](
+			httpClient,
+			baseURL+ModpackServiceImportRemoteModpackProcedure,
+			connect.WithSchema(modpackServiceMethods.ByName("ImportRemoteModpack")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteModpack: connect.NewClient[v1.DeleteModpackRequest, v1.DeleteModpackResponse](
 			httpClient,
 			baseURL+ModpackServiceDeleteModpackProcedure,
@@ -224,6 +235,7 @@ type modpackServiceClient struct {
 	getModpackByURL       *connect.Client[v1.GetModpackByURLRequest, v1.GetModpackByURLResponse]
 	syncModpacks          *connect.Client[v1.SyncModpacksRequest, v1.SyncModpacksResponse]
 	importUploadedModpack *connect.Client[v1.ImportUploadedModpackRequest, v1.ImportUploadedModpackResponse]
+	importRemoteModpack   *connect.Client[v1.ImportRemoteModpackRequest, v1.ImportRemoteModpackResponse]
 	deleteModpack         *connect.Client[v1.DeleteModpackRequest, v1.DeleteModpackResponse]
 	toggleFavorite        *connect.Client[v1.ToggleFavoriteRequest, v1.ToggleFavoriteResponse]
 	listFavorites         *connect.Client[v1.ListFavoritesRequest, v1.ListFavoritesResponse]
@@ -262,6 +274,11 @@ func (c *modpackServiceClient) SyncModpacks(ctx context.Context, req *connect.Re
 // ImportUploadedModpack calls discopanel.v1.ModpackService.ImportUploadedModpack.
 func (c *modpackServiceClient) ImportUploadedModpack(ctx context.Context, req *connect.Request[v1.ImportUploadedModpackRequest]) (*connect.Response[v1.ImportUploadedModpackResponse], error) {
 	return c.importUploadedModpack.CallUnary(ctx, req)
+}
+
+// ImportRemoteModpack calls discopanel.v1.ModpackService.ImportRemoteModpack.
+func (c *modpackServiceClient) ImportRemoteModpack(ctx context.Context, req *connect.Request[v1.ImportRemoteModpackRequest]) (*connect.Response[v1.ImportRemoteModpackResponse], error) {
+	return c.importRemoteModpack.CallUnary(ctx, req)
 }
 
 // DeleteModpack calls discopanel.v1.ModpackService.DeleteModpack.
@@ -318,6 +335,8 @@ type ModpackServiceHandler interface {
 	SyncModpacks(context.Context, *connect.Request[v1.SyncModpacksRequest]) (*connect.Response[v1.SyncModpacksResponse], error)
 	// Import modpack from chunked upload session
 	ImportUploadedModpack(context.Context, *connect.Request[v1.ImportUploadedModpackRequest]) (*connect.Response[v1.ImportUploadedModpackResponse], error)
+	// Import modpack from external URL (GitHub release, CDN, static host)
+	ImportRemoteModpack(context.Context, *connect.Request[v1.ImportRemoteModpackRequest]) (*connect.Response[v1.ImportRemoteModpackResponse], error)
 	// Remove indexed modpack
 	DeleteModpack(context.Context, *connect.Request[v1.DeleteModpackRequest]) (*connect.Response[v1.DeleteModpackResponse], error)
 	// Mark modpack as favorite
@@ -377,6 +396,12 @@ func NewModpackServiceHandler(svc ModpackServiceHandler, opts ...connect.Handler
 		ModpackServiceImportUploadedModpackProcedure,
 		svc.ImportUploadedModpack,
 		connect.WithSchema(modpackServiceMethods.ByName("ImportUploadedModpack")),
+		connect.WithHandlerOptions(opts...),
+	)
+	modpackServiceImportRemoteModpackHandler := connect.NewUnaryHandler(
+		ModpackServiceImportRemoteModpackProcedure,
+		svc.ImportRemoteModpack,
+		connect.WithSchema(modpackServiceMethods.ByName("ImportRemoteModpack")),
 		connect.WithHandlerOptions(opts...),
 	)
 	modpackServiceDeleteModpackHandler := connect.NewUnaryHandler(
@@ -441,6 +466,8 @@ func NewModpackServiceHandler(svc ModpackServiceHandler, opts ...connect.Handler
 			modpackServiceSyncModpacksHandler.ServeHTTP(w, r)
 		case ModpackServiceImportUploadedModpackProcedure:
 			modpackServiceImportUploadedModpackHandler.ServeHTTP(w, r)
+		case ModpackServiceImportRemoteModpackProcedure:
+			modpackServiceImportRemoteModpackHandler.ServeHTTP(w, r)
 		case ModpackServiceDeleteModpackProcedure:
 			modpackServiceDeleteModpackHandler.ServeHTTP(w, r)
 		case ModpackServiceToggleFavoriteProcedure:
@@ -488,6 +515,10 @@ func (UnimplementedModpackServiceHandler) SyncModpacks(context.Context, *connect
 
 func (UnimplementedModpackServiceHandler) ImportUploadedModpack(context.Context, *connect.Request[v1.ImportUploadedModpackRequest]) (*connect.Response[v1.ImportUploadedModpackResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ModpackService.ImportUploadedModpack is not implemented"))
+}
+
+func (UnimplementedModpackServiceHandler) ImportRemoteModpack(context.Context, *connect.Request[v1.ImportRemoteModpackRequest]) (*connect.Response[v1.ImportRemoteModpackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.ModpackService.ImportRemoteModpack is not implemented"))
 }
 
 func (UnimplementedModpackServiceHandler) DeleteModpack(context.Context, *connect.Request[v1.DeleteModpackRequest]) (*connect.Response[v1.DeleteModpackResponse], error) {

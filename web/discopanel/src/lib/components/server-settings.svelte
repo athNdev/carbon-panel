@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -361,7 +372,7 @@
 				<div class="space-y-0.5">
 					<Label for="detached" class="cursor-pointer text-sm font-medium">Detached Mode</Label>
 					<p class="text-xs text-muted-foreground">
-						Server continues running when DiscoPanel stops (not available for proxied servers)
+						Server continues running when MineServer stops (not available for proxied servers)
 					</p>
 				</div>
 				<Switch
@@ -387,7 +398,7 @@
 				<div class="space-y-0.5">
 					<Label for="auto_start" class="cursor-pointer text-sm font-medium">Auto Start</Label>
 					<p class="text-xs text-muted-foreground">
-						Automatically start when DiscoPanel starts{formData.detached
+						Automatically start when MineServer starts{formData.detached
 							? ' (disabled for detached servers)'
 							: ''}
 					</p>

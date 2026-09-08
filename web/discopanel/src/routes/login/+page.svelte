@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -346,8 +357,8 @@
 	<Card class="w-full max-w-md">
 		<CardHeader class="space-y-1">
 			<div class="mb-4 flex items-center justify-center">
-				<img src="/g1_24x24.png" alt="DiscoPanel Logo" class="mr-2 h-8 w-8" />
-				<CardTitle class="text-2xl">DiscoPanel</CardTitle>
+				<img src="/g1_24x24.png" alt="MineServer Logo" class="mr-2 h-8 w-8" />
+				<CardTitle class="text-2xl">MineServer</CardTitle>
 			</div>
 			{#if authStatus.firstUserSetup}
 				<CardDescription class="text-center">

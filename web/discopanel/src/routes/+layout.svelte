@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import '../app.css';
 	import { ModeWatcher } from 'mode-watcher';
@@ -127,7 +138,7 @@
 					});
 				})
 				.catch((err) => {
-					console.debug(`Discopanel caught a polling error: ${err}`);
+					console.debug(`MineServer caught a polling error: ${err}`);
 					reject(err);
 				});
 		});
@@ -135,7 +146,7 @@
 </script>
 
 <svelte:head>
-	<title>DiscoPanel - Minecraft Server Management</title>
+	<title>MineServer - Minecraft Server Management</title>
 </svelte:head>
 
 <ModeWatcher />
@@ -154,8 +165,8 @@
 			<Sidebar collapsible="icon">
 				<SidebarHeader class="my-2">
 					<div class="m-auto flex items-center gap-2">
-						<img src="/g1_24x24.png" alt="DiscoPanel Logo" class="h-6 w-6" />
-						<span class="text-lg font-bold group-data-[collapsible=icon]:hidden">DiscoPanel</span>
+						<img src="/g1_24x24.png" alt="MineServer Logo" class="h-6 w-6" />
+						<span class="text-lg font-bold group-data-[collapsible=icon]:hidden">MineServer</span>
 					</div>
 				</SidebarHeader>
 

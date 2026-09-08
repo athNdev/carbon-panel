@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { authStore, currentUser } from '$lib/stores/auth';
 	import {
@@ -487,7 +498,7 @@
 						<KeyRound class="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
 						<p class="text-sm font-medium text-muted-foreground">No API tokens</p>
 						<p class="mt-1 text-xs text-muted-foreground">
-							Create a token to authenticate programmatically with the DiscoPanel API.
+							Create a token to authenticate programmatically with the MineServer API.
 						</p>
 					</div>
 				{:else}
