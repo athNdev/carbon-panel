@@ -351,6 +351,12 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 		hostConfig.SecurityOpt = overrides.GetSecurityOpt()
 	}
 
+	// Apply PIDs limit (fork bomb guard)
+	if overrides.GetPidsLimit() > 0 {
+		pids := overrides.GetPidsLimit()
+		hostConfig.Resources.PidsLimit = &pids
+	}
+
 	// Apply SHM size
 	if overrides.GetShmSize() > 0 {
 		hostConfig.ShmSize = overrides.GetShmSize()
@@ -496,15 +502,19 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		}
 	}
 
+	pidsLimit := int64(512)
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
 		Mounts: []mount.Mount{
 			{Type: mount.TypeBind, Source: dataPath, Target: "/data", BindOptions: &mount.BindOptions{CreateMountpoint: true}},
 		},
 		RestartPolicy: container.RestartPolicy{Name: "unless-stopped"},
+		CapDrop:       []string{"ALL"},
+		SecurityOpt:   []string{"no-new-privileges:true"},
 		Resources: container.Resources{
 			Memory:     containerLimitBytes,
 			MemorySwap: containerLimitBytes,
+			PidsLimit:  &pidsLimit,
 		},
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
