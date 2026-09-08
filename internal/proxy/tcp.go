@@ -13,26 +13,28 @@ import (
 
 // TCPProxy handles raw TCP forwarding without protocol parsing
 type TCPProxy struct {
-	listener     net.Listener
-	backendHost  string
-	backendPort  int
-	serverID     string
-	logger       *logger.Logger
-	listenAddr   string
-	running      bool
-	runningMutex sync.RWMutex
-	ctx          context.Context
-	cancel       context.CancelFunc
+	listener      net.Listener
+	backendHost   string
+	backendPort   int
+	serverID      string
+	logger        *logger.Logger
+	listenAddr    string
+	proxyProtocol bool
+	running       bool
+	runningMutex  sync.RWMutex
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // NewTCPProxy creates a new raw TCP proxy instance
 func NewTCPProxy(cfg *Config) *TCPProxy {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &TCPProxy{
-		logger:     cfg.Logger,
-		listenAddr: cfg.ListenAddr,
-		ctx:        ctx,
-		cancel:     cancel,
+		logger:        cfg.Logger,
+		listenAddr:    cfg.ListenAddr,
+		proxyProtocol: cfg.ProxyProtocol,
+		ctx:           ctx,
+		cancel:        cancel,
 	}
 }
 
@@ -159,6 +161,17 @@ func (p *TCPProxy) acceptLoop() {
 func (p *TCPProxy) handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
 
+	// Parse incoming PROXY protocol v2 header if present from upstream balancers (MINE-16)
+	wrappedConn, pxyHdr, err := WrapConnWithProxyProtocol(clientConn)
+	if err != nil {
+		p.logger.Debug("Failed parsing PROXY protocol v2 from %s: %v", clientConn.RemoteAddr(), err)
+		return
+	}
+	clientConn = wrappedConn
+	if pxyHdr != nil && pxyHdr.SrcAddr != nil {
+		p.logger.Debug("Preserved real client IP via PROXY protocol v2: %s", clientConn.RemoteAddr())
+	}
+
 	p.runningMutex.RLock()
 	backendHost := p.backendHost
 	backendPort := p.backendPort
@@ -177,6 +190,14 @@ func (p *TCPProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 	defer backendConn.Close()
+
+	// Forward PROXY protocol v2 header to backend if configured
+	if p.proxyProtocol {
+		if err := WriteProxyV2Header(backendConn, clientConn.RemoteAddr(), backendConn.RemoteAddr()); err != nil {
+			p.logger.Error("Failed to write PROXY protocol v2 header to backend: %v", err)
+			return
+		}
+	}
 
 	p.logger.Debug("TCP connection established: %s -> %s", clientConn.RemoteAddr(), backendAddr)
 

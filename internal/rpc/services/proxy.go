@@ -92,14 +92,15 @@ func (s *ProxyService) GetProxyStatus(ctx context.Context, req *connect.Request[
 	for i, l := range listeners {
 		listenPorts[i] = int32(l.Port)
 		protoListeners[i] = &v1.ProxyListener{
-			Id:          l.ID,
-			Name:        l.Name,
-			Description: l.Description,
-			Port:        int32(l.Port),
-			Enabled:     l.Enabled,
-			IsDefault:   l.IsDefault,
-			CreatedAt:   timestamppb.New(l.CreatedAt),
-			UpdatedAt:   timestamppb.New(l.UpdatedAt),
+			Id:            l.ID,
+			Name:          l.Name,
+			Description:   l.Description,
+			Port:          int32(l.Port),
+			Enabled:       l.Enabled,
+			IsDefault:     l.IsDefault,
+			ProxyProtocol: l.ProxyProtocol,
+			CreatedAt:     timestamppb.New(l.CreatedAt),
+			UpdatedAt:     timestamppb.New(l.UpdatedAt),
 		}
 	}
 
@@ -206,14 +207,15 @@ func (s *ProxyService) GetProxyListeners(ctx context.Context, req *connect.Reque
 
 		protoListeners[i] = &v1.ProxyListenerWithCount{
 			Listener: &v1.ProxyListener{
-				Id:          listener.ID,
-				Name:        listener.Name,
-				Description: listener.Description,
-				Port:        int32(listener.Port),
-				Enabled:     listener.Enabled,
-				IsDefault:   listener.IsDefault,
-				CreatedAt:   timestamppb.New(listener.CreatedAt),
-				UpdatedAt:   timestamppb.New(listener.UpdatedAt),
+				Id:            listener.ID,
+				Name:          listener.Name,
+				Description:   listener.Description,
+				Port:          int32(listener.Port),
+				Enabled:       listener.Enabled,
+				IsDefault:     listener.IsDefault,
+				ProxyProtocol: listener.ProxyProtocol,
+				CreatedAt:     timestamppb.New(listener.CreatedAt),
+				UpdatedAt:     timestamppb.New(listener.UpdatedAt),
 			},
 			ServerCount: count,
 		}
@@ -248,11 +250,12 @@ func (s *ProxyService) CreateProxyListener(ctx context.Context, req *connect.Req
 	}
 
 	listener := &storage.ProxyListener{
-		Name:        msg.Name,
-		Description: msg.Description,
-		Port:        int(msg.Port),
-		Enabled:     msg.Enabled,
-		IsDefault:   msg.IsDefault,
+		Name:          msg.Name,
+		Description:   msg.Description,
+		Port:          int(msg.Port),
+		Enabled:       msg.Enabled,
+		IsDefault:     msg.IsDefault,
+		ProxyProtocol: msg.ProxyProtocol,
 	}
 
 	if err := s.store.CreateProxyListener(ctx, listener); err != nil {
@@ -270,14 +273,15 @@ func (s *ProxyService) CreateProxyListener(ctx context.Context, req *connect.Req
 
 	return connect.NewResponse(&v1.CreateProxyListenerResponse{
 		Listener: &v1.ProxyListener{
-			Id:          listener.ID,
-			Name:        listener.Name,
-			Description: listener.Description,
-			Port:        int32(listener.Port),
-			Enabled:     listener.Enabled,
-			IsDefault:   listener.IsDefault,
-			CreatedAt:   timestamppb.New(listener.CreatedAt),
-			UpdatedAt:   timestamppb.New(listener.UpdatedAt),
+			Id:            listener.ID,
+			Name:          listener.Name,
+			Description:   listener.Description,
+			Port:          int32(listener.Port),
+			Enabled:       listener.Enabled,
+			IsDefault:     listener.IsDefault,
+			ProxyProtocol: listener.ProxyProtocol,
+			CreatedAt:     timestamppb.New(listener.CreatedAt),
+			UpdatedAt:     timestamppb.New(listener.UpdatedAt),
 		},
 	}), nil
 }
@@ -296,6 +300,9 @@ func (s *ProxyService) UpdateProxyListener(ctx context.Context, req *connect.Req
 	listener.Description = msg.Description
 	listener.Enabled = msg.Enabled
 	listener.IsDefault = msg.IsDefault
+	if msg.ProxyProtocol != nil {
+		listener.ProxyProtocol = *msg.ProxyProtocol
+	}
 
 	// If setting as default, unset other defaults
 	if msg.IsDefault {
@@ -339,14 +346,15 @@ func (s *ProxyService) UpdateProxyListener(ctx context.Context, req *connect.Req
 
 	return connect.NewResponse(&v1.UpdateProxyListenerResponse{
 		Listener: &v1.ProxyListener{
-			Id:          listener.ID,
-			Name:        listener.Name,
-			Description: listener.Description,
-			Port:        int32(listener.Port),
-			Enabled:     listener.Enabled,
-			IsDefault:   listener.IsDefault,
-			CreatedAt:   timestamppb.New(listener.CreatedAt),
-			UpdatedAt:   timestamppb.New(listener.UpdatedAt),
+			Id:            listener.ID,
+			Name:          listener.Name,
+			Description:   listener.Description,
+			Port:          int32(listener.Port),
+			Enabled:       listener.Enabled,
+			IsDefault:     listener.IsDefault,
+			ProxyProtocol: listener.ProxyProtocol,
+			CreatedAt:     timestamppb.New(listener.CreatedAt),
+			UpdatedAt:     timestamppb.New(listener.UpdatedAt),
 		},
 	}), nil
 }
