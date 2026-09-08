@@ -474,6 +474,19 @@ type Session struct {
 	User      *User     `json:"user,omitempty" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
+// ServerSnapshot represents a volume snapshot taken before modpack updates or upgrades (MINE-23)
+type ServerSnapshot struct {
+	ID        string    `json:"id" gorm:"primaryKey"`
+	ServerID  string    `json:"server_id" gorm:"not null;index;column:server_id"`
+	Name      string    `json:"name" gorm:"not null"`
+	Reason    string    `json:"reason" gorm:"column:reason"`
+	FilePath  string    `json:"file_path" gorm:"not null;column:file_path"`
+	SizeBytes int64     `json:"size_bytes" gorm:"column:size_bytes"`
+	FileCount int       `json:"file_count" gorm:"column:file_count"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
+	Server    *Server   `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
+}
+
 // TaskType defines the type of scheduled task
 type TaskType string
 
