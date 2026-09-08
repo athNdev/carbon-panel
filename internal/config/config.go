@@ -71,8 +71,11 @@ type DockerConfig struct {
 	Version      string            `mapstructure:"version" json:"version"`
 	NetworkName  string            `mapstructure:"network_name" json:"network_name"`
 	RegistryURL  string            `mapstructure:"registry_url" json:"registry_url"`
-	DNS          string            `mapstructure:"dns" json:"dns"`
-	Labels       map[string]string `mapstructure:"labels" json:"labels"`
+	DNS             string            `mapstructure:"dns" json:"dns"`
+	Labels          map[string]string `mapstructure:"labels" json:"labels"`
+	EnableRateLimit bool              `mapstructure:"enable_rate_limit" json:"enable_rate_limit"`
+	RateLimitPerMin int               `mapstructure:"rate_limit_per_min" json:"rate_limit_per_min"`
+	RateLimitBurst  int               `mapstructure:"rate_limit_burst" json:"rate_limit_burst"`
 }
 
 type StorageConfig struct {
@@ -204,6 +207,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("docker.registry_url", "")
 	v.SetDefault("docker.dns", "")
 	v.SetDefault("docker.labels", map[string]string{})
+	v.SetDefault("docker.enable_rate_limit", true)
+	v.SetDefault("docker.rate_limit_per_min", 10)
+	v.SetDefault("docker.rate_limit_burst", 20)
 
 	// Storage defaults
 	dataDir, err := filepath.Abs("./data")
