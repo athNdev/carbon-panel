@@ -79,9 +79,11 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/discopanel.v1.FileService/MoveFile":            {Resource: ResourceFiles, Action: ActionUpdate, ObjectIDField: "server_id"},
 	"/discopanel.v1.FileService/CopyFile":            {Resource: ResourceFiles, Action: ActionCreate, ObjectIDField: "server_id"},
 	"/discopanel.v1.FileService/CreateArchive":       {Resource: ResourceFiles, Action: ActionCreate, ObjectIDField: "server_id"},
-	"/discopanel.v1.FileService/DownloadArchive":     {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
-	"/discopanel.v1.FileService/InitFileDownload":    {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
-	"/discopanel.v1.FileService/GetExtractionStatus": {Resource: ResourceFiles, Action: ActionRead},
+	"/discopanel.v1.FileService/DownloadArchive":          {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
+	"/discopanel.v1.FileService/InitFileDownload":         {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
+	"/discopanel.v1.FileService/GetExtractionStatus":      {Resource: ResourceFiles, Action: ActionRead},
+	"/discopanel.v1.FileService/DownloadRemoteArchive":    {Resource: ResourceFiles, Action: ActionCreate, ObjectIDField: "server_id"},
+	"/discopanel.v1.FileService/GetRemoteArchiveProgress": {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
 
 	// ── ModService ─────────────────────────────────────────────────────
 	"/discopanel.v1.ModService/ListMods":          {Resource: ResourceMods, Action: ActionRead, ObjectIDField: "server_id"},
