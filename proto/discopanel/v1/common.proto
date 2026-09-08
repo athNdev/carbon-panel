@@ -145,6 +145,7 @@ message DockerOverrides {
   repeated string command = 19; // Override default command
   repeated string dns = 20; // Custom DNS servers
   int64 pids_limit = 21; // Maximum number of process IDs (fork bomb guard)
+  string cpuset_cpus = 22; // CPU core pinning (e.g. "0,1" or "0-3") & NUMA optimization
 }
 
 // TCP proxy listener endpoint

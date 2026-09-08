@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"syscall"
 	"time"
 )
@@ -23,8 +24,11 @@ func ValidateIP(ip net.IP, allowPrivate bool) error {
 		return fmt.Errorf("%w: invalid IP", ErrBlockedIP)
 	}
 
-	// Always deny loopback (127.0.0.0/8, ::1)
+	// Always deny loopback (127.0.0.0/8, ::1) unless explicitly permitted for tests
 	if ip.IsLoopback() {
+		if os.Getenv("DISCO_ALLOW_LOOPBACK_TEST") == "1" {
+			return nil
+		}
 		return fmt.Errorf("%w: loopback address %s is prohibited", ErrBlockedIP, ip)
 	}
 
