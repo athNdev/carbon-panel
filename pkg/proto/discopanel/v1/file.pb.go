@@ -1646,6 +1646,274 @@ func (x *InitFileDownloadResponse) GetTotalSize() int64 {
 	return 0
 }
 
+// Download archive from remote URL request
+type DownloadRemoteArchiveRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ServerId        string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	Url             string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	DestinationPath string                 `protobuf:"bytes,3,opt,name=destination_path,json=destinationPath,proto3" json:"destination_path,omitempty"`
+	Sha256Checksum  string                 `protobuf:"bytes,4,opt,name=sha256_checksum,json=sha256Checksum,proto3" json:"sha256_checksum,omitempty"`
+	AutoExtract     bool                   `protobuf:"varint,5,opt,name=auto_extract,json=autoExtract,proto3" json:"auto_extract,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DownloadRemoteArchiveRequest) Reset() {
+	*x = DownloadRemoteArchiveRequest{}
+	mi := &file_discopanel_v1_file_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadRemoteArchiveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadRemoteArchiveRequest) ProtoMessage() {}
+
+func (x *DownloadRemoteArchiveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_file_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadRemoteArchiveRequest.ProtoReflect.Descriptor instead.
+func (*DownloadRemoteArchiveRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_file_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *DownloadRemoteArchiveRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *DownloadRemoteArchiveRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *DownloadRemoteArchiveRequest) GetDestinationPath() string {
+	if x != nil {
+		return x.DestinationPath
+	}
+	return ""
+}
+
+func (x *DownloadRemoteArchiveRequest) GetSha256Checksum() string {
+	if x != nil {
+		return x.Sha256Checksum
+	}
+	return ""
+}
+
+func (x *DownloadRemoteArchiveRequest) GetAutoExtract() bool {
+	if x != nil {
+		return x.AutoExtract
+	}
+	return false
+}
+
+// Download archive from remote URL response
+type DownloadRemoteArchiveResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DownloadRemoteArchiveResponse) Reset() {
+	*x = DownloadRemoteArchiveResponse{}
+	mi := &file_discopanel_v1_file_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DownloadRemoteArchiveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DownloadRemoteArchiveResponse) ProtoMessage() {}
+
+func (x *DownloadRemoteArchiveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_file_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DownloadRemoteArchiveResponse.ProtoReflect.Descriptor instead.
+func (*DownloadRemoteArchiveResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_file_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *DownloadRemoteArchiveResponse) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *DownloadRemoteArchiveResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+// Get remote archive download progress request
+type GetRemoteArchiveProgressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	TaskId        string                 `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRemoteArchiveProgressRequest) Reset() {
+	*x = GetRemoteArchiveProgressRequest{}
+	mi := &file_discopanel_v1_file_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRemoteArchiveProgressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRemoteArchiveProgressRequest) ProtoMessage() {}
+
+func (x *GetRemoteArchiveProgressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_file_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRemoteArchiveProgressRequest.ProtoReflect.Descriptor instead.
+func (*GetRemoteArchiveProgressRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_file_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetRemoteArchiveProgressRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *GetRemoteArchiveProgressRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+// Get remote archive download progress response
+type GetRemoteArchiveProgressResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TaskId          string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Status          string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	BytesDownloaded int64                  `protobuf:"varint,3,opt,name=bytes_downloaded,json=bytesDownloaded,proto3" json:"bytes_downloaded,omitempty"`
+	TotalBytes      int64                  `protobuf:"varint,4,opt,name=total_bytes,json=totalBytes,proto3" json:"total_bytes,omitempty"`
+	ProgressPercent int32                  `protobuf:"varint,5,opt,name=progress_percent,json=progressPercent,proto3" json:"progress_percent,omitempty"`
+	Error           string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetRemoteArchiveProgressResponse) Reset() {
+	*x = GetRemoteArchiveProgressResponse{}
+	mi := &file_discopanel_v1_file_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRemoteArchiveProgressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRemoteArchiveProgressResponse) ProtoMessage() {}
+
+func (x *GetRemoteArchiveProgressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_file_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRemoteArchiveProgressResponse.ProtoReflect.Descriptor instead.
+func (*GetRemoteArchiveProgressResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_file_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *GetRemoteArchiveProgressResponse) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *GetRemoteArchiveProgressResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetRemoteArchiveProgressResponse) GetBytesDownloaded() int64 {
+	if x != nil {
+		return x.BytesDownloaded
+	}
+	return 0
+}
+
+func (x *GetRemoteArchiveProgressResponse) GetTotalBytes() int64 {
+	if x != nil {
+		return x.TotalBytes
+	}
+	return 0
+}
+
+func (x *GetRemoteArchiveProgressResponse) GetProgressPercent() int32 {
+	if x != nil {
+		return x.ProgressPercent
+	}
+	return 0
+}
+
+func (x *GetRemoteArchiveProgressResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_discopanel_v1_file_proto protoreflect.FileDescriptor
 
 const file_discopanel_v1_file_proto_rawDesc = "" +
@@ -1755,7 +2023,27 @@ const file_discopanel_v1_file_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x03R\ttotalSize2\xe8\t\n" +
+	"total_size\x18\x03 \x01(\x03R\ttotalSize\"\xc4\x01\n" +
+	"\x1cDownloadRemoteArchiveRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12)\n" +
+	"\x10destination_path\x18\x03 \x01(\tR\x0fdestinationPath\x12'\n" +
+	"\x0fsha256_checksum\x18\x04 \x01(\tR\x0esha256Checksum\x12!\n" +
+	"\fauto_extract\x18\x05 \x01(\bR\vautoExtract\"R\n" +
+	"\x1dDownloadRemoteArchiveResponse\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"W\n" +
+	"\x1fGetRemoteArchiveProgressRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x17\n" +
+	"\atask_id\x18\x02 \x01(\tR\x06taskId\"\xe0\x01\n" +
+	" GetRemoteArchiveProgressResponse\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12)\n" +
+	"\x10bytes_downloaded\x18\x03 \x01(\x03R\x0fbytesDownloaded\x12\x1f\n" +
+	"\vtotal_bytes\x18\x04 \x01(\x03R\n" +
+	"totalBytes\x12)\n" +
+	"\x10progress_percent\x18\x05 \x01(\x05R\x0fprogressPercent\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error2\xd9\v\n" +
 	"\vFileService\x12N\n" +
 	"\tListFiles\x12\x1f.discopanel.v1.ListFilesRequest\x1a .discopanel.v1.ListFilesResponse\x12H\n" +
 	"\aGetFile\x12\x1d.discopanel.v1.GetFileRequest\x1a\x1e.discopanel.v1.GetFileResponse\x12c\n" +
@@ -1773,7 +2061,9 @@ const file_discopanel_v1_file_proto_rawDesc = "" +
 	"\rCreateArchive\x12#.discopanel.v1.CreateArchiveRequest\x1a$.discopanel.v1.CreateArchiveResponse\x12`\n" +
 	"\x0fDownloadArchive\x12%.discopanel.v1.DownloadArchiveRequest\x1a&.discopanel.v1.DownloadArchiveResponse\x12c\n" +
 	"\x10InitFileDownload\x12&.discopanel.v1.InitFileDownloadRequest\x1a'.discopanel.v1.InitFileDownloadResponse\x12l\n" +
-	"\x13GetExtractionStatus\x12).discopanel.v1.GetExtractionStatusRequest\x1a*.discopanel.v1.GetExtractionStatusResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
+	"\x13GetExtractionStatus\x12).discopanel.v1.GetExtractionStatusRequest\x1a*.discopanel.v1.GetExtractionStatusResponse\x12r\n" +
+	"\x15DownloadRemoteArchive\x12+.discopanel.v1.DownloadRemoteArchiveRequest\x1a,.discopanel.v1.DownloadRemoteArchiveResponse\x12{\n" +
+	"\x18GetRemoteArchiveProgress\x12..discopanel.v1.GetRemoteArchiveProgressRequest\x1a/.discopanel.v1.GetRemoteArchiveProgressResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
 
 var (
 	file_discopanel_v1_file_proto_rawDescOnce sync.Once
@@ -1787,37 +2077,41 @@ func file_discopanel_v1_file_proto_rawDescGZIP() []byte {
 	return file_discopanel_v1_file_proto_rawDescData
 }
 
-var file_discopanel_v1_file_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_discopanel_v1_file_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_discopanel_v1_file_proto_goTypes = []any{
-	(*FileInfo)(nil),                    // 0: discopanel.v1.FileInfo
-	(*ListFilesRequest)(nil),            // 1: discopanel.v1.ListFilesRequest
-	(*ListFilesResponse)(nil),           // 2: discopanel.v1.ListFilesResponse
-	(*GetFileRequest)(nil),              // 3: discopanel.v1.GetFileRequest
-	(*GetFileResponse)(nil),             // 4: discopanel.v1.GetFileResponse
-	(*SaveUploadedFileRequest)(nil),     // 5: discopanel.v1.SaveUploadedFileRequest
-	(*SaveUploadedFileResponse)(nil),    // 6: discopanel.v1.SaveUploadedFileResponse
-	(*UpdateFileRequest)(nil),           // 7: discopanel.v1.UpdateFileRequest
-	(*UpdateFileResponse)(nil),          // 8: discopanel.v1.UpdateFileResponse
-	(*DeleteFileRequest)(nil),           // 9: discopanel.v1.DeleteFileRequest
-	(*DeleteFileResponse)(nil),          // 10: discopanel.v1.DeleteFileResponse
-	(*CreateFolderRequest)(nil),         // 11: discopanel.v1.CreateFolderRequest
-	(*CreateFolderResponse)(nil),        // 12: discopanel.v1.CreateFolderResponse
-	(*MoveFileRequest)(nil),             // 13: discopanel.v1.MoveFileRequest
-	(*MoveFileResponse)(nil),            // 14: discopanel.v1.MoveFileResponse
-	(*CopyFileRequest)(nil),             // 15: discopanel.v1.CopyFileRequest
-	(*CopyFileResponse)(nil),            // 16: discopanel.v1.CopyFileResponse
-	(*CreateArchiveRequest)(nil),        // 17: discopanel.v1.CreateArchiveRequest
-	(*CreateArchiveResponse)(nil),       // 18: discopanel.v1.CreateArchiveResponse
-	(*DownloadArchiveRequest)(nil),      // 19: discopanel.v1.DownloadArchiveRequest
-	(*DownloadArchiveResponse)(nil),     // 20: discopanel.v1.DownloadArchiveResponse
-	(*RenameFileRequest)(nil),           // 21: discopanel.v1.RenameFileRequest
-	(*RenameFileResponse)(nil),          // 22: discopanel.v1.RenameFileResponse
-	(*ExtractArchiveRequest)(nil),       // 23: discopanel.v1.ExtractArchiveRequest
-	(*ExtractArchiveResponse)(nil),      // 24: discopanel.v1.ExtractArchiveResponse
-	(*GetExtractionStatusRequest)(nil),  // 25: discopanel.v1.GetExtractionStatusRequest
-	(*GetExtractionStatusResponse)(nil), // 26: discopanel.v1.GetExtractionStatusResponse
-	(*InitFileDownloadRequest)(nil),     // 27: discopanel.v1.InitFileDownloadRequest
-	(*InitFileDownloadResponse)(nil),    // 28: discopanel.v1.InitFileDownloadResponse
+	(*FileInfo)(nil),                         // 0: discopanel.v1.FileInfo
+	(*ListFilesRequest)(nil),                 // 1: discopanel.v1.ListFilesRequest
+	(*ListFilesResponse)(nil),                // 2: discopanel.v1.ListFilesResponse
+	(*GetFileRequest)(nil),                   // 3: discopanel.v1.GetFileRequest
+	(*GetFileResponse)(nil),                  // 4: discopanel.v1.GetFileResponse
+	(*SaveUploadedFileRequest)(nil),          // 5: discopanel.v1.SaveUploadedFileRequest
+	(*SaveUploadedFileResponse)(nil),         // 6: discopanel.v1.SaveUploadedFileResponse
+	(*UpdateFileRequest)(nil),                // 7: discopanel.v1.UpdateFileRequest
+	(*UpdateFileResponse)(nil),               // 8: discopanel.v1.UpdateFileResponse
+	(*DeleteFileRequest)(nil),                // 9: discopanel.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),               // 10: discopanel.v1.DeleteFileResponse
+	(*CreateFolderRequest)(nil),              // 11: discopanel.v1.CreateFolderRequest
+	(*CreateFolderResponse)(nil),             // 12: discopanel.v1.CreateFolderResponse
+	(*MoveFileRequest)(nil),                  // 13: discopanel.v1.MoveFileRequest
+	(*MoveFileResponse)(nil),                 // 14: discopanel.v1.MoveFileResponse
+	(*CopyFileRequest)(nil),                  // 15: discopanel.v1.CopyFileRequest
+	(*CopyFileResponse)(nil),                 // 16: discopanel.v1.CopyFileResponse
+	(*CreateArchiveRequest)(nil),             // 17: discopanel.v1.CreateArchiveRequest
+	(*CreateArchiveResponse)(nil),            // 18: discopanel.v1.CreateArchiveResponse
+	(*DownloadArchiveRequest)(nil),           // 19: discopanel.v1.DownloadArchiveRequest
+	(*DownloadArchiveResponse)(nil),          // 20: discopanel.v1.DownloadArchiveResponse
+	(*RenameFileRequest)(nil),                // 21: discopanel.v1.RenameFileRequest
+	(*RenameFileResponse)(nil),               // 22: discopanel.v1.RenameFileResponse
+	(*ExtractArchiveRequest)(nil),            // 23: discopanel.v1.ExtractArchiveRequest
+	(*ExtractArchiveResponse)(nil),           // 24: discopanel.v1.ExtractArchiveResponse
+	(*GetExtractionStatusRequest)(nil),       // 25: discopanel.v1.GetExtractionStatusRequest
+	(*GetExtractionStatusResponse)(nil),      // 26: discopanel.v1.GetExtractionStatusResponse
+	(*InitFileDownloadRequest)(nil),          // 27: discopanel.v1.InitFileDownloadRequest
+	(*InitFileDownloadResponse)(nil),         // 28: discopanel.v1.InitFileDownloadResponse
+	(*DownloadRemoteArchiveRequest)(nil),     // 29: discopanel.v1.DownloadRemoteArchiveRequest
+	(*DownloadRemoteArchiveResponse)(nil),    // 30: discopanel.v1.DownloadRemoteArchiveResponse
+	(*GetRemoteArchiveProgressRequest)(nil),  // 31: discopanel.v1.GetRemoteArchiveProgressRequest
+	(*GetRemoteArchiveProgressResponse)(nil), // 32: discopanel.v1.GetRemoteArchiveProgressResponse
 }
 var file_discopanel_v1_file_proto_depIdxs = []int32{
 	0,  // 0: discopanel.v1.FileInfo.children:type_name -> discopanel.v1.FileInfo
@@ -1836,22 +2130,26 @@ var file_discopanel_v1_file_proto_depIdxs = []int32{
 	19, // 13: discopanel.v1.FileService.DownloadArchive:input_type -> discopanel.v1.DownloadArchiveRequest
 	27, // 14: discopanel.v1.FileService.InitFileDownload:input_type -> discopanel.v1.InitFileDownloadRequest
 	25, // 15: discopanel.v1.FileService.GetExtractionStatus:input_type -> discopanel.v1.GetExtractionStatusRequest
-	2,  // 16: discopanel.v1.FileService.ListFiles:output_type -> discopanel.v1.ListFilesResponse
-	4,  // 17: discopanel.v1.FileService.GetFile:output_type -> discopanel.v1.GetFileResponse
-	6,  // 18: discopanel.v1.FileService.SaveUploadedFile:output_type -> discopanel.v1.SaveUploadedFileResponse
-	8,  // 19: discopanel.v1.FileService.UpdateFile:output_type -> discopanel.v1.UpdateFileResponse
-	10, // 20: discopanel.v1.FileService.DeleteFile:output_type -> discopanel.v1.DeleteFileResponse
-	22, // 21: discopanel.v1.FileService.RenameFile:output_type -> discopanel.v1.RenameFileResponse
-	24, // 22: discopanel.v1.FileService.ExtractArchive:output_type -> discopanel.v1.ExtractArchiveResponse
-	12, // 23: discopanel.v1.FileService.CreateFolder:output_type -> discopanel.v1.CreateFolderResponse
-	14, // 24: discopanel.v1.FileService.MoveFile:output_type -> discopanel.v1.MoveFileResponse
-	16, // 25: discopanel.v1.FileService.CopyFile:output_type -> discopanel.v1.CopyFileResponse
-	18, // 26: discopanel.v1.FileService.CreateArchive:output_type -> discopanel.v1.CreateArchiveResponse
-	20, // 27: discopanel.v1.FileService.DownloadArchive:output_type -> discopanel.v1.DownloadArchiveResponse
-	28, // 28: discopanel.v1.FileService.InitFileDownload:output_type -> discopanel.v1.InitFileDownloadResponse
-	26, // 29: discopanel.v1.FileService.GetExtractionStatus:output_type -> discopanel.v1.GetExtractionStatusResponse
-	16, // [16:30] is the sub-list for method output_type
-	2,  // [2:16] is the sub-list for method input_type
+	29, // 16: discopanel.v1.FileService.DownloadRemoteArchive:input_type -> discopanel.v1.DownloadRemoteArchiveRequest
+	31, // 17: discopanel.v1.FileService.GetRemoteArchiveProgress:input_type -> discopanel.v1.GetRemoteArchiveProgressRequest
+	2,  // 18: discopanel.v1.FileService.ListFiles:output_type -> discopanel.v1.ListFilesResponse
+	4,  // 19: discopanel.v1.FileService.GetFile:output_type -> discopanel.v1.GetFileResponse
+	6,  // 20: discopanel.v1.FileService.SaveUploadedFile:output_type -> discopanel.v1.SaveUploadedFileResponse
+	8,  // 21: discopanel.v1.FileService.UpdateFile:output_type -> discopanel.v1.UpdateFileResponse
+	10, // 22: discopanel.v1.FileService.DeleteFile:output_type -> discopanel.v1.DeleteFileResponse
+	22, // 23: discopanel.v1.FileService.RenameFile:output_type -> discopanel.v1.RenameFileResponse
+	24, // 24: discopanel.v1.FileService.ExtractArchive:output_type -> discopanel.v1.ExtractArchiveResponse
+	12, // 25: discopanel.v1.FileService.CreateFolder:output_type -> discopanel.v1.CreateFolderResponse
+	14, // 26: discopanel.v1.FileService.MoveFile:output_type -> discopanel.v1.MoveFileResponse
+	16, // 27: discopanel.v1.FileService.CopyFile:output_type -> discopanel.v1.CopyFileResponse
+	18, // 28: discopanel.v1.FileService.CreateArchive:output_type -> discopanel.v1.CreateArchiveResponse
+	20, // 29: discopanel.v1.FileService.DownloadArchive:output_type -> discopanel.v1.DownloadArchiveResponse
+	28, // 30: discopanel.v1.FileService.InitFileDownload:output_type -> discopanel.v1.InitFileDownloadResponse
+	26, // 31: discopanel.v1.FileService.GetExtractionStatus:output_type -> discopanel.v1.GetExtractionStatusResponse
+	30, // 32: discopanel.v1.FileService.DownloadRemoteArchive:output_type -> discopanel.v1.DownloadRemoteArchiveResponse
+	32, // 33: discopanel.v1.FileService.GetRemoteArchiveProgress:output_type -> discopanel.v1.GetRemoteArchiveProgressResponse
+	18, // [18:34] is the sub-list for method output_type
+	2,  // [2:18] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -1868,7 +2166,7 @@ func file_discopanel_v1_file_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_discopanel_v1_file_proto_rawDesc), len(file_discopanel_v1_file_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

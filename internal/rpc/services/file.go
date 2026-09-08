@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,6 +25,7 @@ import (
 	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
 	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
 	"github.com/nickheyer/discopanel/pkg/upload"
+	"github.com/nickheyer/discopanel/pkg/utils"
 )
 
 // Compile-time check that FileService implements the interface
@@ -35,6 +39,17 @@ type extractionOp struct {
 	CompletedAt    time.Time
 }
 
+// remoteDownloadOp tracks background remote archive download and extraction
+type remoteDownloadOp struct {
+	TaskID          string
+	Status          string // "downloading", "verifying", "extracting", "completed", "failed"
+	BytesDownloaded atomic.Int64
+	TotalBytes      atomic.Int64
+	ProgressPercent atomic.Int32
+	Error           string
+	CompletedAt     time.Time
+}
+
 // FileService implements the File service
 type FileService struct {
 	store           *storage.Store
@@ -43,6 +58,7 @@ type FileService struct {
 	uploadManager   *upload.Manager
 	downloadManager *download.Manager
 	extractions     sync.Map
+	remoteDownloads sync.Map
 }
 
 // NewFileService creates a new file service
@@ -438,6 +454,193 @@ func (s *FileService) GetExtractionStatus(ctx context.Context, req *connect.Requ
 		State:          op.State,
 		FilesExtracted: op.FilesExtracted.Load(),
 		Error:          op.Error,
+	}), nil
+}
+
+// DownloadRemoteArchive downloads an archive from a remote URL (GitHub releases, S3, CDN) with progress, checksum validation, and optional auto-extraction
+func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error) {
+	msg := req.Msg
+	if msg.ServerId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
+	}
+	rawURL := strings.TrimSpace(msg.Url)
+	if rawURL == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("url is required"))
+	}
+
+	server, err := s.store.GetServer(ctx, msg.ServerId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
+	}
+
+	// Validate URL against SSRF (allow homelab private network if needed)
+	_, err = utils.ValidateURL(rawURL, true)
+	if err != nil {
+		s.log.Warn("SSRF check blocked remote archive URL %s: %v", rawURL, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("SSRF guard blocked URL: %w", err))
+	}
+
+	// Resolve destination path inside server root
+	destPath := filepath.Join(server.DataPath, msg.DestinationPath)
+	if !strings.HasPrefix(destPath, server.DataPath) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
+	}
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create destination directory: %w", err))
+	}
+
+	taskID := uuid.New().String()
+	op := &remoteDownloadOp{
+		TaskID: taskID,
+		Status: "downloading",
+	}
+	s.remoteDownloads.Store(taskID, op)
+
+	// Run download in background
+	go func() {
+		defer func() {
+			op.CompletedAt = time.Now()
+		}()
+
+		client := utils.NewSafeHTTPClient(15*time.Minute, true)
+		httpReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, rawURL, nil)
+		if err != nil {
+			op.Status = "failed"
+			op.Error = fmt.Sprintf("failed to create HTTP request: %v", err)
+			return
+		}
+		httpReq.Header.Set("User-Agent", "MineServer/2.x (Archive Downloader)")
+
+		resp, err := client.Do(httpReq)
+		if err != nil {
+			op.Status = "failed"
+			op.Error = fmt.Sprintf("download request failed: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			op.Status = "failed"
+			op.Error = fmt.Sprintf("remote server returned HTTP status %d", resp.StatusCode)
+			return
+		}
+
+		totalSize := resp.ContentLength
+		if totalSize > 0 {
+			op.TotalBytes.Store(totalSize)
+		}
+
+		tmpFile, err := os.CreateTemp("", "remote-archive-*.tmp")
+		if err != nil {
+			op.Status = "failed"
+			op.Error = fmt.Sprintf("failed to create temp file: %v", err)
+			return
+		}
+		tmpPath := tmpFile.Name()
+		defer os.Remove(tmpPath)
+		defer tmpFile.Close()
+
+		hasher := sha256.New()
+		writer := io.MultiWriter(tmpFile, hasher)
+
+		buf := make([]byte, 64*1024)
+		var downloaded int64
+		for {
+			n, rErr := resp.Body.Read(buf)
+			if n > 0 {
+				if _, wErr := writer.Write(buf[:n]); wErr != nil {
+					op.Status = "failed"
+					op.Error = fmt.Sprintf("failed writing download stream: %v", wErr)
+					return
+				}
+				downloaded += int64(n)
+				op.BytesDownloaded.Store(downloaded)
+				if totalSize > 0 {
+					pct := int32((float64(downloaded) / float64(totalSize)) * 100)
+					if pct > 100 {
+						pct = 100
+					}
+					op.ProgressPercent.Store(pct)
+				}
+			}
+			if rErr == io.EOF {
+				break
+			}
+			if rErr != nil {
+				op.Status = "failed"
+				op.Error = fmt.Sprintf("error during download stream: %v", rErr)
+				return
+			}
+		}
+
+		// Verify SHA256 checksum if specified
+		expectedSHA := strings.TrimSpace(msg.Sha256Checksum)
+		if expectedSHA != "" {
+			op.Status = "verifying"
+			actualSHA := hex.EncodeToString(hasher.Sum(nil))
+			if !strings.EqualFold(actualSHA, expectedSHA) {
+				op.Status = "failed"
+				op.Error = fmt.Sprintf("SHA256 checksum mismatch: expected %s, got %s", expectedSHA, actualSHA)
+				return
+			}
+		}
+
+		// Auto-extract if requested
+		if msg.AutoExtract {
+			op.Status = "extracting"
+			_, err := files.ExtractArchive(context.Background(), tmpPath, destPath, nil)
+			if err != nil {
+				op.Status = "failed"
+				op.Error = fmt.Sprintf("failed to extract archive: %v", err)
+				return
+			}
+		} else {
+			// Infer filename from URL
+			parts := strings.Split(rawURL, "/")
+			fileName := parts[len(parts)-1]
+			if idx := strings.Index(fileName, "?"); idx != -1 {
+				fileName = fileName[:idx]
+			}
+			if fileName == "" {
+				fileName = "downloaded_archive.zip"
+			}
+			targetPath := filepath.Join(destPath, fileName)
+			tmpFile.Seek(0, 0)
+			out, err := os.Create(targetPath)
+			if err != nil {
+				op.Status = "failed"
+				op.Error = fmt.Sprintf("failed to save file to destination: %v", err)
+				return
+			}
+			_, _ = io.Copy(out, tmpFile)
+			out.Close()
+		}
+
+		op.ProgressPercent.Store(100)
+		op.Status = "completed"
+	}()
+
+	return connect.NewResponse(&v1.DownloadRemoteArchiveResponse{
+		TaskId:  taskID,
+		Message: "Remote archive download initiated",
+	}), nil
+}
+
+// GetRemoteArchiveProgress returns current status and bytes progress of a remote download
+func (s *FileService) GetRemoteArchiveProgress(ctx context.Context, req *connect.Request[v1.GetRemoteArchiveProgressRequest]) (*connect.Response[v1.GetRemoteArchiveProgressResponse], error) {
+	val, ok := s.remoteDownloads.Load(req.Msg.TaskId)
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("remote download task not found"))
+	}
+	op := val.(*remoteDownloadOp)
+
+	return connect.NewResponse(&v1.GetRemoteArchiveProgressResponse{
+		TaskId:          op.TaskID,
+		Status:          op.Status,
+		BytesDownloaded: op.BytesDownloaded.Load(),
+		TotalBytes:      op.TotalBytes.Load(),
+		ProgressPercent: op.ProgressPercent.Load(),
+		Error:           op.Error,
 	}), nil
 }
 
