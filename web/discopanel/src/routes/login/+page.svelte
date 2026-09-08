@@ -346,8 +346,8 @@
 	<Card class="w-full max-w-md">
 		<CardHeader class="space-y-1">
 			<div class="mb-4 flex items-center justify-center">
-				<img src="/g1_24x24.png" alt="DiscoPanel Logo" class="mr-2 h-8 w-8" />
-				<CardTitle class="text-2xl">DiscoPanel</CardTitle>
+				<img src="/g1_24x24.png" alt="MineServer Logo" class="mr-2 h-8 w-8" />
+				<CardTitle class="text-2xl">MineServer</CardTitle>
 			</div>
 			{#if authStatus.firstUserSetup}
 				<CardDescription class="text-center">

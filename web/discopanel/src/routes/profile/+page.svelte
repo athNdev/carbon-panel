@@ -487,7 +487,7 @@
 						<KeyRound class="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
 						<p class="text-sm font-medium text-muted-foreground">No API tokens</p>
 						<p class="mt-1 text-xs text-muted-foreground">
-							Create a token to authenticate programmatically with the DiscoPanel API.
+							Create a token to authenticate programmatically with the MineServer API.
 						</p>
 					</div>
 				{:else}

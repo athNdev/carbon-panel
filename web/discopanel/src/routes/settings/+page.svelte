@@ -15,11 +15,13 @@
 		HelpCircle,
 		ScrollText,
 		Users,
-		KeyRound
+		KeyRound,
+		Layers
 	} from '@lucide/svelte';
 	import type { ConfigCategory } from '$lib/proto/discopanel/v1/config_pb';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import RoutingSettings from '$lib/components/routing-settings.svelte';
+	import NodeSettings from '$lib/components/node-settings.svelte';
 	import AuthSettings from '$lib/components/auth-settings.svelte';
 	import SupportSettings from '$lib/components/support-settings.svelte';
 	import LogsSettings from '$lib/components/logs-settings.svelte';
@@ -97,7 +99,7 @@
 					Settings
 				</h2>
 				<p class="text-base text-muted-foreground">
-					Configure DiscoPanel and default server settings
+					Configure MineServer and default server settings
 				</p>
 			</div>
 		</div>
@@ -113,6 +115,10 @@
 				<TabsTrigger value="routing" class="flex items-center gap-2 px-4">
 					<Globe class="h-4 w-4" />
 					Routing
+				</TabsTrigger>
+				<TabsTrigger value="nodes" class="flex items-center gap-2 px-4">
+					<Layers class="h-4 w-4" />
+					Docker Nodes
 				</TabsTrigger>
 				<TabsTrigger value="auth" class="flex items-center gap-2 px-4">
 					<Shield class="h-4 w-4" />
@@ -165,6 +171,10 @@
 
 			<TabsContent value="routing" class="space-y-4">
 				<RoutingSettings />
+			</TabsContent>
+
+			<TabsContent value="nodes" class="space-y-4">
+				<NodeSettings />
 			</TabsContent>
 
 			<TabsContent value="auth" class="space-y-4">

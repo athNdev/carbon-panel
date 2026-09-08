@@ -20,6 +20,8 @@ service ModpackService {
   rpc SyncModpacks(SyncModpacksRequest) returns (SyncModpacksResponse);
   // Import modpack from chunked upload session
   rpc ImportUploadedModpack(ImportUploadedModpackRequest) returns (ImportUploadedModpackResponse);
+  // Import modpack from external URL (GitHub release, CDN, static host)
+  rpc ImportRemoteModpack(ImportRemoteModpackRequest) returns (ImportRemoteModpackResponse);
   // Remove indexed modpack
   rpc DeleteModpack(DeleteModpackRequest) returns (DeleteModpackResponse);
   // Mark modpack as favorite
@@ -149,6 +151,22 @@ message ImportUploadedModpackRequest {
 
 // Import result
 message ImportUploadedModpackResponse {
+  IndexedModpack modpack = 1;
+  string message = 2;
+}
+
+// Import modpack from external URL (GitHub release, CDN, static file host)
+message ImportRemoteModpackRequest {
+  string url = 1;
+  string name = 2;
+  string description = 3;
+  string mc_version = 4;
+  string mod_loader = 5;
+  string auth_token = 6;
+}
+
+// Remote import result
+message ImportRemoteModpackResponse {
   IndexedModpack modpack = 1;
   string message = 2;
 }

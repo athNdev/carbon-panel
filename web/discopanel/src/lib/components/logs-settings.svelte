@@ -65,7 +65,7 @@
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
-		a.download = filename || 'discopanel.log';
+		a.download = filename || 'mineserver.log';
 		a.click();
 		URL.revokeObjectURL(url);
 		toast.success('Logs downloaded');
@@ -109,7 +109,7 @@
 			<div>
 				<CardTitle class="text-2xl font-semibold">Application Logs</CardTitle>
 				<CardDescription class="mt-2 text-base">
-					View real-time DiscoPanel application logs for debugging and monitoring.
+					View real-time MineServer application logs for debugging and monitoring.
 				</CardDescription>
 			</div>
 			<div class="flex items-center gap-2">

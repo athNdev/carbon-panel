@@ -201,7 +201,7 @@
 			<div>
 				<CardTitle class="text-2xl font-semibold">Support Tools</CardTitle>
 				<CardDescription class="mt-2 text-base">
-					Generate and upload support bundles to help troubleshoot issues with DiscoPanel.
+					Generate and upload support bundles to help troubleshoot issues with MineServer.
 				</CardDescription>
 			</div>
 		</div>

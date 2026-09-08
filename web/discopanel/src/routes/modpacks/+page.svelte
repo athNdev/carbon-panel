@@ -28,8 +28,19 @@
 		Package,
 		ArrowLeft,
 		Trash2,
-		X
+		X,
+		Globe,
+		Loader2
 	} from '@lucide/svelte';
+	import { Label } from '$lib/components/ui/label';
+	import {
+		Dialog,
+		DialogContent,
+		DialogDescription,
+		DialogFooter,
+		DialogHeader,
+		DialogTitle
+	} from '$lib/components/ui/dialog';
 	import { create } from '@bufbuild/protobuf';
 	import type {
 		IndexedModpack,
@@ -68,6 +79,16 @@
 	let uploadAbortController = $state<AbortController | null>(null);
 	let selectedIndexer = $state('modrinth'); // Default Modrinth since no API key initially
 	let indexerName = $derived(selectedIndexer === 'fuego' ? 'CurseForge' : 'Modrinth');
+
+	// Remote modpack import state
+	let showRemoteModal = $state(false);
+	let importingRemote = $state(false);
+	let remoteUrl = $state('');
+	let remoteName = $state('');
+	let remoteDescription = $state('');
+	let remoteMcVersion = $state('');
+	let remoteModLoader = $state('');
+	let remoteAuthToken = $state('');
 
 	// Dynamic game versions and mod loaders from API
 	let gameVersions = $state<string[]>([]);
@@ -310,6 +331,42 @@
 		}
 	}
 
+	async function handleRemoteImport() {
+		const trimmedUrl = remoteUrl.trim();
+		if (!trimmedUrl) {
+			toast.error('Please enter a valid modpack URL');
+			return;
+		}
+
+		importingRemote = true;
+		try {
+			const res = await rpcClient.modpack.importRemoteModpack({
+				url: trimmedUrl,
+				name: remoteName.trim(),
+				description: remoteDescription.trim(),
+				mcVersion: remoteMcVersion.trim(),
+				modLoader: remoteModLoader.trim(),
+				authToken: remoteAuthToken.trim()
+			});
+
+			toast.success(res.message || 'Modpack imported successfully');
+			showRemoteModal = false;
+			remoteUrl = '';
+			remoteName = '';
+			remoteDescription = '';
+			remoteMcVersion = '';
+			remoteModLoader = '';
+			remoteAuthToken = '';
+
+			await Promise.all([searchModpacks(), loadUploadedPacks()]);
+		} catch (err: unknown) {
+			toast.error(err instanceof Error ? err.message : 'Failed to import modpack');
+			console.error(err);
+		} finally {
+			importingRemote = false;
+		}
+	}
+
 	async function deleteModpack(modpack: IndexedModpack) {
 		if (
 			!confirm(`Are you sure you want to delete "${modpack.name}"? This action cannot be undone.`)
@@ -518,6 +575,15 @@
 					<Upload class="mr-2 h-5 w-5" />
 					Upload Modpack
 				</Button>
+				<Button
+					onclick={() => (showRemoteModal = true)}
+					disabled={importingRemote}
+					variant="outline"
+					class="border-2 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
+				>
+					<Globe class="mr-2 h-5 w-5" />
+					Add from URL / GitHub
+				</Button>
 				<input
 					bind:this={fileInput}
 					type="file"
@@ -558,6 +624,123 @@
 			{/if}
 		</div>
 	{/if}
+
+	<Dialog bind:open={showRemoteModal}>
+		<DialogContent class="sm:max-w-lg">
+			<DialogHeader>
+				<DialogTitle class="flex items-center gap-2">
+					<Globe class="h-5 w-5 text-primary" />
+					Add Modpack from URL / GitHub / CDN
+				</DialogTitle>
+				<DialogDescription>
+					Import a modpack archive (.zip or .mrpack) directly from GitHub Releases, static file hosting, or any CDN.
+				</DialogDescription>
+			</DialogHeader>
+
+			<div class="space-y-4 py-2">
+				<div class="space-y-2">
+					<Label for="remote-url">Modpack URL <span class="text-destructive">*</span></Label>
+					<Input
+						id="remote-url"
+						placeholder="https://github.com/owner/repo/releases/download/v1.0/modpack.zip"
+						bind:value={remoteUrl}
+						disabled={importingRemote}
+					/>
+					<p class="text-xs text-muted-foreground">
+						Direct link to a modpack archive from GitHub releases, Cloudflare R2, S3, or any static host.
+					</p>
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-2">
+						<Label for="remote-name">Pack Name</Label>
+						<Input
+							id="remote-name"
+							placeholder="Auto-detected if empty"
+							bind:value={remoteName}
+							disabled={importingRemote}
+						/>
+					</div>
+					<div class="space-y-2">
+						<Label for="remote-mc-version">Minecraft Version</Label>
+						<Input
+							id="remote-mc-version"
+							placeholder="e.g. 1.20.1 (or auto-detect)"
+							bind:value={remoteMcVersion}
+							disabled={importingRemote}
+						/>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-2">
+						<Label for="remote-loader">Mod Loader</Label>
+						<Select
+							type="single"
+							value={remoteModLoader}
+							onValueChange={(v: string | undefined) => (remoteModLoader = v || '')}
+							disabled={importingRemote}
+						>
+							<SelectTrigger id="remote-loader">
+								<span>{remoteModLoader ? modLoaders.find((l) => l.value === remoteModLoader)?.label || remoteModLoader : 'Auto-detect'}</span>
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="">Auto-detect / Manifest</SelectItem>
+								<SelectItem value="fabric">Fabric</SelectItem>
+								<SelectItem value="forge">Forge</SelectItem>
+								<SelectItem value="neoforge">NeoForge</SelectItem>
+								<SelectItem value="quilt">Quilt</SelectItem>
+								<SelectItem value="custom">Custom</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<div class="space-y-2">
+						<Label for="remote-token">Auth Token (Optional)</Label>
+						<Input
+							id="remote-token"
+							type="password"
+							placeholder="ghp_... for private repos"
+							bind:value={remoteAuthToken}
+							disabled={importingRemote}
+						/>
+					</div>
+				</div>
+
+				<div class="space-y-2">
+					<Label for="remote-desc">Description (Optional)</Label>
+					<Input
+						id="remote-desc"
+						placeholder="Short summary or description"
+						bind:value={remoteDescription}
+						disabled={importingRemote}
+					/>
+				</div>
+			</div>
+
+			<DialogFooter class="flex items-center justify-end gap-2">
+				<Button
+					variant="outline"
+					onclick={() => (showRemoteModal = false)}
+					disabled={importingRemote}
+				>
+					Cancel
+				</Button>
+				<Button
+					onclick={handleRemoteImport}
+					disabled={importingRemote || !remoteUrl.trim()}
+					class="bg-linear-to-r from-primary to-primary/80"
+				>
+					{#if importingRemote}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						Downloading & Importing...
+					{:else}
+						<Download class="mr-2 h-4 w-4" />
+						Import Modpack
+					{/if}
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
 
 	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each displayModpacks as modpack (modpack.id)}

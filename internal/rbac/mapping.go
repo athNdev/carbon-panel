@@ -63,8 +63,9 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	// ── ConfigService ──────────────────────────────────────────────────
 	"/discopanel.v1.ConfigService/GetServerConfig":      {Resource: ResourceServerConfig, Action: ActionRead, ObjectIDField: "server_id"},
 	"/discopanel.v1.ConfigService/UpdateServerConfig":   {Resource: ResourceServerConfig, Action: ActionUpdate, ObjectIDField: "server_id"},
-	"/discopanel.v1.ConfigService/GetGlobalSettings":    {Resource: ResourceSettings, Action: ActionRead},
-	"/discopanel.v1.ConfigService/UpdateGlobalSettings": {Resource: ResourceSettings, Action: ActionUpdate},
+	"/discopanel.v1.ConfigService/GetGlobalSettings":          {Resource: ResourceSettings, Action: ActionRead},
+	"/discopanel.v1.ConfigService/UpdateGlobalSettings":       {Resource: ResourceSettings, Action: ActionUpdate},
+	"/discopanel.v1.ConfigService/SyncGlobalSettingsToServers": {Resource: ResourceSettings, Action: ActionUpdate},
 
 	// ── FileService ────────────────────────────────────────────────────
 	"/discopanel.v1.FileService/ListFiles":           {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
@@ -96,6 +97,7 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/discopanel.v1.ModpackService/GetModpackByURL":       {Resource: ResourceModpacks, Action: ActionRead},
 	"/discopanel.v1.ModpackService/SyncModpacks":          {Resource: ResourceModpacks, Action: ActionCreate},
 	"/discopanel.v1.ModpackService/ImportUploadedModpack": {Resource: ResourceModpacks, Action: ActionCreate},
+	"/discopanel.v1.ModpackService/ImportRemoteModpack":   {Resource: ResourceModpacks, Action: ActionCreate},
 	"/discopanel.v1.ModpackService/DeleteModpack":         {Resource: ResourceModpacks, Action: ActionDelete, ObjectIDField: "id"},
 	"/discopanel.v1.ModpackService/ToggleFavorite":        {Resource: ResourceModpacks, Action: ActionUpdate, ObjectIDField: "id"},
 	"/discopanel.v1.ModpackService/ListFavorites":         {Resource: ResourceModpacks, Action: ActionRead},

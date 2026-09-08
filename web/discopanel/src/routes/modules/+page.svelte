@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>Modules - DiscoPanel</title>
+	<title>Modules - MineServer</title>
 </svelte:head>
 
 <div class="h-full flex-1 space-y-8 bg-linear-to-br from-background to-muted/10 p-8 pt-6">

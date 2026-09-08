@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -430,6 +434,8 @@ func (s *Scheduler) runTaskType(ctx context.Context, server *storage.Server, tas
 		return s.executeScriptTask(ctx, server, task)
 	case storage.TaskTypeWebhook:
 		return s.executeWebhookTask(ctx, server, task, eventType, eventData)
+	case storage.TaskTypeModpackUpdate:
+		return s.executeModpackUpdateTask(ctx, server, task)
 	default:
 		return "", fmt.Errorf("unknown task type: %s", task.TaskType)
 	}
@@ -716,4 +722,117 @@ func webhookEventName(t v1.TriggeredEventType) string {
 	default:
 		return "manual"
 	}
+}
+
+// ModpackUpdateTaskConfig matches the proto message for periodic modpack updates
+type ModpackUpdateTaskConfig struct {
+	GitURL             string `json:"git_url"`
+	Branch             string `json:"branch"`
+	TargetSubfolder    string `json:"target_subfolder"`
+	RestartImmediately bool   `json:"restart_immediately"`
+	AuthToken          string `json:"auth_token"`
+}
+
+// executeModpackUpdateTask handles cloning or fetching updates from Git/source, syncing into the server directory, and restarting if updates are applied
+func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storage.Server, task *storage.ScheduledTask) (string, error) {
+	var cfg ModpackUpdateTaskConfig
+	if task.Config != "" {
+		if err := json.Unmarshal([]byte(task.Config), &cfg); err != nil {
+			return "", fmt.Errorf("invalid modpack update config: %w", err)
+		}
+	}
+
+	if cfg.GitURL == "" {
+		return "", fmt.Errorf("git_url is required for modpack update task")
+	}
+
+	branch := cfg.Branch
+	if branch == "" {
+		branch = "main"
+	}
+
+	// Prepare git repository clone directory inside server directory or app cache
+	cacheDir := filepath.Join(server.DataPath, ".discopanel_modpack_git")
+	gitURL := cfg.GitURL
+	if cfg.AuthToken != "" && strings.HasPrefix(gitURL, "https://") {
+		// Embed auth token into clone URL
+		gitURL = strings.Replace(gitURL, "https://", fmt.Sprintf("https://oauth2:%s@", cfg.AuthToken), 1)
+	}
+
+	var hasUpdates bool
+	var updateSummary string
+
+	if _, err := os.Stat(filepath.Join(cacheDir, ".git")); os.IsNotExist(err) {
+		// Initial clone
+		_ = os.MkdirAll(cacheDir, 0755)
+		s.log.Info("ModpackTask %s: Performing initial clone from %s (branch: %s)", task.Name, cfg.GitURL, branch)
+		cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "-b", branch, gitURL, cacheDir)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return string(out), fmt.Errorf("initial git clone failed: %w: %s", err, string(out))
+		}
+		hasUpdates = true
+		updateSummary = fmt.Sprintf("Initial modpack clone successful from %s on branch %s", cfg.GitURL, branch)
+	} else {
+		// Fetch and check if updates are available
+		cmdFetch := exec.CommandContext(ctx, "git", "-C", cacheDir, "fetch", "origin", branch)
+		if out, err := cmdFetch.CombinedOutput(); err != nil {
+			return string(out), fmt.Errorf("git fetch failed: %w: %s", err, string(out))
+		}
+
+		cmdHead := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "HEAD")
+		headOut, _ := cmdHead.Output()
+		currentHash := strings.TrimSpace(string(headOut))
+
+		cmdRemote := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "FETCH_HEAD")
+		remoteOut, _ := cmdRemote.Output()
+		remoteHash := strings.TrimSpace(string(remoteOut))
+
+		if currentHash == remoteHash && currentHash != "" {
+			return fmt.Sprintf("Modpack is up to date at commit %s (no updates)", currentHash[:min(8, len(currentHash))]), nil
+		}
+
+		// Pull latest changes
+		cmdReset := exec.CommandContext(ctx, "git", "-C", cacheDir, "reset", "--hard", "FETCH_HEAD")
+		if out, err := cmdReset.CombinedOutput(); err != nil {
+			return string(out), fmt.Errorf("git reset to FETCH_HEAD failed: %w: %s", err, string(out))
+		}
+
+		hasUpdates = true
+		updateSummary = fmt.Sprintf("Updated modpack from commit %s to %s",
+			currentHash[:min(8, len(currentHash))],
+			remoteHash[:min(8, len(remoteHash))])
+	}
+
+	if hasUpdates {
+		// Source directory to copy from
+		srcDir := cacheDir
+		if cfg.TargetSubfolder != "" {
+			srcDir = filepath.Join(cacheDir, cfg.TargetSubfolder)
+		}
+
+		// Sync files into server.DataPath (excluding .git)
+		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
+		cmdRsync := exec.CommandContext(ctx, "rsync", "-av", "--exclude=.git", "--exclude=.discopanel_modpack_git", srcDir+"/", server.DataPath+"/")
+		if out, err := cmdRsync.CombinedOutput(); err != nil {
+			// Fallback to cp -rf if rsync is not installed
+			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
+			if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
+				return string(out) + "\n" + string(cpOut), fmt.Errorf("failed to copy modpack files: %w", cpErr)
+			}
+		}
+
+		// Check if immediate restart is requested
+		if cfg.RestartImmediately {
+			s.log.Info("ModpackTask %s: RestartImmediately is true, restarting server %s", task.Name, server.Name)
+			restartOut, err := s.executeRestartTask(ctx, server, task)
+			if err != nil {
+				return fmt.Sprintf("%s\nModpack synced, but server restart failed: %v", updateSummary, err), err
+			}
+			return fmt.Sprintf("%s\n%s", updateSummary, restartOut), nil
+		} else {
+			return fmt.Sprintf("%s\nModpack synced successfully (server restart deferred to scheduled maintenance)", updateSummary), nil
+		}
+	}
+
+	return "No updates found", nil
 }

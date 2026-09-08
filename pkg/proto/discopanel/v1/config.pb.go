@@ -559,6 +559,105 @@ func (x *UpdateGlobalSettingsResponse) GetCategories() []*ConfigCategory {
 	return nil
 }
 
+// Request to propagate global settings to existing servers
+type SyncGlobalSettingsToServersRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// If true, only sync Ops/Admins and Whitelist fields. If false, syncs all non-server-specific fields.
+	OpsAndWhitelistOnly bool `protobuf:"varint,1,opt,name=ops_and_whitelist_only,json=opsAndWhitelistOnly,proto3" json:"ops_and_whitelist_only,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SyncGlobalSettingsToServersRequest) Reset() {
+	*x = SyncGlobalSettingsToServersRequest{}
+	mi := &file_discopanel_v1_config_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncGlobalSettingsToServersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncGlobalSettingsToServersRequest) ProtoMessage() {}
+
+func (x *SyncGlobalSettingsToServersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_config_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncGlobalSettingsToServersRequest.ProtoReflect.Descriptor instead.
+func (*SyncGlobalSettingsToServersRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_config_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SyncGlobalSettingsToServersRequest) GetOpsAndWhitelistOnly() bool {
+	if x != nil {
+		return x.OpsAndWhitelistOnly
+	}
+	return false
+}
+
+// Response after propagating global settings
+type SyncGlobalSettingsToServersResponse struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	UpdatedServersCount int32                  `protobuf:"varint,1,opt,name=updated_servers_count,json=updatedServersCount,proto3" json:"updated_servers_count,omitempty"`
+	Message             string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SyncGlobalSettingsToServersResponse) Reset() {
+	*x = SyncGlobalSettingsToServersResponse{}
+	mi := &file_discopanel_v1_config_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncGlobalSettingsToServersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncGlobalSettingsToServersResponse) ProtoMessage() {}
+
+func (x *SyncGlobalSettingsToServersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_config_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncGlobalSettingsToServersResponse.ProtoReflect.Descriptor instead.
+func (*SyncGlobalSettingsToServersResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_config_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SyncGlobalSettingsToServersResponse) GetUpdatedServersCount() int32 {
+	if x != nil {
+		return x.UpdatedServersCount
+	}
+	return 0
+}
+
+func (x *SyncGlobalSettingsToServersResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_discopanel_v1_config_proto protoreflect.FileDescriptor
 
 const file_discopanel_v1_config_proto_rawDesc = "" +
@@ -612,12 +711,18 @@ const file_discopanel_v1_config_proto_rawDesc = "" +
 	"\x1cUpdateGlobalSettingsResponse\x12=\n" +
 	"\n" +
 	"categories\x18\x01 \x03(\v2\x1d.discopanel.v1.ConfigCategoryR\n" +
-	"categories2\xb5\x03\n" +
+	"categories\"Y\n" +
+	"\"SyncGlobalSettingsToServersRequest\x123\n" +
+	"\x16ops_and_whitelist_only\x18\x01 \x01(\bR\x13opsAndWhitelistOnly\"s\n" +
+	"#SyncGlobalSettingsToServersResponse\x122\n" +
+	"\x15updated_servers_count\x18\x01 \x01(\x05R\x13updatedServersCount\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xbc\x04\n" +
 	"\rConfigService\x12`\n" +
 	"\x0fGetServerConfig\x12%.discopanel.v1.GetServerConfigRequest\x1a&.discopanel.v1.GetServerConfigResponse\x12i\n" +
 	"\x12UpdateServerConfig\x12(.discopanel.v1.UpdateServerConfigRequest\x1a).discopanel.v1.UpdateServerConfigResponse\x12f\n" +
 	"\x11GetGlobalSettings\x12'.discopanel.v1.GetGlobalSettingsRequest\x1a(.discopanel.v1.GetGlobalSettingsResponse\x12o\n" +
-	"\x14UpdateGlobalSettings\x12*.discopanel.v1.UpdateGlobalSettingsRequest\x1a+.discopanel.v1.UpdateGlobalSettingsResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
+	"\x14UpdateGlobalSettings\x12*.discopanel.v1.UpdateGlobalSettingsRequest\x1a+.discopanel.v1.UpdateGlobalSettingsResponse\x12\x84\x01\n" +
+	"\x1bSyncGlobalSettingsToServers\x121.discopanel.v1.SyncGlobalSettingsToServersRequest\x1a2.discopanel.v1.SyncGlobalSettingsToServersResponseBFZDgithub.com/nickheyer/discopanel/pkg/proto/discopanel/v1;discopanelv1b\x06proto3"
 
 var (
 	file_discopanel_v1_config_proto_rawDescOnce sync.Once
@@ -631,39 +736,43 @@ func file_discopanel_v1_config_proto_rawDescGZIP() []byte {
 	return file_discopanel_v1_config_proto_rawDescData
 }
 
-var file_discopanel_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_discopanel_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_discopanel_v1_config_proto_goTypes = []any{
-	(*ConfigProperty)(nil),               // 0: discopanel.v1.ConfigProperty
-	(*ConfigCategory)(nil),               // 1: discopanel.v1.ConfigCategory
-	(*GetServerConfigRequest)(nil),       // 2: discopanel.v1.GetServerConfigRequest
-	(*GetServerConfigResponse)(nil),      // 3: discopanel.v1.GetServerConfigResponse
-	(*UpdateServerConfigRequest)(nil),    // 4: discopanel.v1.UpdateServerConfigRequest
-	(*UpdateServerConfigResponse)(nil),   // 5: discopanel.v1.UpdateServerConfigResponse
-	(*GetGlobalSettingsRequest)(nil),     // 6: discopanel.v1.GetGlobalSettingsRequest
-	(*GetGlobalSettingsResponse)(nil),    // 7: discopanel.v1.GetGlobalSettingsResponse
-	(*UpdateGlobalSettingsRequest)(nil),  // 8: discopanel.v1.UpdateGlobalSettingsRequest
-	(*UpdateGlobalSettingsResponse)(nil), // 9: discopanel.v1.UpdateGlobalSettingsResponse
-	nil,                                  // 10: discopanel.v1.UpdateServerConfigRequest.UpdatesEntry
-	nil,                                  // 11: discopanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
+	(*ConfigProperty)(nil),                      // 0: discopanel.v1.ConfigProperty
+	(*ConfigCategory)(nil),                      // 1: discopanel.v1.ConfigCategory
+	(*GetServerConfigRequest)(nil),              // 2: discopanel.v1.GetServerConfigRequest
+	(*GetServerConfigResponse)(nil),             // 3: discopanel.v1.GetServerConfigResponse
+	(*UpdateServerConfigRequest)(nil),           // 4: discopanel.v1.UpdateServerConfigRequest
+	(*UpdateServerConfigResponse)(nil),          // 5: discopanel.v1.UpdateServerConfigResponse
+	(*GetGlobalSettingsRequest)(nil),            // 6: discopanel.v1.GetGlobalSettingsRequest
+	(*GetGlobalSettingsResponse)(nil),           // 7: discopanel.v1.GetGlobalSettingsResponse
+	(*UpdateGlobalSettingsRequest)(nil),         // 8: discopanel.v1.UpdateGlobalSettingsRequest
+	(*UpdateGlobalSettingsResponse)(nil),        // 9: discopanel.v1.UpdateGlobalSettingsResponse
+	(*SyncGlobalSettingsToServersRequest)(nil),  // 10: discopanel.v1.SyncGlobalSettingsToServersRequest
+	(*SyncGlobalSettingsToServersResponse)(nil), // 11: discopanel.v1.SyncGlobalSettingsToServersResponse
+	nil, // 12: discopanel.v1.UpdateServerConfigRequest.UpdatesEntry
+	nil, // 13: discopanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
 }
 var file_discopanel_v1_config_proto_depIdxs = []int32{
 	0,  // 0: discopanel.v1.ConfigCategory.properties:type_name -> discopanel.v1.ConfigProperty
 	1,  // 1: discopanel.v1.GetServerConfigResponse.categories:type_name -> discopanel.v1.ConfigCategory
-	10, // 2: discopanel.v1.UpdateServerConfigRequest.updates:type_name -> discopanel.v1.UpdateServerConfigRequest.UpdatesEntry
+	12, // 2: discopanel.v1.UpdateServerConfigRequest.updates:type_name -> discopanel.v1.UpdateServerConfigRequest.UpdatesEntry
 	1,  // 3: discopanel.v1.UpdateServerConfigResponse.categories:type_name -> discopanel.v1.ConfigCategory
 	1,  // 4: discopanel.v1.GetGlobalSettingsResponse.categories:type_name -> discopanel.v1.ConfigCategory
-	11, // 5: discopanel.v1.UpdateGlobalSettingsRequest.updates:type_name -> discopanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
+	13, // 5: discopanel.v1.UpdateGlobalSettingsRequest.updates:type_name -> discopanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
 	1,  // 6: discopanel.v1.UpdateGlobalSettingsResponse.categories:type_name -> discopanel.v1.ConfigCategory
 	2,  // 7: discopanel.v1.ConfigService.GetServerConfig:input_type -> discopanel.v1.GetServerConfigRequest
 	4,  // 8: discopanel.v1.ConfigService.UpdateServerConfig:input_type -> discopanel.v1.UpdateServerConfigRequest
 	6,  // 9: discopanel.v1.ConfigService.GetGlobalSettings:input_type -> discopanel.v1.GetGlobalSettingsRequest
 	8,  // 10: discopanel.v1.ConfigService.UpdateGlobalSettings:input_type -> discopanel.v1.UpdateGlobalSettingsRequest
-	3,  // 11: discopanel.v1.ConfigService.GetServerConfig:output_type -> discopanel.v1.GetServerConfigResponse
-	5,  // 12: discopanel.v1.ConfigService.UpdateServerConfig:output_type -> discopanel.v1.UpdateServerConfigResponse
-	7,  // 13: discopanel.v1.ConfigService.GetGlobalSettings:output_type -> discopanel.v1.GetGlobalSettingsResponse
-	9,  // 14: discopanel.v1.ConfigService.UpdateGlobalSettings:output_type -> discopanel.v1.UpdateGlobalSettingsResponse
-	11, // [11:15] is the sub-list for method output_type
-	7,  // [7:11] is the sub-list for method input_type
+	10, // 11: discopanel.v1.ConfigService.SyncGlobalSettingsToServers:input_type -> discopanel.v1.SyncGlobalSettingsToServersRequest
+	3,  // 12: discopanel.v1.ConfigService.GetServerConfig:output_type -> discopanel.v1.GetServerConfigResponse
+	5,  // 13: discopanel.v1.ConfigService.UpdateServerConfig:output_type -> discopanel.v1.UpdateServerConfigResponse
+	7,  // 14: discopanel.v1.ConfigService.GetGlobalSettings:output_type -> discopanel.v1.GetGlobalSettingsResponse
+	9,  // 15: discopanel.v1.ConfigService.UpdateGlobalSettings:output_type -> discopanel.v1.UpdateGlobalSettingsResponse
+	11, // 16: discopanel.v1.ConfigService.SyncGlobalSettingsToServers:output_type -> discopanel.v1.SyncGlobalSettingsToServersResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -681,7 +790,7 @@ func file_discopanel_v1_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_discopanel_v1_config_proto_rawDesc), len(file_discopanel_v1_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

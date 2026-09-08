@@ -9,7 +9,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
-	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle } from '@lucide/svelte';
+	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send } from '@lucide/svelte';
 	import { copyToClipboard } from '$lib/utils/clipboard';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 	import { ServerStatus } from '$lib/proto/discopanel/v1/common_pb';
@@ -28,6 +28,7 @@
 	// State
 	let loading = $state(false);
 	let saving = $state(false);
+	let syncing = $state(false);
 	let categories = $state<ConfigCategory[]>([]);
 	let activeCategory = $state<string>('');
 	let highlightedField = $state<string | null>(null);
@@ -229,6 +230,25 @@
 		}
 	}
 
+	async function handleSyncToAllServers(opsAndWhitelistOnly: boolean) {
+		if (hasChanges) {
+			toast.error('Please save your pending changes first before syncing to servers');
+			return;
+		}
+		syncing = true;
+		try {
+			const res = await rpcClient.config.syncGlobalSettingsToServers({
+				opsAndWhitelistOnly
+			});
+			toast.success(res.message || 'Settings synced to all servers');
+		} catch (error) {
+			toast.error('Failed to sync settings to servers');
+			console.error(error);
+		} finally {
+			syncing = false;
+		}
+	}
+
 	function handleReset() {
 		currentValues = new SvelteMap(originalValues);
 		currentEnabled = new SvelteSet(originalEnabled);
@@ -361,6 +381,22 @@
 					<span class="text-sm whitespace-nowrap text-muted-foreground">
 						{modifiedFields.size} unsaved {modifiedFields.size === 1 ? 'change' : 'changes'}
 					</span>
+				{/if}
+				{#if !server}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => handleSyncToAllServers(true)}
+						disabled={loading || syncing || hasChanges}
+						title="Propagate configured default Ops and Whitelist to all existing servers"
+					>
+						{#if syncing}
+							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						{:else}
+							<Send class="mr-2 h-4 w-4" />
+						{/if}
+						Sync Ops & Whitelist to Servers
+					</Button>
 				{/if}
 				<Button
 					variant="outline"

@@ -1012,6 +1012,144 @@ func (x *ImportUploadedModpackResponse) GetMessage() string {
 	return ""
 }
 
+// Import modpack from external URL (GitHub release, CDN, static file host)
+type ImportRemoteModpackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	McVersion     string                 `protobuf:"bytes,4,opt,name=mc_version,json=mcVersion,proto3" json:"mc_version,omitempty"`
+	ModLoader     string                 `protobuf:"bytes,5,opt,name=mod_loader,json=modLoader,proto3" json:"mod_loader,omitempty"`
+	AuthToken     string                 `protobuf:"bytes,6,opt,name=auth_token,json=authToken,proto3" json:"auth_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportRemoteModpackRequest) Reset() {
+	*x = ImportRemoteModpackRequest{}
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportRemoteModpackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportRemoteModpackRequest) ProtoMessage() {}
+
+func (x *ImportRemoteModpackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportRemoteModpackRequest.ProtoReflect.Descriptor instead.
+func (*ImportRemoteModpackRequest) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ImportRemoteModpackRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *ImportRemoteModpackRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ImportRemoteModpackRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ImportRemoteModpackRequest) GetMcVersion() string {
+	if x != nil {
+		return x.McVersion
+	}
+	return ""
+}
+
+func (x *ImportRemoteModpackRequest) GetModLoader() string {
+	if x != nil {
+		return x.ModLoader
+	}
+	return ""
+}
+
+func (x *ImportRemoteModpackRequest) GetAuthToken() string {
+	if x != nil {
+		return x.AuthToken
+	}
+	return ""
+}
+
+// Remote import result
+type ImportRemoteModpackResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Modpack       *IndexedModpack        `protobuf:"bytes,1,opt,name=modpack,proto3" json:"modpack,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportRemoteModpackResponse) Reset() {
+	*x = ImportRemoteModpackResponse{}
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportRemoteModpackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportRemoteModpackResponse) ProtoMessage() {}
+
+func (x *ImportRemoteModpackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportRemoteModpackResponse.ProtoReflect.Descriptor instead.
+func (*ImportRemoteModpackResponse) Descriptor() ([]byte, []int) {
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ImportRemoteModpackResponse) GetModpack() *IndexedModpack {
+	if x != nil {
+		return x.Modpack
+	}
+	return nil
+}
+
+func (x *ImportRemoteModpackResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 // Modpack to delete
 type DeleteModpackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1022,7 +1160,7 @@ type DeleteModpackRequest struct {
 
 func (x *DeleteModpackRequest) Reset() {
 	*x = DeleteModpackRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[14]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1034,7 +1172,7 @@ func (x *DeleteModpackRequest) String() string {
 func (*DeleteModpackRequest) ProtoMessage() {}
 
 func (x *DeleteModpackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[14]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1047,7 +1185,7 @@ func (x *DeleteModpackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteModpackRequest.ProtoReflect.Descriptor instead.
 func (*DeleteModpackRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{14}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteModpackRequest) GetId() string {
@@ -1067,7 +1205,7 @@ type DeleteModpackResponse struct {
 
 func (x *DeleteModpackResponse) Reset() {
 	*x = DeleteModpackResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[15]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1079,7 +1217,7 @@ func (x *DeleteModpackResponse) String() string {
 func (*DeleteModpackResponse) ProtoMessage() {}
 
 func (x *DeleteModpackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[15]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1092,7 +1230,7 @@ func (x *DeleteModpackResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteModpackResponse.ProtoReflect.Descriptor instead.
 func (*DeleteModpackResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{15}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteModpackResponse) GetMessage() string {
@@ -1112,7 +1250,7 @@ type ToggleFavoriteRequest struct {
 
 func (x *ToggleFavoriteRequest) Reset() {
 	*x = ToggleFavoriteRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[16]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1124,7 +1262,7 @@ func (x *ToggleFavoriteRequest) String() string {
 func (*ToggleFavoriteRequest) ProtoMessage() {}
 
 func (x *ToggleFavoriteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[16]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1137,7 +1275,7 @@ func (x *ToggleFavoriteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleFavoriteRequest.ProtoReflect.Descriptor instead.
 func (*ToggleFavoriteRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{16}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ToggleFavoriteRequest) GetId() string {
@@ -1158,7 +1296,7 @@ type ToggleFavoriteResponse struct {
 
 func (x *ToggleFavoriteResponse) Reset() {
 	*x = ToggleFavoriteResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[17]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1170,7 +1308,7 @@ func (x *ToggleFavoriteResponse) String() string {
 func (*ToggleFavoriteResponse) ProtoMessage() {}
 
 func (x *ToggleFavoriteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[17]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1183,7 +1321,7 @@ func (x *ToggleFavoriteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleFavoriteResponse.ProtoReflect.Descriptor instead.
 func (*ToggleFavoriteResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{17}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ToggleFavoriteResponse) GetIsFavorited() bool {
@@ -1209,7 +1347,7 @@ type ListFavoritesRequest struct {
 
 func (x *ListFavoritesRequest) Reset() {
 	*x = ListFavoritesRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[18]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1221,7 +1359,7 @@ func (x *ListFavoritesRequest) String() string {
 func (*ListFavoritesRequest) ProtoMessage() {}
 
 func (x *ListFavoritesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[18]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1234,7 +1372,7 @@ func (x *ListFavoritesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFavoritesRequest.ProtoReflect.Descriptor instead.
 func (*ListFavoritesRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{18}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{20}
 }
 
 // Favorited modpacks
@@ -1247,7 +1385,7 @@ type ListFavoritesResponse struct {
 
 func (x *ListFavoritesResponse) Reset() {
 	*x = ListFavoritesResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[19]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1259,7 +1397,7 @@ func (x *ListFavoritesResponse) String() string {
 func (*ListFavoritesResponse) ProtoMessage() {}
 
 func (x *ListFavoritesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[19]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1272,7 +1410,7 @@ func (x *ListFavoritesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFavoritesResponse.ProtoReflect.Descriptor instead.
 func (*ListFavoritesResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{19}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListFavoritesResponse) GetModpacks() []*IndexedModpack {
@@ -1291,7 +1429,7 @@ type GetIndexerStatusRequest struct {
 
 func (x *GetIndexerStatusRequest) Reset() {
 	*x = GetIndexerStatusRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[20]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1303,7 +1441,7 @@ func (x *GetIndexerStatusRequest) String() string {
 func (*GetIndexerStatusRequest) ProtoMessage() {}
 
 func (x *GetIndexerStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[20]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1316,7 +1454,7 @@ func (x *GetIndexerStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetIndexerStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetIndexerStatusRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{20}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{22}
 }
 
 // Indexer system status
@@ -1331,7 +1469,7 @@ type GetIndexerStatusResponse struct {
 
 func (x *GetIndexerStatusResponse) Reset() {
 	*x = GetIndexerStatusResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[21]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1343,7 +1481,7 @@ func (x *GetIndexerStatusResponse) String() string {
 func (*GetIndexerStatusResponse) ProtoMessage() {}
 
 func (x *GetIndexerStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[21]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1356,7 +1494,7 @@ func (x *GetIndexerStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetIndexerStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetIndexerStatusResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{21}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetIndexerStatusResponse) GetIndexersAvailable() map[string]bool {
@@ -1390,7 +1528,7 @@ type GetModpackConfigRequest struct {
 
 func (x *GetModpackConfigRequest) Reset() {
 	*x = GetModpackConfigRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[22]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1402,7 +1540,7 @@ func (x *GetModpackConfigRequest) String() string {
 func (*GetModpackConfigRequest) ProtoMessage() {}
 
 func (x *GetModpackConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[22]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1415,7 +1553,7 @@ func (x *GetModpackConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModpackConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetModpackConfigRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{22}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetModpackConfigRequest) GetId() string {
@@ -1435,7 +1573,7 @@ type GetModpackConfigResponse struct {
 
 func (x *GetModpackConfigResponse) Reset() {
 	*x = GetModpackConfigResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[23]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1447,7 +1585,7 @@ func (x *GetModpackConfigResponse) String() string {
 func (*GetModpackConfigResponse) ProtoMessage() {}
 
 func (x *GetModpackConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[23]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1460,7 +1598,7 @@ func (x *GetModpackConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModpackConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetModpackConfigResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{23}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetModpackConfigResponse) GetConfig() map[string]string {
@@ -1480,7 +1618,7 @@ type GetModpackFilesRequest struct {
 
 func (x *GetModpackFilesRequest) Reset() {
 	*x = GetModpackFilesRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[24]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1492,7 +1630,7 @@ func (x *GetModpackFilesRequest) String() string {
 func (*GetModpackFilesRequest) ProtoMessage() {}
 
 func (x *GetModpackFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[24]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1505,7 +1643,7 @@ func (x *GetModpackFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModpackFilesRequest.ProtoReflect.Descriptor instead.
 func (*GetModpackFilesRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{24}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetModpackFilesRequest) GetId() string {
@@ -1525,7 +1663,7 @@ type GetModpackFilesResponse struct {
 
 func (x *GetModpackFilesResponse) Reset() {
 	*x = GetModpackFilesResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[25]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1537,7 +1675,7 @@ func (x *GetModpackFilesResponse) String() string {
 func (*GetModpackFilesResponse) ProtoMessage() {}
 
 func (x *GetModpackFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[25]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1550,7 +1688,7 @@ func (x *GetModpackFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModpackFilesResponse.ProtoReflect.Descriptor instead.
 func (*GetModpackFilesResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{25}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetModpackFilesResponse) GetFiles() []*ModpackFile {
@@ -1575,7 +1713,7 @@ type Version struct {
 
 func (x *Version) Reset() {
 	*x = Version{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[26]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1587,7 +1725,7 @@ func (x *Version) String() string {
 func (*Version) ProtoMessage() {}
 
 func (x *Version) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[26]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1600,7 +1738,7 @@ func (x *Version) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Version.ProtoReflect.Descriptor instead.
 func (*Version) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{26}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *Version) GetId() string {
@@ -1657,7 +1795,7 @@ type GetModpackVersionsRequest struct {
 
 func (x *GetModpackVersionsRequest) Reset() {
 	*x = GetModpackVersionsRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[27]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1669,7 +1807,7 @@ func (x *GetModpackVersionsRequest) String() string {
 func (*GetModpackVersionsRequest) ProtoMessage() {}
 
 func (x *GetModpackVersionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[27]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1682,7 +1820,7 @@ func (x *GetModpackVersionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModpackVersionsRequest.ProtoReflect.Descriptor instead.
 func (*GetModpackVersionsRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{27}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetModpackVersionsRequest) GetId() string {
@@ -1716,7 +1854,7 @@ type GetModpackVersionsResponse struct {
 
 func (x *GetModpackVersionsResponse) Reset() {
 	*x = GetModpackVersionsResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[28]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1728,7 +1866,7 @@ func (x *GetModpackVersionsResponse) String() string {
 func (*GetModpackVersionsResponse) ProtoMessage() {}
 
 func (x *GetModpackVersionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[28]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1741,7 +1879,7 @@ func (x *GetModpackVersionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModpackVersionsResponse.ProtoReflect.Descriptor instead.
 func (*GetModpackVersionsResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{28}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetModpackVersionsResponse) GetVersions() []*Version {
@@ -1761,7 +1899,7 @@ type SyncModpackFilesRequest struct {
 
 func (x *SyncModpackFilesRequest) Reset() {
 	*x = SyncModpackFilesRequest{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[29]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1773,7 +1911,7 @@ func (x *SyncModpackFilesRequest) String() string {
 func (*SyncModpackFilesRequest) ProtoMessage() {}
 
 func (x *SyncModpackFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[29]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1786,7 +1924,7 @@ func (x *SyncModpackFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncModpackFilesRequest.ProtoReflect.Descriptor instead.
 func (*SyncModpackFilesRequest) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{29}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SyncModpackFilesRequest) GetId() string {
@@ -1807,7 +1945,7 @@ type SyncModpackFilesResponse struct {
 
 func (x *SyncModpackFilesResponse) Reset() {
 	*x = SyncModpackFilesResponse{}
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[30]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1819,7 +1957,7 @@ func (x *SyncModpackFilesResponse) String() string {
 func (*SyncModpackFilesResponse) ProtoMessage() {}
 
 func (x *SyncModpackFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_discopanel_v1_modpack_proto_msgTypes[30]
+	mi := &file_discopanel_v1_modpack_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1832,7 +1970,7 @@ func (x *SyncModpackFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncModpackFilesResponse.ProtoReflect.Descriptor instead.
 func (*SyncModpackFilesResponse) Descriptor() ([]byte, []int) {
-	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{30}
+	return file_discopanel_v1_modpack_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *SyncModpackFilesResponse) GetSyncedCount() int32 {
@@ -1939,6 +2077,19 @@ const file_discopanel_v1_modpack_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\"r\n" +
 	"\x1dImportUploadedModpackResponse\x127\n" +
 	"\amodpack\x18\x01 \x01(\v2\x1d.discopanel.v1.IndexedModpackR\amodpack\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xc1\x01\n" +
+	"\x1aImportRemoteModpackRequest\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"mc_version\x18\x04 \x01(\tR\tmcVersion\x12\x1d\n" +
+	"\n" +
+	"mod_loader\x18\x05 \x01(\tR\tmodLoader\x12\x1d\n" +
+	"\n" +
+	"auth_token\x18\x06 \x01(\tR\tauthToken\"p\n" +
+	"\x1bImportRemoteModpackResponse\x127\n" +
+	"\amodpack\x18\x01 \x01(\v2\x1d.discopanel.v1.IndexedModpackR\amodpack\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"&\n" +
 	"\x14DeleteModpackRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"1\n" +
@@ -1993,8 +2144,7 @@ const file_discopanel_v1_modpack_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"W\n" +
 	"\x18SyncModpackFilesResponse\x12!\n" +
 	"\fsynced_count\x18\x01 \x01(\x05R\vsyncedCount\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xe9\n" +
-	"\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xd7\v\n" +
 	"\x0eModpackService\x12]\n" +
 	"\x0eSearchModpacks\x12$.discopanel.v1.SearchModpacksRequest\x1a%.discopanel.v1.SearchModpacksResponse\x12Q\n" +
 	"\n" +
@@ -2002,7 +2152,8 @@ const file_discopanel_v1_modpack_proto_rawDesc = "" +
 	"\x10GetModpackBySlug\x12&.discopanel.v1.GetModpackBySlugRequest\x1a'.discopanel.v1.GetModpackBySlugResponse\x12`\n" +
 	"\x0fGetModpackByURL\x12%.discopanel.v1.GetModpackByURLRequest\x1a&.discopanel.v1.GetModpackByURLResponse\x12W\n" +
 	"\fSyncModpacks\x12\".discopanel.v1.SyncModpacksRequest\x1a#.discopanel.v1.SyncModpacksResponse\x12r\n" +
-	"\x15ImportUploadedModpack\x12+.discopanel.v1.ImportUploadedModpackRequest\x1a,.discopanel.v1.ImportUploadedModpackResponse\x12Z\n" +
+	"\x15ImportUploadedModpack\x12+.discopanel.v1.ImportUploadedModpackRequest\x1a,.discopanel.v1.ImportUploadedModpackResponse\x12l\n" +
+	"\x13ImportRemoteModpack\x12).discopanel.v1.ImportRemoteModpackRequest\x1a*.discopanel.v1.ImportRemoteModpackResponse\x12Z\n" +
 	"\rDeleteModpack\x12#.discopanel.v1.DeleteModpackRequest\x1a$.discopanel.v1.DeleteModpackResponse\x12]\n" +
 	"\x0eToggleFavorite\x12$.discopanel.v1.ToggleFavoriteRequest\x1a%.discopanel.v1.ToggleFavoriteResponse\x12Z\n" +
 	"\rListFavorites\x12#.discopanel.v1.ListFavoritesRequest\x1a$.discopanel.v1.ListFavoritesResponse\x12c\n" +
@@ -2024,7 +2175,7 @@ func file_discopanel_v1_modpack_proto_rawDescGZIP() []byte {
 	return file_discopanel_v1_modpack_proto_rawDescData
 }
 
-var file_discopanel_v1_modpack_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_discopanel_v1_modpack_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_discopanel_v1_modpack_proto_goTypes = []any{
 	(*IndexedModpack)(nil),                // 0: discopanel.v1.IndexedModpack
 	(*ModpackFile)(nil),                   // 1: discopanel.v1.ModpackFile
@@ -2040,78 +2191,83 @@ var file_discopanel_v1_modpack_proto_goTypes = []any{
 	(*SyncModpacksResponse)(nil),          // 11: discopanel.v1.SyncModpacksResponse
 	(*ImportUploadedModpackRequest)(nil),  // 12: discopanel.v1.ImportUploadedModpackRequest
 	(*ImportUploadedModpackResponse)(nil), // 13: discopanel.v1.ImportUploadedModpackResponse
-	(*DeleteModpackRequest)(nil),          // 14: discopanel.v1.DeleteModpackRequest
-	(*DeleteModpackResponse)(nil),         // 15: discopanel.v1.DeleteModpackResponse
-	(*ToggleFavoriteRequest)(nil),         // 16: discopanel.v1.ToggleFavoriteRequest
-	(*ToggleFavoriteResponse)(nil),        // 17: discopanel.v1.ToggleFavoriteResponse
-	(*ListFavoritesRequest)(nil),          // 18: discopanel.v1.ListFavoritesRequest
-	(*ListFavoritesResponse)(nil),         // 19: discopanel.v1.ListFavoritesResponse
-	(*GetIndexerStatusRequest)(nil),       // 20: discopanel.v1.GetIndexerStatusRequest
-	(*GetIndexerStatusResponse)(nil),      // 21: discopanel.v1.GetIndexerStatusResponse
-	(*GetModpackConfigRequest)(nil),       // 22: discopanel.v1.GetModpackConfigRequest
-	(*GetModpackConfigResponse)(nil),      // 23: discopanel.v1.GetModpackConfigResponse
-	(*GetModpackFilesRequest)(nil),        // 24: discopanel.v1.GetModpackFilesRequest
-	(*GetModpackFilesResponse)(nil),       // 25: discopanel.v1.GetModpackFilesResponse
-	(*Version)(nil),                       // 26: discopanel.v1.Version
-	(*GetModpackVersionsRequest)(nil),     // 27: discopanel.v1.GetModpackVersionsRequest
-	(*GetModpackVersionsResponse)(nil),    // 28: discopanel.v1.GetModpackVersionsResponse
-	(*SyncModpackFilesRequest)(nil),       // 29: discopanel.v1.SyncModpackFilesRequest
-	(*SyncModpackFilesResponse)(nil),      // 30: discopanel.v1.SyncModpackFilesResponse
-	nil,                                   // 31: discopanel.v1.GetIndexerStatusResponse.IndexersAvailableEntry
-	nil,                                   // 32: discopanel.v1.GetIndexerStatusResponse.ModpacksByIndexerEntry
-	nil,                                   // 33: discopanel.v1.GetModpackConfigResponse.ConfigEntry
-	(*timestamppb.Timestamp)(nil),         // 34: google.protobuf.Timestamp
+	(*ImportRemoteModpackRequest)(nil),    // 14: discopanel.v1.ImportRemoteModpackRequest
+	(*ImportRemoteModpackResponse)(nil),   // 15: discopanel.v1.ImportRemoteModpackResponse
+	(*DeleteModpackRequest)(nil),          // 16: discopanel.v1.DeleteModpackRequest
+	(*DeleteModpackResponse)(nil),         // 17: discopanel.v1.DeleteModpackResponse
+	(*ToggleFavoriteRequest)(nil),         // 18: discopanel.v1.ToggleFavoriteRequest
+	(*ToggleFavoriteResponse)(nil),        // 19: discopanel.v1.ToggleFavoriteResponse
+	(*ListFavoritesRequest)(nil),          // 20: discopanel.v1.ListFavoritesRequest
+	(*ListFavoritesResponse)(nil),         // 21: discopanel.v1.ListFavoritesResponse
+	(*GetIndexerStatusRequest)(nil),       // 22: discopanel.v1.GetIndexerStatusRequest
+	(*GetIndexerStatusResponse)(nil),      // 23: discopanel.v1.GetIndexerStatusResponse
+	(*GetModpackConfigRequest)(nil),       // 24: discopanel.v1.GetModpackConfigRequest
+	(*GetModpackConfigResponse)(nil),      // 25: discopanel.v1.GetModpackConfigResponse
+	(*GetModpackFilesRequest)(nil),        // 26: discopanel.v1.GetModpackFilesRequest
+	(*GetModpackFilesResponse)(nil),       // 27: discopanel.v1.GetModpackFilesResponse
+	(*Version)(nil),                       // 28: discopanel.v1.Version
+	(*GetModpackVersionsRequest)(nil),     // 29: discopanel.v1.GetModpackVersionsRequest
+	(*GetModpackVersionsResponse)(nil),    // 30: discopanel.v1.GetModpackVersionsResponse
+	(*SyncModpackFilesRequest)(nil),       // 31: discopanel.v1.SyncModpackFilesRequest
+	(*SyncModpackFilesResponse)(nil),      // 32: discopanel.v1.SyncModpackFilesResponse
+	nil,                                   // 33: discopanel.v1.GetIndexerStatusResponse.IndexersAvailableEntry
+	nil,                                   // 34: discopanel.v1.GetIndexerStatusResponse.ModpacksByIndexerEntry
+	nil,                                   // 35: discopanel.v1.GetModpackConfigResponse.ConfigEntry
+	(*timestamppb.Timestamp)(nil),         // 36: google.protobuf.Timestamp
 }
 var file_discopanel_v1_modpack_proto_depIdxs = []int32{
-	34, // 0: discopanel.v1.IndexedModpack.date_created:type_name -> google.protobuf.Timestamp
-	34, // 1: discopanel.v1.IndexedModpack.date_modified:type_name -> google.protobuf.Timestamp
-	34, // 2: discopanel.v1.IndexedModpack.date_released:type_name -> google.protobuf.Timestamp
-	34, // 3: discopanel.v1.ModpackFile.file_date:type_name -> google.protobuf.Timestamp
+	36, // 0: discopanel.v1.IndexedModpack.date_created:type_name -> google.protobuf.Timestamp
+	36, // 1: discopanel.v1.IndexedModpack.date_modified:type_name -> google.protobuf.Timestamp
+	36, // 2: discopanel.v1.IndexedModpack.date_released:type_name -> google.protobuf.Timestamp
+	36, // 3: discopanel.v1.ModpackFile.file_date:type_name -> google.protobuf.Timestamp
 	0,  // 4: discopanel.v1.SearchModpacksResponse.modpacks:type_name -> discopanel.v1.IndexedModpack
 	0,  // 5: discopanel.v1.GetModpackResponse.modpack:type_name -> discopanel.v1.IndexedModpack
 	0,  // 6: discopanel.v1.GetModpackBySlugResponse.modpack:type_name -> discopanel.v1.IndexedModpack
 	0,  // 7: discopanel.v1.GetModpackByURLResponse.modpack:type_name -> discopanel.v1.IndexedModpack
 	0,  // 8: discopanel.v1.ImportUploadedModpackResponse.modpack:type_name -> discopanel.v1.IndexedModpack
-	0,  // 9: discopanel.v1.ListFavoritesResponse.modpacks:type_name -> discopanel.v1.IndexedModpack
-	31, // 10: discopanel.v1.GetIndexerStatusResponse.indexers_available:type_name -> discopanel.v1.GetIndexerStatusResponse.IndexersAvailableEntry
-	32, // 11: discopanel.v1.GetIndexerStatusResponse.modpacks_by_indexer:type_name -> discopanel.v1.GetIndexerStatusResponse.ModpacksByIndexerEntry
-	33, // 12: discopanel.v1.GetModpackConfigResponse.config:type_name -> discopanel.v1.GetModpackConfigResponse.ConfigEntry
-	1,  // 13: discopanel.v1.GetModpackFilesResponse.files:type_name -> discopanel.v1.ModpackFile
-	34, // 14: discopanel.v1.Version.file_date:type_name -> google.protobuf.Timestamp
-	26, // 15: discopanel.v1.GetModpackVersionsResponse.versions:type_name -> discopanel.v1.Version
-	2,  // 16: discopanel.v1.ModpackService.SearchModpacks:input_type -> discopanel.v1.SearchModpacksRequest
-	4,  // 17: discopanel.v1.ModpackService.GetModpack:input_type -> discopanel.v1.GetModpackRequest
-	6,  // 18: discopanel.v1.ModpackService.GetModpackBySlug:input_type -> discopanel.v1.GetModpackBySlugRequest
-	8,  // 19: discopanel.v1.ModpackService.GetModpackByURL:input_type -> discopanel.v1.GetModpackByURLRequest
-	10, // 20: discopanel.v1.ModpackService.SyncModpacks:input_type -> discopanel.v1.SyncModpacksRequest
-	12, // 21: discopanel.v1.ModpackService.ImportUploadedModpack:input_type -> discopanel.v1.ImportUploadedModpackRequest
-	14, // 22: discopanel.v1.ModpackService.DeleteModpack:input_type -> discopanel.v1.DeleteModpackRequest
-	16, // 23: discopanel.v1.ModpackService.ToggleFavorite:input_type -> discopanel.v1.ToggleFavoriteRequest
-	18, // 24: discopanel.v1.ModpackService.ListFavorites:input_type -> discopanel.v1.ListFavoritesRequest
-	20, // 25: discopanel.v1.ModpackService.GetIndexerStatus:input_type -> discopanel.v1.GetIndexerStatusRequest
-	22, // 26: discopanel.v1.ModpackService.GetModpackConfig:input_type -> discopanel.v1.GetModpackConfigRequest
-	24, // 27: discopanel.v1.ModpackService.GetModpackFiles:input_type -> discopanel.v1.GetModpackFilesRequest
-	27, // 28: discopanel.v1.ModpackService.GetModpackVersions:input_type -> discopanel.v1.GetModpackVersionsRequest
-	29, // 29: discopanel.v1.ModpackService.SyncModpackFiles:input_type -> discopanel.v1.SyncModpackFilesRequest
-	3,  // 30: discopanel.v1.ModpackService.SearchModpacks:output_type -> discopanel.v1.SearchModpacksResponse
-	5,  // 31: discopanel.v1.ModpackService.GetModpack:output_type -> discopanel.v1.GetModpackResponse
-	7,  // 32: discopanel.v1.ModpackService.GetModpackBySlug:output_type -> discopanel.v1.GetModpackBySlugResponse
-	9,  // 33: discopanel.v1.ModpackService.GetModpackByURL:output_type -> discopanel.v1.GetModpackByURLResponse
-	11, // 34: discopanel.v1.ModpackService.SyncModpacks:output_type -> discopanel.v1.SyncModpacksResponse
-	13, // 35: discopanel.v1.ModpackService.ImportUploadedModpack:output_type -> discopanel.v1.ImportUploadedModpackResponse
-	15, // 36: discopanel.v1.ModpackService.DeleteModpack:output_type -> discopanel.v1.DeleteModpackResponse
-	17, // 37: discopanel.v1.ModpackService.ToggleFavorite:output_type -> discopanel.v1.ToggleFavoriteResponse
-	19, // 38: discopanel.v1.ModpackService.ListFavorites:output_type -> discopanel.v1.ListFavoritesResponse
-	21, // 39: discopanel.v1.ModpackService.GetIndexerStatus:output_type -> discopanel.v1.GetIndexerStatusResponse
-	23, // 40: discopanel.v1.ModpackService.GetModpackConfig:output_type -> discopanel.v1.GetModpackConfigResponse
-	25, // 41: discopanel.v1.ModpackService.GetModpackFiles:output_type -> discopanel.v1.GetModpackFilesResponse
-	28, // 42: discopanel.v1.ModpackService.GetModpackVersions:output_type -> discopanel.v1.GetModpackVersionsResponse
-	30, // 43: discopanel.v1.ModpackService.SyncModpackFiles:output_type -> discopanel.v1.SyncModpackFilesResponse
-	30, // [30:44] is the sub-list for method output_type
-	16, // [16:30] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	0,  // 9: discopanel.v1.ImportRemoteModpackResponse.modpack:type_name -> discopanel.v1.IndexedModpack
+	0,  // 10: discopanel.v1.ListFavoritesResponse.modpacks:type_name -> discopanel.v1.IndexedModpack
+	33, // 11: discopanel.v1.GetIndexerStatusResponse.indexers_available:type_name -> discopanel.v1.GetIndexerStatusResponse.IndexersAvailableEntry
+	34, // 12: discopanel.v1.GetIndexerStatusResponse.modpacks_by_indexer:type_name -> discopanel.v1.GetIndexerStatusResponse.ModpacksByIndexerEntry
+	35, // 13: discopanel.v1.GetModpackConfigResponse.config:type_name -> discopanel.v1.GetModpackConfigResponse.ConfigEntry
+	1,  // 14: discopanel.v1.GetModpackFilesResponse.files:type_name -> discopanel.v1.ModpackFile
+	36, // 15: discopanel.v1.Version.file_date:type_name -> google.protobuf.Timestamp
+	28, // 16: discopanel.v1.GetModpackVersionsResponse.versions:type_name -> discopanel.v1.Version
+	2,  // 17: discopanel.v1.ModpackService.SearchModpacks:input_type -> discopanel.v1.SearchModpacksRequest
+	4,  // 18: discopanel.v1.ModpackService.GetModpack:input_type -> discopanel.v1.GetModpackRequest
+	6,  // 19: discopanel.v1.ModpackService.GetModpackBySlug:input_type -> discopanel.v1.GetModpackBySlugRequest
+	8,  // 20: discopanel.v1.ModpackService.GetModpackByURL:input_type -> discopanel.v1.GetModpackByURLRequest
+	10, // 21: discopanel.v1.ModpackService.SyncModpacks:input_type -> discopanel.v1.SyncModpacksRequest
+	12, // 22: discopanel.v1.ModpackService.ImportUploadedModpack:input_type -> discopanel.v1.ImportUploadedModpackRequest
+	14, // 23: discopanel.v1.ModpackService.ImportRemoteModpack:input_type -> discopanel.v1.ImportRemoteModpackRequest
+	16, // 24: discopanel.v1.ModpackService.DeleteModpack:input_type -> discopanel.v1.DeleteModpackRequest
+	18, // 25: discopanel.v1.ModpackService.ToggleFavorite:input_type -> discopanel.v1.ToggleFavoriteRequest
+	20, // 26: discopanel.v1.ModpackService.ListFavorites:input_type -> discopanel.v1.ListFavoritesRequest
+	22, // 27: discopanel.v1.ModpackService.GetIndexerStatus:input_type -> discopanel.v1.GetIndexerStatusRequest
+	24, // 28: discopanel.v1.ModpackService.GetModpackConfig:input_type -> discopanel.v1.GetModpackConfigRequest
+	26, // 29: discopanel.v1.ModpackService.GetModpackFiles:input_type -> discopanel.v1.GetModpackFilesRequest
+	29, // 30: discopanel.v1.ModpackService.GetModpackVersions:input_type -> discopanel.v1.GetModpackVersionsRequest
+	31, // 31: discopanel.v1.ModpackService.SyncModpackFiles:input_type -> discopanel.v1.SyncModpackFilesRequest
+	3,  // 32: discopanel.v1.ModpackService.SearchModpacks:output_type -> discopanel.v1.SearchModpacksResponse
+	5,  // 33: discopanel.v1.ModpackService.GetModpack:output_type -> discopanel.v1.GetModpackResponse
+	7,  // 34: discopanel.v1.ModpackService.GetModpackBySlug:output_type -> discopanel.v1.GetModpackBySlugResponse
+	9,  // 35: discopanel.v1.ModpackService.GetModpackByURL:output_type -> discopanel.v1.GetModpackByURLResponse
+	11, // 36: discopanel.v1.ModpackService.SyncModpacks:output_type -> discopanel.v1.SyncModpacksResponse
+	13, // 37: discopanel.v1.ModpackService.ImportUploadedModpack:output_type -> discopanel.v1.ImportUploadedModpackResponse
+	15, // 38: discopanel.v1.ModpackService.ImportRemoteModpack:output_type -> discopanel.v1.ImportRemoteModpackResponse
+	17, // 39: discopanel.v1.ModpackService.DeleteModpack:output_type -> discopanel.v1.DeleteModpackResponse
+	19, // 40: discopanel.v1.ModpackService.ToggleFavorite:output_type -> discopanel.v1.ToggleFavoriteResponse
+	21, // 41: discopanel.v1.ModpackService.ListFavorites:output_type -> discopanel.v1.ListFavoritesResponse
+	23, // 42: discopanel.v1.ModpackService.GetIndexerStatus:output_type -> discopanel.v1.GetIndexerStatusResponse
+	25, // 43: discopanel.v1.ModpackService.GetModpackConfig:output_type -> discopanel.v1.GetModpackConfigResponse
+	27, // 44: discopanel.v1.ModpackService.GetModpackFiles:output_type -> discopanel.v1.GetModpackFilesResponse
+	30, // 45: discopanel.v1.ModpackService.GetModpackVersions:output_type -> discopanel.v1.GetModpackVersionsResponse
+	32, // 46: discopanel.v1.ModpackService.SyncModpackFiles:output_type -> discopanel.v1.SyncModpackFilesResponse
+	32, // [32:47] is the sub-list for method output_type
+	17, // [17:32] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_discopanel_v1_modpack_proto_init() }
@@ -2125,7 +2281,7 @@ func file_discopanel_v1_modpack_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_discopanel_v1_modpack_proto_rawDesc), len(file_discopanel_v1_modpack_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   34,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

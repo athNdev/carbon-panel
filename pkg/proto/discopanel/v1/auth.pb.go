@@ -2202,7 +2202,7 @@ const file_discopanel_v1_auth_proto_rawDesc = "" +
 	"\rListAPITokens\x12#.discopanel.v1.ListAPITokensRequest\x1a$.discopanel.v1.ListAPITokensResponse\x12]\n" +
 	"\x0eDeleteAPIToken\x12$.discopanel.v1.DeleteAPITokenRequest\x1a%.discopanel.v1.DeleteAPITokenResponse\x12]\n" +
 	"\x0eUseRecoveryKey\x12$.discopanel.v1.UseRecoveryKeyRequest\x1a%.discopanel.v1.UseRecoveryKeyResponseB\xed\x06\xbaG\xa3\x06\x12\xb4\x05\n" +
-	"\x0eDiscoPanel API\x12\x9c\x05DiscoPanel server management API. Authenticate using a session token (from Login/OIDC) or an API token (dp_... prefix) in the Authorization header.\n" +
+	"\x0eMineServer API\x12\x9c\x05MineServer server management API. Authenticate using a session token (from Login/OIDC) or an API token (dp_... prefix) in the Authorization header.\n" +
 	"\n" +
 	"## Connect Protocol\n" +
 	"\n" +
