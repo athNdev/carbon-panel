@@ -726,13 +726,17 @@ func webhookEventName(t v1.TriggeredEventType) string {
 	}
 }
 
-// ModpackUpdateTaskConfig matches the proto message for periodic modpack updates
+// ModpackUpdateTaskConfig matches the configuration for periodic modpack updates
 type ModpackUpdateTaskConfig struct {
-	GitURL             string `json:"git_url"`
-	Branch             string `json:"branch"`
-	TargetSubfolder    string `json:"target_subfolder"`
-	RestartImmediately bool   `json:"restart_immediately"`
-	AuthToken          string `json:"auth_token"`
+	GitURL                   string `json:"git_url"`
+	Branch                   string `json:"branch"`
+	TargetSubfolder          string `json:"target_subfolder"`
+	RestartImmediately       bool   `json:"restart_immediately"`
+	GracefulRestart          bool   `json:"graceful_restart"`
+	GracefulCountdownSeconds int    `json:"graceful_countdown_seconds"`
+	MaintenanceWindowCron    string `json:"maintenance_window_cron"`
+	StageConfigUpdates       bool   `json:"stage_config_updates"`
+	AuthToken                string `json:"auth_token"`
 }
 
 // executeModpackUpdateTask handles cloning or fetching updates from Git/source, syncing into the server directory, and restarting if updates are applied
@@ -763,6 +767,9 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 	var hasUpdates bool
 	var updateSummary string
+	var currentHash string
+	var remoteHash string
+	var changedFiles []string
 
 	if _, err := os.Stat(filepath.Join(cacheDir, ".git")); os.IsNotExist(err) {
 		// Initial clone
@@ -771,6 +778,10 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "-b", branch, gitURL, cacheDir)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return string(out), fmt.Errorf("initial git clone failed: %w: %s", err, string(out))
+		}
+		cmdHead := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "HEAD")
+		if headOut, err := cmdHead.Output(); err == nil {
+			remoteHash = strings.TrimSpace(string(headOut))
 		}
 		hasUpdates = true
 		updateSummary = fmt.Sprintf("Initial modpack clone successful from %s on branch %s", cfg.GitURL, branch)
@@ -783,14 +794,27 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 		cmdHead := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "HEAD")
 		headOut, _ := cmdHead.Output()
-		currentHash := strings.TrimSpace(string(headOut))
+		currentHash = strings.TrimSpace(string(headOut))
 
 		cmdRemote := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "FETCH_HEAD")
 		remoteOut, _ := cmdRemote.Output()
-		remoteHash := strings.TrimSpace(string(remoteOut))
+		remoteHash = strings.TrimSpace(string(remoteOut))
 
 		if currentHash == remoteHash && currentHash != "" {
 			return fmt.Sprintf("Modpack is up to date at commit %s (no updates)", currentHash[:min(8, len(currentHash))]), nil
+		}
+
+		// Inspect changed files between current commit and new FETCH_HEAD
+		if currentHash != "" && remoteHash != "" {
+			cmdDiff := exec.CommandContext(ctx, "git", "-C", cacheDir, "diff", "--name-only", currentHash, remoteHash)
+			if diffOut, err := cmdDiff.Output(); err == nil {
+				for _, f := range strings.Split(string(diffOut), "\n") {
+					f = strings.TrimSpace(f)
+					if f != "" {
+						changedFiles = append(changedFiles, f)
+					}
+				}
+			}
 		}
 
 		// Pull latest changes
@@ -806,15 +830,36 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	if hasUpdates {
+		// Stage configuration updates if requested
+		if cfg.StageConfigUpdates {
+			stagedDir := filepath.Join(server.DataPath, ".discopanel_modpack_staged")
+			_ = os.MkdirAll(stagedDir, 0755)
+			manifest := map[string]any{
+				"from_commit":   currentHash,
+				"to_commit":     remoteHash,
+				"changed_files": changedFiles,
+				"staged_at":     time.Now().Format(time.RFC3339),
+				"status":        "staged",
+			}
+			if manifestData, err := json.MarshalIndent(manifest, "", "  "); err == nil {
+				_ = os.WriteFile(filepath.Join(stagedDir, "staged_manifest.json"), manifestData, 0644)
+			}
+			s.log.Info("ModpackTask %s: Staged %d changed config/pack files in %s", task.Name, len(changedFiles), stagedDir)
+		}
+
 		// Source directory to copy from
 		srcDir := cacheDir
 		if cfg.TargetSubfolder != "" {
 			srcDir = filepath.Join(cacheDir, cfg.TargetSubfolder)
 		}
 
-		// Sync files into server.DataPath (excluding .git)
+		// Sync files into server.DataPath (excluding internal directories)
 		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
-		cmdRsync := exec.CommandContext(ctx, "rsync", "-av", "--exclude=.git", "--exclude=.discopanel_modpack_git", srcDir+"/", server.DataPath+"/")
+		cmdRsync := exec.CommandContext(ctx, "rsync", "-av",
+			"--exclude=.git",
+			"--exclude=.discopanel_modpack_git",
+			"--exclude=.discopanel_modpack_staged",
+			srcDir+"/", server.DataPath+"/")
 		if out, err := cmdRsync.CombinedOutput(); err != nil {
 			// Fallback to cp -rf if rsync is not installed
 			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
@@ -823,9 +868,35 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			}
 		}
 
-		// Check if immediate restart is requested
-		if cfg.RestartImmediately {
-			s.log.Info("ModpackTask %s: RestartImmediately is true, restarting server %s", task.Name, server.Name)
+		// Check if maintenance window or immediate restart is triggered
+		shouldRestartNow := cfg.RestartImmediately
+		if !shouldRestartNow && cfg.MaintenanceWindowCron != "" {
+			if s.isWithinMaintenanceWindow(cfg.MaintenanceWindowCron, time.Now()) {
+				s.log.Info("ModpackTask %s: Current time is within maintenance window (%s), proceeding with restart",
+					task.Name, cfg.MaintenanceWindowCron)
+				shouldRestartNow = true
+			} else {
+				s.log.Info("ModpackTask %s: Outside maintenance window (%s), restart deferred",
+					task.Name, cfg.MaintenanceWindowCron)
+			}
+		}
+
+		if shouldRestartNow {
+			countdown := cfg.GracefulCountdownSeconds
+			if countdown <= 0 && cfg.GracefulRestart {
+				countdown = 10
+			}
+
+			if cfg.GracefulRestart || countdown > 0 {
+				s.log.Info("ModpackTask %s: Executing graceful restart (countdown: %ds) for server %s", task.Name, countdown, server.Name)
+				restartOut, err := s.executeGracefulRestart(ctx, server, task, countdown)
+				if err != nil {
+					return fmt.Sprintf("%s\nModpack synced, but graceful restart failed: %v", updateSummary, err), err
+				}
+				return fmt.Sprintf("%s\n%s", updateSummary, restartOut), nil
+			}
+
+			s.log.Info("ModpackTask %s: Restarting server %s immediately", task.Name, server.Name)
 			restartOut, err := s.executeRestartTask(ctx, server, task)
 			if err != nil {
 				return fmt.Sprintf("%s\nModpack synced, but server restart failed: %v", updateSummary, err), err
@@ -837,6 +908,46 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	return "No updates found", nil
+}
+
+// isWithinMaintenanceWindow checks if the given time falls within a 30-minute window of the cron schedule
+func (s *Scheduler) isWithinMaintenanceWindow(cronExpr string, now time.Time) bool {
+	sched, err := s.cronParser.Parse(cronExpr)
+	if err != nil {
+		s.log.Warn("Invalid maintenance window cron expression: %s (%v)", cronExpr, err)
+		return false
+	}
+	prev := sched.Next(now.Add(-30 * time.Minute))
+	return !prev.After(now)
+}
+
+// executeGracefulRestart notifies in-game players, saves world data, and restarts the server
+func (s *Scheduler) executeGracefulRestart(ctx context.Context, server *storage.Server, task *storage.ScheduledTask, countdownSeconds int) (string, error) {
+	if countdownSeconds < 1 {
+		countdownSeconds = 1
+	}
+
+	if server.Status == storage.StatusRunning && server.ContainerID != "" && s.sender != nil {
+		_, _ = s.sender.SendCommand(ctx, server.ID, fmt.Sprintf("say [Auto-Update] Modpack update installed. Server restarting in %d seconds for maintenance...", countdownSeconds))
+
+		remaining := countdownSeconds
+		for remaining > 0 {
+			if remaining == 10 || remaining == 5 || remaining == 3 || remaining == 1 {
+				_, _ = s.sender.SendCommand(ctx, server.ID, fmt.Sprintf("say [Auto-Update] Restarting in %d seconds...", remaining))
+			}
+			if remaining == 5 {
+				_, _ = s.sender.SendCommand(ctx, server.ID, "save-all")
+			}
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(1 * time.Second):
+				remaining--
+			}
+		}
+	}
+
+	return s.executeRestartTask(ctx, server, task)
 }
 
 // ChunkyPregenTaskConfig represents configuration for Chunky radius pre-generation tasks
