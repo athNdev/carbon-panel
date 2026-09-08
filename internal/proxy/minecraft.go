@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package proxy
 
 import (
@@ -14,26 +23,28 @@ import (
 
 // MinecraftProxy handles Minecraft protocol proxying with handshake parsing for hostname-based routing
 type MinecraftProxy struct {
-	listener     net.Listener
-	routes       map[string]*Route
-	routesMutex  sync.RWMutex
-	logger       *logger.Logger
-	listenAddr   string
-	running      bool
-	runningMutex sync.RWMutex
-	ctx          context.Context
-	cancel       context.CancelFunc
+	listener      net.Listener
+	routes        map[string]*Route
+	routesMutex   sync.RWMutex
+	logger        *logger.Logger
+	listenAddr    string
+	proxyProtocol bool
+	running       bool
+	runningMutex  sync.RWMutex
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 // NewMinecraftProxy creates a new Minecraft proxy instance
 func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &MinecraftProxy{
-		routes:     make(map[string]*Route),
-		logger:     cfg.Logger,
-		listenAddr: cfg.ListenAddr,
-		ctx:        ctx,
-		cancel:     cancel,
+		routes:        make(map[string]*Route),
+		logger:        cfg.Logger,
+		listenAddr:    cfg.ListenAddr,
+		proxyProtocol: cfg.ProxyProtocol,
+		ctx:           ctx,
+		cancel:        cancel,
 	}
 }
 
@@ -160,8 +171,19 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 
 	p.logger.Debug("Attempting to route incoming Minecraft connection!")
 
-	// Set initial timeout for handshake
+	// Set initial timeout for handshake and PROXY protocol header
 	clientConn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+	// Detect and parse PROXY protocol v2 header from upstream load balancers (MINE-16)
+	wrappedConn, pxyHdr, err := WrapConnWithProxyProtocol(clientConn)
+	if err != nil {
+		p.logger.Debug("Failed to parse PROXY protocol v2 from %s: %v", clientConn.RemoteAddr(), err)
+		return
+	}
+	clientConn = wrappedConn
+	if pxyHdr != nil && pxyHdr.SrcAddr != nil {
+		p.logger.Debug("Preserved real player IP via PROXY protocol v2: %s", clientConn.RemoteAddr())
+	}
 
 	// Read the handshake packet
 	handshake, err := ReadHandshakePacket(clientConn)
@@ -225,6 +247,14 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 		handshake.ServerAddress = "localhost"
 	}
 	handshake.ServerPort = uint16(route.BackendPort)
+
+	// If PROXY protocol forwarding is enabled for backend, write PROXY v2 header first
+	if p.proxyProtocol {
+		if err := WriteProxyV2Header(backendConn, clientConn.RemoteAddr(), backendConn.RemoteAddr()); err != nil {
+			p.logger.Error("Failed to write PROXY protocol v2 header to backend: %v", err)
+			return
+		}
+	}
 
 	// Forward the modified handshake to the backend
 	if err := WriteHandshakePacket(backendConn, handshake); err != nil {
