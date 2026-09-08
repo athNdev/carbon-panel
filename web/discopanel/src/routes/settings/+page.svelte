@@ -27,6 +27,7 @@ one at https://mozilla.org/MPL/2.0/.
 		ScrollText,
 		Users,
 		KeyRound,
+		Key,
 		Layers
 	} from '@lucide/svelte';
 	import type { ConfigCategory } from '$lib/proto/discopanel/v1/config_pb';
@@ -36,7 +37,9 @@ one at https://mozilla.org/MPL/2.0/.
 	import AuthSettings from '$lib/components/auth-settings.svelte';
 	import SupportSettings from '$lib/components/support-settings.svelte';
 	import LogsSettings from '$lib/components/logs-settings.svelte';
+	import ApiKeysSettings from '$lib/components/api-keys-settings.svelte';
 	import { canReadSettings, canReadUsers, canReadRoles, authEnabled } from '$lib/stores/auth';
+	import { page } from '$app/state';
 
 	let globalConfig = $state<ConfigCategory[]>([]);
 	let loading = $state(true);
@@ -46,10 +49,16 @@ one at https://mozilla.org/MPL/2.0/.
 	let showUsers = $derived($canReadUsers && $authEnabled);
 	let showRoles = $derived($canReadRoles && $authEnabled);
 
-	// Pick the first visible tab as default
+	let queryTab = $derived(page.url.searchParams.get('tab'));
+
+	// Pick the first visible tab as default or read from URL
 	let activeTab = $state('');
 	$effect(() => {
-		if (!activeTab) {
+		if (queryTab && ['server-config', 'api-keys', 'routing', 'nodes', 'auth', 'logs', 'support', 'users', 'roles'].includes(queryTab)) {
+			activeTab = queryTab;
+		} else if (typeof window !== 'undefined' && (window.location.hash === '#cfApiKey' || window.location.hash === '#api-keys')) {
+			activeTab = 'api-keys';
+		} else if (!activeTab) {
 			if (showSettings) activeTab = 'server-config';
 			else if (showUsers) activeTab = 'users';
 			else if (showRoles) activeTab = 'roles';
@@ -123,6 +132,10 @@ one at https://mozilla.org/MPL/2.0/.
 					<Server class="h-4 w-4" />
 					Server Defaults
 				</TabsTrigger>
+				<TabsTrigger value="api-keys" class="flex items-center gap-2 px-4">
+					<Key class="h-4 w-4" />
+					API Keys
+				</TabsTrigger>
 				<TabsTrigger value="routing" class="flex items-center gap-2 px-4">
 					<Globe class="h-4 w-4" />
 					Routing
@@ -178,6 +191,10 @@ one at https://mozilla.org/MPL/2.0/.
 				{:else}
 					<ServerConfiguration config={globalConfig} onSave={saveGlobalSettings} {saving} />
 				{/if}
+			</TabsContent>
+
+			<TabsContent value="api-keys" class="space-y-4">
+				<ApiKeysSettings />
 			</TabsContent>
 
 			<TabsContent value="routing" class="space-y-4">
