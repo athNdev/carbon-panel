@@ -23,6 +23,7 @@ import (
 	"github.com/nickheyer/discopanel/internal/events"
 	"github.com/nickheyer/discopanel/internal/metrics"
 	"github.com/nickheyer/discopanel/internal/minecraft"
+	"github.com/nickheyer/discopanel/pkg/utils"
 	"github.com/nickheyer/discopanel/internal/module"
 	"github.com/nickheyer/discopanel/internal/proxy"
 	"github.com/nickheyer/discopanel/pkg/files"
@@ -663,12 +664,11 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		serverConfig = s.store.CreateDefaultServerConfig(server.ID)
 	}
 
-	// Set memory configuration
+	// Set memory configuration with dynamic headroom and OOM guard (MINE-4)
+	alloc := utils.CalculateMemoryAllocation(server.Memory)
 	if serverConfig.MaxMemory == nil && serverConfig.Memory == nil && serverConfig.InitMemory == nil {
-		strMax := fmt.Sprintf("%dM", int(float64(server.Memory)*0.75))
-		serverConfig.MaxMemory = &strMax
-		strMin := fmt.Sprintf("%dM", int(float64(server.Memory)*0.45))
-		serverConfig.InitMemory = &strMin
+		serverConfig.MaxMemory = &alloc.MaxMemoryStr
+		serverConfig.InitMemory = &alloc.InitMemoryStr
 	}
 
 	if serverConfig.Memory != nil {
