@@ -133,6 +133,7 @@ type ServerConfig struct {
 	EnableJMX              *bool   `json:"enableJmx" env:"ENABLE_JMX" default:"false" desc:"Enable remote JMX for profiling" input:"checkbox" label:"Enable JMX"`
 	JMXHost                *string `json:"jmxHost" env:"JMX_HOST" default:"" desc:"IP/host running the Docker container for JMX" input:"text" label:"JMX Host"`
 	UseAikarFlags          *bool   `json:"useAikarFlags" env:"USE_AIKAR_FLAGS" default:"false" desc:"Use Aikar's optimized JVM flags for GC tuning" input:"checkbox" label:"Use Aikar Flags"`
+	UseGenerationalZgc     *bool   `json:"useGenerationalZgc" env:"USE_GENERATIONAL_ZGC" default:"false" desc:"Use Java 21+ Generational ZGC (-XX:+UseZGC -XX:+ZGenerational)" input:"checkbox" label:"Use Generational ZGC"`
 	UseMeowiceFlags        *bool   `json:"useMeowiceFlags" env:"USE_MEOWICE_FLAGS" default:"false" desc:"Use MeowIce's JVM flags optimized for Java 17+" input:"checkbox" label:"Use MeowIce Flags"`
 	UseMeowiceGraalVMFlags *bool   `json:"useMeowiceGraalvmFlags" env:"USE_MEOWICE_GRAALVM_FLAGS" default:"true" desc:"Enable MeowIce's flags for GraalVM" input:"checkbox" label:"Use MeowIce GraalVM Flags"`
 	JVMOpts                *string `json:"jvmOpts" env:"JVM_OPTS" default:"" desc:"General JVM options" input:"text" label:"JVM Options"`
