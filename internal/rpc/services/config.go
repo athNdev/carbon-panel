@@ -527,7 +527,7 @@ func getCategoryIndex(key string) int {
 	switch key {
 	// JVM Configuration (0)
 	case "uid", "gid", "memory", "initMemory", "maxMemory", "tz", "enableRollingLogs",
-		"enableJmx", "jmxHost", "useAikarFlags", "useMeowiceFlags", "useMeowiceGraalvmFlags",
+		"enableJmx", "jmxHost", "useAikarFlags", "useGenerationalZgc", "useMeowiceFlags", "useMeowiceGraalvmFlags",
 		"jvmOpts", "jvmXxOpts", "jvmDdOpts", "extraArgs", "logTimestamp":
 		return 0
 
