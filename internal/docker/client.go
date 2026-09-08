@@ -633,6 +633,24 @@ func (c *Client) RemoveContainer(ctx context.Context, containerID string) error 
 	})
 }
 
+// PauseContainer pauses all processes in the container using cgroup freezer (MINE-18)
+func (c *Client) PauseContainer(ctx context.Context, containerID string) error {
+	if err := c.docker.ContainerPause(ctx, containerID); err != nil {
+		return fmt.Errorf("failed to pause container %s: %w", containerID, err)
+	}
+	c.log.Info("Paused container %s via cgroup freezer", containerID)
+	return nil
+}
+
+// UnpauseContainer resumes all processes in the container from cgroup freezer (MINE-18)
+func (c *Client) UnpauseContainer(ctx context.Context, containerID string) error {
+	if err := c.docker.ContainerUnpause(ctx, containerID); err != nil {
+		return fmt.Errorf("failed to unpause container %s: %w", containerID, err)
+	}
+	c.log.Info("Unpaused container %s from cgroup freezer", containerID)
+	return nil
+}
+
 // Stops and starts a container with an optional delay between operations
 func (c *Client) RestartContainer(ctx context.Context, containerID string, delay time.Duration) error {
 	if _, err := c.StopContainer(ctx, containerID); err != nil {
@@ -734,8 +752,10 @@ func (c *Client) GetContainerStatus(ctx context.Context, containerID string) (mo
 		return models.StatusStarting, nil
 	case "exited", "dead":
 		return models.StatusStopped, nil
-	case "created", "paused", "removing":
+	case "created", "removing":
 		return models.StatusStopped, nil
+	case "paused":
+		return models.StatusPaused, nil
 	default:
 		return models.StatusError, nil
 	}
