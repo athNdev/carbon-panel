@@ -68,6 +68,12 @@ const (
 	// FileServiceGetExtractionStatusProcedure is the fully-qualified name of the FileService's
 	// GetExtractionStatus RPC.
 	FileServiceGetExtractionStatusProcedure = "/discopanel.v1.FileService/GetExtractionStatus"
+	// FileServiceDownloadRemoteArchiveProcedure is the fully-qualified name of the FileService's
+	// DownloadRemoteArchive RPC.
+	FileServiceDownloadRemoteArchiveProcedure = "/discopanel.v1.FileService/DownloadRemoteArchive"
+	// FileServiceGetRemoteArchiveProgressProcedure is the fully-qualified name of the FileService's
+	// GetRemoteArchiveProgress RPC.
+	FileServiceGetRemoteArchiveProgressProcedure = "/discopanel.v1.FileService/GetRemoteArchiveProgress"
 )
 
 // FileServiceClient is a client for the discopanel.v1.FileService service.
@@ -100,6 +106,10 @@ type FileServiceClient interface {
 	InitFileDownload(context.Context, *connect.Request[v1.InitFileDownloadRequest]) (*connect.Response[v1.InitFileDownloadResponse], error)
 	// Poll extraction progress
 	GetExtractionStatus(context.Context, *connect.Request[v1.GetExtractionStatusRequest]) (*connect.Response[v1.GetExtractionStatusResponse], error)
+	// Download archive from remote URL (GitHub Releases, CDN, S3) with SHA256 verification and auto-extraction
+	DownloadRemoteArchive(context.Context, *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error)
+	// Poll remote archive download progress
+	GetRemoteArchiveProgress(context.Context, *connect.Request[v1.GetRemoteArchiveProgressRequest]) (*connect.Response[v1.GetRemoteArchiveProgressResponse], error)
 }
 
 // NewFileServiceClient constructs a client for the discopanel.v1.FileService service. By default,
@@ -197,25 +207,39 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(fileServiceMethods.ByName("GetExtractionStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		downloadRemoteArchive: connect.NewClient[v1.DownloadRemoteArchiveRequest, v1.DownloadRemoteArchiveResponse](
+			httpClient,
+			baseURL+FileServiceDownloadRemoteArchiveProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("DownloadRemoteArchive")),
+			connect.WithClientOptions(opts...),
+		),
+		getRemoteArchiveProgress: connect.NewClient[v1.GetRemoteArchiveProgressRequest, v1.GetRemoteArchiveProgressResponse](
+			httpClient,
+			baseURL+FileServiceGetRemoteArchiveProgressProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("GetRemoteArchiveProgress")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // fileServiceClient implements FileServiceClient.
 type fileServiceClient struct {
-	listFiles           *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	getFile             *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
-	saveUploadedFile    *connect.Client[v1.SaveUploadedFileRequest, v1.SaveUploadedFileResponse]
-	updateFile          *connect.Client[v1.UpdateFileRequest, v1.UpdateFileResponse]
-	deleteFile          *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
-	renameFile          *connect.Client[v1.RenameFileRequest, v1.RenameFileResponse]
-	extractArchive      *connect.Client[v1.ExtractArchiveRequest, v1.ExtractArchiveResponse]
-	createFolder        *connect.Client[v1.CreateFolderRequest, v1.CreateFolderResponse]
-	moveFile            *connect.Client[v1.MoveFileRequest, v1.MoveFileResponse]
-	copyFile            *connect.Client[v1.CopyFileRequest, v1.CopyFileResponse]
-	createArchive       *connect.Client[v1.CreateArchiveRequest, v1.CreateArchiveResponse]
-	downloadArchive     *connect.Client[v1.DownloadArchiveRequest, v1.DownloadArchiveResponse]
-	initFileDownload    *connect.Client[v1.InitFileDownloadRequest, v1.InitFileDownloadResponse]
-	getExtractionStatus *connect.Client[v1.GetExtractionStatusRequest, v1.GetExtractionStatusResponse]
+	listFiles                *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	getFile                  *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
+	saveUploadedFile         *connect.Client[v1.SaveUploadedFileRequest, v1.SaveUploadedFileResponse]
+	updateFile               *connect.Client[v1.UpdateFileRequest, v1.UpdateFileResponse]
+	deleteFile               *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
+	renameFile               *connect.Client[v1.RenameFileRequest, v1.RenameFileResponse]
+	extractArchive           *connect.Client[v1.ExtractArchiveRequest, v1.ExtractArchiveResponse]
+	createFolder             *connect.Client[v1.CreateFolderRequest, v1.CreateFolderResponse]
+	moveFile                 *connect.Client[v1.MoveFileRequest, v1.MoveFileResponse]
+	copyFile                 *connect.Client[v1.CopyFileRequest, v1.CopyFileResponse]
+	createArchive            *connect.Client[v1.CreateArchiveRequest, v1.CreateArchiveResponse]
+	downloadArchive          *connect.Client[v1.DownloadArchiveRequest, v1.DownloadArchiveResponse]
+	initFileDownload         *connect.Client[v1.InitFileDownloadRequest, v1.InitFileDownloadResponse]
+	getExtractionStatus      *connect.Client[v1.GetExtractionStatusRequest, v1.GetExtractionStatusResponse]
+	downloadRemoteArchive    *connect.Client[v1.DownloadRemoteArchiveRequest, v1.DownloadRemoteArchiveResponse]
+	getRemoteArchiveProgress *connect.Client[v1.GetRemoteArchiveProgressRequest, v1.GetRemoteArchiveProgressResponse]
 }
 
 // ListFiles calls discopanel.v1.FileService.ListFiles.
@@ -288,6 +312,16 @@ func (c *fileServiceClient) GetExtractionStatus(ctx context.Context, req *connec
 	return c.getExtractionStatus.CallUnary(ctx, req)
 }
 
+// DownloadRemoteArchive calls discopanel.v1.FileService.DownloadRemoteArchive.
+func (c *fileServiceClient) DownloadRemoteArchive(ctx context.Context, req *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error) {
+	return c.downloadRemoteArchive.CallUnary(ctx, req)
+}
+
+// GetRemoteArchiveProgress calls discopanel.v1.FileService.GetRemoteArchiveProgress.
+func (c *fileServiceClient) GetRemoteArchiveProgress(ctx context.Context, req *connect.Request[v1.GetRemoteArchiveProgressRequest]) (*connect.Response[v1.GetRemoteArchiveProgressResponse], error) {
+	return c.getRemoteArchiveProgress.CallUnary(ctx, req)
+}
+
 // FileServiceHandler is an implementation of the discopanel.v1.FileService service.
 type FileServiceHandler interface {
 	// Browse server directory
@@ -318,6 +352,10 @@ type FileServiceHandler interface {
 	InitFileDownload(context.Context, *connect.Request[v1.InitFileDownloadRequest]) (*connect.Response[v1.InitFileDownloadResponse], error)
 	// Poll extraction progress
 	GetExtractionStatus(context.Context, *connect.Request[v1.GetExtractionStatusRequest]) (*connect.Response[v1.GetExtractionStatusResponse], error)
+	// Download archive from remote URL (GitHub Releases, CDN, S3) with SHA256 verification and auto-extraction
+	DownloadRemoteArchive(context.Context, *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error)
+	// Poll remote archive download progress
+	GetRemoteArchiveProgress(context.Context, *connect.Request[v1.GetRemoteArchiveProgressRequest]) (*connect.Response[v1.GetRemoteArchiveProgressResponse], error)
 }
 
 // NewFileServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -411,6 +449,18 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(fileServiceMethods.ByName("GetExtractionStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	fileServiceDownloadRemoteArchiveHandler := connect.NewUnaryHandler(
+		FileServiceDownloadRemoteArchiveProcedure,
+		svc.DownloadRemoteArchive,
+		connect.WithSchema(fileServiceMethods.ByName("DownloadRemoteArchive")),
+		connect.WithHandlerOptions(opts...),
+	)
+	fileServiceGetRemoteArchiveProgressHandler := connect.NewUnaryHandler(
+		FileServiceGetRemoteArchiveProgressProcedure,
+		svc.GetRemoteArchiveProgress,
+		connect.WithSchema(fileServiceMethods.ByName("GetRemoteArchiveProgress")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/discopanel.v1.FileService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case FileServiceListFilesProcedure:
@@ -441,6 +491,10 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 			fileServiceInitFileDownloadHandler.ServeHTTP(w, r)
 		case FileServiceGetExtractionStatusProcedure:
 			fileServiceGetExtractionStatusHandler.ServeHTTP(w, r)
+		case FileServiceDownloadRemoteArchiveProcedure:
+			fileServiceDownloadRemoteArchiveHandler.ServeHTTP(w, r)
+		case FileServiceGetRemoteArchiveProgressProcedure:
+			fileServiceGetRemoteArchiveProgressHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -504,4 +558,12 @@ func (UnimplementedFileServiceHandler) InitFileDownload(context.Context, *connec
 
 func (UnimplementedFileServiceHandler) GetExtractionStatus(context.Context, *connect.Request[v1.GetExtractionStatusRequest]) (*connect.Response[v1.GetExtractionStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.FileService.GetExtractionStatus is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) DownloadRemoteArchive(context.Context, *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.FileService.DownloadRemoteArchive is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) GetRemoteArchiveProgress(context.Context, *connect.Request[v1.GetRemoteArchiveProgressRequest]) (*connect.Response[v1.GetRemoteArchiveProgressResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("discopanel.v1.FileService.GetRemoteArchiveProgress is not implemented"))
 }

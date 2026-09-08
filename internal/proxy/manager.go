@@ -24,6 +24,7 @@ type Manager struct {
 	dockerClient     client.CommonAPIClient
 	ownsDockerClient bool
 	wakeHandler      WakeHandler
+	valkeySync       *ValkeySyncManager
 }
 
 // NewManager creates a new proxy manager
@@ -34,6 +35,15 @@ func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dock
 		config:      &cfg.Proxy,
 		logger:      logger,
 		networkName: cfg.Docker.NetworkName,
+	}
+
+	if cfg.Proxy.ValkeyURL != "" {
+		valkeyClient := NewRespClient(cfg.Proxy.ValkeyURL)
+		m.valkeySync = NewValkeySyncManager(valkeyClient, "node-local", logger)
+		m.valkeySync.SetRemoteHandler(func(event *RoutingEvent) {
+			m.handleRemoteRoutingEvent(event)
+		})
+		_ = m.valkeySync.Start(context.Background())
 	}
 
 	if len(dockerCli) > 0 && dockerCli[0] != nil {
@@ -248,10 +258,16 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 		} else {
 			proxy.SetRouteHibernated(hostname, false)
 		}
+		if m.valkeySync != nil {
+			_ = m.valkeySync.BroadcastRouteAdd(context.Background(), server.ID, hostname, backendHost, backendPort, listener.Port)
+		}
 		m.logger.Info("Updated route for server %s (%s -> %s:%d, paused=%v) on port %d", server.Name, hostname, backendHost, backendPort, server.Status == db.StatusPaused, listener.Port)
 	} else if server.Status == db.StatusStopped || server.Status == db.StatusStopping {
 		// Remove route if server is stopped or stopping
 		proxy.RemoveRoute(hostname)
+		if m.valkeySync != nil {
+			_ = m.valkeySync.BroadcastRouteRemove(context.Background(), hostname, listener.Port)
+		}
 	}
 
 	return nil
@@ -682,6 +698,48 @@ func (m *Manager) GetModuleRoutes() map[int]map[string]*Route {
 
 	return moduleRoutes
 }
+
+// SetValkeySync configures the Valkey / Dragonfly routing sync manager
+func (m *Manager) SetValkeySync(sync *ValkeySyncManager) {
+	m.mu.Lock()
+	m.valkeySync = sync
+	if sync != nil {
+		sync.SetRemoteHandler(func(event *RoutingEvent) {
+			m.handleRemoteRoutingEvent(event)
+		})
+	}
+	m.mu.Unlock()
+}
+
+// handleRemoteRoutingEvent processes a real-time routing update received from a remote node via Valkey Pub/Sub
+func (m *Manager) handleRemoteRoutingEvent(event *RoutingEvent) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	proxy, exists := m.proxies[event.ProxyPort]
+	if !exists {
+		return
+	}
+
+	switch event.Action {
+	case "add", "update":
+		routes := proxy.GetRoutes()
+		if _, exists := routes[event.Hostname]; exists {
+			proxy.UpdateRoute(event.Hostname, event.BackendHost, event.BackendPort)
+		} else {
+			proxy.AddRoute(event.ServerID, event.Hostname, event.BackendHost, event.BackendPort)
+		}
+		if m.logger != nil {
+			m.logger.Info("Applied remote route %s: %s -> %s:%d on port %d", event.Action, event.Hostname, event.BackendHost, event.BackendPort, event.ProxyPort)
+		}
+	case "remove":
+		proxy.RemoveRoute(event.Hostname)
+		if m.logger != nil {
+			m.logger.Info("Removed remote route: %s on port %d", event.Hostname, event.ProxyPort)
+		}
+	}
+}
+
 
 // Creates default proxy listener if proxy is enabled
 func (m *Manager) EnsureDefaultListener() (*db.ProxyListener, error) {

@@ -309,6 +309,9 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 	if overrides.GetCpuLimit() > 0 {
 		hostConfig.Resources.NanoCPUs = int64(overrides.GetCpuLimit() * 1e9)
 	}
+	if overrides.GetCpusetCpus() != "" {
+		hostConfig.Resources.CpusetCpus = overrides.GetCpusetCpus()
+	}
 	if overrides.GetMemoryLimit() > 0 {
 		hostConfig.Resources.Memory = overrides.GetMemoryLimit() * 1024 * 1024
 		hostConfig.Resources.MemorySwap = overrides.GetMemoryLimit() * 1024 * 1024
