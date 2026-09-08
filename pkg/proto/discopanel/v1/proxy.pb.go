@@ -599,6 +599,7 @@ type CreateProxyListenerRequest struct {
 	Port          int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
 	Enabled       bool                   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	IsDefault     bool                   `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	ProxyProtocol bool                   `protobuf:"varint,6,opt,name=proxy_protocol,json=proxyProtocol,proto3" json:"proxy_protocol,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -668,6 +669,13 @@ func (x *CreateProxyListenerRequest) GetIsDefault() bool {
 	return false
 }
 
+func (x *CreateProxyListenerRequest) GetProxyProtocol() bool {
+	if x != nil {
+		return x.ProxyProtocol
+	}
+	return false
+}
+
 // Created listener
 type CreateProxyListenerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -722,6 +730,7 @@ type UpdateProxyListenerRequest struct {
 	Port          int32                  `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
 	Enabled       bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	IsDefault     bool                   `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	ProxyProtocol *bool                  `protobuf:"varint,7,opt,name=proxy_protocol,json=proxyProtocol,proto3,oneof" json:"proxy_protocol,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -794,6 +803,13 @@ func (x *UpdateProxyListenerRequest) GetEnabled() bool {
 func (x *UpdateProxyListenerRequest) GetIsDefault() bool {
 	if x != nil {
 		return x.IsDefault
+	}
+	return false
+}
+
+func (x *UpdateProxyListenerRequest) GetProxyProtocol() bool {
+	if x != nil && x.ProxyProtocol != nil {
+		return *x.ProxyProtocol
 	}
 	return false
 }
@@ -1622,16 +1638,17 @@ const file_discopanel_v1_proxy_proto_rawDesc = "" +
 	"\blistener\x18\x01 \x01(\v2\x1c.discopanel.v1.ProxyListenerR\blistener\x12!\n" +
 	"\fserver_count\x18\x02 \x01(\x05R\vserverCount\"`\n" +
 	"\x19GetProxyListenersResponse\x12C\n" +
-	"\tlisteners\x18\x01 \x03(\v2%.discopanel.v1.ProxyListenerWithCountR\tlisteners\"\x9f\x01\n" +
+	"\tlisteners\x18\x01 \x03(\v2%.discopanel.v1.ProxyListenerWithCountR\tlisteners\"\xc6\x01\n" +
 	"\x1aCreateProxyListenerRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x12\n" +
 	"\x04port\x18\x03 \x01(\x05R\x04port\x12\x18\n" +
 	"\aenabled\x18\x04 \x01(\bR\aenabled\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"W\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\x12%\n" +
+	"\x0eproxy_protocol\x18\x06 \x01(\bR\rproxyProtocol\"W\n" +
 	"\x1bCreateProxyListenerResponse\x128\n" +
-	"\blistener\x18\x01 \x01(\v2\x1c.discopanel.v1.ProxyListenerR\blistener\"\xaf\x01\n" +
+	"\blistener\x18\x01 \x01(\v2\x1c.discopanel.v1.ProxyListenerR\blistener\"\xee\x01\n" +
 	"\x1aUpdateProxyListenerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1639,7 +1656,9 @@ const file_discopanel_v1_proxy_proto_rawDesc = "" +
 	"\x04port\x18\x04 \x01(\x05R\x04port\x12\x18\n" +
 	"\aenabled\x18\x05 \x01(\bR\aenabled\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x06 \x01(\bR\tisDefault\"W\n" +
+	"is_default\x18\x06 \x01(\bR\tisDefault\x12*\n" +
+	"\x0eproxy_protocol\x18\a \x01(\bH\x00R\rproxyProtocol\x88\x01\x01B\x11\n" +
+	"\x0f_proxy_protocol\"W\n" +
 	"\x1bUpdateProxyListenerResponse\x128\n" +
 	"\blistener\x18\x01 \x01(\v2\x1c.discopanel.v1.ProxyListenerR\blistener\",\n" +
 	"\x1aDeleteProxyListenerRequest\x12\x0e\n" +
@@ -1795,6 +1814,7 @@ func file_discopanel_v1_proxy_proto_init() {
 		return
 	}
 	file_discopanel_v1_common_proto_init()
+	file_discopanel_v1_proxy_proto_msgTypes[12].OneofWrappers = []any{}
 	file_discopanel_v1_proxy_proto_msgTypes[18].OneofWrappers = []any{}
 	file_discopanel_v1_proxy_proto_msgTypes[23].OneofWrappers = []any{}
 	type x struct{}
