@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -932,5 +933,64 @@ func buildEnvFromConfig(config *models.ServerConfig) []string {
 		}
 	}
 
+	// MINE-3: Generational ZGC (Java 21+) handling vs Aikar G1GC flags
+	if config.UseGenerationalZgc != nil && *config.UseGenerationalZgc {
+		// Override USE_AIKAR_FLAGS to false to prevent conflicting G1GC flags
+		for i, e := range env {
+			if strings.HasPrefix(e, "USE_AIKAR_FLAGS=") {
+				env[i] = "USE_AIKAR_FLAGS=false"
+			}
+		}
+		// Inject Generational ZGC flags into JVM_XX_OPTS
+		zgcFlags := "-XX:+UseZGC -XX:+ZGenerational"
+		hasXxOpts := false
+		for i, e := range env {
+			if strings.HasPrefix(e, "JVM_XX_OPTS=") {
+				val := strings.TrimPrefix(e, "JVM_XX_OPTS=")
+				if !strings.Contains(val, "UseZGC") {
+					if val != "" {
+						env[i] = fmt.Sprintf("JVM_XX_OPTS=%s %s", val, zgcFlags)
+					} else {
+						env[i] = fmt.Sprintf("JVM_XX_OPTS=%s", zgcFlags)
+					}
+				}
+				hasXxOpts = true
+				break
+			}
+		}
+		if !hasXxOpts {
+			env = append(env, fmt.Sprintf("JVM_XX_OPTS=%s", zgcFlags))
+		}
+	}
+
 	return env
+}
+
+// DetectContainerJavaVersion attempts to auto-detect the Java runtime version from a running container
+func (c *Client) DetectContainerJavaVersion(ctx context.Context, containerID string) (int, error) {
+	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return 0, err
+	}
+	for _, e := range inspect.Config.Env {
+		if strings.HasPrefix(e, "JAVA_VERSION=") {
+			vStr := strings.TrimPrefix(e, "JAVA_VERSION=")
+			parts := strings.Split(vStr, ".")
+			if len(parts) > 0 {
+				if v, err := strconv.Atoi(parts[0]); err == nil {
+					return v, nil
+				}
+			}
+		}
+	}
+	// Fall back to inspecting image tag
+	image := inspect.Config.Image
+	if strings.Contains(image, "java21") {
+		return 21, nil
+	} else if strings.Contains(image, "java17") {
+		return 17, nil
+	} else if strings.Contains(image, "java8") {
+		return 8, nil
+	}
+	return 21, nil
 }
