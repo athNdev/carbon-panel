@@ -312,6 +312,7 @@ type ServerConfig struct {
 	VersionFromModrinthProjects        *bool   `json:"versionFromModrinthProjects" env:"VERSION_FROM_MODRINTH_PROJECTS" default:"false" desc:"Automatically set VERSION from Modrinth project compatibility" input:"checkbox" label:"Version From Modrinth Projects"`
 	ModrinthToken                      *string `json:"modrinthToken" env:"MODRINTH_TOKEN" default:"" desc:"Modrinth Personal Access Token (PAT) for increased rate limits" input:"password" label:"Modrinth Token"`
 	ModrinthUserAgent                  *string `json:"modrinthUserAgent" env:"MODRINTH_USER_AGENT" default:"" desc:"Custom User-Agent header for Modrinth API requests" input:"text" label:"Modrinth User-Agent"`
+	PackwizURL                         *string `json:"packwizUrl" env:"PACKWIZ_URL" default:"" desc:"URL to pack.toml for Packwiz modpack bootstrapping" input:"text" label:"Packwiz URL"`
 }
 
 type Mod struct {
