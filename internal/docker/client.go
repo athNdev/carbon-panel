@@ -443,7 +443,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	// Build port bindings
 	portBindings := nat.PortMap{}
 	if !useProxy {
-		// Bind game port to host
+		// Bind game port to public host interfaces (0.0.0.0)
 		portBindings[nat.Port(fmt.Sprintf("%d/tcp", containerPort))] = []nat.PortBinding{
 			{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", server.Port)},
 		}
@@ -454,7 +454,27 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 
 		// Apply DOCKER-USER iptables rate limiting & SYN flood protection (MINE-9)
 		if c.firewall != nil && server.Port > 0 {
+			_ = c.firewall.RemoveProxyPortIsolation(ctx, server.Port)
 			_ = c.firewall.ApplyPortRateLimiting(ctx, server.Port, c.config.RateLimitPerMin, c.config.RateLimitBurst)
+		}
+	} else {
+		// Automatic Proxy Port Isolation Guard (MINE-13):
+		// When routed through Velocity/proxy, bind server container port strictly to loopback (127.0.0.1)
+		// so external players cannot bypass Velocity by connecting directly to the server's backend port.
+		if server.Port > 0 {
+			portBindings[nat.Port(fmt.Sprintf("%d/tcp", containerPort))] = []nat.PortBinding{
+				{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", server.Port)},
+			}
+		}
+		// Bind RCON to localhost only
+		portBindings[nat.Port(fmt.Sprintf("%d/tcp", DefaultRCONPort))] = []nat.PortBinding{
+			{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", server.Port+RCONPortOffset)},
+		}
+
+		// Apply DOCKER-USER iptables proxy port isolation guard
+		if c.firewall != nil && server.Port > 0 {
+			_ = c.firewall.RemovePortRateLimiting(ctx, server.Port)
+			_ = c.firewall.ApplyProxyPortIsolation(ctx, server.Port)
 		}
 	}
 	// Add additional port bindings

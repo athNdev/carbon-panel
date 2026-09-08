@@ -118,3 +118,66 @@ func (f *FirewallManager) RemovePortRateLimiting(ctx context.Context, port int) 
 
 	return nil
 }
+
+// BuildIsolationRules generates iptables rules to drop all external traffic to the proxied server port,
+// allowing only local loopback (127.0.0.1) and internal private/docker subnets.
+func (f *FirewallManager) BuildIsolationRules(port int) [][]string {
+	portStr := strconv.Itoa(port)
+	return [][]string{
+		// 1. Allow connections from loopback (127.0.0.1)
+		{"-p", "tcp", "--dport", portStr, "-s", "127.0.0.1", "-j", "ACCEPT"},
+		// 2. Allow connections from docker bridge & internal private subnets
+		{"-p", "tcp", "--dport", portStr, "-s", "10.0.0.0/8", "-j", "ACCEPT"},
+		{"-p", "tcp", "--dport", portStr, "-s", "172.16.0.0/12", "-j", "ACCEPT"},
+		{"-p", "tcp", "--dport", portStr, "-s", "192.168.0.0/16", "-j", "ACCEPT"},
+		// 3. Drop all outside traffic attempting to bypass Velocity/proxy
+		{"-p", "tcp", "--dport", portStr, "-j", "DROP"},
+	}
+}
+
+// ApplyProxyPortIsolation isolates a proxied server port in the DOCKER-USER chain
+func (f *FirewallManager) ApplyProxyPortIsolation(ctx context.Context, port int) error {
+	if !f.enabled || f.iptablesPath == "" || port <= 0 {
+		return nil
+	}
+
+	rules := f.BuildIsolationRules(port)
+	for _, ruleArgs := range rules {
+		checkArgs := append([]string{"-C", "DOCKER-USER"}, ruleArgs...)
+		cmdCheck := exec.CommandContext(ctx, f.iptablesPath, checkArgs...)
+		if err := cmdCheck.Run(); err == nil {
+			continue
+		}
+
+		insertArgs := append([]string{"-I", "DOCKER-USER", "1"}, ruleArgs...)
+		cmdInsert := exec.CommandContext(ctx, f.iptablesPath, insertArgs...)
+		if out, err := cmdInsert.CombinedOutput(); err != nil {
+			msg := strings.TrimSpace(string(out))
+			if f.log != nil {
+				f.log.Warn("Failed to apply DOCKER-USER isolation rule for port %d: %s (%v)", port, msg, err)
+			}
+			return fmt.Errorf("iptables isolation rule insert failed: %w (%s)", err, msg)
+		}
+	}
+
+	if f.log != nil {
+		f.log.Info("Successfully applied DOCKER-USER proxy port isolation guard for port %d", port)
+	}
+	return nil
+}
+
+// RemoveProxyPortIsolation removes proxy port isolation rules
+func (f *FirewallManager) RemoveProxyPortIsolation(ctx context.Context, port int) error {
+	if !f.enabled || f.iptablesPath == "" || port <= 0 {
+		return nil
+	}
+
+	rules := f.BuildIsolationRules(port)
+	for _, ruleArgs := range rules {
+		deleteArgs := append([]string{"-D", "DOCKER-USER"}, ruleArgs...)
+		cmdDelete := exec.CommandContext(ctx, f.iptablesPath, deleteArgs...)
+		_ = cmdDelete.Run()
+	}
+	return nil
+}
+
