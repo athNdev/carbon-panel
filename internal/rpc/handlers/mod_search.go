@@ -126,22 +126,47 @@ func (m *ModOnlineManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	server, err := m.store.GetServer(r.Context(), serverID)
-	if err != nil {
-		http.Error(w, "server not found", http.StatusNotFound)
-		return
+	var server *storage.Server
+	if serverID != "none" && serverID != "" {
+		s, err := m.store.GetServer(r.Context(), serverID)
+		if err != nil {
+			http.Error(w, "server not found", http.StatusNotFound)
+			return
+		}
+		server = s
 	}
 
 	switch {
 	case action == "search" && r.Method == http.MethodGet:
 		m.handleSearch(w, r, server)
 	case action == "install" && r.Method == http.MethodPost:
+		if server == nil {
+			http.Error(w, "cannot install mods without a target server", http.StatusBadRequest)
+			return
+		}
 		m.handleInstall(w, r, server)
 	case len(parts) >= 4 && parts[3] == "versions" && r.Method == http.MethodGet:
 		slug := parts[2]
 		m.handleVersions(w, r, server, slug)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
+	}
+}
+
+func normalizeLoaderName(raw string) string {
+	s := strings.ToLower(strings.TrimSpace(raw))
+	s = strings.TrimPrefix(s, "mod_loader_")
+	switch {
+	case strings.Contains(s, "neoforge"):
+		return "neoforge"
+	case strings.Contains(s, "forge") || strings.Contains(s, "curseforge"):
+		return "forge"
+	case strings.Contains(s, "quilt"):
+		return "quilt"
+	case strings.Contains(s, "fabric"):
+		return "fabric"
+	default:
+		return s
 	}
 }
 
@@ -152,22 +177,27 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 		platform = "modrinth"
 	}
 
-	loader := strings.ToLower(r.URL.Query().Get("loader"))
-	if loader == "" {
-		loader = strings.ToLower(string(server.ModLoader))
+	loader := normalizeLoaderName(r.URL.Query().Get("loader"))
+	if loader == "" && server != nil {
+		loader = normalizeLoaderName(string(server.ModLoader))
 	}
-	mcVersion := r.URL.Query().Get("mc_version")
-	if mcVersion == "" {
-		mcVersion = server.MCVersion
+	mcVersion := strings.TrimSpace(r.URL.Query().Get("mc_version"))
+	if mcVersion == "" && server != nil {
+		mcVersion = strings.TrimSpace(server.MCVersion)
 	}
 
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	modsDir := ""
+	if server != nil {
+		modsDir = minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	}
 	installedMods := make(map[string]bool)
-	if files, err := os.ReadDir(modsDir); err == nil {
-		for _, f := range files {
-			if !f.IsDir() && strings.HasSuffix(f.Name(), ".jar") {
-				lower := strings.ToLower(f.Name())
-				installedMods[lower] = true
+	if modsDir != "" {
+		if files, err := os.ReadDir(modsDir); err == nil {
+			for _, f := range files {
+				if !f.IsDir() && strings.HasSuffix(f.Name(), ".jar") {
+					lower := strings.ToLower(f.Name())
+					installedMods[lower] = true
+				}
 			}
 		}
 	}
@@ -178,7 +208,12 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 
 	if platform == "curseforge" {
 		apiKey := ""
-		if globalSettings != nil && globalSettings.CFAPIKey != nil {
+		if server != nil && server.ID != "" && server.ID != "none" {
+			if sCfg, err := m.store.GetServerConfig(r.Context(), server.ID); err == nil && sCfg != nil && sCfg.CFAPIKey != nil && *sCfg.CFAPIKey != "" {
+				apiKey = *sCfg.CFAPIKey
+			}
+		}
+		if apiKey == "" && globalSettings != nil && globalSettings.CFAPIKey != nil {
 			apiKey = *globalSettings.CFAPIKey
 		}
 		results = m.searchCurseForge(r.Context(), apiKey, query, loader, mcVersion, installedMods)
@@ -296,34 +331,70 @@ func (m *ModOnlineManager) searchCurseForge(ctx context.Context, apiKey, query, 
 		cfLoaderType = 6
 	}
 
-	var reqURL string
-	if apiKey != "" {
-		reqURL = fmt.Sprintf("https://api.curseforge.com/v1/mods/search?gameId=432&classId=6&searchFilter=%s&pageSize=25", url.QueryEscape(query))
-	} else {
-		reqURL = fmt.Sprintf("https://api.curse.tools/v1/cf/mods/search?gameId=432&classId=6&searchFilter=%s&pageSize=25", url.QueryEscape(query))
-	}
-	if mcVersion != "" {
-		reqURL += fmt.Sprintf("&gameVersion=%s", url.QueryEscape(mcVersion))
-	}
-	if cfLoaderType > 0 {
-		reqURL += fmt.Sprintf("&modLoaderType=%d", cfLoaderType)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
-	if err != nil {
-		return []SearchModResult{}
-	}
-	if apiKey != "" {
-		req.Header.Set("x-api-key", apiKey)
-	}
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := m.httpClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
+	buildReqURL := func(baseURL string, useMCVersion bool) string {
+		u := fmt.Sprintf("%s/mods/search?gameId=432&classId=6&pageSize=25", baseURL)
+		if query != "" {
+			u += fmt.Sprintf("&searchFilter=%s", url.QueryEscape(query))
 		}
-		return []SearchModResult{}
+		if useMCVersion && mcVersion != "" {
+			u += fmt.Sprintf("&gameVersion=%s", url.QueryEscape(mcVersion))
+		}
+		if cfLoaderType > 0 {
+			u += fmt.Sprintf("&modLoaderType=%d", cfLoaderType)
+		}
+		return u
+	}
+
+	results := m.fetchCurseForgeMods(ctx, apiKey, buildReqURL, true, installed)
+	// If 0 results were found and a strict Minecraft version was specified, retry without the strict version filter
+	// so the user gets popular / matching mods instead of an empty result set
+	if len(results) == 0 && mcVersion != "" {
+		results = m.fetchCurseForgeMods(ctx, apiKey, buildReqURL, false, installed)
+	}
+
+	return results
+}
+
+func (m *ModOnlineManager) fetchCurseForgeMods(ctx context.Context, apiKey string, buildURL func(baseURL string, useMCVersion bool) string, useMCVersion bool, installed map[string]bool) []SearchModResult {
+	var resp *http.Response
+	var err error
+
+	// If API key is present, try official CurseForge API first
+	if apiKey != "" {
+		officialURL := buildURL("https://api.curseforge.com/v1", useMCVersion)
+		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, officialURL, nil)
+		if reqErr == nil {
+			req.Header.Set("x-api-key", apiKey)
+			req.Header.Set("Accept", "application/json")
+			resp, err = m.httpClient.Do(req)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				status := 0
+				if resp != nil {
+					status = resp.StatusCode
+					resp.Body.Close()
+				}
+				m.log.Warn("Official CurseForge API mod search returned %d (%v). Seamlessly falling back to community keyless proxy.", status, err)
+				resp = nil
+			}
+		}
+	}
+
+	// If official request was not made or failed, fallback to keyless community proxy
+	if resp == nil {
+		proxyURL := buildURL("https://api.curse.tools/v1/cf", useMCVersion)
+		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, proxyURL, nil)
+		if reqErr != nil {
+			return []SearchModResult{}
+		}
+		req.Header.Set("Accept", "application/json")
+		resp, err = m.httpClient.Do(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			m.log.Warn("Community keyless proxy mod search failed (%v)", err)
+			return []SearchModResult{}
+		}
 	}
 	defer resp.Body.Close()
 
@@ -393,20 +464,25 @@ func (m *ModOnlineManager) handleVersions(w http.ResponseWriter, r *http.Request
 		platform = "modrinth"
 	}
 
-	loader := strings.ToLower(r.URL.Query().Get("loader"))
-	if loader == "" {
-		loader = strings.ToLower(string(server.ModLoader))
+	loader := normalizeLoaderName(r.URL.Query().Get("loader"))
+	if loader == "" && server != nil {
+		loader = normalizeLoaderName(string(server.ModLoader))
 	}
-	mcVersion := r.URL.Query().Get("mc_version")
-	if mcVersion == "" {
-		mcVersion = server.MCVersion
+	mcVersion := strings.TrimSpace(r.URL.Query().Get("mc_version"))
+	if mcVersion == "" && server != nil {
+		mcVersion = strings.TrimSpace(server.MCVersion)
 	}
 
 	globalSettings, _, _ := m.store.GetGlobalSettings(r.Context())
 
 	if platform == "curseforge" {
 		apiKey := ""
-		if globalSettings != nil && globalSettings.CFAPIKey != nil {
+		if server != nil && server.ID != "" && server.ID != "none" {
+			if sCfg, err := m.store.GetServerConfig(r.Context(), server.ID); err == nil && sCfg != nil && sCfg.CFAPIKey != nil && *sCfg.CFAPIKey != "" {
+				apiKey = *sCfg.CFAPIKey
+			}
+		}
+		if apiKey == "" && globalSettings != nil && globalSettings.CFAPIKey != nil {
 			apiKey = *globalSettings.CFAPIKey
 		}
 		m.handleCurseForgeVersions(w, r, apiKey, slug, loader, mcVersion)
@@ -535,15 +611,6 @@ func (m *ModOnlineManager) handleModrinthVersions(w http.ResponseWriter, r *http
 }
 
 func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *http.Request, apiKey, modID, loader, mcVersion string) {
-	var reqURL string
-	if apiKey != "" {
-		reqURL = fmt.Sprintf("https://api.curseforge.com/v1/mods/%s/files?pageSize=20", modID)
-	} else {
-		reqURL = fmt.Sprintf("https://api.curse.tools/v1/cf/mods/%s/files?pageSize=20", modID)
-	}
-	if mcVersion != "" {
-		reqURL += fmt.Sprintf("&gameVersion=%s", url.QueryEscape(mcVersion))
-	}
 	cfLoaderType := 0
 	switch loader {
 	case "forge":
@@ -555,21 +622,58 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 	case "neoforge":
 		cfLoaderType = 6
 	}
-	if cfLoaderType > 0 {
-		reqURL += fmt.Sprintf("&modLoaderType=%d", cfLoaderType)
+
+	buildReqURL := func(baseURL string, useFilters bool) string {
+		u := fmt.Sprintf("%s/mods/%s/files?pageSize=50", baseURL, modID)
+		if useFilters {
+			if mcVersion != "" {
+				u += fmt.Sprintf("&gameVersion=%s", url.QueryEscape(mcVersion))
+			}
+			if cfLoaderType > 0 {
+				u += fmt.Sprintf("&modLoaderType=%d", cfLoaderType)
+			}
+		}
+		return u
 	}
 
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, reqURL, nil)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	fetchFiles := func(useFilters bool) (*http.Response, error) {
+		var resp *http.Response
+		var err error
+		if apiKey != "" {
+			reqURL := buildReqURL("https://api.curseforge.com/v1", useFilters)
+			req, rErr := http.NewRequestWithContext(r.Context(), http.MethodGet, reqURL, nil)
+			if rErr == nil {
+				req.Header.Set("x-api-key", apiKey)
+				req.Header.Set("Accept", "application/json")
+				resp, err = m.httpClient.Do(req)
+				if err == nil && resp.StatusCode == http.StatusOK {
+					return resp, nil
+				}
+				if resp != nil {
+					resp.Body.Close()
+					resp = nil
+				}
+			}
+		}
+		// Fallback to keyless proxy
+		proxyURL := buildReqURL("https://api.curse.tools/v1/cf", useFilters)
+		req, rErr := http.NewRequestWithContext(r.Context(), http.MethodGet, proxyURL, nil)
+		if rErr != nil {
+			return nil, rErr
+		}
+		req.Header.Set("Accept", "application/json")
+		return m.httpClient.Do(req)
 	}
-	if apiKey != "" {
-		req.Header.Set("x-api-key", apiKey)
-	}
-	req.Header.Set("Accept", "application/json")
 
-	resp, err := m.httpClient.Do(req)
+	resp, err := fetchFiles(true)
+	if err != nil || (resp != nil && resp.StatusCode != http.StatusOK) {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		// Try without strict version/loader filter if failed
+		resp, err = fetchFiles(false)
+	}
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to fetch curseforge files: %v", err), http.StatusBadGateway)
 		return

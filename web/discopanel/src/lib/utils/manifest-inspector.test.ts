@@ -4,7 +4,7 @@ import {
 	detectManifestFormat,
 	inspectManifest,
 	exportServerManifest
-} from './manifest-inspector.ts';
+} from './manifest-inspector';
 
 test('detectManifestFormat identifies modrinth format', () => {
 	const data = {

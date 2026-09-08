@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -1695,3 +1696,193 @@ func slugifyName(name string) string {
 	slug := re.ReplaceAllString(name, "-")
 	return strings.Trim(slug, "-")
 }
+
+// MigrateServer moves a server instance from its current node to a target node
+func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error) {
+	startTime := time.Now()
+	serverID := req.Msg.Id
+	targetNodeID := req.Msg.TargetNodeId
+	force := req.Msg.GetForce()
+
+	if serverID == "" || targetNodeID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server ID and target node ID are required"))
+	}
+
+	server, err := s.store.GetServer(ctx, serverID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server %s not found: %w", serverID, err))
+	}
+
+	sourceNodeID := server.NodeID
+	if sourceNodeID == "" {
+		sourceNodeID = "default"
+	}
+
+	if sourceNodeID == targetNodeID {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("server is already hosted on node '%s'", targetNodeID))
+	}
+
+	// Retrieve target node & validate
+	var targetNode *storage.Node
+	if targetNodeID == "default" {
+		targetNode = &storage.Node{
+			ID:      "default",
+			Name:    "Local Controller Daemon",
+			Status:  storage.NodeStatusOnline,
+			Enabled: true,
+			IsLocal: true,
+		}
+	} else {
+		targetNode, err = s.store.GetNode(ctx, targetNodeID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("target node '%s' not found: %w", targetNodeID, err))
+		}
+	}
+
+	if !targetNode.Enabled {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("target node '%s' is disabled", targetNode.Name))
+	}
+
+	// Verify target node connectivity
+	if s.pool != nil && targetNodeID != "default" {
+		online, pingErr := s.pool.PingNode(ctx, targetNodeID)
+		if (!online || pingErr != nil) && !force {
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("target node daemon is unreachable: %v", pingErr))
+		}
+	}
+
+	// Check capacity limits if not forced
+	if !force && (targetNode.MaxMemoryMB > 0 || targetNode.MaxServers > 0) {
+		allocMem, serverCount, _, err := s.store.GetNodeStats(ctx, targetNode.ID)
+		if err == nil {
+			if targetNode.MaxServers > 0 && serverCount >= targetNode.MaxServers {
+				return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("target node has reached its maximum server capacity (%d/%d)", serverCount, targetNode.MaxServers))
+			}
+			if targetNode.MaxMemoryMB > 0 && (allocMem+int64(server.Memory)) > targetNode.MaxMemoryMB {
+				return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("target node lacks memory headroom (allocated %dMB + required %dMB > limit %dMB)", allocMem, server.Memory, targetNode.MaxMemoryMB))
+			}
+		}
+	}
+
+	sourceDockerCli := s.getDockerClient(sourceNodeID)
+	targetDockerCli := s.getDockerClient(targetNodeID)
+
+	// Check if server is currently running
+	var isRunning bool
+	if server.ContainerID != "" && sourceDockerCli != nil {
+		status, err := sourceDockerCli.GetContainerStatus(ctx, server.ContainerID)
+		if err == nil && (status == storage.StatusRunning || status == storage.StatusStarting) {
+			isRunning = true
+		}
+	}
+
+	serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration: %w", err))
+	}
+
+	oldContainerID := server.ContainerID
+
+	if isRunning {
+		s.log.Info("Initiating live migration for server '%s' (%s) from node '%s' to node '%s'", server.Name, server.ID, sourceNodeID, targetNodeID)
+
+		// 1. Flush world chunks to disk
+		if s.sender != nil && oldContainerID != "" {
+			_, _ = s.sender.SendCommand(ctx, server.ID, "save-all flush")
+		}
+
+		// 2. Stop old container cleanly to avoid level.dat lock contention
+		if oldContainerID != "" && sourceDockerCli != nil {
+			_, _ = sourceDockerCli.StopContainer(ctx, oldContainerID)
+		}
+
+		// 3. Prepare config and create new container on target node
+		s.prepareServerConfig(ctx, server, serverConfig)
+		var newContainerID string
+		if targetDockerCli != nil {
+			newContainerID, err = targetDockerCli.CreateContainer(ctx, server, serverConfig)
+			if err != nil {
+				s.log.Error("Migration target container creation failed: %v", err)
+				// Rollback: try restarting old container on source node
+				if oldContainerID != "" && sourceDockerCli != nil {
+					_ = sourceDockerCli.StartContainer(ctx, oldContainerID)
+				}
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create container on target node: %w", err))
+			}
+
+			// 4. Start container on target node
+			if err := targetDockerCli.StartContainer(ctx, newContainerID); err != nil {
+				s.log.Error("Migration target container start failed: %v", err)
+				_ = targetDockerCli.RemoveContainer(ctx, newContainerID)
+				// Rollback: restart old container
+				if oldContainerID != "" && sourceDockerCli != nil {
+					_ = sourceDockerCli.StartContainer(ctx, oldContainerID)
+				}
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start container on target node: %w", err))
+			}
+		}
+
+		// 5. Update DB record
+		server.NodeID = targetNodeID
+		server.ContainerID = newContainerID
+		server.Status = storage.StatusRunning
+		now := time.Now()
+		server.LastStarted = &now
+		if err := s.store.UpdateServer(ctx, server); err != nil {
+			s.log.Error("Failed to update server DB record during live migration: %v", err)
+		}
+
+		// 6. Fast proxy route cutover
+		if s.proxy != nil && server.ProxyHostname != "" {
+			if err := s.proxy.UpdateServerRoute(server); err != nil {
+				s.log.Error("Failed to update proxy route during migration: %v", err)
+			}
+		}
+
+		// 7. Cleanup old container on source node asynchronously
+		if oldContainerID != "" && sourceDockerCli != nil {
+			go func(cID string, sCli *docker.Client) {
+				time.Sleep(1 * time.Second)
+				_ = sCli.RemoveContainer(context.Background(), cID)
+			}(oldContainerID, sourceDockerCli)
+		}
+
+	} else {
+		s.log.Info("Initiating offline migration for server '%s' (%s) from node '%s' to node '%s'", server.Name, server.ID, sourceNodeID, targetNodeID)
+
+		// Remove old container if it exists on source node
+		if oldContainerID != "" && sourceDockerCli != nil {
+			_, _ = sourceDockerCli.StopContainer(ctx, oldContainerID)
+			_ = sourceDockerCli.RemoveContainer(ctx, oldContainerID)
+		}
+
+		// Update database record
+		server.NodeID = targetNodeID
+		server.ContainerID = "" // Reset container ID so next start creates it fresh on target node
+		if err := s.store.UpdateServer(ctx, server); err != nil {
+			s.log.Error("Failed to update server record: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server: %w", err))
+		}
+	}
+
+	durationMs := time.Since(startTime).Milliseconds()
+	msg := fmt.Sprintf("Successfully migrated '%s' to node '%s' (%dms, live=%v)", server.Name, targetNodeID, durationMs, isRunning)
+	s.log.Info("%s", msg)
+
+	if s.bus != nil {
+		s.bus.Emit(ctx, events.Event{
+			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_RESTART,
+			ServerID: server.ID,
+		})
+	}
+
+	return connect.NewResponse(&v1.MigrateServerResponse{
+		Success:      true,
+		Message:      msg,
+		SourceNodeId: sourceNodeID,
+		TargetNodeId: targetNodeID,
+		DurationMs:   durationMs,
+		Server:       dbServerToProto(server),
+	}), nil
+}
+

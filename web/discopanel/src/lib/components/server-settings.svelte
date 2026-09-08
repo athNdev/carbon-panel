@@ -8,12 +8,15 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { create } from '@bufbuild/protobuf';
 	import { toast } from 'svelte-sonner';
-	import { Loader2, Save, AlertCircle } from '@lucide/svelte';
+	import { Loader2, Save, AlertCircle, Network, Server as ServerIcon, ArrowRightLeft, ShieldCheck, CheckCircle2, RefreshCw } from '@lucide/svelte';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 	import * as _ from 'lodash-es';
 	import { ServerStatus, ModLoader } from '$lib/proto/discopanel/v1/common_pb';
 	import type { UpdateServerRequest } from '$lib/proto/discopanel/v1/server_pb';
-	import { UpdateServerRequestSchema } from '$lib/proto/discopanel/v1/server_pb';
+	import { UpdateServerRequestSchema, MigrateServerRequestSchema } from '$lib/proto/discopanel/v1/server_pb';
+	import type { Node } from '$lib/proto/discopanel/v1/node_pb';
+	import { NodeStatus } from '$lib/proto/discopanel/v1/node_pb';
+	import { Badge } from '$lib/components/ui/badge';
 	import type {
 		GetMinecraftVersionsResponse,
 		GetModLoadersResponse,
@@ -130,6 +133,73 @@
 	$effect(() => {
 		loadOptions();
 	});
+
+	// Cluster Node & Migration state
+	let nodes = $state<Node[]>([]);
+	let loadingNodes = $state(true);
+	let targetNodeId = $state<string>('');
+	let forceMigrate = $state(false);
+	let migrating = $state(false);
+	let migrationStep = $state<string>('');
+
+	$effect(() => {
+		loadNodes();
+	});
+
+	async function loadNodes() {
+		try {
+			loadingNodes = true;
+			const res = await rpcClient.node.listNodes({});
+			nodes = res.nodes || [];
+			const other = nodes.find((n) => n.id !== server.nodeId && n.enabled);
+			if (other) {
+				targetNodeId = other.id;
+			} else if (nodes.length > 0) {
+				targetNodeId = nodes[0].id;
+			}
+		} catch (err) {
+			console.error('Failed to load nodes for migration:', err);
+		} finally {
+			loadingNodes = false;
+		}
+	}
+
+	async function handleMigrate() {
+		if (!targetNodeId || targetNodeId === server.nodeId) {
+			toast.error('Please select a different target node to migrate to');
+			return;
+		}
+		const target = nodes.find((n) => n.id === targetNodeId);
+		const isLive = server.status === ServerStatus.RUNNING;
+		const confirmMsg = isLive
+			? `Perform live migration of "${server.name}" to node "${target?.name || targetNodeId}"?\n\n- World state will be flushed to disk\n- Server container will transition cleanly\n- Proxy routing will be updated with zero player disconnection`
+			: `Migrate "${server.name}" to node "${target?.name || targetNodeId}"?`;
+		if (!confirm(confirmMsg)) return;
+
+		migrating = true;
+		migrationStep = isLive ? 'Flushing world chunks and migrating container...' : 'Recreating container on target node...';
+		try {
+			const req = create(MigrateServerRequestSchema, {
+				id: server.id,
+				targetNodeId: targetNodeId,
+				force: forceMigrate
+			});
+			const res = await rpcClient.server.migrateServer(req);
+			if (res.success) {
+				toast.success(res.message || `Server migrated to ${target?.name || targetNodeId} successfully!`);
+				if (onUpdate) onUpdate();
+				await loadNodes();
+			} else {
+				toast.error(res.message || 'Migration did not succeed');
+			}
+		} catch (err: any) {
+			console.error('Live migration failed:', err);
+			toast.error(`Migration failed: ${err.message || 'Unknown error'}`);
+		} finally {
+			migrating = false;
+			migrationStep = '';
+		}
+	}
 
 	async function loadOptions() {
 		try {
@@ -423,6 +493,116 @@
 			disabled={saving}
 			onchange={(overrides) => (formData.dockerOverrides = overrides)}
 		/>
+	</div>
+
+	<Separator class="my-6" />
+
+	<!-- Cluster Node Placement & Live Migration Card -->
+	<div class="rounded-xl border border-border/80 bg-linear-to-br from-card to-card/90 p-5 shadow-sm space-y-5">
+		<div class="flex items-start justify-between gap-4">
+			<div class="flex items-center gap-3">
+				<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+					<Network class="h-5 w-5" />
+				</div>
+				<div>
+					<h4 class="text-base font-semibold text-foreground">Cluster Node Placement & Live Migration</h4>
+					<p class="text-xs text-muted-foreground">
+						Seamlessly migrate this instance across Docker hosts without player disconnection
+					</p>
+				</div>
+			</div>
+			<Badge variant="outline" class="border-primary/30 bg-primary/5 text-primary text-xs font-mono">
+				Live Engine
+			</Badge>
+		</div>
+
+		<!-- Current Placement Info -->
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-lg bg-muted/40 border border-border/50 text-xs">
+			<div>
+				<span class="text-muted-foreground">Current Node:</span>
+				<div class="flex items-center gap-2 mt-1">
+					<span class="font-semibold text-foreground text-sm">{server.nodeId || 'default'}</span>
+					{#if nodes.find((n) => n.id === server.nodeId)?.isLocal}
+						<Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4">Local</Badge>
+					{/if}
+				</div>
+			</div>
+			<div>
+				<span class="text-muted-foreground">Container Endpoint:</span>
+				<div class="font-mono text-foreground mt-1 truncate">
+					{nodes.find((n) => n.id === server.nodeId)?.host || 'local daemon'}
+				</div>
+			</div>
+		</div>
+
+		<!-- Target Node Migration Form -->
+		<div class="space-y-3">
+			<Label for="target_node" class="text-sm font-medium">Migrate to Target Node</Label>
+			<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+				<div class="flex-1">
+					<Select type="single" bind:value={targetNodeId} disabled={migrating || loadingNodes}>
+						<SelectTrigger id="target_node" class="w-full h-10">
+							<span>
+								{nodes.find((n) => n.id === targetNodeId)?.name || 'Select destination node...'}
+							</span>
+						</SelectTrigger>
+						<SelectContent>
+							{#each nodes as node (node.id)}
+								<SelectItem value={node.id} disabled={node.id === server.nodeId || !node.enabled}>
+									<div class="flex items-center justify-between w-full gap-3">
+										<span>{node.name} {node.id === server.nodeId ? '(Current)' : ''}</span>
+										<div class="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+											{#if node.status === NodeStatus.ONLINE}
+												<span class="text-emerald-400">Online</span>
+											{:else}
+												<span class="text-rose-400">Offline</span>
+											{/if}
+											• {(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB RAM
+										</div>
+									</div>
+								</SelectItem>
+							{/each}
+						</SelectContent>
+					</Select>
+				</div>
+
+				<Button
+					onclick={handleMigrate}
+					disabled={migrating || !targetNodeId || targetNodeId === server.nodeId}
+					class="h-10 min-w-36 gap-2"
+				>
+					{#if migrating}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						Migrating...
+					{:else}
+						<ArrowRightLeft class="h-4 w-4" />
+						Migrate Node
+					{/if}
+				</Button>
+			</div>
+
+			<!-- Migration Helper & Force Bypass -->
+			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+				<p class="text-[11px] text-muted-foreground">
+					{#if server.status === ServerStatus.RUNNING}
+						⚡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy rerouting.
+					{:else}
+						💤 <b>Offline migration</b>: Container will be initialized on the selected node.
+					{/if}
+				</p>
+				<div class="flex items-center gap-2 text-xs text-muted-foreground">
+					<Switch id="force_migrate" bind:checked={forceMigrate} disabled={migrating} />
+					<Label for="force_migrate" class="cursor-pointer text-xs">Bypass capacity checks</Label>
+				</div>
+			</div>
+
+			{#if migrating && migrationStep}
+				<div class="flex items-center gap-2 p-3 rounded-md bg-primary/10 border border-primary/20 text-xs text-primary animate-pulse">
+					<Loader2 class="h-3.5 w-3.5 animate-spin" />
+					<span>{migrationStep}</span>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<Separator class="my-4" />

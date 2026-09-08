@@ -89,8 +89,32 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 			defer res.Body.Close()
 
 			if res.StatusCode == http.StatusOK {
-				resp.Valid = true
-				resp.Message = "Connected successfully! CurseForge API key is valid."
+				// Also check if mods/search endpoint allows this key
+				reqSearch, sErr := http.NewRequestWithContext(r.Context(), "GET", "https://api.curseforge.com/v1/mods/search?gameId=432&pageSize=1", nil)
+				if sErr == nil {
+					reqSearch.Header.Set("x-api-key", key)
+					reqSearch.Header.Set("Accept", "application/json")
+					resSearch, doErr := httpClient.Do(reqSearch)
+					if doErr == nil {
+						defer resSearch.Body.Close()
+						if resSearch.StatusCode == http.StatusOK {
+							resp.Valid = true
+							resp.Message = "Connected successfully! CurseForge API key is valid and approved for mod searches."
+						} else if resSearch.StatusCode == http.StatusForbidden || resSearch.StatusCode == http.StatusUnauthorized {
+							resp.Valid = true
+							resp.Message = "CurseForge API key accepted, but Overwolf restricts direct mod search (403). DiscoPanel will automatically use the keyless community proxy for mod searches!"
+						} else {
+							resp.Valid = true
+							resp.Message = "Connected successfully! CurseForge API key is valid."
+						}
+					} else {
+						resp.Valid = true
+						resp.Message = "Connected successfully! CurseForge API key is valid."
+					}
+				} else {
+					resp.Valid = true
+					resp.Message = "Connected successfully! CurseForge API key is valid."
+				}
 			} else if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusUnauthorized {
 				resp.Message = "CurseForge rejected API key (403 Forbidden). Please verify your key at https://console.curseforge.com/#/api-keys."
 			} else {
