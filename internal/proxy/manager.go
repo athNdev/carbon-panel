@@ -88,8 +88,9 @@ func (m *Manager) Start() error {
 
 		listenAddr := fmt.Sprintf(":%d", listener.Port)
 		proxy := NewMinecraftProxy(&Config{
-			ListenAddr: listenAddr,
-			Logger:     m.logger,
+			ListenAddr:    listenAddr,
+			Logger:        m.logger,
+			ProxyProtocol: listener.ProxyProtocol,
 		})
 
 		m.proxies[listener.Port] = proxy
@@ -386,8 +387,9 @@ func (m *Manager) AddListener(listener *db.ProxyListener) error {
 	// Create new proxy instance
 	listenAddr := fmt.Sprintf(":%d", listener.Port)
 	proxy := NewMinecraftProxy(&Config{
-		ListenAddr: listenAddr,
-		Logger:     m.logger,
+		ListenAddr:    listenAddr,
+		Logger:        m.logger,
+		ProxyProtocol: listener.ProxyProtocol,
 	})
 
 	// Start the proxy
