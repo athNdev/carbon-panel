@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -713,6 +716,282 @@ func (s *ModpackService) ImportUploadedModpack(ctx context.Context, req *connect
 	return connect.NewResponse(&v1.ImportUploadedModpackResponse{
 		Modpack: protoModpack,
 		Message: fmt.Sprintf("Modpack '%s' v%s by %s uploaded successfully", manifest.Name, manifest.Version, manifest.Author),
+	}), nil
+}
+
+// ImportRemoteModpack imports a modpack from a remote URL (e.g. GitHub release, CDN, static host)
+func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.Request[v1.ImportRemoteModpackRequest]) (*connect.Response[v1.ImportRemoteModpackResponse], error) {
+	msg := req.Msg
+
+	rawURL := strings.TrimSpace(msg.Url)
+	if rawURL == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("url is required"))
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid URL: must be http or https"))
+	}
+
+	s.log.Info("Starting remote modpack download from URL: %s", rawURL)
+
+	// Create HTTP client with redirect support and timeout
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create request: %w", err))
+	}
+
+	httpReq.Header.Set("User-Agent", "MineServer/2.x (Modpack Downloader)")
+	if msg.AuthToken != "" {
+		token := strings.TrimSpace(msg.AuthToken)
+		if strings.HasPrefix(token, "Bearer ") || strings.HasPrefix(token, "token ") {
+			httpReq.Header.Set("Authorization", token)
+		} else {
+			httpReq.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		s.log.Error("Failed to download modpack from %s: %v", rawURL, err)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to download modpack: %w", err))
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("remote server returned HTTP %d", resp.StatusCode))
+	}
+
+	// Create temp file for download
+	tempFile, err := os.CreateTemp("", "modpack-remote-*.zip")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create temp file: %w", err))
+	}
+	tempPath := tempFile.Name()
+	defer func() {
+		tempFile.Close()
+		os.Remove(tempPath)
+	}()
+
+	written, err := io.Copy(tempFile, resp.Body)
+	if err != nil {
+		s.log.Error("Failed to save remote modpack to temp file: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save downloaded file: %w", err))
+	}
+	tempFile.Close()
+
+	if written < 100 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("downloaded file is too small or invalid"))
+	}
+
+	// Determine modpack name from user input or URL filename
+	packName := strings.TrimSpace(msg.Name)
+	if packName == "" {
+		base := filepath.Base(parsedURL.Path)
+		base = strings.TrimSuffix(base, filepath.Ext(base))
+		if base != "" && base != "/" && base != "." {
+			packName = base
+		} else {
+			packName = "Remote Modpack"
+		}
+	}
+
+	mcVersion := strings.TrimSpace(msg.McVersion)
+	modLoaderStr := strings.ToLower(strings.TrimSpace(msg.ModLoader))
+	var modLoader storage.ModLoader
+
+	// Attempt to inspect ZIP file for CurseForge manifest.json or Modrinth modrinth.index.json
+	zipReader, zipErr := zip.OpenReader(tempPath)
+	if zipErr == nil {
+		for _, f := range zipReader.File {
+			// Check CurseForge manifest.json
+			if f.Name == "manifest.json" || strings.HasSuffix(f.Name, "/manifest.json") {
+				if r, err := f.Open(); err == nil {
+					var manifest struct {
+						Name        string `json:"name"`
+						Version     string `json:"version"`
+						Author      string `json:"author"`
+						Description string `json:"description,omitempty"`
+						Minecraft   struct {
+							Version    string `json:"version"`
+							ModLoaders []struct {
+								ID      string `json:"id"`
+								Primary bool   `json:"primary"`
+							} `json:"modLoaders"`
+						} `json:"minecraft"`
+					}
+					if err := json.NewDecoder(r).Decode(&manifest); err == nil {
+						if manifest.Name != "" && msg.Name == "" {
+							packName = manifest.Name
+						}
+						if manifest.Minecraft.Version != "" && mcVersion == "" {
+							mcVersion = manifest.Minecraft.Version
+						}
+						for _, ml := range manifest.Minecraft.ModLoaders {
+							if ml.Primary || modLoader == "" {
+								if matched, ok := minecraft.MatchModLoader(ml.ID); ok {
+									modLoader = matched
+								}
+							}
+						}
+					}
+					r.Close()
+				}
+				break
+			}
+
+			// Check Modrinth modrinth.index.json
+			if f.Name == "modrinth.index.json" || strings.HasSuffix(f.Name, "/modrinth.index.json") {
+				if r, err := f.Open(); err == nil {
+					var mrIndex struct {
+						Name         string            `json:"name"`
+						Summary      string            `json:"summary"`
+						Dependencies map[string]string `json:"dependencies"`
+					}
+					if err := json.NewDecoder(r).Decode(&mrIndex); err == nil {
+						if mrIndex.Name != "" && msg.Name == "" {
+							packName = mrIndex.Name
+						}
+						if v, ok := mrIndex.Dependencies["minecraft"]; ok && mcVersion == "" {
+							mcVersion = v
+						}
+						if _, ok := mrIndex.Dependencies["fabric-loader"]; ok && modLoader == "" {
+							modLoader = storage.ModLoaderFabric
+						} else if _, ok := mrIndex.Dependencies["forge"]; ok && modLoader == "" {
+							modLoader = storage.ModLoaderForge
+						} else if _, ok := mrIndex.Dependencies["neoforge"]; ok && modLoader == "" {
+							modLoader = storage.ModLoaderNeoForge
+						} else if _, ok := mrIndex.Dependencies["quilt-loader"]; ok && modLoader == "" {
+							modLoader = storage.ModLoaderQuilt
+						}
+					}
+					r.Close()
+				}
+				break
+			}
+		}
+		zipReader.Close()
+	}
+
+	// Fallback detection from user inputs or defaults
+	if modLoader == "" {
+		if matched, ok := minecraft.MatchModLoader(modLoaderStr); ok {
+			modLoader = matched
+		} else {
+			modLoader = storage.ModLoaderCustom
+		}
+	}
+
+	if mcVersion == "" {
+		mcVersion = "1.20.1" // Sensible modern default if completely unspecified
+	}
+
+	javaVersion := docker.GetRequiredJavaVersion(mcVersion, modLoader)
+	dockerImage := docker.GetOptimalDockerTag(mcVersion, modLoader, false)
+
+	modpackID := uuid.New().String()
+
+	// Ensure storage directory exists
+	manualDir := filepath.Join(s.config.Storage.DataDir, "modpacks", "manual")
+	if err := os.MkdirAll(manualDir, 0755); err != nil {
+		s.log.Error("Failed to create modpacks directory: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to initialize modpack storage"))
+	}
+
+	destZipPath := filepath.Join(manualDir, modpackID+".zip")
+	if err := files.CopyFile(tempPath, destZipPath); err != nil {
+		s.log.Error("Failed to copy modpack to %s: %v", destZipPath, err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to store modpack file"))
+	}
+
+	gameVersionsJSON, _ := json.Marshal([]string{mcVersion})
+	modLoadersJSON, _ := json.Marshal([]string{string(modLoader)})
+
+	summary := msg.Description
+	if summary == "" {
+		summary = fmt.Sprintf("Imported from %s", parsedURL.Host)
+	}
+
+	dbModpack := &storage.IndexedModpack{
+		ID:             modpackID,
+		IndexerID:      modpackID,
+		Indexer:        "manual", // Use "manual" for seamless compatibility with server deployer
+		Name:           packName,
+		Slug:           strings.ToLower(strings.ReplaceAll(packName, " ", "-")),
+		Summary:        summary,
+		Description:    msg.Description,
+		LogoURL:        "",
+		WebsiteURL:     rawURL,
+		DownloadCount:  0,
+		Categories:     "[]",
+		GameVersions:   string(gameVersionsJSON),
+		ModLoaders:     string(modLoadersJSON),
+		LatestFileID:   modpackID,
+		DateCreated:    time.Now(),
+		DateModified:   time.Now(),
+		DateReleased:   time.Now(),
+		MCVersion:      mcVersion,
+		JavaVersion:    javaVersion,
+		DockerImage:    dockerImage,
+		RecommendedRAM: 6144,
+	}
+
+	if err := s.store.UpsertIndexedModpack(ctx, dbModpack); err != nil {
+		os.Remove(destZipPath)
+		s.log.Error("Failed to store modpack in database: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to register modpack"))
+	}
+
+	dbFile := &storage.IndexedModpackFile{
+		ID:           modpackID,
+		ModpackID:    modpackID,
+		DisplayName:  packName,
+		FileName:     filepath.Base(destZipPath),
+		FileDate:     time.Now(),
+		FileLength:   written,
+		ReleaseType:  "1",
+		DownloadURL:  destZipPath,
+		GameVersions: string(gameVersionsJSON),
+		ModLoader:    string(modLoader),
+	}
+
+	_ = s.store.UpsertIndexedModpackFile(ctx, dbFile)
+
+	s.log.Info("Successfully imported remote modpack '%s' (id: %s) from %s", packName, modpackID, rawURL)
+
+	javaVersionInt, _ := strconv.Atoi(dbModpack.JavaVersion)
+	protoModpack := &v1.IndexedModpack{
+		Id:             dbModpack.ID,
+		IndexerId:      dbModpack.IndexerID,
+		Indexer:        dbModpack.Indexer,
+		Name:           dbModpack.Name,
+		Slug:           dbModpack.Slug,
+		Summary:        dbModpack.Summary,
+		Description:    dbModpack.Description,
+		LogoUrl:        dbModpack.LogoURL,
+		WebsiteUrl:     dbModpack.WebsiteURL,
+		DownloadCount:  int32(dbModpack.DownloadCount),
+		Categories:     dbModpack.Categories,
+		GameVersions:   dbModpack.GameVersions,
+		ModLoaders:     dbModpack.ModLoaders,
+		LatestFileId:   dbModpack.LatestFileID,
+		DateCreated:    timestamppb.New(dbModpack.DateCreated),
+		DateModified:   timestamppb.New(dbModpack.DateModified),
+		DateReleased:   timestamppb.New(dbModpack.DateReleased),
+		McVersion:      dbModpack.MCVersion,
+		JavaVersion:    int32(javaVersionInt),
+		DockerImage:    dbModpack.DockerImage,
+		RecommendedRam: int32(dbModpack.RecommendedRAM),
+		IsFavorited:    false,
+	}
+
+	return connect.NewResponse(&v1.ImportRemoteModpackResponse{
+		Modpack: protoModpack,
+		Message: fmt.Sprintf("Modpack '%s' imported successfully from %s", packName, parsedURL.Host),
 	}), nil
 }
 

@@ -114,7 +114,7 @@
 				>
 					API
 				</h2>
-				<p class="text-base text-muted-foreground">Explore the Discopanel API</p>
+				<p class="text-base text-muted-foreground">Explore the MineServer API</p>
 			</div>
 		</div>
 	</div>

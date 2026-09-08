@@ -45,6 +45,7 @@ enum TaskType {
   TASK_TYPE_STOP = 5;      // Stop the server
   TASK_TYPE_SCRIPT = 6;    // Run a custom script
   TASK_TYPE_WEBHOOK = 7;   // Send an HTTP webhook
+  TASK_TYPE_MODPACK_UPDATE = 8; // Check and pull modpack updates from source (e.g. Git)
 }
 
 // Task status enumeration
@@ -156,6 +157,15 @@ message WebhookTaskConfig {
   int32 max_retries = 5;                 // Retries on delivery failure (default 3)
   int32 retry_delay_ms = 6;              // Initial retry delay in ms (default 1000)
   int32 timeout_ms = 7;                  // HTTP timeout in ms (default 5000)
+}
+
+// Configuration for Git/source modpack update tasks. Stored serialized as JSON in ScheduledTask.config.
+message ModpackUpdateTaskConfig {
+  string git_url = 1;                     // Git repository URL (e.g. https://github.com/user/modpack.git)
+  string branch = 2;                      // Git branch/tag (default "main" or "master")
+  string target_subfolder = 3;            // Optional subdirectory inside the git repo to sync
+  bool restart_immediately = 4;           // If true, restart immediately when updates found; otherwise rely on scheduled maintenance
+  string auth_token = 5;                  // Optional GitHub token or personal access token for private repositories
 }
 
 // List tasks request

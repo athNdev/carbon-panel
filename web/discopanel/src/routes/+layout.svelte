@@ -127,7 +127,7 @@
 					});
 				})
 				.catch((err) => {
-					console.debug(`Discopanel caught a polling error: ${err}`);
+					console.debug(`MineServer caught a polling error: ${err}`);
 					reject(err);
 				});
 		});
@@ -135,7 +135,7 @@
 </script>
 
 <svelte:head>
-	<title>DiscoPanel - Minecraft Server Management</title>
+	<title>MineServer - Minecraft Server Management</title>
 </svelte:head>
 
 <ModeWatcher />
@@ -154,8 +154,8 @@
 			<Sidebar collapsible="icon">
 				<SidebarHeader class="my-2">
 					<div class="m-auto flex items-center gap-2">
-						<img src="/g1_24x24.png" alt="DiscoPanel Logo" class="h-6 w-6" />
-						<span class="text-lg font-bold group-data-[collapsible=icon]:hidden">DiscoPanel</span>
+						<img src="/g1_24x24.png" alt="MineServer Logo" class="h-6 w-6" />
+						<span class="text-lg font-bold group-data-[collapsible=icon]:hidden">MineServer</span>
 					</div>
 				</SidebarHeader>
 

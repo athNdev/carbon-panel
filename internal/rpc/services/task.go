@@ -52,6 +52,8 @@ func dbTaskTypeToProto(t storage.TaskType) v1.TaskType {
 		return v1.TaskType_TASK_TYPE_SCRIPT
 	case storage.TaskTypeWebhook:
 		return v1.TaskType_TASK_TYPE_WEBHOOK
+	case storage.TaskTypeModpackUpdate:
+		return v1.TaskType_TASK_TYPE_MODPACK_UPDATE
 	default:
 		return v1.TaskType_TASK_TYPE_UNSPECIFIED
 	}
@@ -74,6 +76,8 @@ func protoTaskTypeToDB(t v1.TaskType) storage.TaskType {
 		return storage.TaskTypeScript
 	case v1.TaskType_TASK_TYPE_WEBHOOK:
 		return storage.TaskTypeWebhook
+	case v1.TaskType_TASK_TYPE_MODPACK_UPDATE:
+		return storage.TaskTypeModpackUpdate
 	default:
 		return storage.TaskTypeCommand
 	}

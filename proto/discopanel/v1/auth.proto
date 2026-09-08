@@ -10,9 +10,9 @@ option go_package = "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1;dis
 // Global OpenAPI security: Bearer token auth via session JWT or API token (dp_...)
 option (gnostic.openapi.v3.document) = {
   info: {
-    title: "DiscoPanel API"
+    title: "MineServer API"
     version: "2.x"
-    description: "DiscoPanel server management API. Authenticate using a session token (from Login/OIDC) or an API token (dp_... prefix) in the Authorization header.\n\n## Connect Protocol\n\nThis API uses the [Connect protocol](https://connectrpc.com/docs/protocol) over HTTP. All endpoints accept `POST` with `application/json` bodies. Connect clients may send the following optional headers:\n\n- `Connect-Protocol-Version: 1` — declares the Connect protocol version.\n- `Connect-Timeout-Ms: <ms>` — request deadline in milliseconds.\n\nThese headers are handled automatically by Connect client libraries and are not required when calling the API directly with curl or other HTTP clients."
+    description: "MineServer server management API. Authenticate using a session token (from Login/OIDC) or an API token (dp_... prefix) in the Authorization header.\n\n## Connect Protocol\n\nThis API uses the [Connect protocol](https://connectrpc.com/docs/protocol) over HTTP. All endpoints accept `POST` with `application/json` bodies. Connect clients may send the following optional headers:\n\n- `Connect-Protocol-Version: 1` — declares the Connect protocol version.\n- `Connect-Timeout-Ms: <ms>` — request deadline in milliseconds.\n\nThese headers are handled automatically by Connect client libraries and are not required when calling the API directly with curl or other HTTP clients."
   }
   components: {
     security_schemes: {

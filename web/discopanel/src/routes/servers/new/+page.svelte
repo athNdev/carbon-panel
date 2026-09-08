@@ -654,6 +654,11 @@
 													formData.proxyHostname =
 														formData.name.toLowerCase().replace(/\s+/g, '-') || 'minecraft-server';
 												}
+												// Sync port to match the selected proxy listener
+												const currentListener = proxyListeners.find((l) => l.id === formData.proxyListenerId) || proxyListeners[0];
+												if (currentListener) {
+													formData.port = currentListener.port;
+												}
 												// Clear port error when using proxy
 												portError = '';
 											}}
@@ -680,7 +685,13 @@
 												<Select
 													type="single"
 													value={formData.proxyListenerId}
-													onValueChange={(v) => (formData.proxyListenerId = v || '')}
+													onValueChange={(v) => {
+														formData.proxyListenerId = v || '';
+														const matched = proxyListeners.find((l) => l.id === v);
+														if (matched) {
+															formData.port = matched.port;
+														}
+													}}
 													disabled={loading}
 												>
 													<SelectTrigger id="proxy_listener">
@@ -903,7 +914,7 @@
 										>Detached Mode</Label
 									>
 									<p class="text-xs text-muted-foreground">
-										Server continues running when DiscoPanel stops (not available for proxied
+										Server continues running when MineServer stops (not available for proxied
 										servers)
 									</p>
 								</div>
@@ -932,7 +943,7 @@
 										>Auto Start</Label
 									>
 									<p class="text-xs text-muted-foreground">
-										Automatically start when DiscoPanel starts{formData.detached
+										Automatically start when MineServer starts{formData.detached
 											? ' (disabled for detached servers)'
 											: ''}
 									</p>

@@ -34,7 +34,8 @@
 		Pencil,
 		Webhook as WebhookIcon,
 		Zap,
-		Copy
+		Copy,
+		GitBranch
 	} from '@lucide/svelte';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 	import type { ScheduledTask, TaskExecution } from '$lib/proto/discopanel/v1/task_pb';
@@ -99,6 +100,13 @@
 	let backupRetentionDays = $state(7);
 	let backupMinBackups = $state(3);
 	let backupMaxBackups = $state(0);
+
+	// Modpack update state
+	let gitUrl = $state('');
+	let gitBranch = $state('main');
+	let gitTargetSubfolder = $state('');
+	let gitRestartImmediately = $state(true);
+	let gitAuthToken = $state('');
 
 	const dialogSections = $derived<
 		{
@@ -197,7 +205,7 @@
       {"name": "Players", "value": "{{.server_players}}/{{.server_max_players}}", "inline": true},
       {"name": "Mod Loader", "value": "{{.server_mod_loader}}", "inline": true}
     ],
-    "footer": {"text": "DiscoPanel"}
+    "footer": {"text": "MineServer"}
   }]
 }`,
 		slack: `{
@@ -221,7 +229,7 @@
     },
     {
       "type": "context",
-      "elements": [{"type": "mrkdwn", "text": "DiscoPanel • {{.timestamp}}"}]
+      "elements": [{"type": "mrkdwn", "text": "MineServer • {{.timestamp}}"}]
     }
   ]
 }`,
@@ -256,7 +264,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "DiscoPanel • {{.timestamp}}",
+          "text": "MineServer • {{.timestamp}}",
           "size": "small",
           "isSubtle": true
         }
@@ -385,6 +393,11 @@
 		webhookRetryDelayMs = 1000;
 		webhookTimeoutMs = 5000;
 		originalWebhookHasSecret = false;
+		gitUrl = '';
+		gitBranch = 'main';
+		gitTargetSubfolder = '';
+		gitRestartImmediately = true;
+		gitAuthToken = '';
 		selectedTask = null;
 	}
 
@@ -453,6 +466,20 @@
 			}
 		}
 
+		// Modpack update specific: parse JSON config
+		if (task.taskType === TaskType.MODPACK_UPDATE) {
+			try {
+				const cfg = JSON.parse(task.config || '{}');
+				gitUrl = cfg.git_url || '';
+				gitBranch = cfg.branch || 'main';
+				gitTargetSubfolder = cfg.target_subfolder || '';
+				gitRestartImmediately = cfg.restart_immediately ?? true;
+				gitAuthToken = cfg.auth_token || '';
+			} catch {
+				// Invalid config — leave defaults
+			}
+		}
+
 		showCreateDialog = true;
 	}
 
@@ -484,6 +511,14 @@
 					retention_days: backupRetentionDays,
 					min_backups: backupMinBackups,
 					max_backups: backupMaxBackups
+				});
+			case TaskType.MODPACK_UPDATE:
+				return JSON.stringify({
+					git_url: gitUrl.trim(),
+					branch: gitBranch.trim() || 'main',
+					target_subfolder: gitTargetSubfolder.trim(),
+					restart_immediately: gitRestartImmediately,
+					auth_token: gitAuthToken.trim()
 				});
 			default:
 				return '';
@@ -534,6 +569,12 @@
 		if (taskType === TaskType.WEBHOOK) {
 			if (!webhookUrl.trim()) {
 				toast.error('Webhook URL is required');
+				return;
+			}
+		}
+		if (taskType === TaskType.MODPACK_UPDATE) {
+			if (!gitUrl.trim()) {
+				toast.error('Git repository URL is required');
 				return;
 			}
 		}
@@ -677,6 +718,8 @@
 				return 'Script';
 			case TaskType.WEBHOOK:
 				return 'Webhook';
+			case TaskType.MODPACK_UPDATE:
+				return 'Modpack Auto-Update';
 			default:
 				return 'Unknown';
 		}
@@ -698,6 +741,8 @@
 				return FileText;
 			case TaskType.WEBHOOK:
 				return WebhookIcon;
+			case TaskType.MODPACK_UPDATE:
+				return GitBranch;
 			default:
 				return Clock;
 		}
@@ -1105,6 +1150,9 @@
 											<Select.Item value={TaskType.WEBHOOK.toString()} label="Webhook"
 												>Webhook</Select.Item
 											>
+											<Select.Item value={TaskType.MODPACK_UPDATE.toString()} label="Modpack Auto-Update"
+												>Modpack Auto-Update</Select.Item
+											>
 										</Select.Content>
 									</Select.Root>
 								</div>
@@ -1243,6 +1291,71 @@
 											The endpoint the request is sent to. Discord/Slack/Teams/ntfy URLs are
 											auto-detected for the default payload preset.
 										</p>
+									</div>
+								{:else if taskType === TaskType.MODPACK_UPDATE}
+									<div class="space-y-4">
+										<div class="space-y-3">
+											<Label for="gitUrl">Git Repository URL *</Label>
+											<Input
+												id="gitUrl"
+												bind:value={gitUrl}
+												placeholder="https://github.com/organization/modpack-repo.git"
+												class="h-11 font-mono"
+											/>
+											<p class="text-sm text-muted-foreground">
+												GitHub or Git repository containing modpack files, configs, or mods.
+											</p>
+										</div>
+										<div class="grid grid-cols-2 gap-4">
+											<div class="space-y-3">
+												<Label for="gitBranch">Branch / Tag</Label>
+												<Input
+													id="gitBranch"
+													bind:value={gitBranch}
+													placeholder="main"
+													class="h-11 font-mono"
+												/>
+												<p class="text-sm text-muted-foreground">
+													Branch to track (defaults to main).
+												</p>
+											</div>
+											<div class="space-y-3">
+												<Label for="gitTargetSubfolder">Repository Subfolder</Label>
+												<Input
+													id="gitTargetSubfolder"
+													bind:value={gitTargetSubfolder}
+													placeholder="minecraft (optional)"
+													class="h-11 font-mono"
+												/>
+												<p class="text-sm text-muted-foreground">
+													Optional folder inside the repository to sync into the server root.
+												</p>
+											</div>
+										</div>
+										<div class="space-y-3">
+											<Label for="gitAuthToken">Personal Access Token (optional)</Label>
+											<Input
+												id="gitAuthToken"
+												type="password"
+												bind:value={gitAuthToken}
+												placeholder="ghp_xxxxxxxxxxxx"
+												class="h-11 font-mono"
+											/>
+											<p class="text-sm text-muted-foreground">
+												Required only for private GitHub / GitLab repositories.
+											</p>
+										</div>
+										<label
+											class="flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+										>
+											<Switch bind:checked={gitRestartImmediately} class="mt-0.5" />
+											<div class="space-y-1">
+												<span class="font-medium">Restart Immediately on Update</span>
+												<p class="text-sm text-muted-foreground">
+													If enabled, automatically restarts the Minecraft server whenever new commits are pulled. If disabled, new files are synced and restart is deferred to scheduled maintenance.
+												</p>
+											</div>
+										</label>
 									</div>
 								{:else}
 									<div class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">

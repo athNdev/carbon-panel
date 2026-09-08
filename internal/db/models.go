@@ -478,8 +478,9 @@ const (
 	TaskTypeRestart TaskType = "restart" // Restart the server
 	TaskTypeStart   TaskType = "start"   // Start the server
 	TaskTypeStop    TaskType = "stop"    // Stop the server
-	TaskTypeScript  TaskType = "script"  // Run a custom script
-	TaskTypeWebhook TaskType = "webhook" // Send an HTTP webhook
+	TaskTypeScript        TaskType = "script"         // Run a custom script
+	TaskTypeWebhook       TaskType = "webhook"        // Send an HTTP webhook
+	TaskTypeModpackUpdate TaskType = "modpack_update" // Periodically fetch and update modpack from Git/source
 )
 
 // TaskStatus defines the status of a scheduled task

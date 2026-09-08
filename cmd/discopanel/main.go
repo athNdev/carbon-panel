@@ -365,7 +365,7 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Info("Starting DiscoPanel on %s:%s", cfg.Server.Host, cfg.Server.Port)
+		log.Info("Starting MineServer on %s:%s", cfg.Server.Host, cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Failed to start server: %v", err)
 		}

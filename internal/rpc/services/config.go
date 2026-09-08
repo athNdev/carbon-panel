@@ -173,6 +173,100 @@ func (s *ConfigService) UpdateGlobalSettings(ctx context.Context, req *connect.R
 	}), nil
 }
 
+// SyncGlobalSettingsToServers propagates global defaults (like Ops and Whitelist) to all existing servers
+func (s *ConfigService) SyncGlobalSettingsToServers(ctx context.Context, req *connect.Request[v1.SyncGlobalSettingsToServersRequest]) (*connect.Response[v1.SyncGlobalSettingsToServersResponse], error) {
+	globalConfig, _, err := s.store.GetGlobalSettings(ctx)
+	if err != nil {
+		s.log.Error("Failed to get global settings: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to get global settings"))
+	}
+
+	servers, err := s.store.ListServers(ctx)
+	if err != nil {
+		s.log.Error("Failed to list servers: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to list servers"))
+	}
+
+	opsAndWhitelistOnly := req.Msg.OpsAndWhitelistOnly
+	updatedCount := 0
+
+	for _, srv := range servers {
+		serverConfig, err := s.store.GetServerConfig(ctx, srv.ID)
+		if err != nil {
+			s.log.Warn("Could not find server config for %s, creating default: %v", srv.Name, err)
+			serverConfig = s.store.CreateDefaultServerConfig(srv.ID)
+		}
+
+		if opsAndWhitelistOnly {
+			// Selectively copy Ops and Whitelist settings
+			if globalConfig.Ops != nil {
+				serverConfig.Ops = globalConfig.Ops
+			}
+			if globalConfig.OpsFile != nil {
+				serverConfig.OpsFile = globalConfig.OpsFile
+			}
+			if globalConfig.ExistingOpsFile != nil {
+				serverConfig.ExistingOpsFile = globalConfig.ExistingOpsFile
+			}
+			if globalConfig.UserAPIProvider != nil {
+				serverConfig.UserAPIProvider = globalConfig.UserAPIProvider
+			}
+			if globalConfig.EnableWhitelist != nil {
+				serverConfig.EnableWhitelist = globalConfig.EnableWhitelist
+			}
+			if globalConfig.Whitelist != nil {
+				serverConfig.Whitelist = globalConfig.Whitelist
+			}
+			if globalConfig.WhitelistFile != nil {
+				serverConfig.WhitelistFile = globalConfig.WhitelistFile
+			}
+			if globalConfig.OverrideWhitelist != nil {
+				serverConfig.OverrideWhitelist = globalConfig.OverrideWhitelist
+			}
+			if globalConfig.ExistingWhitelistFile != nil {
+				serverConfig.ExistingWhitelistFile = globalConfig.ExistingWhitelistFile
+			}
+			if globalConfig.EnforceWhitelist != nil {
+				serverConfig.EnforceWhitelist = globalConfig.EnforceWhitelist
+			}
+		} else {
+			// Copy all non-server-specific fields using reflection
+			globalValue := reflect.ValueOf(globalConfig).Elem()
+			configValue := reflect.ValueOf(serverConfig).Elem()
+			configType := configValue.Type()
+
+			for i := 0; i < configType.NumField(); i++ {
+				field := configType.Field(i)
+				if field.Name == "ID" || field.Name == "ServerID" || field.Name == "UpdatedAt" ||
+					field.Name == "Server" || field.Name == "RCONPassword" ||
+					field.Name == "Type" || field.Name == "Version" || field.Name == "Memory" ||
+					field.Name == "InitMemory" || field.Name == "MaxMemory" || field.Name == "ServerPort" ||
+					field.Name == "MaxPlayers" {
+					continue
+				}
+
+				globalField := globalValue.FieldByName(field.Name)
+				if globalField.IsValid() && globalField.Kind() == reflect.Pointer && !globalField.IsNil() {
+					configValue.Field(i).Set(globalField)
+				}
+			}
+		}
+
+		if err := s.store.UpdateServerConfig(ctx, serverConfig); err != nil {
+			s.log.Error("Failed to save synced config for server %s: %v", srv.Name, err)
+			continue
+		}
+		updatedCount++
+	}
+
+	msg := fmt.Sprintf("Successfully synced default settings to %d server(s)", updatedCount)
+	s.log.Info("%s", msg)
+	return connect.NewResponse(&v1.SyncGlobalSettingsToServersResponse{
+		UpdatedServersCount: int32(updatedCount),
+		Message:             msg,
+	}), nil
+}
+
 func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.Server, config *storage.ServerConfig) error {
 	oldContainerID := server.ContainerID
 	wasRunning := false
