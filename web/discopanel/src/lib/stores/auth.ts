@@ -300,15 +300,17 @@ function createAuthStore() {
 
 		getHeaders() {
 			const state = get({ subscribe });
-			const headers: HeadersInit = {};
-			if (state.token) {
-				headers['Authorization'] = `Bearer ${state.token}`;
+			const token = state.token || (browser ? localStorage.getItem('auth_token') : null);
+			const headers: Record<string, string> = {};
+			if (token) {
+				headers['Authorization'] = `Bearer ${token}`;
 			}
 			return headers;
 		},
 
 		getToken(): string | null {
-			return get({ subscribe }).token;
+			const state = get({ subscribe });
+			return state.token || (browser ? localStorage.getItem('auth_token') : null);
 		},
 
 		hasRole(role: string): boolean {

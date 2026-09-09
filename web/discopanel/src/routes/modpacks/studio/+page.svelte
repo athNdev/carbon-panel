@@ -234,7 +234,7 @@
 						<div class="flex items-center justify-between text-xs text-muted-foreground border-t pt-3">
 							<div class="flex items-center gap-1.5">
 								<Calendar class="h-3.5 w-3.5" />
-								<span>{new Date(pack.updated_at).toLocaleDateString()}</span>
+								<span>{pack.updated_at ? new Date(pack.updated_at).toLocaleDateString() : 'Recently'}</span>
 							</div>
 
 							<div class="flex items-center gap-2">
