@@ -155,7 +155,7 @@ func (m *Manager) ListPacks() ([]PackSummary, error) {
 		return nil, err
 	}
 
-	var list []PackSummary
+	list := []PackSummary{}
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -204,6 +204,9 @@ func (m *Manager) CreatePack(p *Pack) (*Pack, error) {
 	}
 	if p.ModLoader == "" {
 		p.ModLoader = "fabric"
+	}
+	if p.Mods == nil {
+		p.Mods = []ModItem{}
 	}
 	p.UpdatedAt = time.Now()
 
@@ -356,7 +359,7 @@ func (m *Manager) readPack(id string) (*Pack, error) {
 
 	// Read mods from mods/
 	modsDir := filepath.Join(pDir, "mods")
-	var mods []ModItem
+	mods := []ModItem{}
 	if files, err := os.ReadDir(modsDir); err == nil {
 		for _, f := range files {
 			if !f.IsDir() && strings.HasSuffix(f.Name(), ".pw.toml") {

@@ -91,7 +91,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		platform: string;
 	}
 
-	const packId = page.params.id;
+	let packId = $derived(page.params.id);
 
 	let pack = $state<Pack | null>(null);
 	let loading = $state(true);
@@ -125,11 +125,16 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	];
 
 	async function loadPack() {
+		if (!packId) return;
 		loading = true;
 		try {
 			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			pack = await res.json();
+			const data = await res.json();
+			if (data) {
+				data.mods = data.mods || [];
+			}
+			pack = data;
 		} catch (err) {
 			console.error('Failed to load pack:', err);
 			toast.error('Failed to load modpack project');
@@ -206,7 +211,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				method: 'DELETE'
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			pack.mods = pack.mods.filter((m) => m.slug !== mod.slug);
+			pack.mods = (pack.mods || []).filter((m) => m.slug !== mod.slug);
 			toast.success(`Removed ${mod.name} from modpack`);
 		} catch (err) {
 			console.error('Failed to delete mod:', err);
@@ -266,13 +271,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			const newMod: ModItem = {
 				slug: item.slug || item.id,
 				name: item.title,
-				file_name: selectedVer.file_name,
+				file_name: selectedVer.file_name || selectedVer.fileName || 'mod.jar',
 				side,
 				platform: item.platform,
 				project_id: item.id,
 				version_id: selectedVer.id,
-				download_url: selectedVer.download_url,
-				file_size: selectedVer.file_size,
+				download_url: selectedVer.download_url || selectedVer.downloadUrl || '',
+				file_size: selectedVer.file_size || selectedVer.fileSize,
 				pinned: false
 			};
 
@@ -293,8 +298,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 	let filteredMods = $derived(
 		(pack?.mods || []).filter((m) =>
-			m.name.toLowerCase().includes(modFilter.toLowerCase()) ||
-			m.file_name.toLowerCase().includes(modFilter.toLowerCase())
+			(m.name || '').toLowerCase().includes(modFilter.toLowerCase()) ||
+			(m.file_name || '').toLowerCase().includes(modFilter.toLowerCase())
 		)
 	);
 
@@ -305,8 +310,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		return count.toString();
 	}
 
-	onMount(() => {
-		loadPack();
+	let prevLoadedId = $state<string | undefined>(undefined);
+	$effect(() => {
+		if (packId && packId !== prevLoadedId) {
+			prevLoadedId = packId;
+			loadPack();
+		}
 	});
 </script>
 
@@ -458,7 +467,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 							<div class="flex items-center gap-2">
 								<CardTitle class="text-lg font-bold">Mods in Pack</CardTitle>
 								<Badge variant="secondary" class="text-xs">
-									{pack.mods.length}
+									{(pack.mods || []).length}
 								</Badge>
 							</div>
 							<CardDescription class="text-xs">Manage sides, versions, and dependencies</CardDescription>
@@ -483,7 +492,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				</CardHeader>
 
 				<CardContent class="p-0">
-					{#if pack.mods.length === 0}
+					{#if (pack.mods || []).length === 0}
 						<div class="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
 							<Package class="h-10 w-10 stroke-[1.5]" />
 							<p class="mt-3 text-base font-semibold">No mods added to pack yet</p>
