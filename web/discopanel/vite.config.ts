@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
@@ -40,6 +49,9 @@ export default defineConfig({
 		__APP_VERSION__: JSON.stringify(getVersion())
 	},
 	server: {
+		host: '0.0.0.0',
+		port: 5174,
+		strictPort: true,
 		proxy: {
 			'/api': {
 				target: 'http://localhost:8080',
