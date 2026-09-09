@@ -230,51 +230,44 @@
 </script>
 
 {#if isLoading}
-	<div class="flex h-full flex-1 items-center justify-center p-6">
-		<div class="space-y-4 text-center">
-			<div
-				class="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary"
-			></div>
-			<p class="text-muted-foreground">Loading dashboard...</p>
+	<div class="flex h-64 items-center justify-center p-6">
+		<div class="flex flex-col items-center gap-3">
+			<div class="h-10 w-10 border-4 border-[#0f62fe] border-t-transparent animate-spin"></div>
+			<p class="font-sans text-xs text-[#a8a8a8]">Loading telemetry & cluster data...</p>
 		</div>
 	</div>
 {:else}
-	<div
-		class="h-full flex-1 space-y-6 bg-linear-to-br from-background via-background to-muted/5 p-6"
-	>
-		<div class="flex items-center justify-between border-b border-border/40 pb-4">
-			<div class="flex items-center gap-4">
-				<div
-					class="flex h-14 w-14 animate-in items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/10 shadow-lg duration-500 fade-in-50"
-				>
-					<LayoutDashboard class="h-7 w-7 text-primary" />
+	<div class="space-y-6">
+		<!-- Carbon Page Header -->
+		<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#393939] gap-4">
+			<div>
+				<div class="flex items-center gap-2">
+					<h1 class="font-sans text-2xl font-light text-[#f4f4f4]">Cluster Overview</h1>
+					<span class="px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 text-xs font-mono">
+						DISCOPANEL
+					</span>
 				</div>
-				<div class="animate-in space-y-1 duration-500 slide-in-from-left-5">
-					<h2 class="text-3xl font-bold tracking-tight">Dashboard</h2>
-					<p class="text-sm text-muted-foreground">
-						Monitor and manage your Minecraft server infrastructure
-					</p>
-				</div>
+				<p class="font-sans text-xs text-[#a8a8a8] mt-1">
+					Hardware utilization, game servers status, and network routing topology
+				</p>
 			</div>
-			<div class="flex animate-in items-center gap-3 duration-500 slide-in-from-right-5">
-				<Button
-					variant="outline"
-					size="sm"
+			<div class="flex items-center gap-2">
+				<button
+					type="button"
 					onclick={refreshDashboard}
 					disabled={isRefreshing}
-					class="flex items-center gap-2"
+					class="h-10 px-4 flex items-center gap-2 bg-[#262626] hover:bg-[#353535] text-[#f4f4f4] border border-[#393939] text-sm font-sans cursor-pointer transition-colors"
 				>
 					<RefreshCw class="h-4 w-4 {isRefreshing ? 'animate-spin' : ''}" />
-					Refresh
-				</Button>
-				<Button
+					<span>Refresh</span>
+				</button>
+				<a
 					href="/servers/new"
-					size="default"
-					class="bg-linear-to-r from-primary to-primary/80 shadow-lg transition-all hover:from-primary/90 hover:to-primary/70 hover:shadow-xl"
+					class="h-10 px-4 flex items-center gap-2 bg-[#0f62fe] hover:bg-[#0353e9] text-white text-sm font-sans font-medium cursor-pointer transition-colors"
 				>
-					<Plus class="mr-2 h-4 w-4" />
-					New Server
-				</Button>
+					<Plus class="h-4 w-4" />
+					<span>New Server</span>
+				</a>
 			</div>
 		</div>
 
