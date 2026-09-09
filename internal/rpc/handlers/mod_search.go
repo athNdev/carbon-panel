@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -185,6 +186,10 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 	if mcVersion == "" && server != nil {
 		mcVersion = strings.TrimSpace(server.MCVersion)
 	}
+	side := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("side")))
+	if side == "" && server != nil && server.ID != "" && server.ID != "none" {
+		side = "server"
+	}
 
 	modsDir := ""
 	if server != nil {
@@ -230,6 +235,18 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 			}
 		}
 		results = m.searchModrinth(r.Context(), token, ua, query, loader, mcVersion, installedMods)
+	}
+
+	// Apply side filter if requested (e.g. side=server)
+	if side == "server" {
+		var serverResults []SearchModResult
+		for _, res := range results {
+			if res.ServerSide == "unsupported" {
+				continue
+			}
+			serverResults = append(serverResults, res)
+		}
+		results = serverResults
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -387,6 +404,7 @@ func (m *ModOnlineManager) fetchCurseForgeMods(ctx context.Context, apiKey strin
 			return []SearchModResult{}
 		}
 		req.Header.Set("Accept", "application/json")
+		req.Header.Set("User-Agent", "MineServer/1.0 (discopanel-admin)")
 		resp, err = m.httpClient.Do(req)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			if resp != nil {
@@ -610,7 +628,73 @@ func (m *ModOnlineManager) handleModrinthVersions(w http.ResponseWriter, r *http
 	})
 }
 
+func (m *ModOnlineManager) resolveCurseForgeSlug(ctx context.Context, apiKey, slug string) string {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return ""
+	}
+
+	searchURL := fmt.Sprintf("https://api.curse.tools/v1/cf/mods/search?gameId=432&slug=%s", url.QueryEscape(slug))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("User-Agent", "MineServer/1.0 (discopanel-admin)")
+	req.Header.Set("Accept", "application/json")
+	if apiKey != "" {
+		req.Header.Set("x-api-key", apiKey)
+	}
+
+	resp, err := m.httpClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		if apiKey != "" {
+			officialURL := fmt.Sprintf("https://api.curseforge.com/v1/mods/search?gameId=432&slug=%s", url.QueryEscape(slug))
+			if oReq, oErr := http.NewRequestWithContext(ctx, http.MethodGet, officialURL, nil); oErr == nil {
+				oReq.Header.Set("x-api-key", apiKey)
+				oReq.Header.Set("Accept", "application/json")
+				oResp, oDoErr := m.httpClient.Do(oReq)
+				if oDoErr == nil && oResp.StatusCode == http.StatusOK {
+					defer oResp.Body.Close()
+					var data struct {
+						Data []struct {
+							ID int `json:"id"`
+						} `json:"data"`
+					}
+					if json.NewDecoder(oResp.Body).Decode(&data) == nil && len(data.Data) > 0 {
+						return fmt.Sprintf("%d", data.Data[0].ID)
+					}
+				}
+				if oResp != nil {
+					oResp.Body.Close()
+				}
+			}
+		}
+		return ""
+	}
+	defer resp.Body.Close()
+
+	var data struct {
+		Data []struct {
+			ID int `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil || len(data.Data) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d", data.Data[0].ID)
+}
+
 func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *http.Request, apiKey, modID, loader, mcVersion string) {
+	// If modID is a slug (contains non-digits), resolve to numeric ID
+	if _, err := strconv.Atoi(modID); err != nil {
+		if resolved := m.resolveCurseForgeSlug(r.Context(), apiKey, modID); resolved != "" {
+			modID = resolved
+		}
+	}
+
 	cfLoaderType := 0
 	switch loader {
 	case "forge":
@@ -655,13 +739,14 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 				}
 			}
 		}
-		// Fallback to keyless proxy
+		// Fallback to keyless proxy with User-Agent
 		proxyURL := buildReqURL("https://api.curse.tools/v1/cf", useFilters)
 		req, rErr := http.NewRequestWithContext(r.Context(), http.MethodGet, proxyURL, nil)
 		if rErr != nil {
 			return nil, rErr
 		}
 		req.Header.Set("Accept", "application/json")
+		req.Header.Set("User-Agent", "MineServer/1.0 (discopanel-admin)")
 		return m.httpClient.Do(req)
 	}
 
@@ -687,12 +772,13 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 
 	var cfFiles struct {
 		Data []struct {
-			ID           int    `json:"id"`
-			DisplayName  string `json:"displayName"`
-			FileName     string `json:"fileName"`
-			ReleaseType  int    `json:"releaseType"` // 1: release, 2: beta, 3: alpha
-			DownloadURL  string `json:"downloadUrl"`
-			FileLength   int64  `json:"fileLength"`
+			ID           int      `json:"id"`
+			DisplayName  string   `json:"displayName"`
+			FileName     string   `json:"fileName"`
+			ReleaseType  int      `json:"releaseType"` // 1: release, 2: beta, 3: alpha
+			DownloadURL  string   `json:"downloadUrl"`
+			FileLength   int64    `json:"fileLength"`
+			GameVersions []string `json:"gameVersions"`
 			Dependencies []struct {
 				ModID        int `json:"modId"`
 				RelationType int `json:"relationType"` // 3: required
@@ -707,6 +793,34 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 
 	var versions []ModVersionItem
 	for _, f := range cfFiles.Data {
+		// Filter by mcVersion / loader if gameVersions present
+		if len(f.GameVersions) > 0 {
+			if mcVersion != "" {
+				mcMatch := false
+				for _, gv := range f.GameVersions {
+					if gv == mcVersion || strings.HasPrefix(gv, mcVersion) {
+						mcMatch = true
+						break
+					}
+				}
+				if !mcMatch {
+					continue
+				}
+			}
+			if loader != "" && loader != "vanilla" {
+				loaderMatch := false
+				for _, gv := range f.GameVersions {
+					if strings.EqualFold(gv, loader) {
+						loaderMatch = true
+						break
+					}
+				}
+				if !loaderMatch {
+					continue
+				}
+			}
+		}
+
 		vType := "release"
 		if f.ReleaseType == 2 {
 			vType = "beta"
@@ -741,6 +855,43 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 			FileSize:      f.FileLength,
 			Dependencies:  deps,
 		})
+	}
+
+	// If strict gameVersion filtering was too restrictive, fallback to returning all files
+	if len(versions) == 0 && len(cfFiles.Data) > 0 {
+		for _, f := range cfFiles.Data {
+			vType := "release"
+			if f.ReleaseType == 2 {
+				vType = "beta"
+			} else if f.ReleaseType == 3 {
+				vType = "alpha"
+			}
+			var deps []ModDependencyItem
+			for _, d := range f.Dependencies {
+				depType := "optional"
+				if d.RelationType == 3 {
+					depType = "required"
+				}
+				deps = append(deps, ModDependencyItem{
+					ProjectID:      fmt.Sprintf("%d", d.ModID),
+					DependencyType: depType,
+				})
+			}
+			downloadURL := f.DownloadURL
+			if downloadURL == "" && f.FileName != "" {
+				downloadURL = fmt.Sprintf("https://edge.forgecdn.net/files/%d/%d/%s", f.ID/1000, f.ID%1000, url.PathEscape(f.FileName))
+			}
+			versions = append(versions, ModVersionItem{
+				ID:            fmt.Sprintf("%d", f.ID),
+				VersionNumber: f.DisplayName,
+				Name:          f.DisplayName,
+				VersionType:   vType,
+				FileName:      f.FileName,
+				DownloadURL:   downloadURL,
+				FileSize:      f.FileLength,
+				Dependencies:  deps,
+			})
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{

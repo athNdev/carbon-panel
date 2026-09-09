@@ -31,7 +31,8 @@
 		X,
 		Globe,
 		Loader2,
-		Sparkles,
+		Boxes,
+		KeyRound,
 		FileSearch
 	} from '@lucide/svelte';
 	import ManifestInspectorDialog from '$lib/components/manifest-inspector-dialog.svelte';
@@ -467,7 +468,7 @@
 				onclick={() => goto('/modpacks/studio')}
 				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
 			>
-				<Sparkles class="mr-2 h-5 w-5" />
+				<Boxes class="mr-2 h-5 w-5" />
 				Modpack Studio
 			</Button>
 			<Button
@@ -485,7 +486,7 @@
 		<div class="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2 font-medium text-primary">
-					<Sparkles class="h-4 w-4" />
+					<KeyRound class="h-4 w-4" />
 					CurseForge Keyless Mode Active
 				</div>
 				<Button size="sm" variant="ghost" class="h-7 text-xs" href="/settings?tab=api-keys">

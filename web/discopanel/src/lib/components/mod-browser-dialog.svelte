@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Dialog as DialogPrimitive } from 'bits-ui';
 	import {
 		DialogContent,
@@ -21,9 +22,13 @@
 		CheckCircle2,
 		ExternalLink,
 		ArrowLeft,
-		Sparkles,
+		Boxes,
 		AlertTriangle,
-		Layers
+		Layers,
+		Filter,
+		X,
+		Plus,
+		Check
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
@@ -69,6 +74,12 @@
 		dependencies: ModDependency[];
 	}
 
+	interface ActiveFilter {
+		key: string;
+		value: string;
+		removable: boolean;
+	}
+
 	let { open = $bindable(false), server, onInstalled }: Props = $props();
 
 	let searchQuery = $state('');
@@ -105,17 +116,97 @@
 		return s || 'fabric';
 	}
 
+	// Filter Bar State
+	let activeFilters = $state<ActiveFilter[]>([
+		{ key: 'side', value: 'server', removable: true },
+		{ key: 'loader', value: getLoaderString(server.modLoader), removable: false },
+		...(server.mcVersion ? [{ key: 'version', value: server.mcVersion, removable: true }] : [])
+	]);
+
+	let filterInput = $state('');
+	let filterInputFocused = $state(false);
+
+	const FILTER_VOCABULARY = [
+		{ label: 'side:server', desc: 'Server-compatible only (omits client-only)' },
+		{ label: 'side:both', desc: 'Runs on client and server' },
+		{ label: 'side:client', desc: 'Client-side mods' },
+		{ label: 'loader:fabric', desc: 'Fabric mod loader' },
+		{ label: 'loader:forge', desc: 'Forge mod loader' },
+		{ label: 'loader:neoforge', desc: 'NeoForge mod loader' },
+		{ label: 'loader:quilt', desc: 'Quilt mod loader' },
+		{ label: 'version:1.21.4', desc: 'Minecraft 1.21.4' },
+		{ label: 'version:1.21.1', desc: 'Minecraft 1.21.1' },
+		{ label: 'version:1.20.4', desc: 'Minecraft 1.20.4' },
+		{ label: 'version:1.20.1', desc: 'Minecraft 1.20.1' },
+		{ label: 'version:1.19.4', desc: 'Minecraft 1.19.4' },
+		{ label: 'version:1.19.2', desc: 'Minecraft 1.19.2' },
+		{ label: 'version:1.18.2', desc: 'Minecraft 1.18.2' },
+		{ label: 'version:1.16.5', desc: 'Minecraft 1.16.5' },
+		{ label: 'category:optimization', desc: 'Performance and FPS' },
+		{ label: 'category:technology', desc: 'Tech & machinery' },
+		{ label: 'category:magic', desc: 'Spells, rituals, sorcery' },
+		{ label: 'category:storage', desc: 'Chests & backpacks' },
+		{ label: 'category:adventure', desc: 'Dungeons & exploration' },
+		{ label: 'category:utility', desc: 'QoL tools & utilities' },
+		{ label: 'category:worldgen', desc: 'Biomes & structures' }
+	];
+
+	let suggestions = $derived.by(() => {
+		const q = filterInput.trim().toLowerCase();
+		if (!q) {
+			return FILTER_VOCABULARY.slice(0, 6);
+		}
+		return FILTER_VOCABULARY.filter(item =>
+			item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)
+		).slice(0, 6);
+	});
+
+	function addFilter(filterStr: string) {
+		const parts = filterStr.split(':');
+		if (parts.length >= 2) {
+			const key = parts[0].trim().toLowerCase();
+			const value = parts.slice(1).join(':').trim().toLowerCase();
+			activeFilters = activeFilters.filter(f => f.key !== key);
+			activeFilters.push({ key, value, removable: true });
+			filterInput = '';
+			filterInputFocused = false;
+			searchMods();
+		}
+	}
+
+	function removeFilter(key: string) {
+		activeFilters = activeFilters.filter(f => f.key !== key);
+		searchMods();
+	}
+
+	// Filtered mods list - omits client-only mods by default in server context
+	let displayMods = $derived.by(() => {
+		const sideFilter = activeFilters.find(f => f.key === 'side')?.value;
+		if (sideFilter === 'server') {
+			return mods.filter(m => m.server_side !== 'unsupported');
+		} else if (sideFilter === 'client') {
+			return mods.filter(m => m.client_side !== 'unsupported');
+		}
+		return mods;
+	});
+
 	async function searchMods() {
 		searching = true;
 		searchError = '';
 		mods = [];
 		try {
-			const loader = getLoaderString(server.modLoader);
+			const loaderVal = activeFilters.find(f => f.key === 'loader')?.value || getLoaderString(server.modLoader);
+			const versionVal = activeFilters.find(f => f.key === 'version')?.value || (filterByVersion ? (server.mcVersion || '') : '');
+			const sideVal = activeFilters.find(f => f.key === 'side')?.value || '';
+			const categoryVal = activeFilters.find(f => f.key === 'category')?.value || '';
+
 			const params = new URLSearchParams({
 				query: searchQuery.trim(),
 				platform,
-				loader,
-				mc_version: filterByVersion ? (server.mcVersion || '') : ''
+				loader: loaderVal,
+				mc_version: versionVal,
+				side: sideVal,
+				...(categoryVal ? { category: categoryVal } : {})
 			});
 
 			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/search?${params.toString()}`);
@@ -137,12 +228,6 @@
 		}
 	}
 
-	$effect(() => {
-		if (open && mods.length === 0 && !searching) {
-			searchMods();
-		}
-	});
-
 	async function viewModVersions(mod: SearchMod) {
 		selectedMod = mod;
 		loadingVersions = true;
@@ -151,14 +236,16 @@
 		selectedDependencies = {};
 
 		try {
-			const loader = getLoaderString(server.modLoader);
+			const loaderVal = activeFilters.find(f => f.key === 'loader')?.value || getLoaderString(server.modLoader);
+			const versionVal = activeFilters.find(f => f.key === 'version')?.value || (filterByVersion ? (server.mcVersion || '') : '');
 			const params = new URLSearchParams({
 				platform: mod.platform,
-				loader,
-				mc_version: filterByVersion ? (server.mcVersion || '') : ''
+				loader: loaderVal,
+				mc_version: versionVal
 			});
 
-			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/${mod.slug || mod.id}/versions?${params.toString()}`);
+			const modTarget = (mod.platform === 'curseforge' && mod.id) ? mod.id : (mod.slug || mod.id);
+			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/${modTarget}/versions?${params.toString()}`);
 			if (!res.ok) {
 				const errorText = await res.text();
 				throw new Error(errorText || `HTTP ${res.status}`);
@@ -231,10 +318,15 @@
 		return count.toString();
 	}
 
+	let wasOpen = false;
 	$effect(() => {
-		if (open) {
-			searchMods();
-		} else {
+		if (open && !wasOpen) {
+			wasOpen = true;
+			untrack(() => {
+				searchMods();
+			});
+		} else if (!open && wasOpen) {
+			wasOpen = false;
 			selectedMod = null;
 		}
 	});
@@ -252,7 +344,7 @@
 					{/if}
 					<div>
 						<DialogTitle class="flex items-center gap-2 text-xl font-bold">
-							<Sparkles class="h-5 w-5 text-primary" />
+							<Boxes class="h-5 w-5 text-primary" />
 							{selectedMod ? selectedMod.title : 'Browse & Install Online Mods'}
 						</DialogTitle>
 						<DialogDescription>
@@ -274,6 +366,13 @@
 							type="button"
 							onclick={() => {
 								filterByVersion = !filterByVersion;
+								if (filterByVersion) {
+									if (!activeFilters.some(f => f.key === 'version')) {
+										activeFilters.push({ key: 'version', value: server.mcVersion, removable: true });
+									}
+								} else {
+									activeFilters = activeFilters.filter(f => f.key !== 'version');
+								}
 								searchMods();
 							}}
 							class="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-mono font-semibold transition-colors cursor-pointer {filterByVersion ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted text-muted-foreground border border-dashed hover:text-foreground'}"
@@ -322,6 +421,70 @@
 						{/if}
 					</Button>
 				</div>
+
+				<!-- Interactive Filter Bar -->
+				<div class="flex flex-wrap items-center gap-2 pt-1 border-t border-border/40">
+					<div class="flex items-center text-xs font-semibold text-muted-foreground mr-1">
+						<Filter class="h-3.5 w-3.5 mr-1 text-primary" />
+						Filters:
+					</div>
+
+					{#each activeFilters as f (f.key)}
+						<span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground border border-border/50">
+							<span class="font-mono text-muted-foreground text-[11px]">{f.key}:</span>
+							<span class="font-semibold">{f.value}</span>
+							{#if f.removable}
+								<button
+									type="button"
+									onclick={() => removeFilter(f.key)}
+									class="ml-0.5 hover:text-destructive transition-colors cursor-pointer"
+									title={`Remove ${f.key} filter`}
+								>
+									<X class="h-3 w-3" />
+								</button>
+							{/if}
+						</span>
+					{/each}
+
+					<!-- Filter input with auto-suggestions -->
+					<div class="relative inline-block">
+						<div class="flex items-center">
+							<input
+								type="text"
+								placeholder="+ Add filter (e.g. side:server, category:optimization)..."
+								bind:value={filterInput}
+								onfocus={() => (filterInputFocused = true)}
+								onblur={() => setTimeout(() => (filterInputFocused = false), 200)}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' && filterInput.trim()) {
+										addFilter(filterInput.trim());
+									} else if (e.key === 'Escape') {
+										filterInputFocused = false;
+									}
+								}}
+								class="h-7 text-xs px-2 rounded-md bg-muted/50 border border-dashed border-border focus:border-primary focus:bg-background focus:outline-none w-72 placeholder:text-muted-foreground/70"
+							/>
+						</div>
+
+						{#if filterInputFocused && suggestions.length > 0}
+							<div class="absolute left-0 top-full mt-1 z-50 w-80 rounded-lg border bg-popover text-popover-foreground shadow-lg overflow-hidden py-1">
+								<div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b mb-1">
+									Filter Suggestions (type key:value)
+								</div>
+								{#each suggestions as s}
+									<button
+										type="button"
+										onmousedown={() => addFilter(s.label)}
+										class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground flex flex-col cursor-pointer transition-colors"
+									>
+										<span class="font-mono font-medium text-primary">{s.label}</span>
+										<span class="text-[10px] text-muted-foreground">{s.desc}</span>
+									</button>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				</div>
 			</div>
 
 			<!-- Search Results / Mod List -->
@@ -337,15 +500,15 @@
 						<Loader2 class="h-8 w-8 animate-spin text-primary" />
 						<p class="mt-3 text-sm">Searching compatible mods for MC {server.mcVersion}...</p>
 					</div>
-				{:else if mods.length === 0}
+				{:else if displayMods.length === 0}
 					<div class="flex flex-col items-center justify-center py-20 text-muted-foreground">
 						<Package class="h-10 w-10 stroke-[1.5]" />
 						<p class="mt-3 text-base font-medium">No matching mods found</p>
-						<p class="text-xs text-muted-foreground">Try a different query or switch between Modrinth and CurseForge.</p>
+						<p class="text-xs text-muted-foreground">Try a different query or remove some active filters.</p>
 					</div>
 				{:else}
 					<div class="grid grid-cols-1 gap-3">
-						{#each mods as mod (mod.id)}
+						{#each displayMods as mod (mod.id)}
 							<Card class="hover:border-primary/50 transition-colors">
 								<CardContent class="p-4 flex items-start justify-between gap-4">
 									<div class="flex items-start gap-3.5 flex-1 min-w-0">
@@ -380,6 +543,16 @@
 													<Download class="mr-1 h-3 w-3" />
 													{formatDownloads(mod.downloads)}
 												</Badge>
+												{#if mod.server_side}
+													<Badge variant="outline" class="text-[10px] h-5 px-1.5 {mod.server_side === 'required' ? 'border-primary/60 text-primary' : 'text-muted-foreground'}">
+														Server: {mod.server_side}
+													</Badge>
+												{/if}
+												{#if mod.client_side}
+													<Badge variant="outline" class="text-[10px] h-5 px-1.5 text-muted-foreground">
+														Client: {mod.client_side}
+													</Badge>
+												{/if}
 												{#each (mod.categories || []).slice(0, 3) as cat}
 													<Badge variant="outline" class="text-[11px] h-5 px-1.5 capitalize">
 														{cat}

@@ -4,7 +4,7 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { AliasCategory, type AliasInfo } from '$lib/proto/discopanel/v1/module_pb';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { Braces, Server, Box, Sparkles, Loader2, Check, Copy } from '@lucide/svelte';
+	import { Braces, Server, Box, Zap, Loader2, Check, Copy } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils/clipboard';
 
@@ -65,7 +65,7 @@
 			case AliasCategory.MODULE:
 				return Box;
 			case AliasCategory.SPECIAL:
-				return Sparkles;
+				return Zap;
 			default:
 				return Braces;
 		}
