@@ -1,10 +1,21 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { AliasCategory, type AliasInfo } from '$lib/proto/discopanel/v1/module_pb';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { Braces, Server, Box, Sparkles, Loader2, Check, Copy } from '@lucide/svelte';
+	import { Braces, Server, Box, Zap, Loader2, Check, Copy } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils/clipboard';
 
@@ -65,7 +76,7 @@
 			case AliasCategory.MODULE:
 				return Box;
 			case AliasCategory.SPECIAL:
-				return Sparkles;
+				return Zap;
 			default:
 				return Braces;
 		}

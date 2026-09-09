@@ -28,8 +28,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		HardDrive,
 		CheckCircle2,
 		Server as ServerIcon,
-		Info,
-		Sparkles
+		Info
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { rpcClient } from '$lib/api/rpc-client';
