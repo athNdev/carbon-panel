@@ -36,7 +36,7 @@
 		Package,
 		ExternalLink,
 		Loader2,
-		Sparkles,
+		Blocks,
 		Layers,
 		CheckCircle2,
 		AlertTriangle
@@ -88,6 +88,9 @@
 	let pack = $state<Pack | null>(null);
 	let loading = $state(true);
 	let saving = $state(false);
+	let exportingPack = $state<'mrpack' | 'curseforge' | null>(null);
+	let availableLoaderVersions = $state<string[]>(['latest']);
+	let loadingLoaderVersions = $state(false);
 
 	// Mod filter in table
 	let modFilter = $state('');
@@ -115,6 +118,62 @@
 		'1.16.5',
 		'1.12.2'
 	];
+
+	async function fetchLoaderVersions(loader: string, mcVer: string) {
+		if (!loader) return;
+		loadingLoaderVersions = true;
+		try {
+			const res = await apiFetch(`/api/v1/packwiz/loaders/${loader.toLowerCase()}/versions?game_version=${mcVer || ''}`);
+			if (res.ok) {
+				const data = await res.json();
+				if (data.versions && data.versions.length > 0) {
+					availableLoaderVersions = data.versions;
+					if (pack?.loader_version && !availableLoaderVersions.includes(pack.loader_version)) {
+						availableLoaderVersions = [pack.loader_version, ...availableLoaderVersions];
+					}
+					return;
+				}
+			}
+		} catch (err) {
+			console.error('Failed to load loader versions:', err);
+		} finally {
+			loadingLoaderVersions = false;
+		}
+		availableLoaderVersions = ['latest'];
+	}
+
+	$effect(() => {
+		if (pack?.mod_loader) {
+			fetchLoaderVersions(pack.mod_loader, pack.mc_version);
+		}
+	});
+
+	async function exportPack(format: 'mrpack' | 'curseforge') {
+		if (!pack) return;
+		exportingPack = format;
+		try {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/export/${format}`);
+			if (!res.ok) {
+				const txt = await res.text();
+				throw new Error(txt || `HTTP ${res.status}`);
+			}
+			const blob = await res.blob();
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = format === 'mrpack' ? `${pack.name}.mrpack` : `${pack.name}.zip`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+			toast.success(`Exported ${format === 'mrpack' ? '.mrpack' : 'CurseForge .zip'}`);
+		} catch (err: any) {
+			console.error('Failed to export modpack:', err);
+			toast.error(`Export failed: ${err.message || 'Unauthorized or server error'}`);
+		} finally {
+			exportingPack = null;
+		}
+	}
 
 	async function loadPack() {
 		if (!packId) return;
@@ -250,7 +309,8 @@
 				loader: pack.mod_loader.toLowerCase(),
 				mc_version: pack.mc_version
 			});
-			const vRes = await apiFetch(`/api/v1/servers/none/mods/${item.slug || item.id}/versions?${vParams.toString()}`);
+			const modTarget = (item.platform === 'curseforge' && item.id) ? item.id : (item.slug || item.id);
+			const vRes = await apiFetch(`/api/v1/servers/none/mods/${modTarget}/versions?${vParams.toString()}`);
 			if (!vRes.ok) throw new Error('No compatible versions found');
 			const vData = await vRes.json();
 			const versions = vData.versions || [];
@@ -344,23 +404,37 @@
 					Deploy to Server
 				</Button>
 
-				<a
-					href={`/api/v1/packwiz/packs/${packId}/export/mrpack`}
-					download
-					class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground shadow-xs transition-colors"
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => exportPack('mrpack')}
+					disabled={exportingPack === 'mrpack'}
+					class="text-xs h-8"
+					title="Export .mrpack"
 				>
-					<Download class="mr-1.5 h-3.5 w-3.5" />
+					{#if exportingPack === 'mrpack'}
+						<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />
+					{:else}
+						<Download class="mr-1.5 h-3.5 w-3.5" />
+					{/if}
 					.mrpack
-				</a>
+				</Button>
 
-				<a
-					href={`/api/v1/packwiz/packs/${packId}/export/curseforge`}
-					download
-					class="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground shadow-xs transition-colors"
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => exportPack('curseforge')}
+					disabled={exportingPack === 'curseforge'}
+					class="text-xs h-8"
+					title="Export CurseForge .zip"
 				>
-					<Download class="mr-1.5 h-3.5 w-3.5" />
+					{#if exportingPack === 'curseforge'}
+						<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />
+					{:else}
+						<Download class="mr-1.5 h-3.5 w-3.5" />
+					{/if}
 					CurseForge .zip
-				</a>
+				</Button>
 
 				<Button size="sm" onclick={saveMetadata} disabled={saving}>
 					{#if saving}
@@ -435,8 +509,25 @@
 					</div>
 
 					<div class="space-y-1.5">
-						<Label for="metaLoaderVer" class="text-xs">Loader Version</Label>
-						<Input id="metaLoaderVer" bind:value={pack.loader_version} class="h-8 text-sm" />
+						<div class="flex items-center justify-between">
+							<Label for="metaLoaderVer" class="text-xs">Loader Version</Label>
+							{#if loadingLoaderVersions}
+								<span class="inline-flex items-center text-[10px] text-muted-foreground">
+									<Loader2 class="h-2.5 w-2.5 mr-1 animate-spin" />
+									fetching...
+								</span>
+							{/if}
+						</div>
+						<Select type="single" bind:value={pack.loader_version}>
+							<SelectTrigger id="metaLoaderVer" class="h-8 text-xs">
+								<span>{pack.loader_version || 'latest'}</span>
+							</SelectTrigger>
+							<SelectContent class="max-h-56 overflow-y-auto">
+								{#each availableLoaderVersions as v}
+									<SelectItem value={v}>{v}</SelectItem>
+								{/each}
+							</SelectContent>
+						</Select>
 					</div>
 
 					<Button size="sm" class="w-full mt-2" onclick={saveMetadata} disabled={saving}>
@@ -580,7 +671,7 @@
 		<DialogHeader>
 			<div class="flex items-center justify-between">
 				<DialogTitle class="flex items-center gap-2 text-xl font-bold">
-					<Sparkles class="h-5 w-5 text-primary" />
+					<Blocks class="h-5 w-5 text-primary" />
 					Search & Add Mods
 				</DialogTitle>
 				{#if pack}

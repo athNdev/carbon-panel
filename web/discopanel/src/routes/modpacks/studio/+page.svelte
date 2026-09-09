@@ -25,7 +25,9 @@
 		Package,
 		Plus,
 		ArrowLeft,
-		Sparkles,
+		Blocks,
+		Boxes,
+		PackagePlus,
 		Download,
 		Rocket,
 		Trash2,
@@ -61,6 +63,9 @@
 	let newMcVersion = $state('1.20.1');
 	let newLoader = $state('fabric');
 	let newLoaderVersion = $state('latest');
+	let availableLoaderVersions = $state<string[]>(['latest']);
+	let loadingLoaderVersions = $state(false);
+	let exportingPack = $state<string | null>(null);
 
 	// Deploy Dialog State
 	let deployDialogOpen = $state(false);
@@ -78,6 +83,61 @@
 		'1.16.5',
 		'1.12.2'
 	];
+
+	async function fetchLoaderVersions(loader: string, mcVer: string) {
+		loadingLoaderVersions = true;
+		try {
+			const res = await apiFetch(`/api/v1/packwiz/loaders/${loader.toLowerCase()}/versions?game_version=${mcVer || ''}`);
+			if (res.ok) {
+				const data = await res.json();
+				if (data.versions && data.versions.length > 0) {
+					availableLoaderVersions = data.versions;
+					if (!availableLoaderVersions.includes(newLoaderVersion)) {
+						newLoaderVersion = 'latest';
+					}
+					return;
+				}
+			}
+		} catch (err) {
+			console.error('Failed to load loader versions:', err);
+		} finally {
+			loadingLoaderVersions = false;
+		}
+		availableLoaderVersions = ['latest'];
+		newLoaderVersion = 'latest';
+	}
+
+	$effect(() => {
+		if (newLoader && newMcVersion) {
+			fetchLoaderVersions(newLoader, newMcVersion);
+		}
+	});
+
+	async function exportPack(packId: string, format: 'mrpack' | 'curseforge', packName: string) {
+		exportingPack = `${packId}-${format}`;
+		try {
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/export/${format}`);
+			if (!res.ok) {
+				const txt = await res.text();
+				throw new Error(txt || `HTTP ${res.status}`);
+			}
+			const blob = await res.blob();
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = format === 'mrpack' ? `${packName}.mrpack` : `${packName}.zip`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+			toast.success(`Exported ${format === 'mrpack' ? '.mrpack' : 'CurseForge .zip'}`);
+		} catch (err: any) {
+			console.error('Failed to export modpack:', err);
+			toast.error(`Export failed: ${err.message || 'Unauthorized or server error'}`);
+		} finally {
+			exportingPack = null;
+		}
+	}
 
 	async function loadPacks() {
 		loading = true;
@@ -162,7 +222,7 @@
 				<ArrowLeft class="h-5 w-5" />
 			</Button>
 			<div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 shadow-lg">
-				<Sparkles class="h-8 w-8 text-primary" />
+				<Boxes class="h-8 w-8 text-primary" />
 			</div>
 			<div class="space-y-1">
 				<h2 class="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
@@ -238,25 +298,35 @@
 							</div>
 
 							<div class="flex items-center gap-2">
-								<a
-									href={`/api/v1/packwiz/packs/${pack.id}/export/mrpack`}
-									download
-									class="inline-flex items-center text-xs text-muted-foreground hover:text-primary transition-colors"
+								<button
+									type="button"
+									onclick={() => exportPack(pack.id, 'mrpack', pack.name)}
+									disabled={exportingPack === `${pack.id}-mrpack`}
+									class="inline-flex items-center text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
 									title="Export .mrpack"
 								>
-									<Download class="h-3.5 w-3.5 mr-1" />
+									{#if exportingPack === `${pack.id}-mrpack`}
+										<Loader2 class="h-3.5 w-3.5 mr-1 animate-spin" />
+									{:else}
+										<Download class="h-3.5 w-3.5 mr-1" />
+									{/if}
 									.mrpack
-								</a>
+								</button>
 								<span>·</span>
-								<a
-									href={`/api/v1/packwiz/packs/${pack.id}/export/curseforge`}
-									download
-									class="inline-flex items-center text-xs text-muted-foreground hover:text-primary transition-colors"
+								<button
+									type="button"
+									onclick={() => exportPack(pack.id, 'curseforge', pack.name)}
+									disabled={exportingPack === `${pack.id}-curseforge`}
+									class="inline-flex items-center text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
 									title="Export CurseForge .zip"
 								>
-									<Download class="h-3.5 w-3.5 mr-1" />
+									{#if exportingPack === `${pack.id}-curseforge`}
+										<Loader2 class="h-3.5 w-3.5 mr-1 animate-spin" />
+									{:else}
+										<Download class="h-3.5 w-3.5 mr-1" />
+									{/if}
 									CurseForge
-								</a>
+								</button>
 							</div>
 						</div>
 
@@ -301,7 +371,7 @@
 	<DialogContent class="max-w-md p-6">
 		<DialogHeader>
 			<DialogTitle class="flex items-center gap-2 text-xl font-bold">
-				<Sparkles class="h-5 w-5 text-primary" />
+				<PackagePlus class="h-5 w-5 text-primary" />
 				Create New Modpack
 			</DialogTitle>
 			<DialogDescription>
@@ -358,8 +428,25 @@
 			</div>
 
 			<div class="space-y-1.5">
-				<Label for="loaderVersion">Loader Version</Label>
-				<Input id="loaderVersion" placeholder="latest" bind:value={newLoaderVersion} />
+				<div class="flex items-center justify-between">
+					<Label for="loaderVersion">Loader Version</Label>
+					{#if loadingLoaderVersions}
+						<span class="inline-flex items-center text-[10px] text-muted-foreground">
+							<Loader2 class="h-2.5 w-2.5 mr-1 animate-spin" />
+							fetching...
+						</span>
+					{/if}
+				</div>
+				<Select type="single" bind:value={newLoaderVersion}>
+					<SelectTrigger id="loaderVersion">
+						<span>{newLoaderVersion || 'latest'}</span>
+					</SelectTrigger>
+					<SelectContent class="max-h-56 overflow-y-auto">
+						{#each availableLoaderVersions as v}
+							<SelectItem value={v}>{v}</SelectItem>
+						{/each}
+					</SelectContent>
+				</Select>
 			</div>
 		</div>
 
@@ -370,7 +457,7 @@
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 					Creating...
 				{:else}
-					<Sparkles class="mr-2 h-4 w-4" />
+					<PackagePlus class="mr-2 h-4 w-4" />
 					Create Project
 				{/if}
 			</Button>

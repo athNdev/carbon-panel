@@ -20,8 +20,7 @@
 		HardDrive,
 		CheckCircle2,
 		Server as ServerIcon,
-		Info,
-		Sparkles
+		Info
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { rpcClient } from '$lib/api/rpc-client';

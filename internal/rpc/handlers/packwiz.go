@@ -43,7 +43,20 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/packwiz/")
 	parts := strings.Split(path, "/")
 
-	if len(parts) >= 2 && parts[0] != "packs" {
+	// Route /api/v1/packwiz/loaders/{loader}/versions
+	if len(parts) >= 2 && parts[0] == "loaders" {
+		loader := parts[1]
+		mcVer := r.URL.Query().Get("game_version")
+		versions := GetLoaderVersions(r.Context(), loader, mcVer)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"loader":       loader,
+			"game_version": mcVer,
+			"versions":     versions,
+		})
+		return
+	}
+
+	if len(parts) >= 2 && parts[0] != "packs" && parts[0] != "loaders" {
 		packID := parts[0]
 		relPath := strings.Join(parts[1:], "/")
 		data, contentType, err := h.manager.ServePackFile(packID, relPath)
@@ -60,6 +73,11 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Auth check for studio management routes
 	if h.authManager != nil && h.authManager.IsAnyAuthEnabled() {
 		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			if token := r.URL.Query().Get("token"); token != "" {
+				authHeader = "Bearer " + token
+			}
+		}
 		user, err := h.authManager.AuthenticateFromHeader(r.Context(), authHeader)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -240,7 +258,7 @@ func (h *PackwizHandler) handleExport(w http.ResponseWriter, r *http.Request, pa
 		if err := h.manager.ExportMrpack(packID, w); err != nil {
 			h.log.Error("Failed to export mrpack: %v", err)
 		}
-	case "curseforge":
+	case "curseforge", "zip":
 		filename := fmt.Sprintf("%s-%s.zip", pack.Name, pack.Version)
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))

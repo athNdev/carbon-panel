@@ -14,7 +14,7 @@
 		Package,
 		FileText,
 		X,
-		Sparkles
+		Boxes
 	} from '@lucide/svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
@@ -233,7 +233,7 @@
 					{#if canHaveMods()}
 						<div class="flex items-center gap-2">
 							<Button variant="default" onclick={() => (browserDialogOpen = true)}>
-								<Sparkles class="mr-2 h-4 w-4" />
+								<Boxes class="mr-2 h-4 w-4" />
 								Browse & Install Mods
 							</Button>
 							<Button variant="outline" onclick={() => fileInput?.click()} disabled={uploading}>

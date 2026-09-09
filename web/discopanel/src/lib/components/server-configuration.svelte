@@ -10,7 +10,7 @@
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from 'svelte-sonner';
-	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send, Sparkles, ChevronDown, ChevronRight, Wand2 } from '@lucide/svelte';
+	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send, KeyRound, ChevronDown, ChevronRight, Wand2 } from '@lucide/svelte';
 	import { copyToClipboard } from '$lib/utils/clipboard';
 	import type { Server } from '$lib/proto/discopanel/v1/common_pb';
 	import { ServerStatus } from '$lib/proto/discopanel/v1/common_pb';
@@ -655,7 +655,7 @@
 												class="h-6 text-xs text-primary hover:bg-primary/10"
 												onclick={() => handleExtractFromPageUrl(getDisplayValue(prop))}
 											>
-												<Sparkles class="mr-1 h-3 w-3" />
+												<Wand2 class="mr-1 h-3 w-3" />
 												Extract Slug & File ID
 											</Button>
 										</div>
@@ -765,7 +765,7 @@
 						{#if activeCategory === 'curseforge'}
 							<div class="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
 								<div class="flex items-center gap-2 font-medium text-primary">
-									<Sparkles class="h-4 w-4" />
+									<KeyRound class="h-4 w-4" />
 									CurseForge Keyless Mode & Defaults Active
 								</div>
 								<p class="mt-1 text-xs text-muted-foreground">

@@ -105,3 +105,28 @@ func TestPackwizHandler_CRUD(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
+
+func TestPackwizHandler_LoaderVersions(t *testing.T) {
+	log := logger.New()
+	handler := NewPackwizHandler(nil, nil, log, nil, nil)
+
+	loaders := []string{"fabric", "forge", "neoforge", "quilt"}
+	for _, l := range loaders {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/packwiz/loaders/"+l+"/versions?game_version=1.20.1", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var resp struct {
+			Loader      string   `json:"loader"`
+			GameVersion string   `json:"game_version"`
+			Versions    []string `json:"versions"`
+		}
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, l, resp.Loader)
+		assert.Equal(t, "1.20.1", resp.GameVersion)
+		assert.NotEmpty(t, resp.Versions)
+		assert.Equal(t, "latest", resp.Versions[0])
+	}
+}
