@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 import { writable, derived, get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
@@ -300,15 +309,17 @@ function createAuthStore() {
 
 		getHeaders() {
 			const state = get({ subscribe });
-			const headers: HeadersInit = {};
-			if (state.token) {
-				headers['Authorization'] = `Bearer ${state.token}`;
+			const token = state.token || (browser ? localStorage.getItem('auth_token') : null);
+			const headers: Record<string, string> = {};
+			if (token) {
+				headers['Authorization'] = `Bearer ${token}`;
 			}
 			return headers;
 		},
 
 		getToken(): string | null {
-			return get({ subscribe }).token;
+			const state = get({ subscribe });
+			return state.token || (browser ? localStorage.getItem('auth_token') : null);
 		},
 
 		hasRole(role: string): boolean {
