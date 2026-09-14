@@ -5,15 +5,15 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
-	"github.com/nickheyer/discopanel/internal/auth"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	"github.com/athNdev/mineserver/internal/auth"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ discopanelv1connect.UserServiceHandler = (*UserService)(nil)
+var _ mineserverv1connect.UserServiceHandler = (*UserService)(nil)
 
 type UserService struct {
 	store       *storage.Store

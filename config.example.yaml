@@ -17,7 +17,7 @@ server:
   read_timeout: 15
   write_timeout: 15
   idle_timeout: 60
-  user_agent: "MineServer/1.0 (github.com/athNdev/discopanel)"
+  user_agent: "MineServer/1.0 (github.com/athNdev/mineserver)"
 
 # Database configuration
 database:
@@ -53,7 +53,7 @@ auth:
   anonymous_access: false  # Allow unauthenticated access
   jwt_secret: ""  # Leave empty to auto-generate
 
-  # Local authentication (login via discopanel web ui)
+  # Local authentication (login via mineserver web ui)
   local:
     enabled: true  # Enable local
     allow_registration: false  # Allow new users to register themselves via login
@@ -61,13 +61,13 @@ auth:
   # OIDC authentication (login via OIDC-compliant provider, ie: keycloak, authelia, authentik, etc.)
   oidc:
     enabled: false
-    issuer_uri: ""  # OIDC Provider url (ie: http://authelia.local:9091, http://localhost:8180/realms/discopanel, etc.)
-    client_id: ""  # Client ID registered with your OIDC (like "discopanel")
+    issuer_uri: ""  # OIDC Provider url (ie: http://authelia.local:9091, http://localhost:8180/realms/mineserver, etc.)
+    client_id: ""  # Client ID registered with your OIDC (like "mineserver")
     client_secret: ""  # Client secret registered with your OIDC
     redirect_url: ""  # Where OIDC sends users after login (ie: "http://localhost:8080/api/v1/auth/oidc/callback")
     scopes: ["openid", "profile", "email"]
     role_claim: "groups"  # The token claim that contains the user's groups (usually "groups")
-    role_mapping: {}  # Mapping to groups if they arent the same name as discopanels (ie: {"my-admins": "admin", "my-users": "user"})
+    role_mapping: {}  # Mapping to groups if they arent the same name as mineserver's (ie: {"my-admins": "admin", "my-users": "user"})
     skip_tls_verify: false  # Skip TLS certificate verification (for self-signed certs)
 
 # Upload configuration
@@ -295,7 +295,7 @@ minecraft:
 # Logging configuration
 logging:
   enabled: true
-  file_path: "./data/discopanel.log"
+  file_path: "./data/mineserver.log"
   max_size: 10
   max_backups: 5
   max_age: 30

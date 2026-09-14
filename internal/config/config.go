@@ -143,13 +143,13 @@ func Load(configPath string) (*Config, error) {
 	}
 	v.AddConfigPath(".")
 	v.AddConfigPath("./config")
-	v.AddConfigPath("/etc/discopanel")
+	v.AddConfigPath("/etc/MINESERVER")
 
 	// Set defaults
 	setDefaults(v)
 
 	// Enable environment variables
-	v.SetEnvPrefix("DISCOPANEL")
+	v.SetEnvPrefix("MINESERVER")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
@@ -191,10 +191,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.read_timeout", 15)
 	v.SetDefault("server.write_timeout", 15)
 	v.SetDefault("server.idle_timeout", 60)
-	v.SetDefault("server.user_agent", "DiscoPanel/1.0 (github.com/nickheyer/discopanel)")
+	v.SetDefault("server.user_agent", "MINESERVER/1.0 (github.com/athNdev/mineserver)")
 
 	// Database defaults
-	v.SetDefault("database.path", "./data/discopanel.db")
+	v.SetDefault("database.path", "./data/MINESERVER.db")
 	v.SetDefault("database.max_connections", 25)
 	v.SetDefault("database.max_idle_conns", 5)
 	v.SetDefault("database.conn_max_lifetime", 300)
@@ -204,7 +204,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("docker.sync_interval", 5)
 	v.SetDefault("docker.host", "unix:///var/run/docker.sock")
 	v.SetDefault("docker.version", "")
-	v.SetDefault("docker.network_name", "discopanel-network")
+	v.SetDefault("docker.network_name", "MINESERVER-network")
 	v.SetDefault("docker.registry_url", "")
 	v.SetDefault("docker.dns", "")
 	v.SetDefault("docker.labels", map[string]string{})
@@ -239,7 +239,7 @@ func setDefaults(v *viper.Viper) {
 
 	// Logging defaults
 	v.SetDefault("logging.enabled", true)
-	v.SetDefault("logging.file_path", "./data/discopanel.log")
+	v.SetDefault("logging.file_path", "./data/MINESERVER.log")
 	v.SetDefault("logging.max_size", 10)   // 10 MB
 	v.SetDefault("logging.max_backups", 5) // keep 5
 	v.SetDefault("logging.max_age", 30)    // 30 days
@@ -319,10 +319,10 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
-	// Validate custom Docker labels do not use reserved namespace 'discopanel.'
+	// Validate custom Docker labels do not use reserved namespace 'MINESERVER.'
 	for k := range cfg.Docker.Labels {
-		if strings.HasPrefix(k, "discopanel.") {
-			return fmt.Errorf("custom docker labels cannot begin with 'discopanel.', namespace reserved for internal management, invalid key: %s", k)
+		if strings.HasPrefix(k, "MINESERVER.") {
+			return fmt.Errorf("custom docker labels cannot begin with 'MINESERVER.', namespace reserved for internal management, invalid key: %s", k)
 		}
 	}
 

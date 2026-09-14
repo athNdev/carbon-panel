@@ -18,17 +18,17 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that SupportService implements the interface
-var _ discopanelv1connect.SupportServiceHandler = (*SupportService)(nil)
+var _ mineserverv1connect.SupportServiceHandler = (*SupportService)(nil)
 
 // SupportService implements the Support service
 type SupportService struct {
@@ -90,7 +90,7 @@ func (s *SupportService) GenerateSupportBundle(ctx context.Context, req *connect
 
 	// Prepare bundle file path
 	bundleID := uuid.New().String()
-	bundleFileName := fmt.Sprintf("discopanel-support-%s.tar.gz", time.Now().Format("20060102-150405"))
+	bundleFileName := fmt.Sprintf("MINESERVER-support-%s.tar.gz", time.Now().Format("20060102-150405"))
 	bundlePath := filepath.Join(s.config.Storage.TempDir, bundleFileName)
 
 	// Create the tar.gz file
@@ -223,7 +223,7 @@ func (s *SupportService) UploadSupportBundle(ctx context.Context, req *connect.R
 	defer os.RemoveAll(tempDir) // Clean up temp directory when done
 
 	// Prepare bundle file path
-	bundleFileName := fmt.Sprintf("discopanel-support-%s.tar.gz", time.Now().Format("20060102-150405"))
+	bundleFileName := fmt.Sprintf("MINESERVER-support-%s.tar.gz", time.Now().Format("20060102-150405"))
 	bundlePath := filepath.Join(s.config.Storage.TempDir, bundleFileName)
 
 	// Create the tar.gz file
@@ -411,7 +411,7 @@ func (s *SupportService) uploadBundleToServer(bundlePath, fileName string, userI
 func (s *SupportService) getSupportUrl() string {
 	url := os.Getenv("SUPPORT_BASE_URL")
 	if url == "" {
-		url = "https://support.discopanel.app"
+		url = "https://support.MINESERVER.app"
 	}
 	return url
 }
@@ -457,7 +457,7 @@ func (s *SupportService) addLogsToBundle(ctx context.Context, tarWriter *tar.Wri
 	// Add log file if it exists
 	logFilePath := s.log.GetLogFilePath()
 	if logFilePath != "" && fileExists(logFilePath) {
-		if err := addFileToTar(tarWriter, logFilePath, "logs/discopanel.log"); err != nil {
+		if err := addFileToTar(tarWriter, logFilePath, "logs/MINESERVER.log"); err != nil {
 			return fmt.Errorf("failed to add log file: %w", err)
 		}
 	}
@@ -468,7 +468,7 @@ func (s *SupportService) addLogsToBundle(ctx context.Context, tarWriter *tar.Wri
 		if logDir != "" && logDir != "." {
 			files, _ := os.ReadDir(logDir)
 			for _, file := range files {
-				if strings.HasPrefix(file.Name(), "discopanel") && strings.Contains(file.Name(), ".log") {
+				if strings.HasPrefix(file.Name(), "MINESERVER") && strings.Contains(file.Name(), ".log") {
 					fullPath := filepath.Join(logDir, file.Name())
 					if err := addFileToTar(tarWriter, fullPath, filepath.Join("logs", file.Name())); err != nil {
 						s.log.Warn("Failed to add log file %s: %v", file.Name(), err)
@@ -510,7 +510,7 @@ func (s *SupportService) addDatabaseToBundle(tarWriter *tar.Writer) error {
 	}
 
 	// Copy database file to tar
-	return addFileToTar(tarWriter, dbPath, "database/discopanel.db")
+	return addFileToTar(tarWriter, dbPath, "database/MINESERVER.db")
 }
 
 // addServerConfigsToBundle adds server configuration files to the bundle
@@ -742,7 +742,7 @@ func getVersionInfo() string {
 
 	// Check version file stored in home
 	if home, err := os.UserHomeDir(); err == nil {
-		versionFile := filepath.Join(home, ".discopanel")
+		versionFile := filepath.Join(home, ".MINESERVER")
 		if data, err := os.ReadFile(versionFile); err == nil {
 			if v := strings.TrimSpace(string(data)); v != "" {
 				return v

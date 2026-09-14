@@ -1,5 +1,5 @@
 ---
-# DiscoPanel - Authelia Configuration                
+# MINESERVER - Authelia Configuration                
 #                                                       
 # This config is ready to use for development/testing. 
 # For production, change ALL secrets and generate new keys.
@@ -14,11 +14,11 @@ log:
   level: 'info'
 
 totp:
-  issuer: 'discopanel'
+  issuer: 'MINESERVER'
 
 identity_validation:
   reset_password:
-    jwt_secret: 'discopanel-dev-jwt-reset-secret-change-me-in-production'
+    jwt_secret: 'MINESERVER-dev-jwt-reset-secret-change-me-in-production'
 
 # User accounts are stored in ./users_database.yml
 authentication_backend:
@@ -36,7 +36,7 @@ authentication_backend:
 
 # Authelia needs a cookie domain for its login portal. ../docker-compose.yaml for instruction
 session:
-  secret: 'discopanel-dev-session-secret-change-me-in-production'
+  secret: 'MINESERVER-dev-session-secret-change-me-in-production'
   cookies:
     - name: 'authelia_session'
       domain: 'traefik.me'
@@ -45,7 +45,7 @@ session:
       inactivity: '5 minutes'
 
 storage:
-  encryption_key: 'discopanel-dev-storage-encryption-key-change-me'
+  encryption_key: 'MINESERVER-dev-storage-encryption-key-change-me'
   local:
     path: '/config/db.sqlite3'
 
@@ -63,13 +63,13 @@ regulation:
 
 identity_providers:
   oidc:
-    hmac_secret: 'discopanel-dev-hmac-secret-must-be-at-least-sixty-four-characters-long-so-here-is-padding'
+    hmac_secret: 'MINESERVER-dev-hmac-secret-must-be-at-least-sixty-four-characters-long-so-here-is-padding'
     enable_client_debug_messages: true
     minimum_parameter_entropy: 8
     enforce_pkce: 'public_clients_only'
 
     jwks:
-      - key_id: 'discopanel-dev'
+      - key_id: 'MINESERVER-dev'
         algorithm: 'RS256'
         use: 'sig'
         key: |
@@ -129,9 +129,9 @@ identity_providers:
       id_token: '1h'
       refresh_token: '90m'
 
-    # This policy puts "groups" directly in the ID token. Without it, groups only show up in the UserInfo endpoint, and Discopanel wouldn't read roles.
+    # This policy puts "groups" directly in the ID token. Without it, groups only show up in the UserInfo endpoint, and MINESERVER wouldn't read roles.
     claims_policies:
-      discopanel:
+      mineserver:
         id_token:
           - 'groups'
           - 'email'
@@ -149,13 +149,13 @@ identity_providers:
       allowed_origins_from_client_redirect_uris: true
 
     clients:
-      - client_id: 'discopanel'
-        client_name: 'DiscoPanel'
-        # Plaintext secret: discopanel-dev-secret
+      - client_id: 'MINESERVER'
+        client_name: 'MINESERVER'
+        # Plaintext secret: MINESERVER-dev-secret
         client_secret: '$pbkdf2-sha512$310000$rjIc/fKRSBnSAe/FKJa.aQ$KIJjfQsCOexmk52nLb73HmJrcMkiDl3GRuWWpmdJN.talWSB.p7cq7zbiiVj4P0xV3YMeJtdlMfzWSVU2XSblw'
         public: false
         authorization_policy: 'one_factor'
-        claims_policy: 'discopanel'
+        claims_policy: 'MINESERVER'
         redirect_uris:
           - 'http://localhost:8080/api/v1/auth/oidc/callback'
           - 'http://localhost:5173/api/v1/auth/oidc/callback'

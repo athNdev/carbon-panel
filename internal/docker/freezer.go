@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // ContainerFreezer defines the container pause/unpause and status capabilities

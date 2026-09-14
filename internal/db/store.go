@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/pkg/utils"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/mineserver/pkg/utils"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -222,9 +222,9 @@ func (s *Store) CreateDefaultServerConfig(serverID string) *ServerConfig {
 	intPtr := func(i int) *int { return &i }
 
 	// Start with basic defaults
-	rconPassword := "discopanel_default"
+	rconPassword := "MINESERVER_default"
 	if serverID != "" && len(serverID) >= 8 {
-		rconPassword = fmt.Sprintf("discopanel_%s", serverID[:8])
+		rconPassword = fmt.Sprintf("MINESERVER_%s", serverID[:8])
 	}
 
 	config := &ServerConfig{

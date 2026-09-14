@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/auth"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	"github.com/nickheyer/discopanel/pkg/upload"
+	"github.com/athNdev/mineserver/internal/auth"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/upload"
 )
 
 type uploadStreamResponse struct {

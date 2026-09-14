@@ -4,11 +4,11 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/nickheyer/discopanel/internal/db"
+	"github.com/athNdev/mineserver/internal/db"
 )
 
 func TestBuildEnvFromConfig_PackwizBootstrap(t *testing.T) {
-	packURL := "http://discopanel.internal:8080/api/v1/packwiz/my-modpack/pack.toml"
+	packURL := "http://MINESERVER.internal:8080/api/v1/packwiz/my-modpack/pack.toml"
 	loader := "FABRIC"
 	version := "1.20.1"
 
@@ -20,7 +20,7 @@ func TestBuildEnvFromConfig_PackwizBootstrap(t *testing.T) {
 
 	env := buildEnvFromConfig(cfg)
 
-	if !slices.Contains(env, "PACKWIZ_URL=http://discopanel.internal:8080/api/v1/packwiz/my-modpack/pack.toml") {
+	if !slices.Contains(env, "PACKWIZ_URL=http://MINESERVER.internal:8080/api/v1/packwiz/my-modpack/pack.toml") {
 		t.Fatalf("expected PACKWIZ_URL to be populated in container env, got %v", env)
 	}
 	if !slices.Contains(env, "TYPE=FABRIC") {

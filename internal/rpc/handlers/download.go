@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/auth"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/download"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/internal/auth"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/download"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // NewDownloadStreamHandler creates an HTTP handler for streaming file downloads.

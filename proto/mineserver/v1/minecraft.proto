@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package mineserver.v1;
+
+option go_package = "github.com/athNdev/mineserver/pkg/proto/mineserver/v1;mineserverv1";
+
+// Minecraft version and runtime information
+service MinecraftService {
+  // List all Minecraft versions
+  rpc GetMinecraftVersions(GetMinecraftVersionsRequest) returns (GetMinecraftVersionsResponse);
+  // List supported mod loaders
+  rpc GetModLoaders(GetModLoadersRequest) returns (GetModLoadersResponse);
+  // List available Docker images
+  rpc GetDockerImages(GetDockerImagesRequest) returns (GetDockerImagesResponse);
+}
+
+// Minecraft version metadata
+message MinecraftVersion {
+  string id = 1;
+  string type = 2; // release, snapshot, old_beta, old_alpha
+  string release_time = 3;
+  string url = 4;
+}
+
+// Empty versions request
+message GetMinecraftVersionsRequest {}
+
+// All available versions
+message GetMinecraftVersionsResponse {
+  repeated MinecraftVersion versions = 1;
+  string latest = 2;
+}
+
+// Mod loader capabilities
+message ModLoaderInfo {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  bool supports_mods = 4;
+  bool supports_plugins = 5;
+  string category = 6;
+}
+
+// Empty loaders request
+message GetModLoadersRequest {}
+
+// Available mod loaders
+message GetModLoadersResponse {
+  repeated ModLoaderInfo modloaders = 1;
+}
+
+// Container image option
+message DockerImage {
+  string tag = 1;
+  string display_name = 2;
+  string description = 3;
+  bool recommended = 4;
+}
+
+// Empty images request
+message GetDockerImagesRequest {}
+
+// Docker image catalog
+message GetDockerImagesResponse {
+  repeated DockerImage images = 1;
+}
+
+// SLP Handshake packet
+message SLPHandshake {
+  int32 protocol_version = 1;
+  string server_address = 2;
+  int32 server_port = 3;
+  int32 next_state = 4; // 1 = status, 2 = login
+}
+
+// Status Request empty payload, packet ID 0x00
+message SLPStatusRequest {}
+
+// Status Response packet ID 0x00, JSON payload
+message SLPStatusResponse {
+  string json_payload = 1;
+}
+
+// Ping packet ID 0x01, 8-byte timestamp
+message SLPPing {
+  int64 payload = 1;
+}
+
+// Pong packet ID 0x01, echoed payload
+message SLPPong {
+  int64 payload = 1;
+}
+
+// Complete status from SLP
+message SLPServerStatus {
+  SLPVersion version = 1;
+  SLPPlayers players = 2;
+  string description = 3; // Parsed MOTD text
+  optional string description_json = 4; // Raw JSON for rich formatting
+  optional string favicon = 5; // Base64 PNG (data:image/png;base64,...)
+  bool enforces_secure_chat = 6;
+  int64 latency_ms = 7;
+}
+
+// Server version information
+message SLPVersion {
+  string name = 1; // ie: "1.21.4"
+  int32 protocol = 2; // Protocol version number
+}
+
+// Player count and sample
+message SLPPlayers {
+  int32 max = 1;
+  int32 online = 2;
+  repeated SLPPlayerSample sample = 3;
+}
+
+// Individual player sample entry
+message SLPPlayerSample {
+  string name = 1;
+  string id = 2; // UUID
+}

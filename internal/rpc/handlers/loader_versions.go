@@ -95,7 +95,7 @@ func fetchFabricLoaderVersions(ctx context.Context, gameVersion string) []string
 	if err != nil {
 		return nil
 	}
-	req.Header.Set("User-Agent", "MineServer/1.0 (discopanel)")
+	req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER)")
 
 	resp, err := loaderHTTP.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -160,7 +160,7 @@ func fetchQuiltLoaderVersions(ctx context.Context, gameVersion string) []string 
 	if err != nil {
 		return nil
 	}
-	req.Header.Set("User-Agent", "MineServer/1.0 (discopanel)")
+	req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER)")
 
 	resp, err := loaderHTTP.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -195,7 +195,7 @@ func fetchForgeLoaderVersions(ctx context.Context, gameVersion string) []string 
 	if err != nil {
 		return nil
 	}
-	req.Header.Set("User-Agent", "MineServer/1.0 (discopanel)")
+	req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER)")
 
 	resp, err := loaderHTTP.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -253,7 +253,7 @@ func fetchNeoForgeLoaderVersions(ctx context.Context, gameVersion string) []stri
 	if err != nil {
 		return nil
 	}
-	req.Header.Set("User-Agent", "MineServer/1.0 (discopanel)")
+	req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER)")
 
 	resp, err := loaderHTTP.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {

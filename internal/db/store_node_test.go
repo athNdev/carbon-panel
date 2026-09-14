@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nickheyer/discopanel/internal/config"
+	"github.com/athNdev/mineserver/internal/config"
 )
 
 func newTestStore(t *testing.T) *Store {
