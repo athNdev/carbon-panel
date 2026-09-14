@@ -241,7 +241,7 @@ one at https://mozilla.org/MPL/2.0/.
 									<span class="flex items-center gap-1"
 										><Server class="h-3 w-3" /> {module.serverName || module.serverId}</span
 									>
-									<span>â€¢</span>
+<span>•</span>
 									<span class="truncate">{module.templateName}</span>
 								</div>
 							</div>
