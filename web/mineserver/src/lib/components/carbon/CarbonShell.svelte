@@ -128,7 +128,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						<span>PROXMOX CT 108</span>
 						<span class="text-emerald-500 font-bold">ONLINE</span>
 					</div>
-					<div class="mt-1 text-[10px] text-[#6f6f6f]">PORT 5174 Â· CARBON V11</div>
+<div class="mt-1 text-[10px] text-[#6f6f6f]">PORT 5174 · CARBON V11</div>
 				</div>
 			{/if}
 		</aside>
