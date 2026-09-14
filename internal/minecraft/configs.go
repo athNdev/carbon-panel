@@ -14,7 +14,7 @@ import (
 	"os"
 	"path/filepath"
 
-	models "github.com/athNdev/mineserver/internal/db"
+	models "github.com/athNdev/carbon-panel/internal/db"
 	"gopkg.in/yaml.v3"
 )
 

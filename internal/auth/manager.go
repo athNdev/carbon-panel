@@ -23,9 +23,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/rbac"
 	"golang.org/x/crypto/bcrypt"
 )
 
