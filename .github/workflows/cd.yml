@@ -6,6 +6,15 @@ on:
       - main
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/cd.yml'
+      - 'docker/**'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
   workflow_dispatch:
     inputs:
       push:
@@ -47,7 +56,7 @@ jobs:
           fi
 
       - name: Log in to Docker Hub
-        if: steps.check-creds.outputs.has_creds == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push)
+        if: steps.check-creds.outputs.has_creds == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
@@ -75,8 +84,8 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile.mineserver
-          platforms: linux/amd64,linux/arm64
-          push: ${{ steps.check-creds.outputs.has_creds == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push) }}
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ steps.check-creds.outputs.has_creds == 'true' && github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.push) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
