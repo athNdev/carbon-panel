@@ -1,16 +1,16 @@
 {
-  "name": "mineserver",
+  "name": "carbon-panel",
   "version": "1.0.0",
   "private": true,
-  "description": "MineServer development workspace",
+  "description": "Carbon Panel development workspace",
   "scripts": {
     "dev": "bun run scripts/dev.ts",
     "dev:backend": "air",
-    "dev:frontend": "cd web/mineserver && bun run dev",
+    "dev:frontend": "cd web/carbon-panel && bun run dev",
     "build": "make build",
-    "check": "cd web/mineserver && bun run check",
-    "lint": "cd web/mineserver && bun run lint",
-    "format": "cd web/mineserver && bun run format",
+    "check": "cd web/carbon-panel && bun run check",
+    "lint": "cd web/carbon-panel && bun run lint",
+    "format": "cd web/carbon-panel && bun run format",
     "test": "go test ./internal/packwiz/... ./internal/scheduler/... ./internal/snapshot/... ./internal/docker/..."
   }
 }
