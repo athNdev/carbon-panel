@@ -1,66 +1,56 @@
 <!--
-SPDX-License-Identifier: MIT AND MPL-2.0
-This file includes DiscoPanel material under the MIT License,
-Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
-and still applies to that inherited material.
-Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
-If a copy of the MPL was not distributed with this file, You can obtain
-one at https://mozilla.org/MPL/2.0/.
+SPDX-License-Identifier: MPL-2.0
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
 -->
 
 
 <script lang="ts">
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Puzzle, Server, Layers } from '@lucide/svelte';
+	import { CarbonTabs } from '$lib/components/carbon';
+	import { Puzzle } from '@lucide/svelte';
 	import TemplateManagement from './TemplateManagement.svelte';
 	import ActiveModules from './ActiveModules.svelte';
 
 	let activeTab = $state('templates');
+
+	const moduleTabs = [
+		{ id: 'templates', label: 'Templates' },
+		{ id: 'active', label: 'Active Instances' }
+	];
 </script>
 
 <svelte:head>
-	<title>Modules - MineServer</title>
+	<title>Modules & Sidecars - MineServer</title>
 </svelte:head>
 
-<div class="h-full flex-1 space-y-8 bg-linear-to-br from-background to-muted/10 p-8 pt-6">
-	<div class="flex items-center justify-between border-b-2 border-border/50 pb-6">
+<div class="h-full flex-1 space-y-6 font-sans text-[#f4f4f4] rounded-none">
+	<!-- Top Bar -->
+	<div class="flex items-center justify-between border-b border-[#393939] pb-6 rounded-none">
 		<div class="flex items-center gap-4">
-			<div
-				class="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/10 shadow-lg"
-			>
-				<Puzzle class="h-8 w-8 text-primary" />
+			<div class="flex h-12 w-12 items-center justify-center bg-[#262626] border border-[#393939] text-[#0f62fe] rounded-none shadow-sm">
+				<Puzzle class="h-6 w-6" />
 			</div>
-			<div class="space-y-1">
-				<h2
-					class="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent"
-				>
-					Modules
-				</h2>
-				<p class="text-base text-muted-foreground">
-					Manage global templates and view active instances
+			<div class="space-y-0.5">
+				<h1 class="text-3xl font-semibold tracking-tight text-white">Modules & Sidecars</h1>
+				<p class="text-xs text-[#a8a8a8]">
+					Manage global module templates and inspect active sidecar container instances
 				</p>
 			</div>
 		</div>
 	</div>
 
-	<Tabs value={activeTab} onValueChange={(v) => (activeTab = v || activeTab)} class="space-y-6">
-		<TabsList class="flex w-fit gap-1">
-			<TabsTrigger value="templates" class="flex items-center gap-2 px-4">
-				<Layers class="h-4 w-4" />
-				Templates
-			</TabsTrigger>
-			<TabsTrigger value="active" class="flex items-center gap-2 px-4">
-				<Server class="h-4 w-4" />
-				Active Instances
-			</TabsTrigger>
-		</TabsList>
+	<!-- Carbon Navigation Tabs -->
+	<CarbonTabs
+		tabs={moduleTabs}
+		bind:selectedTab={activeTab}
+	/>
 
-		<TabsContent value="templates" class="space-y-4">
+	<div>
+		{#if activeTab === 'templates'}
 			<TemplateManagement />
-		</TabsContent>
-
-		<TabsContent value="active" class="space-y-4">
+		{:else if activeTab === 'active'}
 			<ActiveModules />
-		</TabsContent>
-	</Tabs>
+		{/if}
+	</div>
 </div>
