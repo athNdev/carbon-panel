@@ -23,7 +23,7 @@ function getVersion() {
 
 	// Check version file stored in home
 	try {
-		const versionFile = join(homedir(), '.mineserver');
+		const versionFile = join(homedir(), '.MINESERVER');
 		if (existsSync(versionFile)) {
 			const version = readFileSync(versionFile, 'utf8').trim();
 			if (version) return version;
