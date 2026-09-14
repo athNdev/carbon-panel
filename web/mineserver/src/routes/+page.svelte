@@ -10,9 +10,8 @@
 		Users,
 		Zap,
 		ChevronRight,
-		Github,
-		MessageCircle,
-		BookOpen,
+		Package,
+		Globe,
 		Gauge,
 		AlertTriangle,
 		RefreshCw,
@@ -535,49 +534,43 @@
 
 		<!-- Carbon Information Grid (3 columns) -->
 		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-			<!-- Community & Resources -->
+			<!-- Cluster Operations & Shortcuts -->
 			<div class="border border-[#393939] bg-[#262626] rounded-none p-5 flex flex-col justify-between">
 				<div>
 					<div class="flex items-center justify-between pb-3 border-b border-[#393939]">
 						<div>
-							<h2 class="font-sans text-sm font-semibold uppercase tracking-wider text-[#f4f4f4]">Community & Support</h2>
-							<p class="font-sans text-xs text-[#8d8d8d] mt-0.5">Resources and issue tracking</p>
+							<h2 class="font-sans text-sm font-semibold uppercase tracking-wider text-[#f4f4f4]">Cluster Operations</h2>
+							<p class="font-sans text-xs text-[#8d8d8d] mt-0.5">Management shortcuts & ingress</p>
 						</div>
 					</div>
 					<div class="mt-4 space-y-2">
 						<a
-							href="https://discord.gg/6Z9yKTbsrP"
-							target="_blank"
-							rel="noopener noreferrer"
+							href="/servers/new"
 							class="flex items-center justify-between p-3 bg-[#161616] hover:bg-[#353535] border border-[#393939] text-xs font-mono text-[#f4f4f4] transition-colors rounded-none"
 						>
 							<div class="flex items-center gap-2.5">
-								<MessageCircle class="h-4 w-4 text-[#78a9ff]" />
-								<span>Join Discord Community</span>
+								<Plus class="h-4 w-4 text-[#0f62fe]" />
+								<span>Deploy Game Server</span>
 							</div>
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
 						<a
-							href="https://github.com/athNdev/mineserver/issues"
-							target="_blank"
-							rel="noopener noreferrer"
+							href="/modpacks/studio"
 							class="flex items-center justify-between p-3 bg-[#161616] hover:bg-[#353535] border border-[#393939] text-xs font-mono text-[#f4f4f4] transition-colors rounded-none"
 						>
 							<div class="flex items-center gap-2.5">
-								<Github class="h-4 w-4 text-[#f4f4f4]" />
-								<span>Report Bug / Feature</span>
+								<Package class="h-4 w-4 text-[#be95ff]" />
+								<span>Modpack Studio & TOML</span>
 							</div>
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
 						<a
-							href="https://github.com/athNdev/mineserver"
-							target="_blank"
-							rel="noopener noreferrer"
+							href="/settings?tab=routing"
 							class="flex items-center justify-between p-3 bg-[#161616] hover:bg-[#353535] border border-[#393939] text-xs font-mono text-[#f4f4f4] transition-colors rounded-none"
 						>
 							<div class="flex items-center gap-2.5">
-								<BookOpen class="h-4 w-4 text-[#24a148]" />
-								<span>Documentation & Specs</span>
+								<Globe class="h-4 w-4 text-[#42be65]" />
+								<span>Virtual Host Routing (:25565)</span>
 							</div>
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
