@@ -5,7 +5,7 @@ tmp_dir = "tmp"
 [build]
   cmd = "go build -o ./tmp/mineserver-dev ./cmd/mineserver/main.go"
   bin = "./tmp/mineserver-dev"
-  full_bin = ""
+  entrypoint = ["./tmp/mineserver-dev"]
   include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "web", "docs", "data", "docker"]
   include_dir = ["cmd", "internal", "pkg"]
@@ -13,6 +13,11 @@ tmp_dir = "tmp"
   delay = 1000
   stop_on_error = true
   log = "air-build-errors.log"
+
+[build.windows]
+  cmd = "go build -o ./tmp/mineserver-dev.exe ./cmd/mineserver/main.go"
+  bin = "./tmp/mineserver-dev.exe"
+  entrypoint = ["./tmp/mineserver-dev.exe"]
 
 [log]
   time = false
