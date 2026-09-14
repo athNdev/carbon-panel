@@ -122,7 +122,7 @@
 				Deploy "{packName}" to Server
 			</DialogTitle>
 			<DialogDescription>
-				Deploy this Packwiz modpack ({modLoader.toUpperCase()} Â· MC {mcVersion}) to an existing server instance.
+Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an existing server instance.
 			</DialogDescription>
 		</DialogHeader>
 
