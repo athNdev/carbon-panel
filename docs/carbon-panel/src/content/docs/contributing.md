@@ -1,6 +1,6 @@
 ---
 title: Contributing
-description: Guidelines for contributing to CARBONPANEL.
+description: Guidelines for contributing to Carbon Panel.
 ---
 <!--
 SPDX-License-Identifier: MIT AND MPL-2.0
@@ -13,6 +13,6 @@ one at https://mozilla.org/MPL/2.0/.
 -->
 
 
-Guidelines for developers making pull requests to CARBONPANEL.
+Guidelines for developers making pull requests to Carbon Panel.
 
 *This section is a work in progress.*
