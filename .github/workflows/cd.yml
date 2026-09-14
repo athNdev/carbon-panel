@@ -1,0 +1,142 @@
+name: Docker Hub CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/cd.yml'
+      - 'docker/**'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
+  workflow_dispatch:
+    inputs:
+      push:
+        description: 'Push to Docker Hub'
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Hub Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Hub Credentials & Login Check
+        id: check-creds
+        env:
+          RAW_USER: ${{ secrets.DOCKER_HUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
+          RAW_PASS: ${{ secrets.DOCKER_HUB_PASSWORD || secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$RAW_USER" ] || [ -z "$RAW_PASS" ]; then
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Docker Hub credentials not configured (secrets.DOCKER_HUB_USERNAME and secrets.DOCKER_HUB_PASSWORD). Docker images will be built and verified without pushing."
+            exit 0
+          fi
+
+          # Strip whitespace, newlines, carriage returns, leading/trailing quotes
+          USER_CLEAN=$(printf '%s' "$RAW_USER" | tr -d '\r\n' | sed -e 's/^[[:space:]"'\''"]*//' -e 's/[[:space:]"'\''"]*$//')
+          PASS_CLEAN=$(printf '%s' "$RAW_PASS" | tr -d '\r\n' | sed -e 's/^[[:space:]"'\''"]*//' -e 's/[[:space:]"'\''"]*$//')
+
+          # Safe non-sensitive diagnostics
+          echo "Username character count: ${#USER_CLEAN}"
+          echo "Password character count: ${#PASS_CLEAN}"
+          if [[ "$USER_CLEAN" =~ @ ]]; then
+            echo "::error::DOCKER_HUB_USERNAME appears to be an email address. Docker Hub requires your personal Docker ID (username), not email!"
+          fi
+          if [ "$USER_CLEAN" = "athndev" ]; then
+            echo "::warning::'athndev' is a Docker Hub Organization name, not a personal user account. In Docker Hub, 'docker login' requires the personal Docker ID (username) of an account with push permissions in 'athndev'."
+          fi
+          if [[ "$PASS_CLEAN" == *" "* ]]; then
+            echo "::warning::DOCKER_HUB_PASSWORD contains spaces. A Docker PAT should not contain spaces."
+          fi
+          if [[ "$PASS_CLEAN" =~ ^dckr_pat_ ]]; then
+            echo "Token format matches Docker Personal Access Token (starts with 'dckr_pat_')."
+          fi
+
+          # Mask cleaned credentials in logs
+          echo "::add-mask::$PASS_CLEAN"
+          echo "::add-mask::$USER_CLEAN"
+
+          # Direct Docker Hub API verification
+          echo "Checking Docker Hub API authentication directly..."
+          AUTH_RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -H "Content-Type: application/json" \
+            -X POST -d "{\"username\": \"$USER_CLEAN\", \"password\": \"$PASS_CLEAN\"}" \
+            https://hub.docker.com/v2/users/login/)
+          HTTP_CODE=$(echo "$AUTH_RESP" | grep "HTTP_STATUS" | cut -d: -f2)
+          BODY=$(echo "$AUTH_RESP" | grep -v "HTTP_STATUS")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Docker Hub API token validation: SUCCESS (HTTP 200)"
+          else
+            echo "::error::Docker Hub API returned HTTP $HTTP_CODE: $BODY"
+          fi
+
+          # Reset docker config to ensure clean state
+          rm -f ~/.docker/config.json
+          docker logout || true
+
+          # Authenticate via password-stdin
+          echo "Authenticating Docker CLI..."
+          if printf '%s' "$PASS_CLEAN" | docker login -u "$USER_CLEAN" --password-stdin; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+            echo "login_ok=true" >> "$GITHUB_OUTPUT"
+            echo "Docker CLI login succeeded."
+          else
+            LOGIN_STATUS=$?
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "login_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Docker Hub authentication failed (exit code $LOGIN_STATUS)."
+            exit $LOGIN_STATUS
+          fi
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            athndev/mineserver
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short,prefix=sha-
+          labels: |
+            org.opencontainers.image.title=MineServer
+            org.opencontainers.image.description=A modern Minecraft server and modpack management panel
+            org.opencontainers.image.source=https://github.com/athNdev/mineserver
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.mineserver
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ steps.check-creds.outputs.has_creds == 'true' && github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.push) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
