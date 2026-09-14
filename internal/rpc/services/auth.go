@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package services
 
 import (
@@ -178,16 +187,18 @@ func (s *AuthService) GetCurrentUser(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not authenticated"))
 	}
 
-	// When all auth is disabled, the interceptor injects a synthetic admin
-	// that doesn't exist in DB. Return it directly.
-	if !s.authManager.IsAnyAuthEnabled() {
+	// When all auth is disabled or when browsing anonymously, return synthetic permissions
+	if !s.authManager.IsAnyAuthEnabled() || authUser.Provider == "anonymous" {
 		roles := authUser.Roles
-		protoUser := &v1.User{
-			Id:           authUser.ID,
-			Username:     authUser.Username,
-			AuthProvider: authUser.Provider,
-			IsActive:     true,
-			Roles:        roles,
+		var protoUser *v1.User
+		if authUser.Provider != "anonymous" {
+			protoUser = &v1.User{
+				Id:           authUser.ID,
+				Username:     authUser.Username,
+				AuthProvider: authUser.Provider,
+				IsActive:     true,
+				Roles:        roles,
+			}
 		}
 
 		var permissions []*v1.Permission
