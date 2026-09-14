@@ -2,13 +2,10 @@
 	import { onMount, untrack } from 'svelte';
 	import { SvelteMap, SvelteSet, SvelteURL } from 'svelte/reactivity';
 	import { rpcClient } from '$lib/api/rpc-client';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Button } from '$lib/components/ui/button';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from 'svelte-sonner';
 	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send, KeyRound, ChevronDown, ChevronRight, Wand2 } from '@lucide/svelte';
 	import { copyToClipboard } from '$lib/utils/clipboard';
@@ -474,14 +471,14 @@
 	}
 </script>
 
-<Card class="flex h-full flex-col gap-0 pb-0">
-	<CardHeader class="mb-0 shrink-0 border-b pb-0">
-		<div class="flex flex-col justify-between sm:flex-row sm:items-center">
+<div class="flex h-full flex-col gap-0 border border-[#393939] bg-[#262626] rounded-none shadow-none">
+	<div class="shrink-0 border-b border-[#393939] bg-[#262626] p-4 sm:p-5">
+		<div class="flex flex-col justify-between sm:flex-row sm:items-center gap-4">
 			<div>
-				<CardTitle>
+				<h2 class="font-sans text-lg font-light text-[#f4f4f4] tracking-tight">
 					{!server ? 'Default Server Configuration' : 'Server Configuration'}
-				</CardTitle>
-				<p class="mt-1 text-sm text-muted-foreground">
+				</h2>
+				<p class="mt-1 text-xs text-[#a8a8a8]">
 					{!server
 						? 'Configure default values for new servers'
 						: 'Configure Minecraft server environment variables'}
@@ -489,82 +486,86 @@
 			</div>
 			<div class="flex items-center gap-3">
 				{#if hasChanges}
-					<span class="text-sm whitespace-nowrap text-muted-foreground">
+					<span class="text-xs font-mono text-[#ff832b] whitespace-nowrap">
 						{modifiedFields.size} unsaved {modifiedFields.size === 1 ? 'change' : 'changes'}
 					</span>
 				{/if}
 				{#if !server}
-					<Button
-						variant="outline"
-						size="sm"
+					<button
+						type="button"
 						onclick={() => handleSyncToAllServers(true)}
 						disabled={loading || syncing || hasChanges}
 						title="Propagate configured default Ops and Whitelist to all existing servers"
+						class="h-8 px-3 inline-flex items-center gap-2 rounded-none border border-[#393939] bg-[#353535] text-xs font-sans text-[#f4f4f4] hover:bg-[#393939] hover:text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 					>
 						{#if syncing}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+							<Loader2 class="mr-2 h-3.5 w-3.5 animate-spin" />
 						{:else}
-							<Send class="mr-2 h-4 w-4" />
+							<Send class="mr-2 h-3.5 w-3.5" />
 						{/if}
-						Sync Ops & Whitelist to Servers
-					</Button>
+						<span>Sync Ops & Whitelist</span>
+					</button>
 				{/if}
-				<Button
-					variant="outline"
-					size="sm"
+				<button
+					type="button"
 					onclick={handleReset}
 					disabled={loading || isServerRunning || !hasChanges}
+					class="h-8 px-3 inline-flex items-center gap-2 rounded-none border border-[#393939] bg-[#353535] text-xs font-sans text-[#f4f4f4] hover:bg-[#393939] hover:text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				>
-					<RefreshCw class="mr-2 h-4 w-4" />
-					Reset
-				</Button>
-				<Button
-					size="sm"
+					<RefreshCw class="mr-2 h-3.5 w-3.5" />
+					<span>Reset</span>
+				</button>
+				<button
+					type="button"
 					onclick={handleSave}
 					disabled={loading || isSaving || isServerRunning || !hasChanges}
+					class="h-8 px-4 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-xs font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				>
 					{#if isSaving}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 class="mr-2 h-3.5 w-3.5 animate-spin" />
 					{:else}
-						<Save class="mr-2 h-4 w-4" />
+						<Save class="mr-2 h-3.5 w-3.5" />
 					{/if}
-					Save
-				</Button>
+					<span>Save</span>
+				</button>
 			</div>
 		</div>
-	</CardHeader>
+	</div>
 
-	<CardContent class="my-0 flex-1 overflow-hidden p-0">
+	<div class="my-0 flex-1 overflow-hidden p-0">
 		{#if loading}
-			<div class="flex items-center justify-center py-12">
-				<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+			<div class="flex items-center justify-center py-16">
+				<div class="space-y-3 text-center">
+					<div class="mx-auto h-8 w-8 border-2 border-[#0f62fe] border-t-transparent animate-spin"></div>
+					<div class="text-xs font-sans text-[#a8a8a8]">Loading server configuration...</div>
+				</div>
 			</div>
 		{:else if filteredCategories.length === 0}
-			<div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
-				<p class="mb-2 text-lg">No configuration found</p>
-				<p class="text-sm">Unable to load server configuration</p>
+			<div class="flex flex-col items-center justify-center py-12 text-[#8d8d8d]">
+				<p class="mb-2 text-sm">No configuration found</p>
+				<p class="text-xs text-[#6f6f6f]">Unable to load server configuration</p>
 			</div>
 		{:else}
 			<div class="flex h-full">
 				<!-- Category Sidebar -->
-				<div class="w-48 shrink-0 overflow-y-auto border-r bg-muted/20">
-					<nav class="space-y-1 p-2">
+				<div class="w-48 shrink-0 overflow-y-auto border-r border-[#393939] bg-[#161616]">
+					<nav class="space-y-0 p-0">
 						{#each filteredCategories as category (category.name)}
 							{@const categoryId = getCategoryId(category.name)}
 							{@const isActive = activeCategory === categoryId}
 							{@const modCount = modifiedCountByCategory.get(categoryId) ?? 0}
 							<button
-								class="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors
+								class="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs transition-colors rounded-none border-b border-[#262626] cursor-pointer
 									{isActive
-									? 'bg-primary text-primary-foreground'
-									: 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
+									? 'border-l-4 border-l-[#0f62fe] bg-[#353535] text-white font-medium pl-2.5'
+									: 'border-l-4 border-l-transparent text-[#8d8d8d] hover:bg-[#262626] hover:text-white'}"
 								onclick={() => selectCategory(categoryId)}
 							>
 								<span class="truncate">{category.name}</span>
 								{#if modCount > 0}
 									<span
-										class="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium
-										{isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-orange-500 text-white'}"
+										class="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-none px-1 text-[10px] font-mono font-medium
+										{isActive ? 'bg-[#ff832b] text-black font-semibold' : 'bg-[#ff832b] text-black'}"
 									>
 										{modCount}
 									</span>
@@ -575,11 +576,11 @@
 				</div>
 
 				<!-- Fields Panel -->
-				<div class="flex min-w-0 flex-1 flex-col">
+				<div class="flex min-w-0 flex-1 flex-col bg-[#161616]">
 					<!-- Category Header -->
-					<div class="shrink-0 border-b bg-muted/10 px-4 py-3">
-						<h3 class="font-semibold">{currentCategoryName}</h3>
-						<p class="text-xs text-muted-foreground">{currentCategoryProps.length} fields</p>
+					<div class="shrink-0 border-b border-[#393939] bg-[#262626] px-4 py-3">
+						<h3 class="font-sans text-sm font-normal text-[#f4f4f4]">{currentCategoryName}</h3>
+						<p class="text-xs text-[#a8a8a8] mt-0.5">{currentCategoryProps.length} fields</p>
 					</div>
 
 					{#snippet fieldCard(prop: ConfigProperty)}
@@ -591,10 +592,9 @@
 						<div
 							id={prop.key}
 							data-field="true"
-							class="group rounded-lg border p-4 transition-all duration-300
-								{isHighlighted ? 'ring-2 ring-primary ring-offset-2' : ''}
-								{isModified ? 'border-orange-500/50 bg-orange-500/5' : 'bg-card'}
-								{!isEnabled ? 'bg-muted/30' : ''}"
+							class="group rounded-none border border-[#393939] p-4 transition-all duration-150
+								{isHighlighted ? 'outline-2 outline-[#0f62fe]' : ''}
+								{isModified ? 'border-l-4 border-l-[#ff832b] bg-[#2d251e]' : !isEnabled ? 'bg-[#1e1e1e] opacity-80' : 'bg-[#262626]'}"
 						>
 							<!-- Field Header -->
 							<div class="mb-3 flex items-start justify-between gap-2">
@@ -602,70 +602,66 @@
 									<div class="mb-1 flex flex-wrap items-center gap-2">
 										<Label
 											for={prop.key}
-											class="text-sm font-medium {!isEnabled ? 'text-muted-foreground' : ''}"
+											class="text-xs font-medium text-[#f4f4f4] {!isEnabled ? 'text-[#8d8d8d]' : ''}"
 										>
 											{prop.label}
 										</Label>
 										{#if prop.required}
-											<span class="text-xs font-medium text-red-500">required</span>
+											<span class="text-[10px] font-mono font-medium text-[#ff8389] bg-[#da1e28]/20 border border-[#da1e28]/40 px-1 py-0.5 rounded-none">required</span>
 										{/if}
 										{#if prop.system}
-											<span class="text-xs font-medium text-blue-500">system</span>
+											<span class="text-[10px] font-mono font-medium text-[#78a9ff] bg-[#0f62fe]/20 border border-[#0f62fe]/40 px-1 py-0.5 rounded-none">system</span>
 										{/if}
 										{#if isModified}
-											<span class="text-xs font-medium text-orange-500">modified</span>
+											<span class="text-[10px] font-mono font-medium text-[#ff832b] bg-[#ff832b]/20 border border-[#ff832b]/40 px-1 py-0.5 rounded-none">modified</span>
 										{/if}
 										{#if !isEnabled}
-											<span class="text-xs text-muted-foreground">(unset)</span>
+											<span class="text-[10px] font-mono text-[#8d8d8d] bg-[#353535] border border-[#525252] px-1 py-0.5 rounded-none">(unset)</span>
 										{/if}
 										{#if prop.key === 'cfApiKey'}
-											<span class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+											<span class="rounded-none bg-[#0f62fe]/20 border border-[#0f62fe]/40 px-1.5 py-0.5 text-[10px] font-mono font-medium text-[#78a9ff]">
 												Optional (Keyless Fallback)
 											</span>
 										{/if}
 									</div>
 									{#if prop.envVar}
-										<code class="font-mono text-xs text-muted-foreground">{prop.envVar}</code>
+										<code class="font-mono text-xs text-[#8d8d8d]">{prop.envVar}</code>
 									{/if}
 									{#if prop.description}
-										<p class="mt-1 text-xs text-muted-foreground">{prop.description}</p>
+										<p class="mt-1 text-xs text-[#a8a8a8]">{prop.description}</p>
 									{/if}
 
 									<!-- Quick Actions for CurseForge Fields -->
 									{#if prop.key === 'cfSlug' && server?.name}
 										<div class="mt-2">
-											<Button
+											<button
 												type="button"
-												variant="outline"
-												size="sm"
-												class="h-6 text-xs text-primary hover:bg-primary/10"
+												class="h-6 px-2 text-xs font-sans rounded-none border border-[#393939] bg-[#353535] text-[#78a9ff] hover:bg-[#393939] hover:text-white cursor-pointer inline-flex items-center"
 												onclick={assumeCfSlugFromServerName}
 											>
 												<Wand2 class="mr-1 h-3 w-3" />
 												Assume from Server Name ("{server.name}")
-											</Button>
+											</button>
 										</div>
 									{/if}
 									{#if prop.key === 'cfPageUrl' && getDisplayValue(prop)}
 										<div class="mt-2">
-											<Button
+											<button
 												type="button"
-												variant="outline"
-												size="sm"
-												class="h-6 text-xs text-primary hover:bg-primary/10"
+												class="h-6 px-2 text-xs font-sans rounded-none border border-[#393939] bg-[#353535] text-[#78a9ff] hover:bg-[#393939] hover:text-white cursor-pointer inline-flex items-center"
 												onclick={() => handleExtractFromPageUrl(getDisplayValue(prop))}
 											>
 												<Wand2 class="mr-1 h-3 w-3" />
 												Extract Slug & File ID
-											</Button>
+											</button>
 										</div>
 									{/if}
 								</div>
 								<div class="flex items-center gap-1">
 									<!-- Set/Unset Toggle -->
 									<button
-										class="rounded p-1 transition-colors
-											{canToggle ? 'cursor-pointer hover:bg-muted' : 'cursor-not-allowed opacity-50'}"
+										class="rounded-none p-1 transition-colors
+											{canToggle ? 'cursor-pointer hover:bg-[#353535]' : 'cursor-not-allowed opacity-50'}"
 										onclick={() => canToggle && toggleFieldEnabled(prop.key, !isEnabled, prop)}
 										disabled={!canToggle}
 										title={isEnabled
@@ -673,19 +669,18 @@
 											: 'Click to set a custom value'}
 									>
 										{#if isEnabled}
-											<CircleDot class="h-4 w-4 text-green-500" />
+											<CircleDot class="h-4 w-4 text-[#42be65]" />
 										{:else}
-											<Circle class="h-4 w-4 text-muted-foreground" />
+											<Circle class="h-4 w-4 text-[#8d8d8d]" />
 										{/if}
 									</button>
-									<Button
-										variant="ghost"
-										size="icon"
-										class="h-6 w-6 opacity-0 group-hover:opacity-100"
+									<button
+										type="button"
+										class="h-6 w-6 rounded-none flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-[#353535] text-[#8d8d8d] hover:text-white cursor-pointer transition-all"
 										onclick={() => copyLinkToClipboard(prop.key)}
 									>
 										<Link class="h-3 w-3" />
-									</Button>
+									</button>
 								</div>
 							</div>
 
@@ -698,7 +693,7 @@
 										onCheckedChange={(checked) => updateValue(prop.key, checked)}
 										disabled={prop.system || !isEnabled || isServerRunning}
 									/>
-									<span class="text-sm {!isEnabled ? 'text-muted-foreground' : ''}">
+									<span class="text-xs text-[#c6c6c6] {!isEnabled ? 'text-[#8d8d8d]' : ''}">
 										{getBooleanValue(prop) ? 'Enabled' : 'Disabled'}
 									</span>
 								</div>
@@ -709,14 +704,14 @@
 									onValueChange={(value) => updateValue(prop.key, value ?? '')}
 									disabled={prop.system || !isEnabled || isServerRunning}
 								>
-									<SelectTrigger class="h-9 {!isEnabled ? 'opacity-60' : ''}">
+									<SelectTrigger class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {!isEnabled ? 'opacity-60' : ''}">
 										<span class="truncate">
 											{getDisplayValue(prop) || 'Select...'}
 										</span>
 									</SelectTrigger>
-									<SelectContent>
+									<SelectContent class="rounded-none border border-[#393939] bg-[#262626]">
 										{#each prop.options as option (option)}
-											<SelectItem value={option}>{option || '(empty)'}</SelectItem>
+											<SelectItem value={option} class="rounded-none">{option || '(empty)'}</SelectItem>
 										{/each}
 									</SelectContent>
 								</Select>
@@ -728,7 +723,7 @@
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
 									disabled={prop.system || !isEnabled || isServerRunning}
-									class="h-9 {!isEnabled ? 'opacity-60' : ''}"
+									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled ? 'opacity-60' : ''}"
 								/>
 							{:else if prop.type === 'password'}
 								<Input
@@ -738,7 +733,7 @@
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
 									disabled={prop.system || !isEnabled || isServerRunning}
-									class="h-9 {!isEnabled ? 'opacity-60' : ''}"
+									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled ? 'opacity-60' : ''}"
 								/>
 							{:else}
 								<Input
@@ -748,13 +743,13 @@
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
 									disabled={prop.system || !isEnabled || isServerRunning}
-									class="h-9 {!isEnabled ? 'opacity-60' : ''}"
+									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled ? 'opacity-60' : ''}"
 								/>
 							{/if}
 
 							{#if prop.defaultValue !== undefined && prop.defaultValue !== ''}
-								<p class="mt-2 text-xs text-muted-foreground">
-									Default: <code class="rounded bg-muted px-1 py-0.5">{prop.defaultValue}</code>
+								<p class="mt-2 text-xs text-[#8d8d8d]">
+									Default: <code class="rounded-none bg-[#353535] px-1 py-0.5 font-mono text-xs text-[#c6c6c6]">{prop.defaultValue}</code>
 								</p>
 							{/if}
 						</div>
@@ -763,12 +758,12 @@
 					<!-- Fields Grid -->
 					<div class="flex-1 overflow-y-auto p-4">
 						{#if activeCategory === 'curseforge'}
-							<div class="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-								<div class="flex items-center gap-2 font-medium text-primary">
+							<div class="mb-4 rounded-none border border-[#0f62fe]/40 bg-[#0043ce]/10 p-3 text-sm">
+								<div class="flex items-center gap-2 font-medium text-[#78a9ff]">
 									<KeyRound class="h-4 w-4" />
 									CurseForge Keyless Mode & Defaults Active
 								</div>
-								<p class="mt-1 text-xs text-muted-foreground">
+								<p class="mt-1 text-xs text-[#a8a8a8]">
 									CurseForge modpacks and mods can be downloaded and searched without an API key via community proxies. If provided, slugs and file IDs can be auto-extracted directly from modpack URLs or assumed from the server name.
 								</p>
 							</div>
@@ -781,21 +776,21 @@
 						</div>
 
 						{#if activeCategory === 'curseforge' && advancedCategoryProps.length > 0}
-							<div class="mt-6 rounded-lg border bg-muted/10 p-4">
+							<div class="mt-6 rounded-none border border-[#393939] bg-[#1e1e1e] p-4">
 								<button
 									type="button"
 									onclick={() => (showAdvancedCurseForge = !showAdvancedCurseForge)}
-									class="flex w-full items-center justify-between text-left text-sm font-medium text-foreground hover:text-primary transition-colors"
+									class="flex w-full items-center justify-between text-left text-sm font-medium text-[#f4f4f4] hover:text-[#78a9ff] transition-colors cursor-pointer rounded-none"
 								>
 									<span class="flex items-center gap-2">
 										{#if showAdvancedCurseForge}
-											<ChevronDown class="h-4 w-4 text-muted-foreground" />
+											<ChevronDown class="h-4 w-4 text-[#8d8d8d]" />
 										{:else}
-											<ChevronRight class="h-4 w-4 text-muted-foreground" />
+											<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 										{/if}
 										Advanced CurseForge Options
 									</span>
-									<span class="text-xs text-muted-foreground">
+									<span class="text-xs text-[#8d8d8d]">
 										{advancedCategoryProps.length} additional options
 									</span>
 								</button>
@@ -814,15 +809,15 @@
 
 			{#if server && isServerRunning}
 				<div
-					class="border-t border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-950"
+					class="border-t border-[#f1c21b]/30 bg-[#f1c21b]/10 p-4 rounded-none"
 				>
-					<p class="text-sm text-yellow-800 dark:text-yellow-200">
+					<p class="text-xs font-mono text-[#f1c21b]">
 						Server must be stopped to modify configuration. Changes will take effect after restart.
 					</p>
 				</div>
 			{/if}
 		{/if}
-	</CardContent>
-</Card>
+	</div>
+</div>
 
 <ScrollToTop />

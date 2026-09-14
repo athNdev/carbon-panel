@@ -93,21 +93,19 @@
 	});
 </script>
 
-<div class="h-full flex-1 space-y-8 bg-linear-to-br from-background to-muted/10 p-8 pt-6">
-	<div class="flex items-center justify-between border-b-2 border-border/50 pb-6">
+<div class="min-h-full flex-1 space-y-6 bg-[#161616] text-[#f4f4f4] p-6 lg:p-8">
+	<div class="flex items-center justify-between border-b border-[#393939] pb-6">
 		<div class="flex items-center gap-4">
 			<div
-				class="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/10 shadow-lg"
+				class="flex h-14 w-14 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#0f62fe]"
 			>
-				<Settings class="h-8 w-8 text-primary" />
+				<Settings class="h-7 w-7 text-[#0f62fe]" />
 			</div>
 			<div class="space-y-1">
-				<h2
-					class="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent"
-				>
+				<h1 class="font-sans text-2xl font-light tracking-tight text-[#f4f4f4]">
 					Settings
-				</h2>
-				<p class="text-base text-muted-foreground">
+				</h1>
+				<p class="text-xs text-[#a8a8a8]">
 					Configure MineServer and default server settings
 				</p>
 			</div>
@@ -115,45 +113,45 @@
 	</div>
 
 	<Tabs value={activeTab} onValueChange={(v) => (activeTab = v || activeTab)} class="space-y-6">
-		<TabsList class="flex w-fit gap-1">
+		<TabsList class="w-full justify-start gap-0 h-10 border-b border-[#393939] bg-transparent p-0 rounded-none overflow-x-auto">
 			{#if showSettings}
-				<TabsTrigger value="server-config" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="server-config" class="flex items-center gap-2 px-4 rounded-none">
 					<Server class="h-4 w-4" />
 					Server Defaults
 				</TabsTrigger>
-				<TabsTrigger value="api-keys" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="api-keys" class="flex items-center gap-2 px-4 rounded-none">
 					<Key class="h-4 w-4" />
 					API Keys
 				</TabsTrigger>
-				<TabsTrigger value="routing" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="routing" class="flex items-center gap-2 px-4 rounded-none">
 					<Globe class="h-4 w-4" />
 					Routing
 				</TabsTrigger>
-				<TabsTrigger value="nodes" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="nodes" class="flex items-center gap-2 px-4 rounded-none">
 					<Layers class="h-4 w-4" />
 					Docker Nodes
 				</TabsTrigger>
-				<TabsTrigger value="auth" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="auth" class="flex items-center gap-2 px-4 rounded-none">
 					<Shield class="h-4 w-4" />
 					Auth
 				</TabsTrigger>
-				<TabsTrigger value="logs" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="logs" class="flex items-center gap-2 px-4 rounded-none">
 					<ScrollText class="h-4 w-4" />
 					Logs
 				</TabsTrigger>
-				<TabsTrigger value="support" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="support" class="flex items-center gap-2 px-4 rounded-none">
 					<HelpCircle class="h-4 w-4" />
 					Support
 				</TabsTrigger>
 			{/if}
 			{#if showUsers}
-				<TabsTrigger value="users" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="users" class="flex items-center gap-2 px-4 rounded-none">
 					<Users class="h-4 w-4" />
 					Users
 				</TabsTrigger>
 			{/if}
 			{#if showRoles}
-				<TabsTrigger value="roles" class="flex items-center gap-2 px-4">
+				<TabsTrigger value="roles" class="flex items-center gap-2 px-4 rounded-none">
 					<KeyRound class="h-4 w-4" />
 					Roles
 				</TabsTrigger>
@@ -163,20 +161,18 @@
 		{#if showSettings}
 			<TabsContent value="server-config" class="space-y-4">
 				{#if loading}
-					<Card>
-						<CardContent class="py-16">
-							<div class="flex items-center justify-center">
-								<div class="space-y-3 text-center">
-									<div
-										class="mx-auto flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10"
-									>
-										<Settings class="h-6 w-6 text-primary" />
-									</div>
-									<div class="font-medium text-muted-foreground">Loading settings...</div>
+					<div class="border border-[#393939] bg-[#262626] p-16">
+						<div class="flex items-center justify-center">
+							<div class="space-y-3 text-center">
+								<div
+									class="mx-auto flex h-10 w-10 items-center justify-center border border-[#393939] bg-[#161616]"
+								>
+									<Settings class="h-5 w-5 text-[#0f62fe] animate-spin" />
 								</div>
+								<div class="text-xs font-sans text-[#a8a8a8]">Loading settings...</div>
 							</div>
-						</CardContent>
-					</Card>
+						</div>
+					</div>
 				{:else}
 					<ServerConfiguration config={globalConfig} onSave={saveGlobalSettings} {saving} />
 				{/if}

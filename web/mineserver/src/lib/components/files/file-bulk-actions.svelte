@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
 	import { Download, Trash2, FolderInput, Archive, Package, X } from '@lucide/svelte';
 
 	interface Props {
@@ -29,64 +28,69 @@
 
 <!-- Always rendered at fixed height to prevent layout shift -->
 <div
-	class="flex h-[32px] items-center justify-between border-b px-3 transition-colors {active
-		? 'bg-primary/5'
-		: 'bg-transparent'}"
+	class="flex h-[36px] items-center justify-between border-b border-[#393939] px-3 font-sans transition-colors rounded-none {active
+		? 'bg-[#262626] text-[#f4f4f4]'
+		: 'bg-[#161616] text-[#8d8d8d]'}"
 >
 	{#if active}
 		<div class="flex items-center gap-2">
-			<span class="text-xs font-medium">{selectedCount} selected</span>
-			<Button size="sm" variant="ghost" class="h-6 px-2 text-xs" onclick={onClear}>
-				<X class="mr-1 h-3 w-3" />
-				Clear
-			</Button>
+			<span class="text-xs font-mono font-medium text-[#78a9ff]">{selectedCount} selected</span>
+			<button
+				type="button"
+				class="h-6 px-2 text-xs bg-[#393939] hover:bg-[#4c4c4c] text-white flex items-center gap-1 rounded-none cursor-pointer"
+				onclick={onClear}
+			>
+				<X class="h-3 w-3" />
+				<span>Clear</span>
+			</button>
 		</div>
-		<div class="flex items-center gap-0.5">
-			<Button
-				size="icon"
-				variant="ghost"
-				class="h-7 w-7"
+		<div class="flex items-center gap-1">
+			<button
+				type="button"
+				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 				onclick={onDownload}
 				title="Download selected"
 			>
 				<Download class="h-3.5 w-3.5" />
-			</Button>
-			<Button size="icon" variant="ghost" class="h-7 w-7" onclick={onMove} title="Move selected">
+			</button>
+			<button
+				type="button"
+				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
+				onclick={onMove}
+				title="Move selected"
+			>
 				<FolderInput class="h-3.5 w-3.5" />
-			</Button>
-			<Button
-				size="icon"
-				variant="ghost"
-				class="h-7 w-7"
+			</button>
+			<button
+				type="button"
+				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 				onclick={onCompress}
 				title="Compress selected"
 			>
 				<Archive class="h-3.5 w-3.5" />
-			</Button>
+			</button>
 			{#if canExtract}
-				<Button
-					size="icon"
-					variant="ghost"
-					class="h-7 w-7"
+				<button
+					type="button"
+					class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 					onclick={onExtract}
 					title="Extract archive"
 				>
 					<Package class="h-3.5 w-3.5" />
-				</Button>
+				</button>
 			{/if}
-			<Button
-				size="icon"
-				variant="ghost"
-				class="h-7 w-7 text-destructive hover:text-destructive"
+			<button
+				type="button"
+				class="h-7 w-7 flex items-center justify-center text-[#ff8389] hover:bg-[#da1e28]/20 rounded-none cursor-pointer"
 				onclick={onDelete}
 				title="Delete selected"
 			>
 				<Trash2 class="h-3.5 w-3.5" />
-			</Button>
+			</button>
 		</div>
 	{:else}
-		<span class="text-[10px] text-muted-foreground/50"
-			>Ctrl+Click to select &middot; Right-click for options</span
+		<span class="text-[11px] text-[#6f6f6f] font-mono"
+			>Ctrl+Click to select • Right-click for file actions</span
 		>
 	{/if}
 </div>

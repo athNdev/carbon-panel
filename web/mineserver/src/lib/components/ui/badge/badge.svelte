@@ -2,15 +2,13 @@
 	import { type VariantProps, tv } from 'tailwind-variants';
 
 	export const badgeVariants = tv({
-		base: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium transition-[color,box-shadow] focus-visible:ring-[3px] [&>svg]:pointer-events-none [&>svg]:size-3',
+		base: 'inline-flex w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap rounded-none border px-2 py-0.5 text-xs font-normal tracking-wide transition-colors [&>svg]:pointer-events-none [&>svg]:size-3',
 		variants: {
 			variant: {
-				default: 'bg-primary text-primary-foreground [a&]:hover:bg-primary/90 border-transparent',
-				secondary:
-					'bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 border-transparent',
-				destructive:
-					'bg-destructive [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/70 border-transparent text-white',
-				outline: 'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground'
+				default: 'bg-[#0043ce]/20 border-[#0f62fe] text-[#78a9ff]',
+				secondary: 'bg-[#393939] border-[#525252] text-[#f4f4f4]',
+				destructive: 'bg-[#da1e28]/20 border-[#da1e28] text-[#ff8389]',
+				outline: 'bg-transparent border-[#525252] text-[#c6c6c6]'
 			}
 		},
 		defaultVariants: {
