@@ -113,7 +113,7 @@
 	</div>
 
 	<Tabs value={activeTab} onValueChange={(v) => (activeTab = v || activeTab)} class="space-y-6">
-		<TabsList class="w-full justify-start gap-0 h-10 border-b border-[#393939] bg-transparent p-0 rounded-none overflow-x-auto">
+		<TabsList class="w-full justify-start gap-0 h-[41px] border-b border-[#393939] bg-transparent p-0 rounded-none overflow-x-auto overflow-y-hidden">
 			{#if showSettings}
 				<TabsTrigger value="server-config" class="flex items-center gap-2 px-4 rounded-none">
 					<Server class="h-4 w-4" />
