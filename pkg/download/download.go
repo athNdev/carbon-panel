@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 var (

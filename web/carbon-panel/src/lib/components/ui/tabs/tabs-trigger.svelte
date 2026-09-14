@@ -1,0 +1,31 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
+<script lang="ts">
+	import { Tabs as TabsPrimitive } from 'bits-ui';
+	import { cn } from '$lib/utils.js';
+
+	let {
+		ref = $bindable(null),
+		class: className,
+		...restProps
+	}: TabsPrimitive.TriggerProps = $props();
+</script>
+
+<TabsPrimitive.Trigger
+	bind:ref
+	data-slot="tabs-trigger"
+	class={cn(
+		"inline-flex h-10 items-center justify-center gap-2 rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-normal whitespace-nowrap text-[#8d8d8d] transition-colors hover:bg-[#353535] hover:text-[#f4f4f4] focus-visible:outline-2 focus-visible:outline-[#0f62fe] focus-visible:outline-offset-[-2px] disabled:pointer-events-none disabled:opacity-40 data-[state=active]:border-b-[#0f62fe] data-[state=active]:bg-[#262626] data-[state=active]:text-[#f4f4f4] data-[state=active]:font-medium cursor-pointer [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		className
+	)}
+	{...restProps}
+/>

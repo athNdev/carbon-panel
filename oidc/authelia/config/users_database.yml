@@ -8,7 +8,7 @@
 
 
 ---
-# MINESERVER - Authelia Users
+# Carbon Panel - Authelia Users
 #
 # Do NOT use default admin in production.          
 # Default login is "admin" / "admin"     
@@ -22,9 +22,9 @@
 users:
   admin: # username
     disabled: false
-    displayname: 'MINESERVER Admin'
+    displayname: 'Carbon Panel Admin'
     password: "REDACTED"
-    email: 'admin@MINESERVER.local'
+    email: 'admin@carbon-panel.local'
     groups:
       - 'admin'
 

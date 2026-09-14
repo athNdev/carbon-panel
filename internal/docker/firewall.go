@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // FirewallManager manages DOCKER-USER chain iptables rules for Minecraft ports

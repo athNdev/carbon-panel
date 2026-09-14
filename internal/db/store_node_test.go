@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/carbon-panel/internal/config"
 )
 
 func newTestStore(t *testing.T) *Store {
