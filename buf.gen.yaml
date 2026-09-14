@@ -1,12 +1,12 @@
 version: v2
 plugins:
   - remote: buf.build/community/sudorandom-connect-openapi:v0.21.3
-    out: web/mineserver/static
+    out: web/carbon-panel/static
     opt:
       - path=schemav1.yaml
 
   - remote: buf.build/community/sudorandom-connect-openapi:v0.21.3
-    out: docs/mineserver/public
+    out: docs/carbon-panel/public
     opt:
       - path=schemav1.yaml
 
@@ -24,7 +24,7 @@ plugins:
 
   # Generate TypeScript
   - remote: buf.build/bufbuild/es
-    out: web/mineserver/src/lib/proto
+    out: web/carbon-panel/src/lib/proto
     opt:
       - target=ts
       - import_extension=none

@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Server mod management
+service ModService {
+  // List server mods
+  rpc ListMods(ListModsRequest) returns (ListModsResponse);
+  // Get mod details
+  rpc GetMod(GetModRequest) returns (GetModResponse);
+  // Import mod from chunked upload session
+  rpc ImportUploadedMod(ImportUploadedModRequest) returns (ImportUploadedModResponse);
+  // Update mod metadata
+  rpc UpdateMod(UpdateModRequest) returns (UpdateModResponse);
+  // Delete mod file
+  rpc DeleteMod(DeleteModRequest) returns (DeleteModResponse);
+  // Get Fabric optimization stack status and compatibility for a server
+  rpc GetFabricOptimizationStack(GetFabricOptimizationStackRequest) returns (GetFabricOptimizationStackResponse);
+  // Install or update Fabric optimization stack mods (Lithium, FerriteCore, ModernFix, C2ME)
+  rpc InstallFabricOptimizationStack(InstallFabricOptimizationStackRequest) returns (InstallFabricOptimizationStackResponse);
+}
+
+// Server mod metadata
+message Mod {
+  string id = 1;
+  string server_id = 2;
+  string file_name = 3;
+  string display_name = 4;
+  string description = 5;
+  string version = 6;
+  string mod_id = 7; // External mod ID (e.g., CurseForge ID)
+  string author = 8;
+  string website = 9;
+  int64 file_size = 10;
+  google.protobuf.Timestamp uploaded_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  bool enabled = 13;
+}
+
+// Server mods request
+message ListModsRequest {
+  string server_id = 1;
+}
+
+// All server mods
+message ListModsResponse {
+  repeated Mod mods = 1;
+}
+
+// Mod lookup
+message GetModRequest {
+  string server_id = 1;
+  string mod_id = 2;
+}
+
+// Mod details
+message GetModResponse {
+  Mod mod = 1;
+}
+
+// Import mod from chunked upload session
+message ImportUploadedModRequest {
+  string server_id = 1;
+  string upload_session_id = 2;
+  string display_name = 3;
+  string description = 4;
+}
+
+// Import result
+message ImportUploadedModResponse {
+  Mod mod = 1;
+  string message = 2;
+}
+
+// Mod fields to update
+message UpdateModRequest {
+  string server_id = 1;
+  string mod_id = 2;
+  optional string display_name = 3;
+  optional string description = 4;
+  optional bool enabled = 5;
+}
+
+// Updated mod
+message UpdateModResponse {
+  Mod mod = 1;
+}
+
+// Mod to delete
+message DeleteModRequest {
+  string server_id = 1;
+  string mod_id = 2;
+}
+
+// Deletion confirmation
+message DeleteModResponse {
+  string message = 1;
+}
+
+// Fabric optimization mod item
+message FabricOptimizationMod {
+  string mod_id = 1;                  // e.g. "lithium", "ferrite-core", "modernfix", "c2me-fabric"
+  string name = 2;                    // e.g. "Lithium", "FerriteCore", "ModernFix", "C2ME"
+  string description = 3;             // Mod optimization description
+  bool installed = 4;
+  bool compatible = 5;
+  string installed_version = 6;
+  string latest_compatible_version = 7;
+  string file_name = 8;
+  string download_url = 9;
+}
+
+// Get Fabric optimization stack request
+message GetFabricOptimizationStackRequest {
+  string server_id = 1;
+}
+
+// Get Fabric optimization stack response
+message GetFabricOptimizationStackResponse {
+  bool is_fabric = 1;
+  string mc_version = 2;
+  repeated FabricOptimizationMod mods = 3;
+}
+
+// Install Fabric optimization stack request
+message InstallFabricOptimizationStackRequest {
+  string server_id = 1;
+  repeated string mod_ids = 2; // Optional filter; empty installs all 4
+}
+
+// Install Fabric optimization stack response
+message InstallFabricOptimizationStackResponse {
+  repeated FabricOptimizationMod installed_mods = 1;
+  repeated string warnings = 2;
+  string message = 3;
+}

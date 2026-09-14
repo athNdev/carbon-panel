@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 func setupTestStore(t *testing.T) *storage.Store {

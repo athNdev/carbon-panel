@@ -1,10 +1,10 @@
 .PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs
 
 DATA_DIR := ./data
-DOCKER_DATA_DIR := /tmp/mineserver
-DB_FILE := $(DATA_DIR)/mineserver.db
-FRONTEND_DIR := web/mineserver
-MINESERVER_BIN := build/mineserver
+DOCKER_DATA_DIR := /tmp/carbon-panel
+DB_FILE := $(DATA_DIR)/carbon-panel.db
+FRONTEND_DIR := web/carbon-panel
+CARBONPANEL_BIN := build/carbon-panel
 BUF_IMAGE := bufbuild/buf:latest
 BUF_RUN := docker run --rm \
 	--volume "$(shell pwd):/workspace" \
@@ -20,33 +20,33 @@ run:
 restore:
 	@echo "Restoring seeded db for dev"
 	@mkdir -p $(DATA_DIR)
-	cp dev/mineserver.db data/mineserver.db || echo "No saved dev state, starting new db"
+	cp dev/carbon-panel.db data/carbon-panel.db || echo "No saved dev state, starting new db"
 
 dev: clean restore run
 
 # Build and run with OIDC provider (Keycloak)
 dev-auth-%: clean
 	docker compose -f oidc/$*/docker-compose.yaml down -v --remove-orphans
-	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/mineserver
+	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/carbon-panel
 	@echo "Building and running with OIDC provider..."
 	docker compose -f oidc/$*/docker-compose.yaml build --no-cache
 	docker compose -f oidc/$*/docker-compose.yaml up
 
 dev-docker: clean
 	docker compose down -v --remove-orphans
-	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/mineserver
+	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/carbon-panel
 	@echo "Building and running with base compose..."
 	docker compose build --no-cache
 	docker compose up
 
 dev-docs:
-	cd docs/mineserver && npm run dev
+	cd docs/carbon-panel && npm run dev
 	
 # Production build and run
 prod: build-frontend
 	@echo "Building for production..."
 	@mkdir -p $(DATA_DIR)
-	go build -o $(MINESERVER_BIN) cmd/mineserver/main.go
+	go build -o $(CARBONPANEL_BIN) cmd/carbon-panel/main.go
 
 # Build frontend for production
 build-frontend:
@@ -56,7 +56,7 @@ build-frontend:
 # Build backend with embedded frontend
 build: build-frontend
 	@echo "Building backend with embedded frontend..."
-	go build -o $(MINESERVER_BIN) cmd/mineserver/main.go
+	go build -o $(CARBONPANEL_BIN) cmd/carbon-panel/main.go
 
 # Build and push Docker image to :dev tag
 image:
@@ -73,11 +73,11 @@ modules: gen
 	@echo "Building and pushing module images..."
 	@for dockerfile in docker/Dockerfile.*; do \
 		name=$$(basename $$dockerfile | sed 's/Dockerfile\.//'); \
-		if [ "$$name" != "mineserver" ]; then \
-			echo "Building athndev/mineserver-$$name:latest..."; \
-			docker build -t "athndev/mineserver-$$name:latest" -f "$$dockerfile" . && \
-			echo "Pushing athndev/mineserver-$$name:latest..." && \
-			docker push "athndev/mineserver-$$name:latest"; \
+		if [ "$$name" != "carbon-panel" ]; then \
+			echo "Building athndev/carbon-panel-$$name:latest..."; \
+			docker build -t "athndev/carbon-panel-$$name:latest" -f "$$dockerfile" . && \
+			echo "Pushing athndev/carbon-panel-$$name:latest..." && \
+			docker push "athndev/carbon-panel-$$name:latest"; \
 		fi \
 	done
 	@echo "Module builds complete!"
@@ -87,13 +87,13 @@ module-%: gen
 	@if [ ! -f "docker/Dockerfile.$*" ]; then \
 		echo "Error: docker/Dockerfile.$* not found"; \
 		echo "Available modules:"; \
-		ls docker/Dockerfile.* 2>/dev/null | sed 's/docker\/Dockerfile\./  /g' | grep -v mineserver; \
+		ls docker/Dockerfile.* 2>/dev/null | sed 's/docker\/Dockerfile\./  /g' | grep -v carbon-panel; \
 		exit 1; \
 	fi
-	@echo "Building athndev/mineserver-$*:latest..."
-	@docker build -t "athndev/mineserver-$*:latest" -f "docker/Dockerfile.$*" .
-	@echo "Pushing athndev/mineserver-$*:latest..."
-	@docker push "athndev/mineserver-$*:latest"
+	@echo "Building athndev/carbon-panel-$*:latest..."
+	@docker build -t "athndev/carbon-panel-$*:latest" -f "docker/Dockerfile.$*" .
+	@echo "Pushing athndev/carbon-panel-$*:latest..."
+	@docker push "athndev/carbon-panel-$*:latest"
 	@echo "Module $* build complete!"
 
 # Clean development data
@@ -107,13 +107,13 @@ clean:
 		echo "Removing docker data directory..."; \
 		docker run --rm -v $(DOCKER_DATA_DIR):/tmp alpine sh -c 'rm -rf /tmp/*'; \
 	fi
-	@if [ -f "$(MINESERVER_BIN)" ]; then \
+	@if [ -f "$(CARBONPANEL_BIN)" ]; then \
 		echo "Removing backend binary..."; \
-		rm -f $(MINESERVER_BIN); \
+		rm -f $(CARBONPANEL_BIN); \
 	fi
-	@if [ -f "mineserver.db" ]; then \
+	@if [ -f "carbon-panel.db" ]; then \
 		echo "Removing old database file..."; \
-		rm -f mineserver.db; \
+		rm -f carbon-panel.db; \
 	fi
 	@echo "Clean complete!"
 
@@ -124,8 +124,8 @@ kill-dev:
 	@pkill -f "bun" || true
 	@pkill -f "npm run dev" || true
 	@pkill -f "vite" || true
-	@pkill -f "go run cmd/mineserver/main.go" || true
-	@pkill -f "mineserver" || true
+	@pkill -f "go run cmd/carbon-panel/main.go" || true
+	@pkill -f "carbon-panel" || true
 	@echo "Cleanup complete!"
 
 # Install dependencies
@@ -167,7 +167,7 @@ proto:
 proto-clean:
 	@echo "Cleaning generated proto files..."
 	rm -rf pkg/proto
-	rm -rf web/mineserver/src/lib/proto
+	rm -rf web/carbon-panel/src/lib/proto
 	@echo "Proto files cleaned!"
 
 proto-lint:

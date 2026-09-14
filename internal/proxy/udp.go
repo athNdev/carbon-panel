@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // UDPProxy handles UDP forwarding for modules like Geyser

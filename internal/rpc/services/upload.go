@@ -5,15 +5,15 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
-	"github.com/athNdev/mineserver/pkg/upload"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/upload"
 )
 
 // Compile-time check that UploadService implements the interface
-var _ mineserverv1connect.UploadServiceHandler = (*UploadService)(nil)
+var _ carbonpanelv1connect.UploadServiceHandler = (*UploadService)(nil)
 
 // UploadService implements the Upload service
 type UploadService struct {

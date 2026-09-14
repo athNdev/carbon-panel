@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Configuration management
+service ConfigService {
+  // Fetch server environment variables
+  rpc GetServerConfig(GetServerConfigRequest) returns (GetServerConfigResponse);
+  // Update server environment variables
+  rpc UpdateServerConfig(UpdateServerConfigRequest) returns (UpdateServerConfigResponse);
+  // Fetch system-wide defaults
+  rpc GetGlobalSettings(GetGlobalSettingsRequest) returns (GetGlobalSettingsResponse);
+  // Update system-wide defaults
+  rpc UpdateGlobalSettings(UpdateGlobalSettingsRequest) returns (UpdateGlobalSettingsResponse);
+  // Apply global defaults (or specific categories like Ops and Whitelist) to all existing servers
+  rpc SyncGlobalSettingsToServers(SyncGlobalSettingsToServersRequest) returns (SyncGlobalSettingsToServersResponse);
+}
+
+// Single configuration field
+message ConfigProperty {
+  string key = 1;
+  string label = 2;
+  string value = 3;
+  optional string default_value = 4;
+  string type = 5; // text, number, checkbox, select, password
+  string description = 6;
+  bool required = 7;
+  bool system = 8; // If true, field is auto-populated and read-only
+  bool ephemeral = 9; // If true, field is cleared after server start
+  string env_var = 10;
+  repeated string options = 11; // For select type
+}
+
+// Group of related config fields
+message ConfigCategory {
+  string name = 1;
+  repeated ConfigProperty properties = 2;
+}
+
+// Server config request
+message GetServerConfigRequest {
+  string server_id = 1;
+}
+
+// Categorized server settings
+message GetServerConfigResponse {
+  repeated ConfigCategory categories = 1;
+}
+
+// Config fields to update
+message UpdateServerConfigRequest {
+  string server_id = 1;
+  map<string, string> updates = 2;
+}
+
+// Updated server settings
+message UpdateServerConfigResponse {
+  repeated ConfigCategory categories = 1;
+}
+
+// Empty global settings request
+message GetGlobalSettingsRequest {}
+
+// Categorized global defaults
+message GetGlobalSettingsResponse {
+  repeated ConfigCategory categories = 1;
+}
+
+// Global fields to update
+message UpdateGlobalSettingsRequest {
+  map<string, string> updates = 1;
+}
+
+// Updated global defaults
+message UpdateGlobalSettingsResponse {
+  repeated ConfigCategory categories = 1;
+}
+
+// Request to propagate global settings to existing servers
+message SyncGlobalSettingsToServersRequest {
+  // If true, only sync Ops/Admins and Whitelist fields. If false, syncs all non-server-specific fields.
+  bool ops_and_whitelist_only = 1;
+}
+
+// Response after propagating global settings
+message SyncGlobalSettingsToServersResponse {
+  int32 updated_servers_count = 1;
+  string message = 2;
+}

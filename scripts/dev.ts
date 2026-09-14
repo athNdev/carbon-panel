@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 const isWindows = process.platform === "win32";
 
 console.log("\x1b[36m%s\x1b[0m", "==================================================");
-console.log("\x1b[36m%s\x1b[0m", "   MineServer Live Development Environment");
+console.log("\x1b[36m%s\x1b[0m", "   Carbon Panel Live Development Environment");
 console.log("\x1b[36m%s\x1b[0m", "==================================================");
 console.log("\x1b[32m%s\x1b[0m", "  Frontend (Vite HMR):  http://localhost:5174");
 console.log("\x1b[32m%s\x1b[0m", "  Backend API / RPC:    http://localhost:8080");
@@ -71,8 +71,8 @@ try {
   });
 
   backendProc.on("error", (err) => {
-    console.warn("\x1b[33m%s\x1b[0m", `[backend] Air not found or error (${err.message}). Falling back to 'go run cmd/mineserver/main.go'...`);
-    const fallbackProc = spawn("go", ["run", "cmd/mineserver/main.go"], {
+    console.warn("\x1b[33m%s\x1b[0m", `[backend] Air not found or error (${err.message}). Falling back to 'go run cmd/carbon-panel/main.go'...`);
+    const fallbackProc = spawn("go", ["run", "cmd/carbon-panel/main.go"], {
       stdio: "inherit",
       shell: isWindows,
       cwd: process.cwd()
@@ -82,8 +82,8 @@ try {
 
   activeProcesses.push(backendProc);
 } catch (e) {
-  console.warn("\x1b[33m%s\x1b[0m", `[backend] Starting with 'go run cmd/mineserver/main.go'...`);
-  const fallbackProc = spawn("go", ["run", "cmd/mineserver/main.go"], {
+  console.warn("\x1b[33m%s\x1b[0m", `[backend] Starting with 'go run cmd/carbon-panel/main.go'...`);
+  const fallbackProc = spawn("go", ["run", "cmd/carbon-panel/main.go"], {
     stdio: "inherit",
     shell: isWindows,
     cwd: process.cwd()
@@ -92,7 +92,7 @@ try {
 }
 
 // 2. Start Frontend with Bun (Vite HMR)
-const frontendDir = join(process.cwd(), "web", "mineserver");
+const frontendDir = join(process.cwd(), "web", "carbon-panel");
 const frontendProc = spawn("bun", ["run", "dev"], {
   stdio: "inherit",
   shell: isWindows,

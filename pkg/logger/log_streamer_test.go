@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

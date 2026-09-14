@@ -9,10 +9,10 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 type mockDockerClient struct {
@@ -60,7 +60,7 @@ func TestGetContainerIP_SpecificNetwork(t *testing.T) {
 						"bridge": {
 							IPAddress: "172.17.0.2",
 						},
-						"MINESERVER-net": {
+						"carbon-panel-net": {
 							IPAddress: "172.20.0.5",
 						},
 					},
@@ -69,7 +69,7 @@ func TestGetContainerIP_SpecificNetwork(t *testing.T) {
 		},
 	}
 
-	ip, err := GetContainerIP(mockCli, "container-123", "MINESERVER-net")
+	ip, err := GetContainerIP(mockCli, "container-123", "carbon-panel-net")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

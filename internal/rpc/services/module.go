@@ -8,21 +8,21 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/alias"
-	"github.com/athNdev/mineserver/internal/auth"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/module"
-	"github.com/athNdev/mineserver/internal/proxy"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/carbon-panel/internal/alias"
+	"github.com/athNdev/carbon-panel/internal/auth"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that ModuleService implements the interface
-var _ mineserverv1connect.ModuleServiceHandler = (*ModuleService)(nil)
+var _ carbonpanelv1connect.ModuleServiceHandler = (*ModuleService)(nil)
 
 // ModuleService implements the Module service
 type ModuleService struct {

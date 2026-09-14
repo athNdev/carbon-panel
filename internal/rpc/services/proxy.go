@@ -6,19 +6,19 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/minecraft"
-	"github.com/athNdev/mineserver/internal/proxy"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that ProxyService implements the interface
-var _ mineserverv1connect.ProxyServiceHandler = (*ProxyService)(nil)
+var _ carbonpanelv1connect.ProxyServiceHandler = (*ProxyService)(nil)
 
 // ProxyService implements the Proxy service
 type ProxyService struct {

@@ -15,16 +15,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 
-	"github.com/athNdev/mineserver/internal/command"
-	appconfig "github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/events"
-	"github.com/athNdev/mineserver/internal/metrics"
-	"github.com/athNdev/mineserver/internal/snapshot"
-	"github.com/athNdev/mineserver/internal/webhook"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/carbon-panel/internal/command"
+	appconfig "github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/events"
+	"github.com/athNdev/carbon-panel/internal/metrics"
+	"github.com/athNdev/carbon-panel/internal/snapshot"
+	"github.com/athNdev/carbon-panel/internal/webhook"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 // Scheduler manages scheduled tasks for all servers
@@ -780,7 +780,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	// Prepare git repository clone directory inside server directory or app cache
-	cacheDir := filepath.Join(server.DataPath, ".mineserver_modpack_git")
+	cacheDir := filepath.Join(server.DataPath, ".carbon-panel_modpack_git")
 	gitURL := cfg.GitURL
 	if cfg.AuthToken != "" && strings.HasPrefix(gitURL, "https://") {
 		// Embed auth token into clone URL
@@ -867,7 +867,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 		// Stage configuration updates if requested
 		if cfg.StageConfigUpdates {
-			stagedDir := filepath.Join(server.DataPath, ".mineserver_modpack_staged")
+			stagedDir := filepath.Join(server.DataPath, ".carbon-panel_modpack_staged")
 			_ = os.MkdirAll(stagedDir, 0755)
 			manifest := map[string]any{
 				"from_commit":   currentHash,
@@ -892,16 +892,16 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
 		cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
 			"--exclude=.git",
-			"--exclude=.mineserver_modpack_git",
-			"--exclude=.mineserver_modpack_staged",
-			"--exclude=.mineserver_snapshots",
+			"--exclude=.carbon-panel_modpack_git",
+			"--exclude=.carbon-panel_modpack_staged",
+			"--exclude=.carbon-panel_snapshots",
 			srcDir+"/", server.DataPath+"/")
 		if out, err := cmdRsync.CombinedOutput(); err != nil {
 			// Fallback to cp -rf if rsync is not installed
 			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
 			if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
 				// Pure Go fallback if neither rsync nor cp are available (e.g. on Windows)
-				excludes := []string{".git", ".mineserver_modpack_git", ".mineserver_modpack_staged", ".mineserver_snapshots"}
+				excludes := []string{".git", ".carbon-panel_modpack_git", ".carbon-panel_modpack_staged", ".carbon-panel_snapshots"}
 				if goErr := copyDirExcluding(srcDir, server.DataPath, excludes); goErr != nil {
 					// If copying failed and we took a snapshot, rollback if enabled
 					if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {

@@ -6,15 +6,6 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/cd.yml'
-      - 'docker/**'
-      - 'cmd/**'
-      - 'internal/**'
-      - 'web/**'
   workflow_dispatch:
     inputs:
       push:
@@ -115,7 +106,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            athndev/mineserver
+            athndev/carbon-panel
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch,enable=${{ github.ref != 'refs/heads/main' }}
@@ -123,15 +114,15 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short,prefix=sha-
           labels: |
-            org.opencontainers.image.title=MineServer
+            org.opencontainers.image.title=Carbon Panel
             org.opencontainers.image.description=A modern Minecraft server and modpack management panel
-            org.opencontainers.image.source=https://github.com/athNdev/mineserver
+            org.opencontainers.image.source=https://github.com/athNdev/carbon-panel
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.mineserver
+          file: docker/Dockerfile.carbon-panel
           platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ steps.check-creds.outputs.has_creds == 'true' && github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.push) }}
           tags: ${{ steps.meta.outputs.tags }}

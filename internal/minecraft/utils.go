@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	models "github.com/athNdev/mineserver/internal/db"
+	models "github.com/athNdev/carbon-panel/internal/db"
 )
 
 // ParseTPSFromOutput parses TPS value from various server command outputs

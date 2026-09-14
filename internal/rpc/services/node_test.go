@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 func setupTestStore(t *testing.T) *db.Store {

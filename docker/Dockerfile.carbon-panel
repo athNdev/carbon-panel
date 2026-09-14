@@ -1,0 +1,60 @@
+ARG APP_VERSION=dev
+
+# Generate protobuf code using buf
+FROM bufbuild/buf:latest AS proto-builder
+WORKDIR /app
+COPY buf.yaml buf.gen.yaml buf.lock ./
+COPY proto/ ./proto/
+RUN mkdir -p web/carbon-panel/static pkg/proto web/carbon-panel/src/lib/proto && buf generate
+
+FROM oven/bun:1-alpine AS frontend-builder
+
+ARG APP_VERSION
+ENV APP_VERSION=${APP_VERSION}
+
+WORKDIR /app/web/carbon-panel
+
+COPY web/carbon-panel/package.json web/carbon-panel/bun.lock ./
+RUN bun install --frozen-lockfile
+
+COPY web/carbon-panel/ ./
+COPY --from=proto-builder /app/web/carbon-panel/src/lib/proto ./src/lib/proto/
+COPY --from=proto-builder /app/web/carbon-panel/static/schemav1.yaml ./static/
+
+RUN bun run build
+
+FROM golang:alpine AS backend-builder
+
+ARG APP_VERSION
+ENV APP_VERSION=${APP_VERSION}
+
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+COPY --from=proto-builder /app/pkg/proto ./pkg/proto/
+COPY --from=frontend-builder /app/web/carbon-panel/build ./web/carbon-panel/build
+
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o carbon-panel ./cmd/carbon-panel
+
+FROM alpine:latest
+
+ARG APP_VERSION
+ENV APP_VERSION=${APP_VERSION}
+
+RUN apk --no-cache add ca-certificates sqlite-libs
+
+WORKDIR /app
+
+COPY --from=backend-builder /app/carbon-panel .
+COPY config.example.yaml ./
+
+#RUN mkdir -p data/servers backups tmp
+
+EXPOSE 8080
+
+CMD ["./carbon-panel"]

@@ -1,16 +1,16 @@
-﻿# MineServer System Architecture & Design Specification
+﻿# Carbon Panel System Architecture & Design Specification
 
 ---
 
 ## 1. Executive Summary & Design Principles
 
-**MineServer** is a modern, enterprise-grade Minecraft server orchestration platform and intelligent TCP reverse proxy. It couples a containerized backend written in Go with an IBM Carbon Design System web interface engineered in SvelteKit 2 and Svelte 5.
+**Carbon Panel** is a modern, enterprise-grade Minecraft server orchestration platform and intelligent TCP reverse proxy. It couples a containerized backend written in Go with an IBM Carbon Design System web interface engineered in SvelteKit 2 and Svelte 5.
 
 ### Core Principles
 1. **Deterministic Isolation**: Every game server runs as an independent, sandboxed OCI/Docker container. No runtime dependencies, libraries, or JVM artifacts are shared across server environments.
 2. **Zero-Friction Ingress**: Single-port TCP multiplexing (`25565`) enables hosting unlimited server domains without requiring port forwarding, manual port mapping, or multi-port firewall rules.
 3. **Rigorous Design Fidelity**: The user interface strictly implements the **IBM Carbon Design System** (v11 Gray 100 theme) with 0px sharp geometry, IBM Plex typography, and 2x grid alignment.
-4. **Contract-Driven APIs**: All communication between frontend, backend, and CLI utilities is defined through Protocol Buffers and Connect-RPC schemas (`proto/mineserver/v1`).
+4. **Contract-Driven APIs**: All communication between frontend, backend, and CLI utilities is defined through Protocol Buffers and Connect-RPC schemas (`proto/carbonpanel/v1`).
 5. **Unified Developer Experience**: Live hotloading with Go Air and Bun/Vite HMR allows instant cross-stack development.
 
 ---
@@ -31,7 +31,7 @@ flowchart TB
         WSHub["WebSocket Streaming Hub (:8080/ws)"]
     end
 
-    subgraph DaemonLayer ["MineServer Core Daemon (Go 1.24+)"]
+    subgraph DaemonLayer ["Carbon Panel Core Daemon (Go 1.24+)"]
         RPC["RPC Handler Engine\n(Server, Modpack, Auth, Config)"]
         Router["Dynamic Route Registry\n(Virtual Host Mapping)"]
         Scheduler["Cron & Task Scheduler\n(Maintenance & Backups)"]
@@ -78,7 +78,7 @@ flowchart TB
 
 ## 3. Frontend Architecture: IBM Carbon Design System
 
-The frontend application in `web/mineserver` is built using **SvelteKit 2**, **Svelte 5 Runes**, **Tailwind CSS v4**, and custom IBM Carbon Design System components.
+The frontend application in `web/carbon-panel` is built using **SvelteKit 2**, **Svelte 5 Runes**, **Tailwind CSS v4**, and custom IBM Carbon Design System components.
 
 ### 3.1 Architectural Foundation
 - **Svelte 5 Runes Mode**: Reactivity is implemented exclusively using Svelte 5 runes (`$state`, `$derived`, `$effect`, `$props`, and `{#snippet}`) eliminating legacy Svelte 3/4 stores and mutable reactive declarations (`$: ...`).
@@ -130,12 +130,12 @@ To avoid CSS specificity regressions, all styling is strictly compiled inside Ta
 
 ## 4. Backend Service Architecture (Go)
 
-The backend daemon in `cmd/mineserver` coordinates several loosely-coupled subsystems:
+The backend daemon in `cmd/carbon-panel` coordinates several loosely-coupled subsystems:
 
 ```
-mineserver/
+carbon-panel/
 ├── cmd/
-│   ├── mineserver/       # Main server daemon entrypoint
+│   ├── carbon-panel/       # Main server daemon entrypoint
 │   ├── geyser/           # Bedrock translation sidecar entrypoint
 │   └── status/           # CLI health probe utility
 ├── internal/
@@ -166,7 +166,7 @@ mineserver/
 ### 4.1 Intelligent Minecraft TCP Reverse Proxy (`internal/proxy`)
 Minecraft clients connect over TCP using the Minecraft Protocol handshake. Standard HTTP reverse proxies (like NGINX or Traefik in HTTP mode) cannot parse Minecraft packets. 
 
-MineServer implements a high-performance raw TCP proxy:
+Carbon Panel implements a high-performance raw TCP proxy:
 1. **Handshake Parsing**: When a client initiates a connection on port `25565`, the proxy reads the initial variable-length `Handshake` packet (`0x00`).
 2. **Server Address Extraction**: The packet contains the exact hostname string entered by the player in their Minecraft client (e.g., `survival.myserver.com`).
 3. **Route Lookup**: The proxy queries `internal/proxy.Registry` to match the hostname against configured server routing rules.
@@ -176,7 +176,7 @@ MineServer implements a high-performance raw TCP proxy:
 sequenceDiagram
     autonumber
     actor Player as Minecraft Client
-    participant Proxy as MineServer Proxy (:25565)
+    participant Proxy as Carbon Panel Proxy (:25565)
     participant Router as Route Registry
     participant Container as Docker Container (Server)
 
@@ -194,7 +194,7 @@ sequenceDiagram
 ```
 
 ### 4.2 Docker Container Orchestration (`internal/docker`)
-MineServer uses the official Docker Engine API (`github.com/docker/docker/client`) to orchestrate container lifecycles:
+Carbon Panel uses the official Docker Engine API (`github.com/docker/docker/client`) to orchestrate container lifecycles:
 - **Base Images**: Utilizes optimized `itzg/minecraft-server` multi-architecture images.
 - **Volume Binding**: Server directories are mounted into the container at `/data`, isolating world saves, configs, and plugins.
 - **Resource Constraints**: Dynamically applies CPU quotas (`NanoCPUs`) and memory limits (`Memory`) defined per server.
@@ -210,10 +210,10 @@ The modpack engine enables full modpack authoring and distribution:
 
 ## 5. API & Protocol Contracts
 
-MineServer standardizes on Protocol Buffers v3 and Connect-RPC. All schema files reside in `proto/mineserver/v1/`.
+Carbon Panel standardizes on Protocol Buffers v3 and Connect-RPC. All schema files reside in `proto/carbonpanel/v1/`.
 
 ```
-proto/mineserver/v1/
+proto/carbonpanel/v1/
 ├── auth.proto        # Login, registration, token refresh, recovery key
 ├── common.proto      # Enums (ServerStatus), User, Role, Permission entities
 ├── config.proto      # Global and server configuration properties
@@ -238,7 +238,7 @@ proto/mineserver/v1/
 
 ## 6. Data Storage & Schema Design
 
-Persistence is handled by **SQLite** located at `data/mineserver.db` (or custom configured path via `MINESERVER_DATA_DIR`).
+Persistence is handled by **SQLite** located at `data/carbon-panel.db` (or custom configured path via `CARBONPANEL_DATA_DIR`).
 
 ```mermaid
 erDiagram
@@ -299,7 +299,7 @@ erDiagram
 ## 7. Security Architecture & Threat Model
 
 ### 7.1 Docker Socket Protection
-- The host `/var/run/docker.sock` is mounted into the MineServer daemon container.
+- The host `/var/run/docker.sock` is mounted into the Carbon Panel daemon container.
 - Container creation enforces strict resource isolation (`NanoCPUs`, memory hard limits).
 - Server containers run non-root users inside the container where supported.
 
@@ -333,7 +333,7 @@ flowchart LR
     subgraph CD ["Automated Image Publishing"]
         QEMU["Set up QEMU"]
         Buildx["Buildx Multi-Arch\n(linux/amd64, linux/arm64)"]
-        Push["Push to Docker Hub\n(athndev/mineserver)"]
+        Push["Push to Docker Hub\n(athndev/carbon-panel)"]
     end
 ```
 
@@ -350,7 +350,7 @@ A unified development environment is configured to eliminate manual rebuild cycl
 | Layer | Technology | Tool | Port | Hotloading Mechanism |
 | :--- | :--- | :--- | :--- | :--- |
 | **Frontend** | SvelteKit / Tailwind | Vite 7 | `5174` | Vite Hot Module Replacement (HMR) with automatic reverse proxy to `:8080` |
-| **Backend** | Go 1.24 | Air (`.air.toml`) | `8080` | File-system watcher triggers automatic recompilation to `./tmp/mineserver-dev` |
+| **Backend** | Go 1.24 | Air (`.air.toml`) | `8080` | File-system watcher triggers automatic recompilation to `./tmp/carbon-panel-dev` |
 | **Orchestrator** | TypeScript | `scripts/dev.ts` | — | Concurrently spawns Air and Vite with unified stdout/stderr logging and signal handling |
 
 To launch the hotloading development environment:

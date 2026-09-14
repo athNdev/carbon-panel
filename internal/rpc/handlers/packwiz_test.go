@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/athNdev/mineserver/internal/packwiz"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/internal/packwiz"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )
 
