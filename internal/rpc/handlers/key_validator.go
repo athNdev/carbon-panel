@@ -102,7 +102,7 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 							resp.Message = "Connected successfully! CurseForge API key is valid and approved for mod searches."
 						} else if resSearch.StatusCode == http.StatusForbidden || resSearch.StatusCode == http.StatusUnauthorized {
 							resp.Valid = true
-							resp.Message = "CurseForge API key accepted, but Overwolf restricts direct mod search (403). CARBONPANEL will automatically use the keyless community proxy for mod searches!"
+							resp.Message = "CurseForge API key accepted, but Overwolf restricts direct mod search (403). Carbon Panel will automatically use the keyless community proxy for mod searches!"
 						} else {
 							resp.Valid = true
 							resp.Message = "Connected successfully! CurseForge API key is valid."

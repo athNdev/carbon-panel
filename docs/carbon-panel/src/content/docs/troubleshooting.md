@@ -10,8 +10,8 @@ Common errors, known quirks (like CurseForge API keys randomly invalidating), an
 Before opening a GitHub issue:
 
 1. Check this page and the [FAQ](/faq/) first
-2. Try the latest version of CARBONPANEL
-3. Include your Docker/compose version, CARBONPANEL version, and relevant logs
+2. Try the latest version of Carbon Panel
+3. Include your Docker/compose version, Carbon Panel version, and relevant logs
 4. Open an issue at [github.com/athNdev/carbon-panel/issues](https://github.com/athNdev/carbon-panel/issues)
 
 For quicker help, ask in the [Discord](https://discord.gg/6Z9yKTbsrP).

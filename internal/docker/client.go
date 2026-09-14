@@ -236,7 +236,7 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 	} else {
 		// Set defaults
 		c.config = ClientConfig{
-			NetworkName:     "CARBONPANEL-network",
+			NetworkName:     "carbon-panel-network",
 			EnableRateLimit: true,
 			RateLimitPerMin: 10,
 			RateLimitBurst:  20,
@@ -494,7 +494,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		c.log.Debug("Additional port mapping: %s (%d:%d/%s)", port.GetName(), port.GetHostPort(), port.GetContainerPort(), protocol)
 	}
 
-	// Handle path translation when CARBONPANEL runs in a container
+	// Handle path translation when Carbon Panel runs in a container
 	dataPath := TranslateToHostPath(server.DataPath)
 
 	if err := os.MkdirAll(server.DataPath, 0755); err != nil {
@@ -509,11 +509,11 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		AttachStderr: true,
 		ExposedPorts: exposedPorts,
 		Labels: map[string]string{
-			"CARBONPANEL.server.id":      server.ID,
-			"CARBONPANEL.server.name":    server.Name,
-			"CARBONPANEL.server.loader":  string(server.ModLoader),
-			"CARBONPANEL.server.version": server.MCVersion,
-			"CARBONPANEL.managed":        "true",
+			"carbon-panel.server.id":      server.ID,
+			"carbon-panel.server.name":    server.Name,
+			"carbon-panel.server.loader":  string(server.ModLoader),
+			"carbon-panel.server.version": server.MCVersion,
+			"carbon-panel.managed":        "true",
 		},
 	}
 
@@ -569,7 +569,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 
 	resp, err := c.docker.ContainerCreate(
 		ctx, config, hostConfig, networkConfig, nil,
-		fmt.Sprintf("CARBONPANEL-server-%s", server.ID),
+		fmt.Sprintf("carbon-panel-server-%s", server.ID),
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create container: %w", err)
@@ -922,7 +922,7 @@ func (c *Client) EnsureNetwork() error {
 		createOpts := network.CreateOptions{
 			Driver: "bridge",
 			Labels: map[string]string{
-				"CARBONPANEL.managed": "true",
+				"carbon-panel.managed": "true",
 			},
 		}
 
@@ -935,7 +935,7 @@ func (c *Client) EnsureNetwork() error {
 	return nil
 }
 
-// Connects CARBONPANEL to its own bridge network if running as container
+// Connects Carbon Panel to its own bridge network if running as container
 // NOTE: Only really needed for bridge mode though
 func (c *Client) attachSelfToNetwork(ctx context.Context) {
 	if _, err := os.Stat("/.dockerenv"); err != nil {
@@ -963,11 +963,11 @@ func (c *Client) attachSelfToNetwork(ctx context.Context) {
 	}
 
 	if err := c.docker.NetworkConnect(ctx, c.config.NetworkName, info.ID, nil); err != nil {
-		c.log.Error("Failed to attach CARBONPANEL container to network %s: %v", c.config.NetworkName, err)
+		c.log.Error("Failed to attach Carbon Panel container to network %s: %v", c.config.NetworkName, err)
 		return
 	}
 
-	c.log.Info("Attached CARBONPANEL container to network %s", c.config.NetworkName)
+	c.log.Info("Attached Carbon Panel container to network %s", c.config.NetworkName)
 }
 
 var (

@@ -36,7 +36,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 				"BEDROCK_MOTD1": "GeyserMC",
 				"BEDROCK_MOTD2": "Minecraft Server",
 				"BEDROCK_SERVERNAME": "Geyser",
-				"REMOTE_ADDRESS": "CARBONPANEL-server-{{server.id}}",
+				"REMOTE_ADDRESS": "carbon-panel-server-{{server.id}}",
 				"REMOTE_PORT": "25565",
 				"REMOTE_AUTH_TYPE": "offline"
 			}`,
@@ -57,7 +57,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			Icon:           "archive",
 			Ports:          []*v1.ModulePort{},
 			DefaultEnv: `{
-				"RCON_HOST": "CARBONPANEL-server-{{server.id}}",
+				"RCON_HOST": "carbon-panel-server-{{server.id}}",
 				"RCON_PORT": "{{server.config.rconPort}}",
 				"RCON_PASSWORD": "{{server.config.rconPassword}}",
 				"SRC_DIR": "/data",
@@ -97,7 +97,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			DefaultEnv: `{
 				"RWA_ADMIN": "true",
 				"RWA_PASSWORD": "admin",
-				"RWA_RCON_HOST": "CARBONPANEL-server-{{server.id}}",
+				"RWA_RCON_HOST": "carbon-panel-server-{{server.id}}",
 				"RWA_RCON_PORT": "{{server.config.rconPort}}",
 				"RWA_RCON_PASSWORD": "{{server.config.rconPassword}}",
 				"RWA_WEBSOCKET_URL": "ws://{{server.proxy_hostname}}:{{module.ports.WS.host_port}}"
@@ -124,7 +124,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			},
 			DefaultAccessUrls: []string{"http://{{host.hostname}}:{{module.ports.Metrics.host_port}}/metrics"},
 			DefaultEnv: `{
-				"EXPORT_SERVERS": "CARBONPANEL-server-{{server.id}}:25565",
+				"EXPORT_SERVERS": "carbon-panel-server-{{server.id}}:25565",
 				"EXPORT_PORT": "{{module.ports.Metrics.container_port}}"
 			}`,
 			DefaultVolumes:  `[]`,
@@ -187,7 +187,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			DefaultVolumes:  `[]`,
 			HealthCheckPath: "/health",
 			HealthCheckPort: 8181,
-			Documentation:   "Displays a real-time status dashboard for the attached Minecraft server. Fetches status via the CARBONPANEL API including player count, TPS, CPU/memory usage, and server configuration. Automatically refreshes every 10 seconds.",
+			Documentation:   "Displays a real-time status dashboard for the attached Minecraft server. Fetches status via the Carbon Panel API including player count, TPS, CPU/memory usage, and server configuration. Automatically refreshes every 10 seconds.",
 			DefaultMemory:   512,
 		},
 	}

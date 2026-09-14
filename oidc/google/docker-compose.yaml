@@ -1,4 +1,4 @@
-# CARBONPANEL + Google (OIDC)
+# Carbon Panel + Google (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Google as the identity provider.
 #
@@ -15,7 +15,7 @@
 # NOTE ON ROLES:
 #   Google does not include a "groups" claim in its ID token by default.
 #   Users will be assigned CARBONPANEL's default roles on first login.
-#   To promote a user to admin, use the CARBONPANEL UI after they log in.
+#   To promote a user to admin, use the Carbon Panel UI after they log in.
 #
 #   If you use Google Workspace and want automatic role mapping, you can:
 #     - Use "hd" (hosted domain) as CARBONPANEL_AUTH_OIDC_ROLE_CLAIM with a role mapping
@@ -39,7 +39,7 @@ services:
       - CARBONPANEL_HOST_DATA_PATH=/tmp/carbon-panel
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBONPANEL + GOOGLE ------------------------------------
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBON PANEL + GOOGLE ------------------------------------
       - CARBONPANEL_AUTH_LOCAL_ENABLED=true
       - CARBONPANEL_AUTH_OIDC_ENABLED=true
 
@@ -62,6 +62,6 @@ services:
       # If using Google Workspace, you can set this to "hd" and add a role mapping (see below).
       - CARBONPANEL_AUTH_OIDC_ROLE_CLAIM=
 
-      # OPTIONAL: Map Google Workspace domain to a CARBONPANEL role.
+      # OPTIONAL: Map Google Workspace domain to a Carbon Panel role.
       # Uncomment and modify if using "hd" as ROLE_CLAIM above:
       # - CARBONPANEL_AUTH_OIDC_ROLE_MAPPING={"yourdomain.com":"admin"}

@@ -91,8 +91,8 @@ type Server struct {
 	JavaVersion     string               `json:"java_version" gorm:"column:java_version"`
 	DockerImage     string               `json:"docker_image" gorm:"column:docker_image"`
 	DataPath        string               `json:"data_path" gorm:"not null;column:data_path"`
-	Detached        bool                 `json:"detached" gorm:"default:false;column:detached"`                             // Detach server container from CARBONPANEL lifecycle (default: false)
-	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when CARBONPANEL starts (default: false)
+	Detached        bool                 `json:"detached" gorm:"default:false;column:detached"`                             // Detach server container from Carbon Panel lifecycle (default: false)
+	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when Carbon Panel starts (default: false)
 	AutoHibernate   bool                 `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`                 // Sleep/wake container on idle via cgroup freezer (MINE-18)
 	IdleTimeoutMinutes int               `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"`       // Minutes idle before auto-hibernating
 	TPSCommand      string               `json:"tps_command" gorm:"column:tps_command"`                                     // The TPS command for this server (empty if not supported)

@@ -1,11 +1,11 @@
 ---
 title: Prebuilt Binaries
-description: Install CARBONPANEL from prebuilt release binaries.
+description: Install Carbon Panel from prebuilt release binaries.
 ---
 
 ## Prerequisites
 
-CARBONPANEL manages Minecraft servers as Docker containers, so Docker is required.
+Carbon Panel manages Minecraft servers as Docker containers, so Docker is required.
 
 - [Docker Engine](https://docs.docker.com/engine/install/)
 
@@ -14,11 +14,11 @@ CARBONPANEL manages Minecraft servers as Docker containers, so Docker is require
 Grab a release from the [releases page](https://github.com/athNdev/carbon-panel/releases). Packages are available for each platform:
 
 ```
-CARBONPANEL-darwin-amd64.tar.gz
-CARBONPANEL-darwin-arm64.tar.gz
-CARBONPANEL-linux-amd64.tar.gz
-CARBONPANEL-linux-arm64.tar.gz
-CARBONPANEL-windows-amd64.exe.zip
+carbon-panel-darwin-amd64.tar.gz
+carbon-panel-darwin-arm64.tar.gz
+carbon-panel-linux-amd64.tar.gz
+carbon-panel-linux-arm64.tar.gz
+carbon-panel-windows-amd64.exe.zip
 ```
 
 :::note
@@ -31,10 +31,10 @@ Extract the archive and run it:
 
 ```bash
 # Using default config (./config.yaml if it exists, otherwise defaults)
-./CARBONPANEL
+./carbon-panel
 
 # Or point to a specific config file
-./CARBONPANEL -config /path/to/config.yaml
+./carbon-panel -config /path/to/config.yaml
 ```
 
 All config options can also be set via environment variables with the `CARBONPANEL_` prefix. For example, `server.port` becomes `CARBONPANEL_SERVER_PORT`. Environment variables take precedence over the config file.
@@ -42,7 +42,7 @@ All config options can also be set via environment variables with the `CARBONPAN
 :::tip[Host path mapping]
 When running the binary directly on a host (not in a Docker container), do **not** set `CARBONPANEL_DATA_DIR` or `CARBONPANEL_HOST_DATA_PATH` — those are only for container path translation.
 
-To change where CARBONPANEL stores its database and server data, set `CARBONPANEL_STORAGE_DATA_DIR` or configure it in your config file:
+To change where Carbon Panel stores its database and server data, set `CARBONPANEL_STORAGE_DATA_DIR` or configure it in your config file:
 
 ```yaml
 storage:

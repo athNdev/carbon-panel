@@ -90,7 +90,7 @@ func (s *SupportService) GenerateSupportBundle(ctx context.Context, req *connect
 
 	// Prepare bundle file path
 	bundleID := uuid.New().String()
-	bundleFileName := fmt.Sprintf("CARBONPANEL-support-%s.tar.gz", time.Now().Format("20060102-150405"))
+	bundleFileName := fmt.Sprintf("carbon-panel-support-%s.tar.gz", time.Now().Format("20060102-150405"))
 	bundlePath := filepath.Join(s.config.Storage.TempDir, bundleFileName)
 
 	// Create the tar.gz file
@@ -223,7 +223,7 @@ func (s *SupportService) UploadSupportBundle(ctx context.Context, req *connect.R
 	defer os.RemoveAll(tempDir) // Clean up temp directory when done
 
 	// Prepare bundle file path
-	bundleFileName := fmt.Sprintf("CARBONPANEL-support-%s.tar.gz", time.Now().Format("20060102-150405"))
+	bundleFileName := fmt.Sprintf("carbon-panel-support-%s.tar.gz", time.Now().Format("20060102-150405"))
 	bundlePath := filepath.Join(s.config.Storage.TempDir, bundleFileName)
 
 	// Create the tar.gz file
@@ -411,7 +411,7 @@ func (s *SupportService) uploadBundleToServer(bundlePath, fileName string, userI
 func (s *SupportService) getSupportUrl() string {
 	url := os.Getenv("SUPPORT_BASE_URL")
 	if url == "" {
-		url = "https://support.CARBONPANEL.app"
+		url = "https://support.carbon-panel.app"
 	}
 	return url
 }
@@ -468,7 +468,7 @@ func (s *SupportService) addLogsToBundle(ctx context.Context, tarWriter *tar.Wri
 		if logDir != "" && logDir != "." {
 			files, _ := os.ReadDir(logDir)
 			for _, file := range files {
-				if strings.HasPrefix(file.Name(), "CARBONPANEL") && strings.Contains(file.Name(), ".log") {
+				if strings.HasPrefix(file.Name(), "carbon-panel") && strings.Contains(file.Name(), ".log") {
 					fullPath := filepath.Join(logDir, file.Name())
 					if err := addFileToTar(tarWriter, fullPath, filepath.Join("logs", file.Name())); err != nil {
 						s.log.Warn("Failed to add log file %s: %v", file.Name(), err)

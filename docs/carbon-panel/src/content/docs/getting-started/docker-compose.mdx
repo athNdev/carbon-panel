@@ -1,6 +1,6 @@
 ---
 title: Docker Compose
-description: Deploy CARBONPANEL using Docker Compose.
+description: Deploy Carbon Panel using Docker Compose.
 ---
 
 import { Code } from '@astrojs/starlight/components';
@@ -8,13 +8,13 @@ import dockerCompose from '../../../../../../docker-compose.yml?raw';
 
 ## Prerequisites
 
-CARBONPANEL manages Minecraft servers as Docker containers, so Docker is required.
+Carbon Panel manages Minecraft servers as Docker containers, so Docker is required.
 
 - [Docker Engine](https://docs.docker.com/engine/install/) with Docker Compose
 
 ## Compose file
 
-The recommended way to run CARBONPANEL. Create a `docker-compose.yml` or use the one from the repo:
+The recommended way to run Carbon Panel. Create a `docker-compose.yml` or use the one from the repo:
 
 <Code code={dockerCompose} lang="yaml" title="docker-compose.yml" />
 
@@ -26,12 +26,12 @@ docker compose up -d
 
 ## Volume paths
 
-CARBONPANEL creates Docker bind mounts for each managed Minecraft server. When CARBONPANEL runs inside a container, it needs to know both the container-internal path and the corresponding host path to set up those mounts correctly.
+Carbon Panel creates Docker bind mounts for each managed Minecraft server. When Carbon Panel runs inside a container, it needs to know both the container-internal path and the corresponding host path to set up those mounts correctly.
 
 | Variable | Purpose | Example |
 |---|---|---|
-| `CARBONPANEL_HOST_DATA_PATH` | The host path that `CARBONPANEL_DATA_DIR` is mounted from | `/opt/CARBONPANEL/data` |
-| `CARBONPANEL_DATA_DIR` | Where CARBONPANEL reads/writes data inside the container — you can usually leave this as the default | `/app/data` |
+| `CARBONPANEL_HOST_DATA_PATH` | The host path that `CARBONPANEL_DATA_DIR` is mounted from | `/opt/carbon-panel/data` |
+| `CARBONPANEL_DATA_DIR` | Where Carbon Panel reads/writes data inside the container — you can usually leave this as the default | `/app/data` |
 
 These **must** correspond to the same volume entry. If your compose file maps `/srv/minecraft/data:/app/data`, then set `CARBONPANEL_HOST_DATA_PATH=/srv/minecraft/data`.
 

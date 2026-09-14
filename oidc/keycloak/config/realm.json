@@ -10,11 +10,11 @@
     "realm": [
       {
         "name": "admin",
-        "description": "CARBONPANEL administrator"
+        "description": "Carbon Panel administrator"
       },
       {
         "name": "user",
-        "description": "CARBONPANEL user"
+        "description": "Carbon Panel user"
       }
     ]
   },
@@ -89,7 +89,7 @@
     {
       "username": "admin",
       "enabled": true,
-      "email": "admin@CARBONPANEL.local",
+      "email": "admin@carbon-panel.local",
       "emailVerified": true,
       "firstName": "Disco",
       "lastName": "Admin",

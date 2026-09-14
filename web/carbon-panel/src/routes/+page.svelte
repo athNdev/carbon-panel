@@ -204,7 +204,7 @@
 			<div>
 				<div class="flex items-center gap-2">
 					<h1 class="font-sans text-2xl font-light text-[#f4f4f4] tracking-tight">Cluster Overview</h1>
-					<CarbonTag type="blue" size="sm">CARBONPANEL</CarbonTag>
+					<CarbonTag type="blue" size="sm">Carbon Panel</CarbonTag>
 				</div>
 				<p class="font-sans text-xs text-[#8d8d8d] mt-1">
 					Hardware utilization, game servers status, and network routing topology

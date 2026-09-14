@@ -107,11 +107,11 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 		AttachStderr: true,
 		ExposedPorts: exposedPorts,
 		Labels: map[string]string{
-			"CARBONPANEL.module.id":          module.ID,
-			"CARBONPANEL.module.name":        module.Name,
-			"CARBONPANEL.module.server_id":   module.ServerID,
-			"CARBONPANEL.module.template_id": module.TemplateID,
-			"CARBONPANEL.managed":            "true",
+			"carbon-panel.module.id":          module.ID,
+			"carbon-panel.module.name":        module.Name,
+			"carbon-panel.module.server_id":   module.ServerID,
+			"carbon-panel.module.template_id": module.TemplateID,
+			"carbon-panel.managed":            "true",
 		},
 	}
 
@@ -176,7 +176,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 	// Create the container
 	resp, err := c.docker.ContainerCreate(
 		ctx, config, hostConfig, networkConfig, nil,
-		fmt.Sprintf("CARBONPANEL-module-%s", module.ID),
+		fmt.Sprintf("carbon-panel-module-%s", module.ID),
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create module container: %w", err)
@@ -189,11 +189,11 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 func (c *Client) buildModuleEnv(module *models.Module, server *models.Server, aliasCtx *alias.Context) []string {
 	env := make([]string, 0)
 
-	// Add CARBONPANEL context variables
+	// Add Carbon Panel context variables
 	env = append(env,
 		fmt.Sprintf("CARBONPANEL_SERVER_ID=%s", server.ID),
 		fmt.Sprintf("CARBONPANEL_SERVER_NAME=%s", server.Name),
-		fmt.Sprintf("CARBONPANEL_SERVER_HOST=CARBONPANEL-server-%s", server.ID),
+		fmt.Sprintf("CARBONPANEL_SERVER_HOST=carbon-panel-server-%s", server.ID),
 		fmt.Sprintf("CARBONPANEL_SERVER_PORT=%d", DefaultMinecraftPort),
 		fmt.Sprintf("CARBONPANEL_MODULE_ID=%s", module.ID),
 		fmt.Sprintf("CARBONPANEL_MODULE_NAME=%s", module.Name),
@@ -273,7 +273,7 @@ func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount) []mount.Moun
 	return mounts
 }
 
-// GetModuleContainerIP gets the IP address of a module container on the CARBONPANEL network
+// GetModuleContainerIP gets the IP address of a module container on the Carbon Panel network
 func (c *Client) GetModuleContainerIP(ctx context.Context, containerID string) (string, error) {
 	inspect, err := c.docker.ContainerInspect(ctx, containerID)
 	if err != nil {

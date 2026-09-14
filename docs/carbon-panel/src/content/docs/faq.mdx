@@ -6,7 +6,7 @@ description: Frequently asked questions.
 Answers to the questions that get asked over and over.
 
 <details>
-  <summary>How do I update CARBONPANEL?</summary>
+  <summary>How do I update Carbon Panel?</summary>
 
   <details>
     <summary>Docker Compose</summary>
@@ -14,7 +14,7 @@ Answers to the questions that get asked over and over.
 In the folder where your `compose.yml` file is, run:
 
 1. `docker compose down`
-2. `docker pull nickheyer/CARBONPANEL`
+2. `docker pull nickheyer/carbon-panel`
 3. `docker compose up -d`
 
   </details>
@@ -88,12 +88,12 @@ In Settings → Logs.
 <details>
   <summary>I'm using Simple Voice Chat or Square/Dynmap and I want to expose that port. How do I do that?</summary>
 
-This is best done using the 'Additional Ports' section of the overview tab of the server you want to adjust. At current there is no reverse proxy built into CARBONPANEL for these, but Simple Voice Chat does have its own implementation that you should check out.
+This is best done using the 'Additional Ports' section of the overview tab of the server you want to adjust. At current there is no reverse proxy built into Carbon Panel for these, but Simple Voice Chat does have its own implementation that you should check out.
 
 </details>
 
 <details>
-  <summary>How do I stop CARBONPANEL from updating my servers?</summary>
+  <summary>How do I stop Carbon Panel from updating my servers?</summary>
 
   <details>
     <summary>Curseforge</summary>
@@ -118,7 +118,7 @@ Refer to the [itzg/docker-minecraft docs](https://docker-minecraft-server.readth
 </details>
 
 <details>
-  <summary>CARBONPANEL keeps deleting the mods I upload. How do I stop it?</summary>
+  <summary>Carbon Panel keeps deleting the mods I upload. How do I stop it?</summary>
 
   <details>
     <summary>Curseforge</summary>
@@ -142,7 +142,7 @@ Both options are configured in the **Docker Container Overrides** section of the
 <details>
   <summary>Failed to start server: [failed_precondition] ... etc</summary>
 
-This is usually a permissions issue. CARBONPANEL runs Minecraft server containers as `PUID:GID 1000:1000` by default, so if that user/group doesn't have access to CARBONPANEL's install directory, you'll hit this error. Use `ls -la` to check permissions, `chown` to change ownership, and `chmod` to adjust permissions.
+This is usually a permissions issue. Carbon Panel runs Minecraft server containers as `PUID:GID 1000:1000` by default, so if that user/group doesn't have access to Carbon Panel's install directory, you'll hit this error. Use `ls -la` to check permissions, `chown` to change ownership, and `chmod` to adjust permissions.
 
 </details>
 
@@ -156,20 +156,20 @@ These are likely not something we can help with. Either your DNS isn't working p
 <details>
   <summary>My curseforge API key isn't working.</summary>
 
-Sometimes it takes a day or two for the key to start working in CARBONPANEL when it works fine via curl or Postman. Sometimes it helps remaking the key once or twice too.
+Sometimes it takes a day or two for the key to start working in Carbon Panel when it works fine via curl or Postman. Sometimes it helps remaking the key once or twice too.
 </details>
 
 <details>
-  <summary>CARBONPANEL ran out of memory or failed when uploading a file</summary>
+  <summary>Carbon Panel ran out of memory or failed when uploading a file</summary>
 
 Try uploading the file using `scp` or `ftp` to move it directly into the folder it needs to be in.
 
-**Make sure the file has the right permissions so CARBONPANEL can read and write to it.**
+**Make sure the file has the right permissions so Carbon Panel can read and write to it.**
 
 </details>
 
 <details>
-  <summary>Does CARBONPANEL have a widget?</summary>
+  <summary>Does Carbon Panel have a widget?</summary>
 
 Yep! We have a Glance widget. It's in the community repo but not yet merged at time of writing.
 

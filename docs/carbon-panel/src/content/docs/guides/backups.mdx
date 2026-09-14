@@ -5,7 +5,7 @@ description: Schedule automatic world backups with retention policies using the 
 
 import { Aside } from '@astrojs/starlight/components';
 
-CARBONPANEL has built-in server backups via the **Backup** task type. Backups run on a schedule (or on demand), safely archive your world data while the server is running, and clean up old backups automatically based on the retention rules you set.
+Carbon Panel has built-in server backups via the **Backup** task type. Backups run on a schedule (or on demand), safely archive your world data while the server is running, and clean up old backups automatically based on the retention rules you set.
 
 ## Creating a backup task
 
@@ -19,7 +19,7 @@ Every run is recorded in the task's execution history, including the archive nam
 
 ## What gets backed up
 
-By default (with **Paths to Include** left empty), CARBONPANEL backs up the server's **world directory**. On Paper, Spigot, and other Bukkit-based servers, the separate `world_nether` and `world_the_end` dimension folders are included automatically. On vanilla and Forge/Fabric servers, the nether and end already live inside the world folder, so they're covered either way.
+By default (with **Paths to Include** left empty), Carbon Panel backs up the server's **world directory**. On Paper, Spigot, and other Bukkit-based servers, the separate `world_nether` and `world_the_end` dimension folders are included automatically. On vanilla and Forge/Fabric servers, the nether and end already live inside the world folder, so they're covered either way.
 
 To back up more than the world — or a custom layout — list paths explicitly, comma-separated and relative to the server directory:
 
@@ -30,7 +30,7 @@ world, world_nether, world_the_end, server.properties, config
 Paths that don't exist yet (for example, a dimension that hasn't generated) are skipped and noted in the task output rather than failing the backup.
 
 <Aside type="note">
-If the server is running, CARBONPANEL pauses world saving (`save-off`), flushes pending writes to disk (`save-all flush`), creates the archive, and then re-enables saving (`save-on`) — so the backup is consistent and your server keeps running. Servers that are offline can be backed up too; just disable **Require Server Online** in the task's Advanced section.
+If the server is running, Carbon Panel pauses world saving (`save-off`), flushes pending writes to disk (`save-all flush`), creates the archive, and then re-enables saving (`save-on`) — so the backup is consistent and your server keeps running. Servers that are offline can be backed up too; just disable **Require Server Online** in the task's Advanced section.
 </Aside>
 
 ## Backup options
@@ -50,13 +50,13 @@ Retention is scoped to the task's backup name, so multiple backup tasks for the 
 
 ## Where backups are stored
 
-Backups are written as `.zip` files to CARBONPANEL's backup directory, grouped per server:
+Backups are written as `.zip` files to Carbon Panel's backup directory, grouped per server:
 
 ```
 <backup_dir>/<server_folder>/<backup_name>_<timestamp>.zip
 ```
 
-The backup directory is set by `storage.backup_dir` in `config.yaml` (default `./backups`), or the `CARBONPANEL_STORAGE_BACKUP_DIR` environment variable. If you run CARBONPANEL in Docker, make sure it's mounted as a volume so backups survive container recreation:
+The backup directory is set by `storage.backup_dir` in `config.yaml` (default `./backups`), or the `CARBONPANEL_STORAGE_BACKUP_DIR` environment variable. If you run Carbon Panel in Docker, make sure it's mounted as a volume so backups survive container recreation:
 
 ```yaml
 volumes:
