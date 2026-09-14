@@ -31,10 +31,11 @@ jobs:
       - name: Ensure embedded web build directory exists
         run: mkdir -p web/discopanel/build && touch web/discopanel/build/.gitkeep
 
-      - name: Run Packwiz & Core Tests
+      - name: Run Packwiz, Scheduler & Core Tests
         run: |
-          go test -v ./internal/packwiz/... ./internal/rpc/handlers/ -run "TestPackwiz"
-          go test -v ./internal/scheduler/modpack_update_test.go ./internal/scheduler/modpack_update.go ./internal/scheduler/scheduler.go ./internal/scheduler/types.go || true
+          go test -v ./internal/packwiz/...
+          go test -v ./internal/rpc/handlers/ -run "TestPackwiz"
+          go test -v ./internal/scheduler/...
 
   test-frontend:
     name: Frontend Quality & Build Gate
