@@ -67,8 +67,8 @@ jobs:
           for dockerfile in docker/Dockerfile.*; do
             name=$(basename "$dockerfile" | sed 's/Dockerfile\.//')
             if [ "$name" != "mineserver" ]; then
-echo "Building athndev/mineserver-$name (linux/amd64,linux/arm64)..."
-TAGS="--tag athndev/mineserver-$name:latest"
+              echo "Building athndev/mineserver-$name (linux/amd64,linux/arm64)..."
+              TAGS="--tag athndev/mineserver-$name:latest"
               if [ -n "$VERSION" ]; then
                 TAGS="$TAGS --tag athndev/mineserver-$name:$VERSION"
               fi
@@ -80,7 +80,7 @@ TAGS="--tag athndev/mineserver-$name:latest"
                 --push \
                 .
 
-              echo "Pushed athNdev/mineserver-$name"
+              echo "Pushed athndev/mineserver-$name"
             fi
           done
 

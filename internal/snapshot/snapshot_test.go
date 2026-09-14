@@ -53,7 +53,7 @@ func TestSnapshot_CreateAndList(t *testing.T) {
 	require.NoError(t, store.CreateServer(ctx, server))
 
 	engine := NewEngine(store, nil, nil, log, Config{
-		BackupDir:    "", // uses .MINESERVER_snapshots inside server dir
+		BackupDir:    "", // uses .mineserver_snapshots inside server dir
 		MaxSnapshots: 5,
 	})
 

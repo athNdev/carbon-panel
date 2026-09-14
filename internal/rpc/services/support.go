@@ -457,7 +457,7 @@ func (s *SupportService) addLogsToBundle(ctx context.Context, tarWriter *tar.Wri
 	// Add log file if it exists
 	logFilePath := s.log.GetLogFilePath()
 	if logFilePath != "" && fileExists(logFilePath) {
-		if err := addFileToTar(tarWriter, logFilePath, "logs/MINESERVER.log"); err != nil {
+		if err := addFileToTar(tarWriter, logFilePath, "logs/mineserver.log"); err != nil {
 			return fmt.Errorf("failed to add log file: %w", err)
 		}
 	}
@@ -510,7 +510,7 @@ func (s *SupportService) addDatabaseToBundle(tarWriter *tar.Writer) error {
 	}
 
 	// Copy database file to tar
-	return addFileToTar(tarWriter, dbPath, "database/MINESERVER.db")
+	return addFileToTar(tarWriter, dbPath, "database/mineserver.db")
 }
 
 // addServerConfigsToBundle adds server configuration files to the bundle

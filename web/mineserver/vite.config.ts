@@ -14,10 +14,12 @@ function getVersion() {
 
 	// Check version file stored in home
 	try {
-		const versionFile = join(homedir(), '.MINESERVER');
-		if (existsSync(versionFile)) {
-			const version = readFileSync(versionFile, 'utf8').trim();
-			if (version) return version;
+		for (const name of ['.mineserver', '.MINESERVER']) {
+			const versionFile = join(homedir(), name);
+			if (existsSync(versionFile)) {
+				const version = readFileSync(versionFile, 'utf8').trim();
+				if (version) return version;
+			}
 		}
 	} catch {
 		/* ignore */

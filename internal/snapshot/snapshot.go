@@ -67,7 +67,7 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 	if e.backupDir != "" {
 		baseSnapshotsDir = filepath.Join(e.backupDir, filepath.Base(server.DataPath), "snapshots")
 	} else {
-		baseSnapshotsDir = filepath.Join(server.DataPath, ".MINESERVER_snapshots")
+		baseSnapshotsDir = filepath.Join(server.DataPath, ".mineserver_snapshots")
 	}
 
 	if err := os.MkdirAll(baseSnapshotsDir, 0755); err != nil {
@@ -250,8 +250,8 @@ func gatherVolumePaths(dataDir string) ([]string, error) {
 		name := d.Name()
 		// Skip internal caches, git repos, temp dirs
 		if d.IsDir() {
-			if name == ".git" || name == ".MINESERVER_modpack_git" ||
-				name == ".MINESERVER_modpack_staged" || name == ".MINESERVER_snapshots" ||
+			if name == ".git" || name == ".mineserver_modpack_git" ||
+				name == ".mineserver_modpack_staged" || name == ".mineserver_snapshots" ||
 				name == "logs" || name == "crash-reports" {
 				return fs.SkipDir
 			}
