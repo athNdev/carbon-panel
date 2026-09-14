@@ -1,45 +1,45 @@
-# MINESERVER + Keycloak (OIDC)
+# CARBONPANEL + Keycloak (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Keycloak.
 #
-# Keycloak takes ~30-60 seconds to start. MINESERVER waits for it.
+# Keycloak takes ~30-60 seconds to start. CARBONPANEL waits for it.
 #
 # Keycloak Admin UI (See KC_BOOTSTRAP_ADMIN_USERNAME/KC_BOOTSTRAP_ADMIN_PASSWORD below): http://localhost:8180/admin
 
 services:
-  mineserver:
+  carbon-panel:
     build:
       context: ../../
-      dockerfile: docker/Dockerfile.mineserver
-    #image: athNdev/mineserver:dev
-    container_name: mineserver
+      dockerfile: docker/Dockerfile.carbon-panel
+    #image: athNdev/carbon-panel:dev
+    container_name: carbon-panel
     restart: unless-stopped
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/mineserver:/app/data
+      - /tmp/carbon-panel:/app/data
     environment:
-      - MINESERVER_DATA_DIR=/app/data
-      - MINESERVER_HOST_DATA_PATH=/tmp/mineserver
+      - CARBONPANEL_DATA_DIR=/app/data
+      - CARBONPANEL_HOST_DATA_PATH=/tmp/carbon-panel
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR MINESERVER + KEYCLOAK ------------------------------------
-      - MINESERVER_AUTH_LOCAL_ENABLED=true
-      - MINESERVER_AUTH_OIDC_ENABLED=true
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBONPANEL + KEYCLOAK ------------------------------------
+      - CARBONPANEL_AUTH_LOCAL_ENABLED=true
+      - CARBONPANEL_AUTH_OIDC_ENABLED=true
 
       # ONLY CHANGE THIS IF YOU ARE HOSTING OIDC ON ANOTHER MACHINE OR WITH A DIFFERENT "realm" NAME
-      - MINESERVER_AUTH_OIDC_ISSUER_URI=http://localhost:8180/realms/MINESERVER
+      - CARBONPANEL_AUTH_OIDC_ISSUER_URI=http://localhost:8180/realms/CARBONPANEL
 
       # ONLY CHANGE THIS IF YOUR CLIENT NAME IS DIFFERENT
-      - MINESERVER_AUTH_OIDC_CLIENT_ID=MINESERVER
+      - CARBONPANEL_AUTH_OIDC_CLIENT_ID=CARBONPANEL
 
       # YOU SHOULD CHANGE THIS HERE AS WELL AS IN oidc/keycloak/config/realm.json (inside the clients object)
-      - MINESERVER_AUTH_OIDC_CLIENT_SECRET=MINESERVER-dev-secret
+      - CARBONPANEL_AUTH_OIDC_CLIENT_SECRET=CARBONPANEL-dev-secret
 
-      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR MINESERVER (ie: https://mypanel.com/api/v1/auth/oidc/callback)
-      - MINESERVER_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback 
+      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR CARBONPANEL (ie: https://mypanel.com/api/v1/auth/oidc/callback)
+      - CARBONPANEL_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback 
 
-      - MINESERVER_AUTH_OIDC_ROLE_CLAIM=groups
+      - CARBONPANEL_AUTH_OIDC_ROLE_CLAIM=groups
 
     depends_on:
       keycloak:
@@ -50,7 +50,7 @@ services:
     container_name: keycloak
     command: start-dev --import-realm
     volumes:
-      # THIS IS AN EXAMPLE REALM CONFIG, MODIFY AS NEEDED (WHICH MAY REQUIRE MODIFYING MINESERVER CONFIG TO MATCH, SEE ABOVE)
+      # THIS IS AN EXAMPLE REALM CONFIG, MODIFY AS NEEDED (WHICH MAY REQUIRE MODIFYING CARBONPANEL CONFIG TO MATCH, SEE ABOVE)
       - ./config/realm.json:/opt/keycloak/data/import/realm.json:ro
     environment:
       # KEYCLOAK ADMIN LOGIN CREDENTIALS - CHANGE THESE!!!!!

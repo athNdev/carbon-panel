@@ -15,19 +15,19 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/minecraft"
-	"github.com/athNdev/mineserver/pkg/files"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
-	"github.com/athNdev/mineserver/pkg/upload"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/pkg/files"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/upload"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that ModService implements the interface
-var _ mineserverv1connect.ModServiceHandler = (*ModService)(nil)
+var _ carbonpanelv1connect.ModServiceHandler = (*ModService)(nil)
 
 // ModService implements the Mod service
 type ModService struct {
@@ -525,7 +525,7 @@ func fetchModrinthModVersion(ctx context.Context, slug string, mcVersion string)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Mineserver-MINESERVER/1.0 (contact@mineserver.local)")
+	req.Header.Set("User-Agent", "CarbonPanel/1.0 (contact@carbon-panel.local)")
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)

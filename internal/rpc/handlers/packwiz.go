@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/athNdev/mineserver/internal/auth"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/minecraft"
-	"github.com/athNdev/mineserver/internal/packwiz"
-	"github.com/athNdev/mineserver/internal/rbac"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/internal/auth"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/packwiz"
+	"github.com/athNdev/carbon-panel/internal/rbac"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 type PackwizHandler struct {

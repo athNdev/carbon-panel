@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 func createTestZip(t *testing.T, filename, content string) ([]byte, string) {

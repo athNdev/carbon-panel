@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	models "github.com/athNdev/mineserver/internal/db"
+	models "github.com/athNdev/carbon-panel/internal/db"
 )
 
 // PlacementStrategy specifies which algorithm to use when assigning a container to a node.

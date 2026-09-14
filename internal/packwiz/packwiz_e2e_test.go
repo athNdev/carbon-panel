@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -88,7 +88,7 @@ func TestPackwizE2E_ModDependenciesIngestion(t *testing.T) {
 	pack := &Pack{
 		ID:            "dependency-pack",
 		Name:          "Dependency Verification Pack",
-		Author:        "MineServer E2E",
+		Author:        "Carbon Panel E2E",
 		Version:       "1.0.0",
 		MCVersion:     "1.20.1",
 		ModLoader:     "fabric",

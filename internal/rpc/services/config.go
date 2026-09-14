@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"gorm.io/gorm"
 )
 
-var _ mineserverv1connect.ConfigServiceHandler = (*ConfigService)(nil)
+var _ carbonpanelv1connect.ConfigServiceHandler = (*ConfigService)(nil)
 
 type ConfigService struct {
 	store  *storage.Store

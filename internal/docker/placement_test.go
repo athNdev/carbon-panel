@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	models "github.com/athNdev/mineserver/internal/db"
+	models "github.com/athNdev/carbon-panel/internal/db"
 )
 
 // mockPlacementStore implements PlacementStore for unit tests

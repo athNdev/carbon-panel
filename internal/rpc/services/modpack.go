@@ -17,24 +17,24 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/indexers"
-	_ "github.com/athNdev/mineserver/internal/indexers/fuego"
-	_ "github.com/athNdev/mineserver/internal/indexers/modrinth"
-	"github.com/athNdev/mineserver/internal/minecraft"
-	"github.com/athNdev/mineserver/pkg/files"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
-	"github.com/athNdev/mineserver/pkg/upload"
-	"github.com/athNdev/mineserver/pkg/utils"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/indexers"
+	_ "github.com/athNdev/carbon-panel/internal/indexers/fuego"
+	_ "github.com/athNdev/carbon-panel/internal/indexers/modrinth"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/pkg/files"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/upload"
+	"github.com/athNdev/carbon-panel/pkg/utils"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that ModpackService implements the interface
-var _ mineserverv1connect.ModpackServiceHandler = (*ModpackService)(nil)
+var _ carbonpanelv1connect.ModpackServiceHandler = (*ModpackService)(nil)
 
 // ModpackService implements the Modpack service
 type ModpackService struct {
@@ -740,7 +740,7 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create request: %w", err))
 	}
 
-	httpReq.Header.Set("User-Agent", "MineServer/2.x (Modpack Downloader)")
+	httpReq.Header.Set("User-Agent", "CarbonPanel/2.x (Modpack Downloader)")
 	if msg.AuthToken != "" {
 		token := strings.TrimSpace(msg.AuthToken)
 		if strings.HasPrefix(token, "Bearer ") || strings.HasPrefix(token, "token ") {

@@ -5,15 +5,15 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
-	"github.com/athNdev/mineserver/internal/auth"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/carbon-panel/internal/auth"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ mineserverv1connect.UserServiceHandler = (*UserService)(nil)
+var _ carbonpanelv1connect.UserServiceHandler = (*UserService)(nil)
 
 type UserService struct {
 	store       *storage.Store

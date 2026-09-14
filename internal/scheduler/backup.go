@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/files"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/files"
 )
 
 // BackupTaskConfig represents configuration for backup tasks

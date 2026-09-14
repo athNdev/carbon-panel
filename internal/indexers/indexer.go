@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/carbon-panel/internal/config"
 )
 
 // ModpackIndexer defines the interface for modpack indexing services

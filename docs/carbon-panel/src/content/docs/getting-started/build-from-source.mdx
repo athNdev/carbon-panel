@@ -1,0 +1,78 @@
+---
+title: Building from Source
+description: Build CARBONPANEL from source code.
+---
+
+## Prerequisites
+
+CARBONPANEL manages Minecraft servers as Docker containers, so Docker is required both at build time and runtime.
+
+- **Go** 1.24+
+- **Bun** 1.2+
+- **Docker** (also used to run [buf](https://buf.build/) for protobuf code generation)
+- **Make**
+
+## Build steps
+
+```bash
+# Clone the repo
+git clone https://github.com/athNdev/carbon-panel.git
+cd CARBONPANEL
+
+# Generate protobuf code (Go + TypeScript) via Docker buf
+make gen
+
+# Install frontend dependencies and build
+cd web/carbon-panel && bun install && bun run build && cd ../..
+
+# Build the Go binary with embedded frontend
+go build -o carbon-panel cmd/carbon-panel/main.go
+```
+
+The `//go:embed` directives bake the frontend build into the binary so it serves the UI without a separate web server.
+
+## Live Development (Hot Reloading)
+
+For active development with live reload for both backend and frontend:
+
+```bash
+# Using Bun (Recommended):
+bun run dev
+
+# Or using Make:
+make dev
+
+# Or Windows (PowerShell):
+.\scripts\dev.ps1
+
+# Or Linux/macOS (Bash):
+./scripts/dev.sh
+```
+
+- **Frontend (Vite HMR)**: `http://localhost:5174`
+- **Backend API**: `http://localhost:8080`
+
+## Running
+
+```bash
+# Using default config (./config.yaml if it exists, otherwise defaults)
+./carbon-panel
+
+# Or point to a specific config file
+./carbon-panel -config /path/to/config.yaml
+```
+
+All config options can also be set via environment variables with the `CARBONPANEL_` prefix. For example, `server.port` becomes `CARBONPANEL_SERVER_PORT`. Environment variables take precedence over the config file.
+
+:::tip[Host path mapping]
+When running the binary directly on a host (not in a Docker container), do **not** set `CARBONPANEL_DATA_DIR` or `CARBONPANEL_HOST_DATA_PATH` — those are only for container path translation.
+
+To change where CARBONPANEL stores its database and server data, set `CARBONPANEL_STORAGE_DATA_DIR` or configure it in your config file:
+
+```yaml
+storage:
+  data_dir: /your/path  # Default: ./data (relative to working directory)
+```
+:::
+
+For all available configuration options, see [Configuration](/configuration/).

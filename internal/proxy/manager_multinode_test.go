@@ -7,9 +7,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 func TestResolveBackend_LocalServer(t *testing.T) {

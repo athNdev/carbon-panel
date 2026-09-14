@@ -10,26 +10,26 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
-	"github.com/athNdev/mineserver/internal/auth"
-	"github.com/athNdev/mineserver/internal/command"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/events"
-	"github.com/athNdev/mineserver/internal/metrics"
-	"github.com/athNdev/mineserver/internal/module"
-	"github.com/athNdev/mineserver/internal/packwiz"
-	"github.com/athNdev/mineserver/internal/proxy"
-	"github.com/athNdev/mineserver/internal/rbac"
-	"github.com/athNdev/mineserver/internal/rpc/handlers"
-	"github.com/athNdev/mineserver/internal/rpc/services"
-	"github.com/athNdev/mineserver/internal/scheduler"
-	"github.com/athNdev/mineserver/internal/ws"
-	"github.com/athNdev/mineserver/pkg/download"
-	"github.com/athNdev/mineserver/pkg/logger"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
-	"github.com/athNdev/mineserver/pkg/upload"
-	web "github.com/athNdev/mineserver/web/mineserver"
+	"github.com/athNdev/carbon-panel/internal/auth"
+	"github.com/athNdev/carbon-panel/internal/command"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/events"
+	"github.com/athNdev/carbon-panel/internal/metrics"
+	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/packwiz"
+	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/internal/rbac"
+	"github.com/athNdev/carbon-panel/internal/rpc/handlers"
+	"github.com/athNdev/carbon-panel/internal/rpc/services"
+	"github.com/athNdev/carbon-panel/internal/scheduler"
+	"github.com/athNdev/carbon-panel/internal/ws"
+	"github.com/athNdev/carbon-panel/pkg/download"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/upload"
+	web "github.com/athNdev/carbon-panel/web/carbon-panel"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/proto"
@@ -173,20 +173,20 @@ func (s *Server) setupHandler() {
 
 	// Add reflection for gRPC clients
 	reflector := grpcreflect.NewStaticReflector(
-		mineserverv1connect.AuthServiceName,
-		mineserverv1connect.ConfigServiceName,
-		mineserverv1connect.FileServiceName,
-		mineserverv1connect.MinecraftServiceName,
-		mineserverv1connect.ModServiceName,
-		mineserverv1connect.ModpackServiceName,
-		mineserverv1connect.ModuleServiceName,
-		mineserverv1connect.ProxyServiceName,
-		mineserverv1connect.RoleServiceName,
-		mineserverv1connect.ServerServiceName,
-		mineserverv1connect.SupportServiceName,
-		mineserverv1connect.TaskServiceName,
-		mineserverv1connect.UploadServiceName,
-		mineserverv1connect.UserServiceName,
+		carbonpanelv1connect.AuthServiceName,
+		carbonpanelv1connect.ConfigServiceName,
+		carbonpanelv1connect.FileServiceName,
+		carbonpanelv1connect.MinecraftServiceName,
+		carbonpanelv1connect.ModServiceName,
+		carbonpanelv1connect.ModpackServiceName,
+		carbonpanelv1connect.ModuleServiceName,
+		carbonpanelv1connect.ProxyServiceName,
+		carbonpanelv1connect.RoleServiceName,
+		carbonpanelv1connect.ServerServiceName,
+		carbonpanelv1connect.SupportServiceName,
+		carbonpanelv1connect.TaskServiceName,
+		carbonpanelv1connect.UploadServiceName,
+		carbonpanelv1connect.UserServiceName,
 	)
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
@@ -247,49 +247,49 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	uploadService := services.NewUploadService(s.uploadManager, s.config, s.log)
 
 	// Register service handlers
-	authPath, authHandler := mineserverv1connect.NewAuthServiceHandler(authService, opts...)
+	authPath, authHandler := carbonpanelv1connect.NewAuthServiceHandler(authService, opts...)
 	mux.Handle(authPath, authHandler)
 
-	configPath, configHandler := mineserverv1connect.NewConfigServiceHandler(configService, opts...)
+	configPath, configHandler := carbonpanelv1connect.NewConfigServiceHandler(configService, opts...)
 	mux.Handle(configPath, configHandler)
 
-	filePath, fileHandler := mineserverv1connect.NewFileServiceHandler(fileService, opts...)
+	filePath, fileHandler := carbonpanelv1connect.NewFileServiceHandler(fileService, opts...)
 	mux.Handle(filePath, fileHandler)
 
-	minecraftPath, minecraftHandler := mineserverv1connect.NewMinecraftServiceHandler(minecraftService, opts...)
+	minecraftPath, minecraftHandler := carbonpanelv1connect.NewMinecraftServiceHandler(minecraftService, opts...)
 	mux.Handle(minecraftPath, minecraftHandler)
 
-	modPath, modHandler := mineserverv1connect.NewModServiceHandler(modService, opts...)
+	modPath, modHandler := carbonpanelv1connect.NewModServiceHandler(modService, opts...)
 	mux.Handle(modPath, modHandler)
 
-	modpackPath, modpackHandler := mineserverv1connect.NewModpackServiceHandler(modpackService, opts...)
+	modpackPath, modpackHandler := carbonpanelv1connect.NewModpackServiceHandler(modpackService, opts...)
 	mux.Handle(modpackPath, modpackHandler)
 
-	proxyPath, proxyHandler := mineserverv1connect.NewProxyServiceHandler(proxyService, opts...)
+	proxyPath, proxyHandler := carbonpanelv1connect.NewProxyServiceHandler(proxyService, opts...)
 	mux.Handle(proxyPath, proxyHandler)
 
-	serverPath, serverHandler := mineserverv1connect.NewServerServiceHandler(serverService, opts...)
+	serverPath, serverHandler := carbonpanelv1connect.NewServerServiceHandler(serverService, opts...)
 	mux.Handle(serverPath, serverHandler)
 
-	nodePath, nodeHandler := mineserverv1connect.NewNodeServiceHandler(nodeService, opts...)
+	nodePath, nodeHandler := carbonpanelv1connect.NewNodeServiceHandler(nodeService, opts...)
 	mux.Handle(nodePath, nodeHandler)
 
-	supportPath, supportHandler := mineserverv1connect.NewSupportServiceHandler(supportService, opts...)
+	supportPath, supportHandler := carbonpanelv1connect.NewSupportServiceHandler(supportService, opts...)
 	mux.Handle(supportPath, supportHandler)
 
-	taskPath, taskHandler := mineserverv1connect.NewTaskServiceHandler(taskService, opts...)
+	taskPath, taskHandler := carbonpanelv1connect.NewTaskServiceHandler(taskService, opts...)
 	mux.Handle(taskPath, taskHandler)
 
-	userPath, userHandler := mineserverv1connect.NewUserServiceHandler(userService, opts...)
+	userPath, userHandler := carbonpanelv1connect.NewUserServiceHandler(userService, opts...)
 	mux.Handle(userPath, userHandler)
 
-	rolePath, roleHandler := mineserverv1connect.NewRoleServiceHandler(roleService, opts...)
+	rolePath, roleHandler := carbonpanelv1connect.NewRoleServiceHandler(roleService, opts...)
 	mux.Handle(rolePath, roleHandler)
 
-	modulePath, moduleHandler := mineserverv1connect.NewModuleServiceHandler(moduleService, opts...)
+	modulePath, moduleHandler := carbonpanelv1connect.NewModuleServiceHandler(moduleService, opts...)
 	mux.Handle(modulePath, moduleHandler)
 
-	uploadPath, uploadHandler := mineserverv1connect.NewUploadServiceHandler(uploadService, opts...)
+	uploadPath, uploadHandler := carbonpanelv1connect.NewUploadServiceHandler(uploadService, opts...)
 	mux.Handle(uploadPath, uploadHandler)
 }
 
@@ -362,15 +362,15 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 
 // pollingProcedures lists endpoints that are called frequently and should be excluded from logging.
 var pollingProcedures = []string{
-	"/mineserver.v1.AuthService/GetAuthStatus",
-	"/mineserver.v1.ServerService/ListServers",
-	"/mineserver.v1.ServerService/GetServer",
-	"/mineserver.v1.ServerService/GetServerLogs",
-	"/mineserver.v1.ProxyService/GetProxyStatus",
-	"/mineserver.v1.SupportService/GetApplicationLogs",
-	"/mineserver.v1.UploadService/UploadChunk",
-	"/mineserver.v1.UploadService/GetUploadStatus",
-	"/mineserver.v1.FileService/GetExtractionStatus",
+	"/carbonpanel.v1.AuthService/GetAuthStatus",
+	"/carbonpanel.v1.ServerService/ListServers",
+	"/carbonpanel.v1.ServerService/GetServer",
+	"/carbonpanel.v1.ServerService/GetServerLogs",
+	"/carbonpanel.v1.ProxyService/GetProxyStatus",
+	"/carbonpanel.v1.SupportService/GetApplicationLogs",
+	"/carbonpanel.v1.UploadService/UploadChunk",
+	"/carbonpanel.v1.UploadService/GetUploadStatus",
+	"/carbonpanel.v1.FileService/GetExtractionStatus",
 }
 
 // Checks if a procedure is a polling endpoint or high-frequency endpoint
@@ -442,7 +442,7 @@ func (s *Server) createFrontendHandler(fs http.FileSystem) http.HandlerFunc {
 func isConnectPath(path string) bool {
 	// Connect paths start with service names
 	connectPrefixes := []string{
-		"/mineserver.v1.",
+		"/carbonpanel.v1.",
 		"/grpc.reflection.",
 		"/connect.",
 	}

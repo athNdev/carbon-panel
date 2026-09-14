@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // TCPProxy handles raw TCP forwarding without protocol parsing

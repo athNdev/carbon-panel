@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/proxy"
-	rcon "github.com/athNdev/mineserver/internal/rcon"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/proxy"
+	rcon "github.com/athNdev/carbon-panel/internal/rcon"
 )
 
 type DockerExecutor interface {

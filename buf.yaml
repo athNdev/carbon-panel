@@ -1,7 +1,7 @@
 version: v2
 modules:
   - path: proto
-    name: github.com/athNdev/mineserver
+    name: github.com/athNdev/carbon-panel
 lint:
   use:
     - STANDARD

@@ -29,7 +29,7 @@ jobs:
           cache: true
 
       - name: Ensure embedded web build directory exists
-        run: mkdir -p web/mineserver/build && touch web/mineserver/build/.gitkeep
+        run: mkdir -p web/carbon-panel/build && touch web/carbon-panel/build/.gitkeep
 
       - name: Run Packwiz, Scheduler & Core Tests
         run: |
@@ -43,7 +43,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: web/mineserver
+        working-directory: web/carbon-panel
 
     steps:
       - name: Checkout Repository

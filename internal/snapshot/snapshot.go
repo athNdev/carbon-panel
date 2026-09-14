@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/athNdev/mineserver/internal/command"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/pkg/files"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/internal/command"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/pkg/files"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // Engine manages volume snapshots, pre-update backups, and rollbacks for servers (MINE-23)
@@ -67,7 +67,7 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 	if e.backupDir != "" {
 		baseSnapshotsDir = filepath.Join(e.backupDir, filepath.Base(server.DataPath), "snapshots")
 	} else {
-		baseSnapshotsDir = filepath.Join(server.DataPath, ".mineserver_snapshots")
+		baseSnapshotsDir = filepath.Join(server.DataPath, ".carbon-panel_snapshots")
 	}
 
 	if err := os.MkdirAll(baseSnapshotsDir, 0755); err != nil {
@@ -250,8 +250,8 @@ func gatherVolumePaths(dataDir string) ([]string, error) {
 		name := d.Name()
 		// Skip internal caches, git repos, temp dirs
 		if d.IsDir() {
-			if name == ".git" || name == ".mineserver_modpack_git" ||
-				name == ".mineserver_modpack_staged" || name == ".mineserver_snapshots" ||
+			if name == ".git" || name == ".carbon-panel_modpack_git" ||
+				name == ".carbon-panel_modpack_staged" || name == ".carbon-panel_snapshots" ||
 				name == "logs" || name == "crash-reports" {
 				return fs.SkipDir
 			}
