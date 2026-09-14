@@ -220,7 +220,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            athNdev/mineserver
+            athndev/mineserver
           tags: |
             type=ref,event=tag
             type=raw,value=dev
