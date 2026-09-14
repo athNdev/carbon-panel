@@ -443,7 +443,7 @@
 														? 'text-red-500'
 														: ''}"
 										>
-											{server.tps ? server.tps.toFixed(1) : 'â€”'}
+{server.tps ? server.tps.toFixed(1) : '—'}
 										</p>
 									</div>
 								</div>
