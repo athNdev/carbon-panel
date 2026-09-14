@@ -190,7 +190,7 @@
 							</div>
 							<p class="text-xs text-muted-foreground">
 								Configures container environment with <code class="bg-muted px-1 rounded text-primary">PACKWIZ_URL</code>.
-								The server automatically syncs with DiscoPanel API on every startup.
+								The server automatically syncs with MineServer API on every startup.
 							</p>
 						</div>
 					</div>

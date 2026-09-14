@@ -55,9 +55,9 @@
 
 			<!-- Brand Logo & Name -->
 			<a href="/" class="flex items-center gap-2 text-sm font-sans tracking-[0.16px] text-white hover:text-[#0f62fe] transition-colors">
-				<span class="font-semibold">DiscoPanel</span>
-				<span class="font-mono text-xs text-[#a8a8a8] hidden sm:inline">[ MineServer ]</span>
-				<CarbonTag type="cyan" size="sm" class="hidden md:inline-flex">IBM Carbon</CarbonTag>
+				<img src="/mineserver_logo.png" alt="MineServer" class="h-6 w-6 rounded-sm" />
+				<span class="font-semibold tracking-wide">MineServer</span>
+				<CarbonTag type="cyan" size="sm" class="hidden md:inline-flex">Carbon UI</CarbonTag>
 			</a>
 		</div>
 
