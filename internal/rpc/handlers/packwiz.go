@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -108,6 +110,12 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(parts) >= 2 && parts[0] == "packs" {
+		// Sub-route /api/v1/packwiz/packs/import
+		if parts[1] == "import" && r.Method == http.MethodPost {
+			h.handleImportPack(w, r)
+			return
+		}
+
 		packID := parts[1]
 
 		if len(parts) == 2 {
@@ -126,7 +134,27 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		subRoute := parts[2]
 		switch {
-		case subRoute == "mods" && r.Method == http.MethodPost:
+		case subRoute == "clone" && r.Method == http.MethodPost:
+			h.handleClonePack(w, r, packID)
+		case subRoute == "refresh" && r.Method == http.MethodPost:
+			h.handleRefreshPack(w, r, packID)
+		case subRoute == "updates" && r.Method == http.MethodGet:
+			h.handleCheckUpdates(w, r, packID)
+		case subRoute == "updates" && r.Method == http.MethodPost:
+			h.handleApplyUpdates(w, r, packID)
+		case subRoute == "migrate" && r.Method == http.MethodPost:
+			h.handleMigrate(w, r, packID)
+		case subRoute == "files" && r.Method == http.MethodGet:
+			h.handleListFiles(w, r, packID)
+		case subRoute == "files" && r.Method == http.MethodPost:
+			h.handleSaveFile(w, r, packID)
+		case subRoute == "files" && r.Method == http.MethodDelete:
+			h.handleDeleteFile(w, r, packID)
+		case subRoute == "mods" && len(parts) >= 4 && parts[3] == "url" && r.Method == http.MethodPost:
+			h.handleAddModURL(w, r, packID)
+		case subRoute == "mods" && len(parts) >= 4 && parts[3] == "batch" && r.Method == http.MethodPost:
+			h.handleBatchMods(w, r, packID)
+		case subRoute == "mods" && len(parts) == 3 && r.Method == http.MethodPost:
 			h.handleAddMod(w, r, packID)
 		case subRoute == "mods" && len(parts) >= 4 && r.Method == http.MethodPatch:
 			modSlug := parts[3]
@@ -204,6 +232,80 @@ func (h *PackwizHandler) handleDeletePack(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]any{"success": true})
 }
 
+func (h *PackwizHandler) handleClonePack(w http.ResponseWriter, r *http.Request, packID string) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	cloned, err := h.manager.ClonePack(packID, req.Name)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to clone pack: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusCreated, cloned)
+}
+
+func (h *PackwizHandler) handleRefreshPack(w http.ResponseWriter, r *http.Request, packID string) {
+	if err := h.manager.RefreshPack(packID); err != nil {
+		http.Error(w, fmt.Sprintf("failed to refresh pack: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Pack re-indexed and refreshed successfully"})
+}
+
+func (h *PackwizHandler) handleCheckUpdates(w http.ResponseWriter, r *http.Request, packID string) {
+	updates, err := h.manager.CheckModUpdates(packID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to check updates: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"updates": updates})
+}
+
+func (h *PackwizHandler) handleApplyUpdates(w http.ResponseWriter, r *http.Request, packID string) {
+	var req struct {
+		Slug             string `json:"slug"`
+		TargetVersionID  string `json:"target_version_id"`
+		TargetFileName   string `json:"target_file_name"`
+		TargetURL        string `json:"target_url"`
+		ApplyAll         bool   `json:"apply_all"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.ApplyAll {
+		updates, err := h.manager.CheckModUpdates(packID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to check updates: %v", err), http.StatusInternalServerError)
+			return
+		}
+		updatedCount := 0
+		for _, u := range updates {
+			if u.UpdateAvailable && u.LatestVersionID != "" {
+				if err := h.manager.ApplyModUpdate(packID, u.Slug, u.LatestVersionID, u.LatestFileName, u.LatestDownloadURL); err == nil {
+					updatedCount++
+				}
+			}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"success": true, "updated_count": updatedCount})
+		return
+	}
+
+	if req.Slug == "" || req.TargetVersionID == "" {
+		http.Error(w, "slug and target_version_id are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.manager.ApplyModUpdate(packID, req.Slug, req.TargetVersionID, req.TargetFileName, req.TargetURL); err != nil {
+		http.Error(w, fmt.Sprintf("failed to apply update: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
 func (h *PackwizHandler) handleAddMod(w http.ResponseWriter, r *http.Request, packID string) {
 	var mod packwiz.ModItem
 	if err := json.NewDecoder(r.Body).Decode(&mod); err != nil {
@@ -216,6 +318,47 @@ func (h *PackwizHandler) handleAddMod(w http.ResponseWriter, r *http.Request, pa
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func (h *PackwizHandler) handleAddModURL(w http.ResponseWriter, r *http.Request, packID string) {
+	var req packwiz.DirectURLModRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	mod, err := h.manager.AddModFromURL(packID, req)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to add mod from URL: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusCreated, mod)
+}
+
+func (h *PackwizHandler) handleBatchMods(w http.ResponseWriter, r *http.Request, packID string) {
+	var req struct {
+		Action string   `json:"action"` // "set_side", "pin", "unpin", "remove"
+		Slugs  []string `json:"slugs"`
+		Side   string   `json:"side,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	for _, slug := range req.Slugs {
+		switch req.Action {
+		case "set_side":
+			_ = h.manager.UpdateMod(packID, slug, req.Side, false)
+		case "pin":
+			_ = h.manager.UpdateMod(packID, slug, "", true)
+		case "unpin":
+			_ = h.manager.UpdateMod(packID, slug, "", false)
+		case "remove":
+			_ = h.manager.DeleteMod(packID, slug)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "count": len(req.Slugs)})
 }
 
 func (h *PackwizHandler) handleUpdateMod(w http.ResponseWriter, r *http.Request, packID, slug string) {
@@ -243,6 +386,176 @@ func (h *PackwizHandler) handleDeleteMod(w http.ResponseWriter, r *http.Request,
 	writeJSON(w, http.StatusOK, map[string]any{"success": true})
 }
 
+func (h *PackwizHandler) handleListFiles(w http.ResponseWriter, r *http.Request, packID string) {
+	files, err := h.manager.ListPackFiles(packID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to list files: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"files": files})
+}
+
+func (h *PackwizHandler) handleSaveFile(w http.ResponseWriter, r *http.Request, packID string) {
+	// Multipart file upload or JSON payload
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			http.Error(w, "failed to parse multipart form", http.StatusBadRequest)
+			return
+		}
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, "missing file field", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		relPath := r.FormValue("path")
+		if relPath == "" {
+			relPath = "config/" + header.Filename
+		}
+
+		if err := h.manager.SavePackFile(packID, relPath, file); err != nil {
+			http.Error(w, fmt.Sprintf("failed to save file: %v", err), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"success": true, "path": relPath})
+		return
+	}
+
+	var req struct {
+		Path    string `json:"path"`
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Path == "" {
+		http.Error(w, "path is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.manager.SavePackFile(packID, req.Path, strings.NewReader(req.Content)); err != nil {
+		http.Error(w, fmt.Sprintf("failed to save file: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "path": req.Path})
+}
+
+func (h *PackwizHandler) handleDeleteFile(w http.ResponseWriter, r *http.Request, packID string) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		http.Error(w, "path query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.manager.DeletePackFile(packID, path); err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete file: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func (h *PackwizHandler) handleMigrate(w http.ResponseWriter, r *http.Request, packID string) {
+	var req struct {
+		TargetMC     string `json:"target_mc"`
+		TargetLoader string `json:"target_loader"`
+		Apply        bool   `json:"apply"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TargetMC == "" {
+		http.Error(w, "target_mc is required", http.StatusBadRequest)
+		return
+	}
+	if req.TargetLoader == "" {
+		req.TargetLoader = "fabric"
+	}
+
+	if req.Apply {
+		report, err := h.manager.ApplyMigration(packID, req.TargetMC, req.TargetLoader)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to apply migration: %v", err), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, report)
+		return
+	}
+
+	report, err := h.manager.SimulateMigration(packID, req.TargetMC, req.TargetLoader)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to simulate migration: %v", err), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
+func (h *PackwizHandler) handleImportPack(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		if err := r.ParseMultipartForm(64 << 20); err != nil {
+			http.Error(w, "failed to parse multipart form", http.StatusBadRequest)
+			return
+		}
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, "missing file", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		data, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "failed to read uploaded file", http.StatusInternalServerError)
+			return
+		}
+		readerAt := bytes.NewReader(data)
+		size := int64(len(data))
+
+		format := r.FormValue("format")
+		if format == "" {
+			if strings.HasSuffix(header.Filename, ".mrpack") {
+				format = "mrpack"
+			} else {
+				format = "curseforge"
+			}
+		}
+
+		opts := packwiz.ImportOptions{
+			Name:          r.FormValue("name"),
+			Author:        r.FormValue("author"),
+			Version:       r.FormValue("version"),
+			MCVersion:     r.FormValue("mc_version"),
+			ModLoader:     r.FormValue("mod_loader"),
+			LoaderVersion: r.FormValue("loader_version"),
+		}
+
+		var pack *packwiz.Pack
+		switch format {
+		case "mrpack":
+			pack, err = h.manager.ImportMrpack(readerAt, size, opts)
+		case "curseforge":
+			pack, err = h.manager.ImportCurseForge(readerAt, size, opts)
+		case "packwiz":
+			pack, err = h.manager.ImportPackwizZip(readerAt, size, opts)
+		default:
+			http.Error(w, "unsupported import format", http.StatusBadRequest)
+			return
+		}
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("import failed: %v", err), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusCreated, pack)
+		return
+	}
+
+	http.Error(w, "multipart/form-data required for import", http.StatusBadRequest)
+}
+
 func (h *PackwizHandler) handleExport(w http.ResponseWriter, r *http.Request, packID, format string) {
 	pack, err := h.manager.GetPack(packID)
 	if err != nil {
@@ -251,6 +564,13 @@ func (h *PackwizHandler) handleExport(w http.ResponseWriter, r *http.Request, pa
 	}
 
 	switch format {
+	case "packwiz":
+		filename := fmt.Sprintf("%s-%s.packwiz.zip", pack.Name, pack.Version)
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		if err := h.manager.ExportPackwizZip(packID, w); err != nil {
+			h.log.Error("Failed to export packwiz zip: %v", err)
+		}
 	case "mrpack":
 		filename := fmt.Sprintf("%s-%s.mrpack", pack.Name, pack.Version)
 		w.Header().Set("Content-Type", "application/x-modrinth-modpack+zip")
