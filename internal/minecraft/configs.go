@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	models "github.com/nickheyer/discopanel/internal/db"
+	models "github.com/athNdev/mineserver/internal/db"
 	"gopkg.in/yaml.v3"
 )
 

@@ -8,11 +8,11 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/proxy"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/proxy"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 type mockDockerClient struct {

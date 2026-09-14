@@ -5,7 +5,7 @@
   
   ### The modern Minecraft server management platform with IBM Carbon UI
   
-  [GitHub](https://github.com/athNdev/discopanel) &bull; [Issues](https://github.com/athNdev/discopanel/issues)
+  [GitHub](https://github.com/athNdev/mineserver) &bull; [Issues](https://github.com/athNdev/mineserver/issues)
 </div>
 
 ---
@@ -24,7 +24,7 @@ Because managing Minecraft servers should be fast, reliable, and modern:
 - **Intelligent Reverse Proxy** - Route player traffic dynamically through hostnames with automatic SRV handling on port 25565 without port-forwarding gymnastics.
 - **Modpack Studio & Direct CurseForge Integration** - Native keyless CurseForge & Modrinth search, version resolution, packwiz support, and direct `.mrpack` export.
 - **Automated Lifecycle** - Auto-start, auto-stop, auto-restart on schedule or event triggers.
-- **Modern Proto-based API** - Built with Protocol Buffers and Connect RPC (`proto/discopanel/v1`) for robust, type-safe API client generation.
+- **Modern Proto-based API** - Built with Protocol Buffers and Connect RPC (`proto/mineserver/v1`) for robust, type-safe API client generation.
 
 ---
 
@@ -34,21 +34,21 @@ Because managing Minecraft servers should be fast, reliable, and modern:
 
 Requirements:
 1. **Go** (v1.24+)
-2. **Node.js** (v20+) & **npm**
+2. **Bun** (v1.2+)
 
 ```bash
 # Clone the repository
-git clone https://github.com/athNdev/discopanel.git
-cd discopanel
+git clone https://github.com/athNdev/mineserver.git
+cd mineserver
 
 # Generate the RPC/API code using buf in docker (optional if pre-generated)
 docker run --rm -v "$(pwd):/workspace" -w /workspace bufbuild/buf:latest generate
 
-# Install npm dependencies and build the Carbon frontend
-cd web/discopanel && npm install && npm run build && cd ../..
+# Install dependencies and build the Carbon frontend
+cd web/mineserver && bun install && bun run build && cd ../..
 
 # Build backend binary
-go build -o mineserver cmd/discopanel/main.go
+go build -o mineserver cmd/mineserver/main.go
 
 # Start MineServer
 ./mineserver
@@ -171,10 +171,10 @@ MineServer provides a comprehensive Connect-RPC & gRPC API:
 
 ```bash
 # List managed servers
-curl http://localhost:8080/discopanel.v1.ServerService/ListServers
+curl http://localhost:8080/mineserver.v1.ServerService/ListServers
 
 # Restart a server
-curl -X POST http://localhost:8080/discopanel.v1.ServerService/RestartServer \
+curl -X POST http://localhost:8080/mineserver.v1.ServerService/RestartServer \
   -H "Content-Type: application/json" \
   -d '{"id": "your-server-id"}'
 ```

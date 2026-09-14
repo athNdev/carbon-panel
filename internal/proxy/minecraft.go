@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // MinecraftProxy handles Minecraft protocol proxying with handshake parsing for hostname-based routing

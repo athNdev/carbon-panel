@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/internal/indexers"
-	"github.com/nickheyer/discopanel/internal/minecraft"
-	"github.com/nickheyer/discopanel/pkg/utils"
+	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/mineserver/internal/indexers"
+	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/mineserver/pkg/utils"
 )
 
 func init() {

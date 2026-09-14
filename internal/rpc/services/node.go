@@ -7,15 +7,15 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ discopanelv1connect.NodeServiceHandler = (*NodeService)(nil)
+var _ mineserverv1connect.NodeServiceHandler = (*NodeService)(nil)
 
 // NodeService handles Docker daemon node management RPCs
 type NodeService struct {

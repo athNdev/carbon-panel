@@ -11,16 +11,16 @@ import (
 	"connectrpc.com/connect"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/nickheyer/discopanel/internal/auth"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	"github.com/athNdev/mineserver/internal/auth"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ discopanelv1connect.AuthServiceHandler = (*AuthService)(nil)
+var _ mineserverv1connect.AuthServiceHandler = (*AuthService)(nil)
 
 type AuthService struct {
 	store       *storage.Store
@@ -146,7 +146,7 @@ func (s *AuthService) Register(ctx context.Context, req *connect.Request[v1.Regi
 		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("registration failed"))
 	}
 
-	// Role assignment: first user → admin; invite with roles → invite roles; else → default roles
+	// Role assignment: first user â†’ admin; invite with roles â†’ invite roles; else â†’ default roles
 	if isFirstUser {
 		_ = s.store.AssignRole(ctx, user.ID, "admin", "local")
 	} else if invite != nil && len(invite.Roles) > 0 {

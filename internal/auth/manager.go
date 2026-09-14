@@ -14,9 +14,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/rbac"
+	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/rbac"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -55,7 +55,7 @@ func NewManager(store *db.Store, enforcer *rbac.Enforcer, cfg *config.AuthConfig
 	ctx := context.Background()
 	var secret []byte
 
-	// Priority: config value → DB-stored value → generate + persist to DB
+	// Priority: config value â†’ DB-stored value â†’ generate + persist to DB
 	if cfg.JWTSecret != "" {
 		secret = []byte(cfg.JWTSecret)
 	} else {

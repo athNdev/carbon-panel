@@ -1,0 +1,57 @@
+---
+title: Building from Source
+description: Build MINESERVER from source code.
+---
+
+## Prerequisites
+
+MINESERVER manages Minecraft servers as Docker containers, so Docker is required both at build time and runtime.
+
+- **Go** 1.24+
+- **Bun** 1.2+
+- **Docker** (also used to run [buf](https://buf.build/) for protobuf code generation)
+- **Make**
+
+## Build steps
+
+```bash
+# Clone the repo
+git clone https://github.com/athNdev/mineserver.git
+cd MINESERVER
+
+# Generate protobuf code (Go + TypeScript) via Docker buf
+make gen
+
+# Install frontend dependencies and build
+cd web/mineserver && bun install && bun run build && cd ../..
+
+# Build the Go binary with embedded frontend
+go build -o MINESERVER cmd/MINESERVER/main.go
+```
+
+The `//go:embed` directives bake the frontend build into the binary so it serves the UI without a separate web server.
+
+## Running
+
+```bash
+# Using default config (./config.yaml if it exists, otherwise defaults)
+./MINESERVER
+
+# Or point to a specific config file
+./MINESERVER -config /path/to/config.yaml
+```
+
+All config options can also be set via environment variables with the `MINESERVER_` prefix. For example, `server.port` becomes `MINESERVER_SERVER_PORT`. Environment variables take precedence over the config file.
+
+:::tip[Host path mapping]
+When running the binary directly on a host (not in a Docker container), do **not** set `MINESERVER_DATA_DIR` or `MINESERVER_HOST_DATA_PATH` — those are only for container path translation.
+
+To change where MINESERVER stores its database and server data, set `MINESERVER_STORAGE_DATA_DIR` or configure it in your config file:
+
+```yaml
+storage:
+  data_dir: /your/path  # Default: ./data (relative to working directory)
+```
+:::
+
+For all available configuration options, see [Configuration](/configuration/).

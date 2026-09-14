@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/pkg/files"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/pkg/files"
 )
 
 // BackupTaskConfig represents configuration for backup tasks

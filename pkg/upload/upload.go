@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 var (

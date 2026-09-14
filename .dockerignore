@@ -5,11 +5,11 @@
 .vscode/
 build/
 backups/
-discopanel
-!cmd/discopanel
-web/discopanel/build/
-web/discopanel/node_modules/
-web/discopanel/.svelte-kit/
+mineserver
+!cmd/mineserver
+web/mineserver/build/
+web/mineserver/node_modules/
+web/mineserver/.svelte-kit/
 data/
 tmp/
 sandbox/

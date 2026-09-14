@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/internal/indexers"
+	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/mineserver/internal/indexers"
 )
 
 const (

@@ -14,16 +14,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 
-	"github.com/nickheyer/discopanel/internal/command"
-	appconfig "github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/internal/events"
-	"github.com/nickheyer/discopanel/internal/metrics"
-	"github.com/nickheyer/discopanel/internal/snapshot"
-	"github.com/nickheyer/discopanel/internal/webhook"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	"github.com/athNdev/mineserver/internal/command"
+	appconfig "github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/internal/events"
+	"github.com/athNdev/mineserver/internal/metrics"
+	"github.com/athNdev/mineserver/internal/snapshot"
+	"github.com/athNdev/mineserver/internal/webhook"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 // Scheduler manages scheduled tasks for all servers
@@ -315,7 +315,7 @@ func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eve
 		return nil, err
 	}
 
-	// Check if server is online (if required). Webhook tasks always fire —
+	// Check if server is online (if required). Webhook tasks always fire â€”
 	// they notify, they don't operate on the server, and most useful events
 	// (server_stop, server_restart) happen while the server is not running.
 	if task.RequireOnline && task.TaskType != storage.TaskTypeWebhook && server.Status != storage.StatusRunning {
@@ -779,7 +779,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	// Prepare git repository clone directory inside server directory or app cache
-	cacheDir := filepath.Join(server.DataPath, ".discopanel_modpack_git")
+	cacheDir := filepath.Join(server.DataPath, ".MINESERVER_modpack_git")
 	gitURL := cfg.GitURL
 	if cfg.AuthToken != "" && strings.HasPrefix(gitURL, "https://") {
 		// Embed auth token into clone URL
@@ -866,7 +866,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 		// Stage configuration updates if requested
 		if cfg.StageConfigUpdates {
-			stagedDir := filepath.Join(server.DataPath, ".discopanel_modpack_staged")
+			stagedDir := filepath.Join(server.DataPath, ".MINESERVER_modpack_staged")
 			_ = os.MkdirAll(stagedDir, 0755)
 			manifest := map[string]any{
 				"from_commit":   currentHash,
@@ -891,9 +891,9 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
 		cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
 			"--exclude=.git",
-			"--exclude=.discopanel_modpack_git",
-			"--exclude=.discopanel_modpack_staged",
-			"--exclude=.discopanel_snapshots",
+			"--exclude=.MINESERVER_modpack_git",
+			"--exclude=.MINESERVER_modpack_staged",
+			"--exclude=.MINESERVER_snapshots",
 			srcDir+"/", server.DataPath+"/")
 		if out, err := cmdRsync.CombinedOutput(); err != nil {
 			// Fallback to cp -rf if rsync is not installed

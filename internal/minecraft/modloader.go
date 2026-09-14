@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	models "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/pkg/strmatch"
+	models "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/pkg/strmatch"
 )
 
 // ModLoaderInfo contains information about a specific mod loader

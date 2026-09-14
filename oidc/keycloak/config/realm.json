@@ -1,5 +1,5 @@
 {
-  "realm": "discopanel",
+  "realm": "MINESERVER",
   "enabled": true,
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
@@ -10,11 +10,11 @@
     "realm": [
       {
         "name": "admin",
-        "description": "DiscoPanel administrator"
+        "description": "MINESERVER administrator"
       },
       {
         "name": "user",
-        "description": "DiscoPanel user"
+        "description": "MINESERVER user"
       }
     ]
   },
@@ -31,11 +31,11 @@
   "defaultGroups": ["user"],
   "clients": [
     {
-      "clientId": "discopanel",
+      "clientId": "MINESERVER",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
-      "secret": "discopanel-dev-secret",
+      "secret": "MINESERVER-dev-secret",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
@@ -89,7 +89,7 @@
     {
       "username": "admin",
       "enabled": true,
-      "email": "admin@discopanel.local",
+      "email": "admin@MINESERVER.local",
       "emailVerified": true,
       "firstName": "Disco",
       "lastName": "Admin",

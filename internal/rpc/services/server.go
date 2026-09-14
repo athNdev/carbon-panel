@@ -18,25 +18,25 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/command"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/internal/events"
-	"github.com/nickheyer/discopanel/internal/metrics"
-	"github.com/nickheyer/discopanel/internal/minecraft"
-	"github.com/nickheyer/discopanel/pkg/utils"
-	"github.com/nickheyer/discopanel/internal/module"
-	"github.com/nickheyer/discopanel/internal/proxy"
-	"github.com/nickheyer/discopanel/pkg/files"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	"github.com/athNdev/mineserver/internal/command"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/internal/events"
+	"github.com/athNdev/mineserver/internal/metrics"
+	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/mineserver/pkg/utils"
+	"github.com/athNdev/mineserver/internal/module"
+	"github.com/athNdev/mineserver/internal/proxy"
+	"github.com/athNdev/mineserver/pkg/files"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that ServerService implements the interface
-var _ discopanelv1connect.ServerServiceHandler = (*ServerService)(nil)
+var _ mineserverv1connect.ServerServiceHandler = (*ServerService)(nil)
 
 // ServerService implements the Server service
 type ServerService struct {
@@ -946,10 +946,10 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 
 	// Handle docker overrides update
 	if msg.DockerOverrides != nil {
-		// Check that labels do not start with "discopanel."
+		// Check that labels do not start with "MINESERVER."
 		for key := range msg.DockerOverrides.Labels {
-			if strings.HasPrefix(key, "discopanel.") {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("docker label keys cannot start with 'discopanel.', namespace reserved for internal management"))
+			if strings.HasPrefix(key, "MINESERVER.") {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("docker label keys cannot start with 'MINESERVER.', namespace reserved for internal management"))
 			}
 		}
 
@@ -1521,7 +1521,7 @@ func (s *ServerService) UploadToMCLogs(ctx context.Context, req *connect.Request
 	// Build mclo.gs request
 	payload, _ := json.Marshal(map[string]string{
 		"content": string(content),
-		"source":  fmt.Sprintf("DiscoPanel-%s", server.Name),
+		"source":  fmt.Sprintf("MINESERVER-%s", server.Name),
 	})
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.mclo.gs/1/log", bytes.NewReader(payload))
