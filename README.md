@@ -16,7 +16,7 @@ one at https://mozilla.org/MPL/2.0/.
   
   ### The modern Minecraft server management platform with IBM Carbon UI
   
-  [GitHub](https://github.com/athNdev/discopanel) • [Issues](https://github.com/athNdev/discopanel/issues)
+  [GitHub](https://github.com/athNdev/discopanel) &bull; [Issues](https://github.com/athNdev/discopanel/issues)
 </div>
 
 ---
