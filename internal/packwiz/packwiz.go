@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/logger"
 	toml "github.com/pelletier/go-toml/v2"
 )
 
@@ -613,7 +613,7 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 		"game":          "minecraft",
 		"versionId":     pack.Version,
 		"name":          pack.Name,
-		"summary":       fmt.Sprintf("%s modpack created in DiscoPanel Studio", pack.Name),
+		"summary":       fmt.Sprintf("%s modpack created in MINESERVER Studio", pack.Name),
 		"files":         files,
 		"dependencies":  deps,
 	}

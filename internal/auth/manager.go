@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package auth
 
 import (
@@ -14,9 +23,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/rbac"
+	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/rbac"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -55,7 +64,7 @@ func NewManager(store *db.Store, enforcer *rbac.Enforcer, cfg *config.AuthConfig
 	ctx := context.Background()
 	var secret []byte
 
-	// Priority: config value → DB-stored value → generate + persist to DB
+	// Priority: config value â†’ DB-stored value â†’ generate + persist to DB
 	if cfg.JWTSecret != "" {
 		secret = []byte(cfg.JWTSecret)
 	} else {
