@@ -57,7 +57,26 @@ go build -o mineserver cmd/mineserver/main.go
 # http://localhost:8080 (Production) or http://localhost:5174 (Carbon Vite Dev)
 ```
 
-> **Development Tip**: Run `make gen` and `make dev` for concurrent backend reloading and Carbon frontend HMR.
+### Live Development (Hot Reloading)
+
+Start both the Go backend (with Air live reload) and SvelteKit frontend (with Vite HMR) concurrently:
+
+```bash
+# Using Bun (Recommended):
+bun run dev
+
+# Or using Make:
+make dev
+
+# Or on Windows (PowerShell):
+.\scripts\dev.ps1
+
+# Or on Linux/macOS (Bash):
+./scripts/dev.sh
+```
+
+- **Frontend (Vite HMR)**: `http://localhost:5174` (auto-proxies API, RPC, and WebSocket traffic to `:8080`)
+- **Backend API**: `http://localhost:8080` (automatically rebuilds and restarts on Go source changes)
 
 ---
 

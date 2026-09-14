@@ -13,17 +13,9 @@ BUF_RUN := docker run --rm \
 	--env HOME=/tmp \
 	$(BUF_IMAGE)
 
-# Development mode - runs backend and frontend concurrently
+# Development mode - runs backend (with live reload) and frontend concurrently
 run:
-	@echo "Starting development environment..."
-	@mkdir -p $(DATA_DIR)
-	@echo "Starting backend server with frontend dev server..."
-	@trap 'echo "Stopping all processes..."; kill $$(jobs -p) 2>/dev/null; wait; exit' INT TERM; \
-	cd $(FRONTEND_DIR) && bun run dev & \
-	FRONTEND_PID=$$!; \
-	go run cmd/mineserver/main.go & \
-	BACKEND_PID=$$!; \
-	wait $$BACKEND_PID $$FRONTEND_PID
+	@bash scripts/dev.sh
 
 restore:
 	@echo "Restoring seeded db for dev"
@@ -128,6 +120,7 @@ clean:
 # Kill any orphaned dev processes
 kill-dev:
 	@echo "Killing orphaned development processes..."
+	@pkill -f "air" || true
 	@pkill -f "bun" || true
 	@pkill -f "npm run dev" || true
 	@pkill -f "vite" || true
