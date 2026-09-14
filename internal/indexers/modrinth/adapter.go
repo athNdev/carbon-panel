@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/internal/indexers"
-	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/indexers"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
 )
 
 func init() {

@@ -4,12 +4,12 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 .vscode/
 build/
-/mineserver
-!cmd/mineserver
-!web/mineserver/
-web/mineserver/build/
-web/mineserver/node_modules/
-web/mineserver/.svelte-kit/
+/carbon-panel
+!cmd/carbon-panel
+!web/carbon-panel/
+web/carbon-panel/build/
+web/carbon-panel/node_modules/
+web/carbon-panel/.svelte-kit/
 data/
 tmp/
 sandbox/

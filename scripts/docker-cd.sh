@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# MineServer Docker Hub Continuous Deployment (CD) Script
+# Carbon Panel Docker Hub Continuous Deployment (CD) Script
 #
 # Builds and pushes multi-architecture or local Docker images to Docker Hub.
 #
@@ -17,7 +17,7 @@ set -e
 
 TAG="${1:-latest}"
 REGISTRY="${DOCKER_HUB_USERNAME:-${DOCKERHUB_USERNAME:-athndev}}"
-IMAGE="${REGISTRY}/mineserver:${TAG}"
+IMAGE="${REGISTRY}/carbon-panel:${TAG}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
 
 PUSH=false
@@ -30,7 +30,7 @@ for arg in "$@"; do
     esac
 done
 
-echo "=== MineServer Docker CD ==="
+echo "=== Carbon Panel Docker CD ==="
 echo "Target Image: ${IMAGE}"
 echo "Registry:     ${REGISTRY}"
 echo "Platforms:    ${PLATFORMS}"
@@ -46,7 +46,7 @@ fi
 
 if [ "$MULTIARCH" = "true" ] || [ "$PUSH" = "true" ]; then
     echo "Building multi-architecture image with buildx..."
-    BUILDX_CMD=(docker buildx build --platform "$PLATFORMS" --file docker/Dockerfile.mineserver -t "$IMAGE")
+    BUILDX_CMD=(docker buildx build --platform "$PLATFORMS" --file docker/Dockerfile.carbon-panel -t "$IMAGE")
     if [ "$PUSH" = "true" ]; then
         BUILDX_CMD+=(--push)
     else
@@ -55,7 +55,7 @@ if [ "$MULTIARCH" = "true" ] || [ "$PUSH" = "true" ]; then
     "${BUILDX_CMD[@]}" .
 else
     echo "Building local Docker image..."
-    docker build -f docker/Dockerfile.mineserver -t "$IMAGE" .
+    docker build -f docker/Dockerfile.carbon-panel -t "$IMAGE" .
 fi
 
-echo "=== MineServer Docker CD Complete ==="
+echo "=== Carbon Panel Docker CD Complete ==="

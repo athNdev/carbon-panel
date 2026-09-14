@@ -1,4 +1,4 @@
-module github.com/athNdev/mineserver
+module github.com/athNdev/carbon-panel
 
 go 1.25.0
 

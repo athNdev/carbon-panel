@@ -1,5 +1,5 @@
 {
-  "realm": "MINESERVER",
+  "realm": "CARBONPANEL",
   "enabled": true,
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
@@ -10,11 +10,11 @@
     "realm": [
       {
         "name": "admin",
-        "description": "MINESERVER administrator"
+        "description": "CARBONPANEL administrator"
       },
       {
         "name": "user",
-        "description": "MINESERVER user"
+        "description": "CARBONPANEL user"
       }
     ]
   },
@@ -31,11 +31,11 @@
   "defaultGroups": ["user"],
   "clients": [
     {
-      "clientId": "MINESERVER",
+      "clientId": "CARBONPANEL",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
-      "secret": "MINESERVER-dev-secret",
+      "secret": "CARBONPANEL-dev-secret",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
@@ -89,7 +89,7 @@
     {
       "username": "admin",
       "enabled": true,
-      "email": "admin@MINESERVER.local",
+      "email": "admin@CARBONPANEL.local",
       "emailVerified": true,
       "firstName": "Disco",
       "lastName": "Admin",

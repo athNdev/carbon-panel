@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/docker/docker/client"
-	"github.com/athNdev/mineserver/internal/config"
-	db "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/internal/config"
+	db "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // Manager handles the lifecycle of the proxy and manages routes

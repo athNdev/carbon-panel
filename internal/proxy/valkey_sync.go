@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 const (
-	ValkeyChannelRoutingEvents = "MINESERVER:routing:events"
-	ValkeyRouteKeyPrefix       = "MINESERVER:routes:"
+	ValkeyChannelRoutingEvents = "CARBONPANEL:routing:events"
+	ValkeyRouteKeyPrefix       = "CARBONPANEL:routes:"
 )
 
 // RouteInfo holds stored route details in Valkey / Dragonfly KV

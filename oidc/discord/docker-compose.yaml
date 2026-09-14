@@ -1,4 +1,4 @@
-# MINESERVER + Discord (OIDC)
+# CARBONPANEL + Discord (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Discord as the identity provider.
 #
@@ -17,46 +17,46 @@
 #   "Guild restriction" and "Role mapping" sections below.
 
 services:
-  mineserver:
+  carbon-panel:
     build:
       context: ../../
-      dockerfile: docker/Dockerfile.mineserver
-    #image: athNdev/mineserver:dev
-    container_name: mineserver
+      dockerfile: docker/Dockerfile.carbon-panel
+    #image: athNdev/carbon-panel:dev
+    container_name: carbon-panel
     restart: unless-stopped
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/mineserver:/app/data
+      - /tmp/carbon-panel:/app/data
     environment:
-      - MINESERVER_DATA_DIR=/app/data
-      - MINESERVER_HOST_DATA_PATH=/tmp/mineserver
+      - CARBONPANEL_DATA_DIR=/app/data
+      - CARBONPANEL_HOST_DATA_PATH=/tmp/carbon-panel
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR MINESERVER + DISCORD ------------------------------------
-      - MINESERVER_AUTH_LOCAL_ENABLED=true
-      - MINESERVER_AUTH_OIDC_ENABLED=true
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBONPANEL + DISCORD ------------------------------------
+      - CARBONPANEL_AUTH_LOCAL_ENABLED=true
+      - CARBONPANEL_AUTH_OIDC_ENABLED=true
 
       # DISCORD OIDC ISSUER - DO NOT CHANGE
-      - MINESERVER_AUTH_OIDC_ISSUER_URI=https://discord.com
+      - CARBONPANEL_AUTH_OIDC_ISSUER_URI=https://discord.com
 
       # PASTE YOUR DISCORD OAUTH CLIENT ID HERE (from Discord Developer Portal)
-      - MINESERVER_AUTH_OIDC_CLIENT_ID=REPLACE_ME
+      - CARBONPANEL_AUTH_OIDC_CLIENT_ID=REPLACE_ME
 
       # PASTE YOUR DISCORD OAUTH CLIENT SECRET HERE (from Discord Developer Portal)
-      - MINESERVER_AUTH_OIDC_CLIENT_SECRET=REPLACE_ME
+      - CARBONPANEL_AUTH_OIDC_CLIENT_SECRET=REPLACE_ME
 
       # Discord requires "openid", "identify", and "email" for basic OIDC login.
       # Add "guilds" if you want to restrict access to a specific server (see below).
       # Add "guilds.members.read" if you also want to map Discord server roles.
-      - MINESERVER_AUTH_OIDC_SCOPES=openid,identify,email
+      - CARBONPANEL_AUTH_OIDC_SCOPES=openid,identify,email
 
       # THIS MUST MATCH EXACTLY WHAT YOU ENTERED IN DISCORD DEVELOPER PORTAL UNDER "Redirects"
       # FOR PRODUCTION: change to your public domain (ie: https://mypanel.com/api/v1/auth/oidc/callback)
-      - MINESERVER_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
+      - CARBONPANEL_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
 
       # Leave empty to skip automatic role mapping - users get default roles and can be promoted manually.
-      - MINESERVER_AUTH_OIDC_ROLE_CLAIM=
+      - CARBONPANEL_AUTH_OIDC_ROLE_CLAIM=
 
       # ------------------------------------ GUILD RESTRICTION (OPTIONAL) ------------------------------------
       #
@@ -65,25 +65,25 @@ services:
       #   2. Uncomment the lines below, replacing YOUR_GUILD_ID with your server's ID
       #      (enable Developer Mode in Discord, right-click the server → Copy Server ID)
       #
-      # - MINESERVER_AUTH_OIDC_EXTRA_CLAIMS_URL=https://discord.com/api/users/@me/guilds
-      # - MINESERVER_AUTH_OIDC_EXTRA_CLAIMS_KEY=#.id
-      # - MINESERVER_AUTH_OIDC_EXTRA_CLAIMS_NAME=guilds
-      # - MINESERVER_AUTH_OIDC_REQUIRED_CLAIM=guilds
-      # - MINESERVER_AUTH_OIDC_REQUIRED_VALUES=YOUR_GUILD_ID
+      # - CARBONPANEL_AUTH_OIDC_EXTRA_CLAIMS_URL=https://discord.com/api/users/@me/guilds
+      # - CARBONPANEL_AUTH_OIDC_EXTRA_CLAIMS_KEY=#.id
+      # - CARBONPANEL_AUTH_OIDC_EXTRA_CLAIMS_NAME=guilds
+      # - CARBONPANEL_AUTH_OIDC_REQUIRED_CLAIM=guilds
+      # - CARBONPANEL_AUTH_OIDC_REQUIRED_VALUES=YOUR_GUILD_ID
       #
       # ------------------------------------ ROLE MAPPING (OPTIONAL) ------------------------------------
       #
-      # OPTION B: Restrict to a guild AND map Discord server roles to MINESERVER roles.
+      # OPTION B: Restrict to a guild AND map Discord server roles to CARBONPANEL roles.
       #   1. Add "guilds.members.read" to SCOPES above → openid,identify,email,guilds.members.read
       #   2. Install your Discord application in the server (OAuth2 → URL Generator → select "bot" scope → invite)
       #   3. Set EXTRA_CLAIMS_URL to the guild member endpoint with your server ID:
       #
-      # - MINESERVER_AUTH_OIDC_EXTRA_CLAIMS_URL=https://discord.com/api/users/@me/guilds/YOUR_GUILD_ID/member
-      # - MINESERVER_AUTH_OIDC_EXTRA_CLAIMS_KEY=roles
-      # - MINESERVER_AUTH_OIDC_EXTRA_CLAIMS_NAME=discord_roles
-      # - MINESERVER_AUTH_OIDC_ROLE_CLAIM=discord_roles
-      # - MINESERVER_AUTH_OIDC_ROLE_MAPPING={"DISCORD_ROLE_ID":"admin","OTHER_ROLE_ID":"moderator"}
-      # - MINESERVER_AUTH_OIDC_REJECT_UNMAPPED=true
+      # - CARBONPANEL_AUTH_OIDC_EXTRA_CLAIMS_URL=https://discord.com/api/users/@me/guilds/YOUR_GUILD_ID/member
+      # - CARBONPANEL_AUTH_OIDC_EXTRA_CLAIMS_KEY=roles
+      # - CARBONPANEL_AUTH_OIDC_EXTRA_CLAIMS_NAME=discord_roles
+      # - CARBONPANEL_AUTH_OIDC_ROLE_CLAIM=discord_roles
+      # - CARBONPANEL_AUTH_OIDC_ROLE_MAPPING={"DISCORD_ROLE_ID":"admin","OTHER_ROLE_ID":"moderator"}
+      # - CARBONPANEL_AUTH_OIDC_REJECT_UNMAPPED=true
       #
       #   This also restricts access to guild members — non-members get a 403 from Discord's API.
       #   To find role IDs: Server Settings → Roles → right-click a role → Copy Role ID

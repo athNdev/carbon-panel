@@ -1,7 +1,7 @@
 services:
-  mineserver:
-    image: mineserver:latest
-    container_name: mineserver
+  carbon-panel:
+    image: carbon-panel:latest
+    container_name: carbon-panel
     restart: unless-stopped
 
     # Option 1 (RECOMENDED FOR SIMPLICITY): Use host network mode
@@ -9,14 +9,14 @@ services:
 
     # Option 2 (MORE COMPLICATED, ONLY USE IF YOU NEEDED): Use bridge mode with port mapping (default)
     #
-    # NOTE: In bridge mode, MineServer automatically attaches itself to the managed Docker network
-    #       (mineserver-network) at startup so it can reach the minecraft server containers it creates.
+    # NOTE: In bridge mode, Carbon Panel automatically attaches itself to the managed Docker network
+    #       (carbon-panel-network) at startup so it can reach the minecraft server containers it creates.
     #
     # NOTE: Only specify minecraft server ports (25565 ... etc) for proxied minecraft servers using a hostname. 
-    #       MineServer will automatically expose ports needed on the managed minecraft server instances. In other
-    #       words, only the mineserver web port is needed + proxy port(s).
+    #       Carbon Panel will automatically expose ports needed on the managed minecraft server instances. In other
+    #       words, only the carbon-panel web port is needed + proxy port(s).
     # ports:
-    #   - "8080:8080"         # MineServer web interface
+    #   - "8080:8080"         # Carbon Panel web interface
     #   - "25565:25565"       # Minecraft port/proxy-port
     #   - "25565-25665:25565-25665/tcp" # Additional ports/proxy-ports if needed
     #   - "25565-25665:25565-25665/udp" # Also map UDP for some Minecraft features
@@ -29,20 +29,20 @@ services:
       # IMPORTANT: This is where your server(s) data will be stored on the host.
       # You can set this to any path you'd like, but the path must exist AND you must use the same
       # absolute paths below for the below env vars (in the environment section at the bottom). Example:
-      # MINESERVER_DATA_DIR=/app/data
-      # MINESERVER_HOST_DATA_PATH=/opt/mineserver/data
+      # CARBONPANEL_DATA_DIR=/app/data
+      # CARBONPANEL_HOST_DATA_PATH=/opt/carbon-panel/data
       # (See environment)
-      - /opt/mineserver/data:/app/data
-      - /opt/mineserver/backups:/app/backups
-      - /tmp/mineserver:/app/tmp
+      - /opt/carbon-panel/data:/app/data
+      - /opt/carbon-panel/backups:/app/backups
+      - /tmp/carbon-panel:/app/tmp
       
       # Configuration file, uncomment if you are using a config file (optional, see config.example.yaml for all available options).
       #- ./config.yaml:/app/config.yaml:ro
     environment:
-      - MINESERVER_DATA_DIR=/app/data
+      - CARBONPANEL_DATA_DIR=/app/data
 
       # IMPORTANT: THIS MUST BE SET TO THE SAME PATH AS THE SERVER DATA PATH IN "volumes" above
-      - MINESERVER_HOST_DATA_PATH=/opt/mineserver/data
+      - CARBONPANEL_HOST_DATA_PATH=/opt/carbon-panel/data
       - TZ=UTC
 
       # ── Authentication ──────────────────────────
@@ -50,7 +50,7 @@ services:
       # You create your first admin account on first login.
       #
       # Want to let new users sign up on their own?
-      # - MINESERVER_AUTH_LOCAL_ALLOW_REGISTRATION=true
+      # - CARBONPANEL_AUTH_LOCAL_ALLOW_REGISTRATION=true
       #
       # Want single sign-on (OIDC) with Keycloak, Authelia, etc?
       # See the oidc/ folder for examples.

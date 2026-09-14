@@ -1,20 +1,29 @@
-# MineServer
+# Carbon Panel
 
 <div align="center">
-  <img src="assets/mineserver_logo.png" alt="MineServer Logo" width="160" height="160" />
+  <img src="assets/carbon_panel_logo.png" alt="Carbon Panel Logo" width="160" height="160" />
   
   ### The modern Minecraft server management platform with IBM Carbon UI
   
-  [GitHub](https://github.com/athNdev/mineserver) &bull; [Issues](https://github.com/athNdev/mineserver/issues)
+  [GitHub](https://github.com/athNdev/carbon-panel) &bull; [Issues](https://github.com/athNdev/carbon-panel/issues)
 </div>
 
 ---
 
-## What is MineServer?
+> **Renamed from MineServer.** This project was previously called MineServer and has been rebranded to Carbon Panel. If you're upgrading an existing deployment, you'll need to update a few things:
+> - Environment variable prefix: `MINESERVER_*` → `CARBONPANEL_*` (e.g. `MINESERVER_DATA_DIR` → `CARBONPANEL_DATA_DIR`)
+> - Default database/log filenames: `mineserver.db` / `mineserver.log` → `carbon-panel.db` / `carbon-panel.log`
+> - Docker network name: `mineserver-network` → `carbon-panel-network`
+>
+> Existing data isn't touched automatically — rename your files/volumes and update your env vars and compose files accordingly before starting the new version.
 
-MineServer is a high-performance, web-based Minecraft server, proxy, and modpack management platform designed with the **IBM Carbon Design System**. Built for developers, homelab operators, and community hosts who demand clean, dependable server orchestration without bloated interfaces.
+---
 
-## Why MineServer?
+## What is Carbon Panel?
+
+Carbon Panel is a high-performance, web-based Minecraft server, proxy, and modpack management platform designed with the **IBM Carbon Design System**. Built for developers, homelab operators, and community hosts who demand clean, dependable server orchestration without bloated interfaces.
+
+## Why Carbon Panel?
 
 Because managing Minecraft servers should be fast, reliable, and modern:
 
@@ -24,7 +33,7 @@ Because managing Minecraft servers should be fast, reliable, and modern:
 - **Intelligent Reverse Proxy** - Route player traffic dynamically through hostnames with automatic SRV handling on port 25565 without port-forwarding gymnastics.
 - **Modpack Studio & Direct CurseForge Integration** - Native keyless CurseForge & Modrinth search, version resolution, packwiz support, and direct `.mrpack` export.
 - **Automated Lifecycle** - Auto-start, auto-stop, auto-restart on schedule or event triggers.
-- **Modern Proto-based API** - Built with Protocol Buffers and Connect RPC (`proto/mineserver/v1`) for robust, type-safe API client generation.
+- **Modern Proto-based API** - Built with Protocol Buffers and Connect RPC (`proto/carbonpanel/v1`) for robust, type-safe API client generation.
 
 ---
 
@@ -38,20 +47,20 @@ Requirements:
 
 ```bash
 # Clone the repository
-git clone https://github.com/athNdev/mineserver.git
-cd mineserver
+git clone https://github.com/athNdev/carbon-panel.git
+cd carbon-panel
 
 # Generate the RPC/API code using buf in docker (optional if pre-generated)
 docker run --rm -v "$(pwd):/workspace" -w /workspace bufbuild/buf:latest generate
 
 # Install dependencies and build the Carbon frontend
-cd web/mineserver && bun install && bun run build && cd ../..
+cd web/carbon-panel && bun install && bun run build && cd ../..
 
 # Build backend binary
-go build -o mineserver cmd/mineserver/main.go
+go build -o carbon-panel cmd/carbon-panel/main.go
 
-# Start MineServer
-./mineserver
+# Start Carbon Panel
+./carbon-panel
 
 # Open your browser:
 # http://localhost:8080 (Production) or http://localhost:5174 (Carbon Vite Dev)
@@ -86,7 +95,7 @@ make dev
 
 ```bash
 docker run -d \
-  --name mineserver \
+  --name carbon-panel \
   --restart unless-stopped \
   --network host \
   -v /var/run/docker.sock:/var/run/docker.sock \
@@ -94,19 +103,19 @@ docker run -d \
   -v ./backups:/app/backups \
   -v ./tmp:/app/tmp \
   -v ./config.yaml:/app/config.yaml:ro \
-  -e MINESERVER_DATA_DIR=/app/data \
-  -e MINESERVER_HOST_DATA_PATH="$(pwd)/data" \
+  -e CARBONPANEL_DATA_DIR=/app/data \
+  -e CARBONPANEL_HOST_DATA_PATH="$(pwd)/data" \
   -e TZ=UTC \
-  mineserver:latest
+  carbon-panel:latest
 ```
 
 ### Docker Compose (Recommended)
 
 ```yaml
 services:
-  mineserver:
-    image: mineserver:latest
-    container_name: mineserver
+  carbon-panel:
+    image: carbon-panel:latest
+    container_name: carbon-panel
     restart: unless-stopped
 
     # Option 1 (Recommended): Use host network mode
@@ -114,7 +123,7 @@ services:
 
     # Option 2: Bridge mode with port mapping
     # ports:
-    #   - "8080:8080"         # MineServer Web Interface
+    #   - "8080:8080"         # Carbon Panel Web Interface
     #   - "25565:25565"       # Minecraft Default Proxy Port
     #   - "25565-25665:25565-25665/tcp"
 
@@ -128,8 +137,8 @@ services:
       #- ./config.yaml:/app/config.yaml:ro
 
     environment:
-      - MINESERVER_DATA_DIR=/app/data
-      - MINESERVER_HOST_DATA_PATH=/opt/mineserver/data
+      - CARBONPANEL_DATA_DIR=/app/data
+      - CARBONPANEL_HOST_DATA_PATH=/opt/carbon-panel/data
       - TZ=UTC
 
     extra_hosts:
@@ -165,7 +174,7 @@ services:
 
 ## Configuration
 
-MineServer loads configuration from `config.yaml` or environment variables:
+Carbon Panel loads configuration from `config.yaml` or environment variables:
 
 ```yaml
 server:
@@ -186,14 +195,14 @@ proxy:
 
 ## API & Extensibility
 
-MineServer provides a comprehensive Connect-RPC & gRPC API:
+Carbon Panel provides a comprehensive Connect-RPC & gRPC API:
 
 ```bash
 # List managed servers
-curl http://localhost:8080/mineserver.v1.ServerService/ListServers
+curl http://localhost:8080/carbonpanel.v1.ServerService/ListServers
 
 # Restart a server
-curl -X POST http://localhost:8080/mineserver.v1.ServerService/RestartServer \
+curl -X POST http://localhost:8080/carbonpanel.v1.ServerService/RestartServer \
   -H "Content-Type: application/json" \
   -d '{"id": "your-server-id"}'
 ```
@@ -202,7 +211,7 @@ curl -X POST http://localhost:8080/mineserver.v1.ServerService/RestartServer \
 
 ## Acknowledgments & Credits
 
-MineServer is built upon the open-source foundation of the original [DiscoPanel](https://github.com/discohaus/discopanel) project created by [nickheyer](https://github.com/nickheyer). We gratefully credit the original authors and contributors for their work in pioneering the containerized Minecraft server and proxy architecture.
+Carbon Panel (formerly MineServer) is built upon the open-source foundation of the original [DiscoPanel](https://github.com/discohaus/discopanel) project created by [nickheyer](https://github.com/nickheyer). We gratefully credit the original authors and contributors for their work in pioneering the containerized Minecraft server and proxy architecture.
 
 ---
 

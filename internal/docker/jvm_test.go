@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/carbon-panel/internal/db"
 )
 
 func TestBuildEnvFromConfig_GenerationalZGC(t *testing.T) {

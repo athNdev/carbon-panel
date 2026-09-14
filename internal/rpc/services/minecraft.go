@@ -4,16 +4,16 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/minecraft"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 )
 
 // Compile-time check that MinecraftService implements the interface
-var _ mineserverv1connect.MinecraftServiceHandler = (*MinecraftService)(nil)
+var _ carbonpanelv1connect.MinecraftServiceHandler = (*MinecraftService)(nil)
 
 // MinecraftService implements the Minecraft service
 type MinecraftService struct {

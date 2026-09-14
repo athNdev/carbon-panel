@@ -1,11 +1,11 @@
-# Air configuration for MineServer live development reloading
+# Air configuration for Carbon Panel live development reloading
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/mineserver-dev ./cmd/mineserver/main.go"
-  bin = "./tmp/mineserver-dev"
-  entrypoint = ["./tmp/mineserver-dev"]
+  cmd = "go build -o ./tmp/carbon-panel-dev ./cmd/carbon-panel/main.go"
+  bin = "./tmp/carbon-panel-dev"
+  entrypoint = ["./tmp/carbon-panel-dev"]
   include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "web", "docs", "data", "docker"]
   include_dir = ["cmd", "internal", "pkg"]
@@ -15,9 +15,9 @@ tmp_dir = "tmp"
   log = "air-build-errors.log"
 
 [build.windows]
-  cmd = "go build -o ./tmp/mineserver-dev.exe ./cmd/mineserver/main.go"
-  bin = "./tmp/mineserver-dev.exe"
-  entrypoint = ["./tmp/mineserver-dev.exe"]
+  cmd = "go build -o ./tmp/carbon-panel-dev.exe ./cmd/carbon-panel/main.go"
+  bin = "./tmp/carbon-panel-dev.exe"
+  entrypoint = ["./tmp/carbon-panel-dev.exe"]
 
 [log]
   time = false

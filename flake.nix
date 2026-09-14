@@ -1,5 +1,5 @@
 {
-  description = "MineServer - The Minecraft server manager that works";
+  description = "Carbon Panel - The Minecraft server manager that works";
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };

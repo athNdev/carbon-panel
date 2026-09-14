@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/athNdev/mineserver/internal/config"
-	"github.com/athNdev/mineserver/internal/indexers"
+	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/indexers"
 )
 
 const (

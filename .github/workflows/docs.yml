@@ -35,17 +35,17 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        working-directory: docs/mineserver
+        working-directory: docs/carbon-panel
         run: npm ci
 
       - name: Build docs
-        working-directory: docs/mineserver
+        working-directory: docs/carbon-panel
         run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/mineserver/dist
+          path: docs/carbon-panel/dist
 
   deploy:
     needs: build
