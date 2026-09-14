@@ -244,7 +244,7 @@
 				<div class="flex items-center gap-2">
 					<h1 class="font-sans text-2xl font-light text-[#f4f4f4]">Cluster Overview</h1>
 					<span class="px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 text-xs font-mono">
-						DISCOPANEL
+						MINESERVER
 					</span>
 				</div>
 				<p class="font-sans text-xs text-[#a8a8a8] mt-1">
@@ -625,7 +625,7 @@
 					<Button
 						variant="outline"
 						class="w-full justify-start gap-3 transition-all hover:border-primary/50 hover:bg-muted/50"
-						onclick={() => window.open('https://github.com/nickheyer/discopanel/issues', '_blank')}
+						onclick={() => window.open('https://github.com/athNdev/discopanel/issues', '_blank')}
 					>
 						<Github class="h-4 w-4" />
 						<span class="flex-1 text-left">Report an Issue</span>
@@ -634,7 +634,7 @@
 					<Button
 						variant="outline"
 						class="w-full justify-start gap-3 transition-all hover:border-primary/50 hover:bg-muted/50"
-						onclick={() => window.open('https://github.com/nickheyer/discopanel', '_blank')}
+						onclick={() => window.open('https://github.com/athNdev/discopanel', '_blank')}
 					>
 						<BookOpen class="h-4 w-4 text-green-500" />
 						<span class="flex-1 text-left">Documentation</span>

@@ -1,10 +1,10 @@
-# Air configuration for DiscoPanel live development reloading
+# Air configuration for MineServer live development reloading
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/discopanel-dev ./cmd/discopanel/main.go"
-  bin = "./tmp/discopanel-dev"
+  cmd = "go build -o ./tmp/mineserver-dev ./cmd/discopanel/main.go"
+  bin = "./tmp/mineserver-dev"
   full_bin = ""
   include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "web", "docs", "data", "docker"]

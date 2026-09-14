@@ -1,7 +1,7 @@
 services:
-  discopanel:
-    image: nickheyer/discopanel:latest
-    container_name: discopanel
+  mineserver:
+    image: mineserver:latest
+    container_name: mineserver
     restart: unless-stopped
 
     # Option 1 (RECOMENDED FOR SIMPLICITY): Use host network mode
@@ -9,14 +9,14 @@ services:
 
     # Option 2 (MORE COMPLICATED, ONLY USE IF YOU NEEDED): Use bridge mode with port mapping (default)
     #
-    # NOTE: In bridge mode, DiscoPanel automatically attaches itself to the managed Docker network
-    #       (discopanel-network) at startup so it can reach the minecraft server containers it creates.
+    # NOTE: In bridge mode, MineServer automatically attaches itself to the managed Docker network
+    #       (mineserver-network) at startup so it can reach the minecraft server containers it creates.
     #
     # NOTE: Only specify minecraft server ports (25565 ... etc) for proxied minecraft servers using a hostname. 
-    #       Discopanel will automatically expose ports needed on the managed minecraft server instances. In other
-    #       words, only the discopanel web port is needed + proxy port(s).
+    #       MineServer will automatically expose ports needed on the managed minecraft server instances. In other
+    #       words, only the mineserver web port is needed + proxy port(s).
     # ports:
-    #   - "8080:8080"         # DiscoPanel web interface
+    #   - "8080:8080"         # MineServer web interface
     #   - "25565:25565"       # Minecraft port/proxy-port
     #   - "25565-25665:25565-25665/tcp" # Additional ports/proxy-ports if needed
     #   - "25565-25665:25565-25665/udp" # Also map UDP for some Minecraft features
@@ -30,11 +30,11 @@ services:
       # You can set this to any path you'd like, but the path must exist AND you must use the same
       # absolute paths below for the below env vars (in the environment section at the bottom). Example:
       # DISCOPANEL_DATA_DIR=/app/data
-      # DISCOPANEL_HOST_DATA_PATH=/opt/discopanel/data
+      # DISCOPANEL_HOST_DATA_PATH=/opt/mineserver/data
       # (See environment)
-      - /opt/discopanel/data:/app/data
-      - /opt/discopanel/backups:/app/backups
-      - /tmp/discopanel:/app/tmp
+      - /opt/mineserver/data:/app/data
+      - /opt/mineserver/backups:/app/backups
+      - /tmp/mineserver:/app/tmp
       
       # Configuration file, uncomment if you are using a config file (optional, see config.example.yaml for all available options).
       #- ./config.yaml:/app/config.yaml:ro
@@ -42,7 +42,7 @@ services:
       - DISCOPANEL_DATA_DIR=/app/data
 
       # IMPORTANT: THIS MUST BE SET TO THE SAME PATH AS THE SERVER DATA PATH IN "volumes" above
-      - DISCOPANEL_HOST_DATA_PATH=/opt/discopanel/data
+      - DISCOPANEL_HOST_DATA_PATH=/opt/mineserver/data
       - TZ=UTC
 
       # ── Authentication ──────────────────────────
