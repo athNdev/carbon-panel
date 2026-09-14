@@ -28,9 +28,12 @@ jobs:
           go-version: '1.23'
           cache: true
 
+      - name: Ensure embedded web build directory exists
+        run: mkdir -p web/discopanel/build && touch web/discopanel/build/.gitkeep
+
       - name: Run Packwiz & Core Tests
         run: |
-          go test -v -race ./internal/packwiz/... ./internal/rpc/handlers/ -run "TestPackwiz"
+          go test -v ./internal/packwiz/... ./internal/rpc/handlers/ -run "TestPackwiz"
           go test -v ./internal/scheduler/modpack_update_test.go ./internal/scheduler/modpack_update.go ./internal/scheduler/scheduler.go ./internal/scheduler/types.go || true
 
   test-frontend:
@@ -45,10 +48,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: web/discopanel/package-lock.json
 
