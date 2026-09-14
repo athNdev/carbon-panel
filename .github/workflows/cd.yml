@@ -62,7 +62,10 @@ jobs:
           echo "Username character count: ${#USER_CLEAN}"
           echo "Password character count: ${#PASS_CLEAN}"
           if [[ "$USER_CLEAN" =~ @ ]]; then
-            echo "::error::DOCKER_HUB_USERNAME appears to be an email address. Docker Hub requires your Docker ID (username), not email!"
+            echo "::error::DOCKER_HUB_USERNAME appears to be an email address. Docker Hub requires your personal Docker ID (username), not email!"
+          fi
+          if [ "$USER_CLEAN" = "athndev" ]; then
+            echo "::warning::'athndev' is a Docker Hub Organization name, not a personal user account. In Docker Hub, 'docker login' requires the personal Docker ID (username) of an account with push permissions in 'athndev'."
           fi
           if [[ "$PASS_CLEAN" == *" "* ]]; then
             echo "::warning::DOCKER_HUB_PASSWORD contains spaces. A Docker PAT should not contain spaces."
