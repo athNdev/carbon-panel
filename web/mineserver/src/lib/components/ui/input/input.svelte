@@ -1,3 +1,11 @@
+<!--
+SPDX-License-Identifier: MPL-2.0
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -24,9 +32,8 @@
 		bind:this={ref}
 		data-slot="input"
 		class={cn(
-			'flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 pt-1.5 text-sm font-medium shadow-xs ring-offset-background transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30',
-			'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-			'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40',
+			'flex h-10 w-full min-w-0 rounded-none border border-[#525252] bg-[#262626] px-3 py-2 text-sm text-[#f4f4f4] placeholder:text-[#6f6f6f] shadow-none outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0f62fe] disabled:cursor-not-allowed disabled:opacity-40 disabled:bg-[#161616] disabled:border-[#393939]',
+			'aria-invalid:border-[#da1e28] aria-invalid:focus-visible:outline-[#da1e28]',
 			className
 		)}
 		type="file"
@@ -39,9 +46,8 @@
 		bind:this={ref}
 		data-slot="input"
 		class={cn(
-			'flex h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-base shadow-xs ring-offset-background transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30',
-			'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-			'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40',
+			'flex h-10 w-full min-w-0 rounded-none border border-[#525252] bg-[#262626] px-3 py-2 text-sm text-[#f4f4f4] placeholder:text-[#6f6f6f] shadow-none outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0f62fe] disabled:cursor-not-allowed disabled:opacity-40 disabled:bg-[#161616] disabled:border-[#393939]',
+			'aria-invalid:border-[#da1e28] aria-invalid:focus-visible:outline-[#da1e28]',
 			className
 		)}
 		{type}

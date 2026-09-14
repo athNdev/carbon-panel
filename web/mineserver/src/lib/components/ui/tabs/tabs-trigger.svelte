@@ -1,3 +1,11 @@
+<!--
+SPDX-License-Identifier: MPL-2.0
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { Tabs as TabsPrimitive } from 'bits-ui';
 	import { cn } from '$lib/utils.js';
@@ -13,7 +21,7 @@
 	bind:ref
 	data-slot="tabs-trigger"
 	class={cn(
-		"inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-foreground transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:shadow-sm dark:text-muted-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 dark:data-[state=active]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		"inline-flex h-10 items-center justify-center gap-2 rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-normal whitespace-nowrap text-[#8d8d8d] transition-colors hover:bg-[#353535] hover:text-[#f4f4f4] focus-visible:outline-2 focus-visible:outline-[#0f62fe] focus-visible:outline-offset-[-2px] disabled:pointer-events-none disabled:opacity-40 data-[state=active]:border-b-[#0f62fe] data-[state=active]:bg-[#262626] data-[state=active]:text-[#f4f4f4] data-[state=active]:font-medium cursor-pointer [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 		className
 	)}
 	{...restProps}
