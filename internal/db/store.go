@@ -37,6 +37,9 @@ func NewSQLiteStore(cfg *config.Config) (*Store, error) {
 		return nil, fmt.Errorf("failed to get database handle: %w", err)
 	}
 
+	// Enable WAL mode, busy timeout, and normal synchronous for robust production concurrency
+	_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=NORMAL;")
+
 	if cfg.Database.MaxConnections > 0 {
 		sqlDB.SetMaxOpenConns(cfg.Database.MaxConnections)
 	}
