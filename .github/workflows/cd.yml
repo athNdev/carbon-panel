@@ -44,6 +44,7 @@ jobs:
 
       - name: Docker Hub Credentials & Login Check
         id: check-creds
+        if: github.event_name != 'pull_request'
         env:
           RAW_USER: ${{ secrets.DOCKER_HUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
           RAW_PASS: ${{ secrets.DOCKER_HUB_PASSWORD || secrets.DOCKERHUB_TOKEN }}
