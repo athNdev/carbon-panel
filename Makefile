@@ -93,10 +93,10 @@ module-%: gen
 		ls docker/Dockerfile.* 2>/dev/null | sed 's/docker\/Dockerfile\./  /g' | grep -v mineserver; \
 		exit 1; \
 	fi
-	@echo "Building athNdev/mineserver-$*:latest..."
-	@docker build -t "athNdev/mineserver-$*:latest" -f "docker/Dockerfile.$*" .
-	@echo "Pushing athNdev/mineserver-$*:latest..."
-	@docker push "athNdev/mineserver-$*:latest"
+	@echo "Building athndev/mineserver-$*:latest..."
+	@docker build -t "athndev/mineserver-$*:latest" -f "docker/Dockerfile.$*" .
+	@echo "Pushing athndev/mineserver-$*:latest..."
+	@docker push "athndev/mineserver-$*:latest"
 	@echo "Module $* build complete!"
 
 # Clean development data
