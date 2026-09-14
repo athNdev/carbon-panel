@@ -8,7 +8,7 @@
 
 
 ---
-# DiscoPanel - Authelia Configuration                
+# MINESERVER - Authelia Configuration                
 #                                                       
 # This config is ready to use for development/testing. 
 # For production, change ALL secrets and generate new keys.
@@ -23,7 +23,7 @@ log:
   level: 'info'
 
 totp:
-  issuer: 'discopanel'
+  issuer: 'MINESERVER'
 
 identity_validation:
   reset_password:
@@ -78,7 +78,7 @@ identity_providers:
     enforce_pkce: 'public_clients_only'
 
     jwks:
-      - key_id: 'discopanel-dev'
+      - key_id: 'MINESERVER-dev'
         algorithm: 'RS256'
         use: 'sig'
         key: ""
@@ -110,9 +110,9 @@ identity_providers:
       id_token: '1h'
       refresh_token: '90m'
 
-    # This policy puts "groups" directly in the ID token. Without it, groups only show up in the UserInfo endpoint, and Discopanel wouldn't read roles.
+    # This policy puts "groups" directly in the ID token. Without it, groups only show up in the UserInfo endpoint, and MINESERVER wouldn't read roles.
     claims_policies:
-      discopanel:
+      mineserver:
         id_token:
           - 'groups'
           - 'email'
@@ -130,13 +130,13 @@ identity_providers:
       allowed_origins_from_client_redirect_uris: true
 
     clients:
-      - client_id: 'discopanel'
-        client_name: 'DiscoPanel'
+      - client_id: 'MINESERVER'
+        client_name: 'MINESERVER'
         # Plaintext secret: REDACTED
         client_secret: "REDACTED"
         public: false
         authorization_policy: 'one_factor'
-        claims_policy: 'discopanel'
+        claims_policy: 'MINESERVER'
         redirect_uris:
           - 'http://localhost:8080/api/v1/auth/oidc/callback'
           - 'http://localhost:5173/api/v1/auth/oidc/callback'
