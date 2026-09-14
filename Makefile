@@ -77,10 +77,10 @@ modules: gen
 	@for dockerfile in docker/Dockerfile.*; do \
 		name=$$(basename $$dockerfile | sed 's/Dockerfile\.//'); \
 		if [ "$$name" != "mineserver" ]; then \
-			echo "Building athNdev/mineserver-$$name:latest..."; \
-			docker build -t "athNdev/mineserver-$$name:latest" -f "$$dockerfile" . && \
-			echo "Pushing athNdev/mineserver-$$name:latest..." && \
-			docker push "athNdev/mineserver-$$name:latest"; \
+			echo "Building athndev/mineserver-$name:latest..."; \
+			docker build -t "athndev/mineserver-$name:latest" -f "$dockerfile" . && \
+			echo "Pushing athndev/mineserver-$name:latest..." && \
+			docker push "athndev/mineserver-$name:latest";
 		fi \
 	done
 	@echo "Module builds complete!"
