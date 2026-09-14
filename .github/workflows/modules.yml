@@ -70,7 +70,7 @@ jobs:
 echo "Building athndev/mineserver-$name (linux/amd64,linux/arm64)..."
 TAGS="--tag athndev/mineserver-$name:latest"
               if [ -n "$VERSION" ]; then
-                TAGS="$TAGS --tag athNdev/mineserver-$name:$VERSION"
+                TAGS="$TAGS --tag athndev/mineserver-$name:$VERSION"
               fi
 
               docker buildx build \
