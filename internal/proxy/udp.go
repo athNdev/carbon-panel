@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // UDPProxy handles UDP forwarding for modules like Geyser

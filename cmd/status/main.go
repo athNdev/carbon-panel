@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 )
 
 // Template functions for arithmetic operations
@@ -33,13 +33,13 @@ var templateFuncs = template.FuncMap{
 var templateFS embed.FS
 
 func main() {
-	serverID := os.Getenv("DISCOPANEL_SERVER_ID")
+	serverID := os.Getenv("MINESERVER_SERVER_ID")
 	if serverID == "" {
-		fmt.Fprintln(os.Stderr, "DISCOPANEL_SERVER_ID required")
+		fmt.Fprintln(os.Stderr, "MINESERVER_SERVER_ID required")
 		os.Exit(1)
 	}
 
-	apiURL := env("DISCOPANEL_URL", "http://host.docker.internal:8080")
+	apiURL := env("MINESERVER_URL", "http://host.docker.internal:8080")
 	port := envInt("PORT", 8181)
 	poll := envDuration("POLL_INTERVAL", 10*time.Second)
 
@@ -51,20 +51,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	apiToken := os.Getenv("DISCOPANEL_API_TOKEN")
+	apiToken := os.Getenv("MINESERVER_API_TOKEN")
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 
 	var clientOpts []connect.ClientOption
 	if apiToken != "" {
-		fmt.Println("Using DISCOPANEL_API_TOKEN for authentication")
+		fmt.Println("Using MINESERVER_API_TOKEN for authentication")
 		clientOpts = append(clientOpts, connect.WithInterceptors(authInterceptor(apiToken)))
 	}
 
 	p := &panel{
-		serverClient:    discopanelv1connect.NewServerServiceClient(httpClient, apiURL, clientOpts...),
-		minecraftClient: discopanelv1connect.NewMinecraftServiceClient(httpClient, apiURL, clientOpts...),
-		configClient:    discopanelv1connect.NewConfigServiceClient(httpClient, apiURL, clientOpts...),
-		modpackClient:   discopanelv1connect.NewModpackServiceClient(httpClient, apiURL, clientOpts...),
+		serverClient:    mineserverv1connect.NewServerServiceClient(httpClient, apiURL, clientOpts...),
+		minecraftClient: mineserverv1connect.NewMinecraftServiceClient(httpClient, apiURL, clientOpts...),
+		configClient:    mineserverv1connect.NewConfigServiceClient(httpClient, apiURL, clientOpts...),
+		modpackClient:   mineserverv1connect.NewModpackServiceClient(httpClient, apiURL, clientOpts...),
 		serverID:        serverID,
 		poll:            poll,
 		tmpl:            tmpl,
@@ -85,10 +85,10 @@ func main() {
 }
 
 type panel struct {
-	serverClient    discopanelv1connect.ServerServiceClient
-	minecraftClient discopanelv1connect.MinecraftServiceClient
-	configClient    discopanelv1connect.ConfigServiceClient
-	modpackClient   discopanelv1connect.ModpackServiceClient
+	serverClient    mineserverv1connect.ServerServiceClient
+	minecraftClient mineserverv1connect.MinecraftServiceClient
+	configClient    mineserverv1connect.ConfigServiceClient
+	modpackClient   mineserverv1connect.ModpackServiceClient
 	serverID        string
 	poll            time.Duration
 	tmpl            *template.Template

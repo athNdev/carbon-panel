@@ -1,4 +1,4 @@
-name: DiscoPanel Releaser
+name: MineServer Releaser
 
 on:
   push:
@@ -33,14 +33,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: proto-ts
-          path: web/discopanel/src/lib/proto
+          path: web/mineserver/src/lib/proto
           retention-days: 1
   
       - name: Upload generated oapi schema
         uses: actions/upload-artifact@v4
         with:
           name: api-schema-yaml
-          path: web/discopanel/static/schemav1.yaml
+          path: web/mineserver/static/schemav1.yaml
           retention-days: 1
 
   build-frontend:
@@ -57,36 +57,34 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: proto-ts
-          path: web/discopanel/src/lib/proto
+          path: web/mineserver/src/lib/proto
 
       - name: Download generated oapi schema
         uses: actions/download-artifact@v4
         with:
           name: api-schema-yaml
-          path: web/discopanel/static
+          path: web/mineserver/static
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/discopanel/package-lock.json
+          bun-version: latest
 
       - name: Install frontend dependencies
         run: |
-          cd web/discopanel
-          npm ci
+          cd web/mineserver
+          bun install --frozen-lockfile
 
       - name: Build frontend
         run: |
-          cd web/discopanel
-          APP_VERSION=${{ github.ref_name }} npm run build
+          cd web/mineserver
+          APP_VERSION=${{ github.ref_name }} bun run build
 
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: web/discopanel/build
+          path: web/mineserver/build
           retention-days: 1
 
   build-binaries:
@@ -152,7 +150,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: web/discopanel/build
+          path: web/mineserver/build
 
       - name: Build binary
         env:
@@ -161,25 +159,25 @@ jobs:
           CC: ${{ matrix.cc || '' }}
           CXX: ${{ matrix.cxx || '' }}
         run: |
-          go build -o discopanel-${{ matrix.suffix }} ./cmd/discopanel
+          go build -o mineserver-${{ matrix.suffix }} ./cmd/mineserver
 
       - name: Compress binary (non-Windows)
         if: matrix.goos != 'windows'
         run: |
-          tar -czf discopanel-${{ matrix.suffix }}.tar.gz discopanel-${{ matrix.suffix }}
+          tar -czf mineserver-${{ matrix.suffix }}.tar.gz mineserver-${{ matrix.suffix }}
 
       - name: Compress binary (Windows)
         if: matrix.goos == 'windows'
         run: |
-          zip discopanel-${{ matrix.suffix }}.zip discopanel-${{ matrix.suffix }}
+          zip mineserver-${{ matrix.suffix }}.zip mineserver-${{ matrix.suffix }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.suffix }}
           path: |
-            discopanel-${{ matrix.suffix }}.tar.gz
-            discopanel-${{ matrix.suffix }}.zip
+            mineserver-${{ matrix.suffix }}.tar.gz
+            mineserver-${{ matrix.suffix }}.zip
           if-no-files-found: error
           retention-days: 1
 
@@ -209,7 +207,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            nickheyer/discopanel
+            athndev/mineserver
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -222,7 +220,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            nickheyer/discopanel
+            athndev/mineserver
           tags: |
             type=ref,event=tag
             type=raw,value=dev
@@ -233,7 +231,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.discopanel
+          file: docker/Dockerfile.mineserver
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags || steps.meta-dev.outputs.tags }}
@@ -289,7 +287,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          name: DiscoPanel ${{ github.ref_name }}
+          name: MineServer ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -315,8 +313,8 @@ jobs:
           curl -H "Content-Type: application/json" \
             -d '{
               "embeds": [{
-                "title": "DiscoPanel '"${VERSION}"' Released!",
-                "description": "A new version of DiscoPanel has been released.",
+                "title": "MineServer '"${VERSION}"' Released!",
+                "description": "A new version of MineServer has been released.",
                 "url": "'"${RELEASE_URL}"'",
                 "color": 5814783,
                 "image": {
@@ -335,12 +333,12 @@ jobs:
                   },
                   {
                     "name": "Docker Hub",
-                    "value": "[View Images](https://hub.docker.com/r/nickheyer/discopanel)",
+                    "value": "[View Images](https://hub.docker.com/r/athNdev/mineserver)",
                     "inline": true
                   }
                 ],
                 "footer": {
-                  "text": "DiscoPanel Release"
+                  "text": "MineServer Release"
                 },
                 "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'"
               }]

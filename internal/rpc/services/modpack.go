@@ -17,24 +17,24 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/internal/indexers"
-	_ "github.com/nickheyer/discopanel/internal/indexers/fuego"
-	_ "github.com/nickheyer/discopanel/internal/indexers/modrinth"
-	"github.com/nickheyer/discopanel/internal/minecraft"
-	"github.com/nickheyer/discopanel/pkg/files"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
-	"github.com/nickheyer/discopanel/pkg/upload"
-	"github.com/nickheyer/discopanel/pkg/utils"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/internal/indexers"
+	_ "github.com/athNdev/mineserver/internal/indexers/fuego"
+	_ "github.com/athNdev/mineserver/internal/indexers/modrinth"
+	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/mineserver/pkg/files"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/mineserver/pkg/upload"
+	"github.com/athNdev/mineserver/pkg/utils"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that ModpackService implements the interface
-var _ discopanelv1connect.ModpackServiceHandler = (*ModpackService)(nil)
+var _ mineserverv1connect.ModpackServiceHandler = (*ModpackService)(nil)
 
 // ModpackService implements the Modpack service
 type ModpackService struct {

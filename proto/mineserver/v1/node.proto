@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package mineserver.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/mineserver/pkg/proto/mineserver/v1;mineserverv1";
+
+// Node health and connectivity status
+enum NodeStatus {
+  NODE_STATUS_UNSPECIFIED = 0;
+  NODE_STATUS_ONLINE = 1;
+  NODE_STATUS_OFFLINE = 2;
+  NODE_STATUS_ERROR = 3;
+}
+
+// Docker daemon node instance
+message Node {
+  string id = 1;
+  string name = 2;
+  string host = 3;
+  string advertised_ip = 4;
+  string tls_ca_cert = 5;
+  string tls_cert = 6;
+  string tls_key = 7;
+  bool tls_enabled = 8;
+  bool tls_skip_verify = 9;
+  int64 max_memory_mb = 10;
+  int32 max_servers = 11;
+  bool enabled = 12;
+  NodeStatus status = 13;
+  bool is_local = 14;
+  optional google.protobuf.Timestamp last_heartbeat = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+  int64 allocated_memory_mb = 18;
+  int32 server_count = 19;
+  int32 running_count = 20;
+}
+
+// Docker node management service
+service NodeService {
+  // List all nodes with optional runtime stats
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  // Get single node details
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  // Create a new remote Docker node
+  rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
+  // Update node settings
+  rpc UpdateNode(UpdateNodeRequest) returns (UpdateNodeResponse);
+  // Delete a remote Docker node
+  rpc DeleteNode(DeleteNodeRequest) returns (DeleteNodeResponse);
+  // Test node connectivity and latency
+  rpc PingNode(PingNodeRequest) returns (PingNodeResponse);
+}
+
+// Node list request
+message ListNodesRequest {}
+
+// Node list response
+message ListNodesResponse {
+  repeated Node nodes = 1;
+}
+
+// Single node lookup request
+message GetNodeRequest {
+  string id = 1;
+}
+
+// Single node lookup response
+message GetNodeResponse {
+  Node node = 1;
+}
+
+// Create node request
+message CreateNodeRequest {
+  string name = 1;
+  string host = 2;
+  string advertised_ip = 3;
+  string tls_ca_cert = 4;
+  string tls_cert = 5;
+  string tls_key = 6;
+  bool tls_enabled = 7;
+  bool tls_skip_verify = 8;
+  int64 max_memory_mb = 9;
+  int32 max_servers = 10;
+  bool enabled = 11;
+}
+
+// Create node response
+message CreateNodeResponse {
+  Node node = 1;
+}
+
+// Update node request
+message UpdateNodeRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string host = 3;
+  optional string advertised_ip = 4;
+  optional string tls_ca_cert = 5;
+  optional string tls_cert = 6;
+  optional string tls_key = 7;
+  optional bool tls_enabled = 8;
+  optional bool tls_skip_verify = 9;
+  optional int64 max_memory_mb = 10;
+  optional int32 max_servers = 11;
+  optional bool enabled = 12;
+}
+
+// Update node response
+message UpdateNodeResponse {
+  Node node = 1;
+}
+
+// Delete node request
+message DeleteNodeRequest {
+  string id = 1;
+}
+
+// Delete node response
+message DeleteNodeResponse {
+  bool success = 1;
+}
+
+// Ping node request
+message PingNodeRequest {
+  string id = 1;
+}
+
+// Ping node response
+message PingNodeResponse {
+  bool success = 1;
+  string message = 2;
+  NodeStatus status = 3;
+  int64 latency_ms = 4;
+}

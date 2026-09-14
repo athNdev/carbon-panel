@@ -1,10 +1,10 @@
 .PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs
 
 DATA_DIR := ./data
-DOCKER_DATA_DIR := /tmp/discopanel
-DB_FILE := $(DATA_DIR)/discopanel.db
-FRONTEND_DIR := web/discopanel
-DISCOPANEL_BIN := build/discopanel
+DOCKER_DATA_DIR := /tmp/mineserver
+DB_FILE := $(DATA_DIR)/mineserver.db
+FRONTEND_DIR := web/mineserver
+MINESERVER_BIN := build/mineserver
 BUF_IMAGE := bufbuild/buf:latest
 BUF_RUN := docker run --rm \
 	--volume "$(shell pwd):/workspace" \
@@ -13,60 +13,58 @@ BUF_RUN := docker run --rm \
 	--env HOME=/tmp \
 	$(BUF_IMAGE)
 
-#DISCOSUPPORT_URL := http://localhost:8911
-
 # Development mode - runs backend and frontend concurrently
 run:
 	@echo "Starting development environment..."
 	@mkdir -p $(DATA_DIR)
 	@echo "Starting backend server with frontend dev server..."
 	@trap 'echo "Stopping all processes..."; kill $$(jobs -p) 2>/dev/null; wait; exit' INT TERM; \
-	cd $(FRONTEND_DIR) && npm run dev & \
+	cd $(FRONTEND_DIR) && bun run dev & \
 	FRONTEND_PID=$$!; \
-	go run cmd/discopanel/main.go & \
+	go run cmd/mineserver/main.go & \
 	BACKEND_PID=$$!; \
 	wait $$BACKEND_PID $$FRONTEND_PID
 
 restore:
 	@echo "Restoring seeded db for dev"
 	@mkdir -p $(DATA_DIR)
-	cp dev/discopanel.db data/discopanel.db || echo "No saved dev state, starting new db"
+	cp dev/mineserver.db data/mineserver.db || echo "No saved dev state, starting new db"
 
 dev: clean restore run
 
 # Build and run with OIDC provider (Keycloak)
 dev-auth-%: clean
 	docker compose -f oidc/$*/docker-compose.yaml down -v --remove-orphans
-	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/discopanel
+	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/mineserver
 	@echo "Building and running with OIDC provider..."
 	docker compose -f oidc/$*/docker-compose.yaml build --no-cache
 	docker compose -f oidc/$*/docker-compose.yaml up
 
 dev-docker: clean
 	docker compose down -v --remove-orphans
-	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/discopanel
+	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/mineserver
 	@echo "Building and running with base compose..."
 	docker compose build --no-cache
 	docker compose up
 
 dev-docs:
-	cd docs/discopanel && npm run dev
+	cd docs/mineserver && npm run dev
 	
 # Production build and run
 prod: build-frontend
 	@echo "Building for production..."
 	@mkdir -p $(DATA_DIR)
-	go build -o $(DISCOPANEL_BIN) cmd/discopanel/main.go
+	go build -o $(MINESERVER_BIN) cmd/mineserver/main.go
 
 # Build frontend for production
 build-frontend:
 	@echo "Building frontend..."
-	cd $(FRONTEND_DIR) && npm run build
+	cd $(FRONTEND_DIR) && bun run build
 
 # Build backend with embedded frontend
 build: build-frontend
 	@echo "Building backend with embedded frontend..."
-	go build -o $(DISCOPANEL_BIN) cmd/discopanel/main.go
+	go build -o $(MINESERVER_BIN) cmd/mineserver/main.go
 
 # Build and push Docker image to :dev tag
 image:
@@ -78,11 +76,11 @@ modules: gen
 	@echo "Building and pushing module images..."
 	@for dockerfile in docker/Dockerfile.*; do \
 		name=$$(basename $$dockerfile | sed 's/Dockerfile\.//'); \
-		if [ "$$name" != "discopanel" ]; then \
-			echo "Building nickheyer/discopanel-$$name:latest..."; \
-			docker build -t "nickheyer/discopanel-$$name:latest" -f "$$dockerfile" . && \
-			echo "Pushing nickheyer/discopanel-$$name:latest..." && \
-			docker push "nickheyer/discopanel-$$name:latest"; \
+		if [ "$$name" != "mineserver" ]; then \
+			echo "Building athndev/mineserver-$$name:latest..."; \
+			docker build -t "athndev/mineserver-$$name:latest" -f "$$dockerfile" . && \
+			echo "Pushing athndev/mineserver-$$name:latest..." && \
+			docker push "athndev/mineserver-$$name:latest"; \
 		fi \
 	done
 	@echo "Module builds complete!"
@@ -92,13 +90,13 @@ module-%: gen
 	@if [ ! -f "docker/Dockerfile.$*" ]; then \
 		echo "Error: docker/Dockerfile.$* not found"; \
 		echo "Available modules:"; \
-		ls docker/Dockerfile.* 2>/dev/null | sed 's/docker\/Dockerfile\./  /g' | grep -v discopanel; \
+		ls docker/Dockerfile.* 2>/dev/null | sed 's/docker\/Dockerfile\./  /g' | grep -v mineserver; \
 		exit 1; \
 	fi
-	@echo "Building nickheyer/discopanel-$*:latest..."
-	@docker build -t "nickheyer/discopanel-$*:latest" -f "docker/Dockerfile.$*" .
-	@echo "Pushing nickheyer/discopanel-$*:latest..."
-	@docker push "nickheyer/discopanel-$*:latest"
+	@echo "Building athndev/mineserver-$*:latest..."
+	@docker build -t "athndev/mineserver-$*:latest" -f "docker/Dockerfile.$*" .
+	@echo "Pushing athndev/mineserver-$*:latest..."
+	@docker push "athndev/mineserver-$*:latest"
 	@echo "Module $* build complete!"
 
 # Clean development data
@@ -112,23 +110,24 @@ clean:
 		echo "Removing docker data directory..."; \
 		docker run --rm -v $(DOCKER_DATA_DIR):/tmp alpine sh -c 'rm -rf /tmp/*'; \
 	fi
-	@if [ -f "$(DISCOPANEL_BIN)" ]; then \
+	@if [ -f "$(MINESERVER_BIN)" ]; then \
 		echo "Removing backend binary..."; \
-		rm -f $(DISCOPANEL_BIN); \
+		rm -f $(MINESERVER_BIN); \
 	fi
-	@if [ -f "discopanel.db" ]; then \
+	@if [ -f "mineserver.db" ]; then \
 		echo "Removing old database file..."; \
-		rm -f discopanel.db; \
+		rm -f mineserver.db; \
 	fi
 	@echo "Clean complete!"
 
 # Kill any orphaned dev processes
 kill-dev:
 	@echo "Killing orphaned development processes..."
+	@pkill -f "bun" || true
 	@pkill -f "npm run dev" || true
 	@pkill -f "vite" || true
-	@pkill -f "go run cmd/discopanel/main.go" || true
-	@pkill -f "discopanel" || true
+	@pkill -f "go run cmd/mineserver/main.go" || true
+	@pkill -f "mineserver" || true
 	@echo "Cleanup complete!"
 
 # Install dependencies
@@ -138,7 +137,7 @@ deps:
 	@echo "Updating buf dependencies (using Docker)..."
 	$(BUF_RUN) dep update
 	@echo "Installing frontend dependencies..."
-	cd $(FRONTEND_DIR) && npm install
+	cd $(FRONTEND_DIR) && bun install
 
 # Run tests
 test:
@@ -150,17 +149,17 @@ fmt:
 	@echo "Formatting Go code..."
 	go fmt ./...
 	@echo "Formatting frontend code..."
-	cd $(FRONTEND_DIR) && npm run format
+	cd $(FRONTEND_DIR) && bun run format
 
 # Lint code
 lint: proto-lint
 	@echo "Linting frontend code..."
-	cd $(FRONTEND_DIR) && npm run lint
+	cd $(FRONTEND_DIR) && bun run lint
 
 # Type check frontend
 check:
 	@echo "Type checking frontend..."
-	cd $(FRONTEND_DIR) && npm run check
+	cd $(FRONTEND_DIR) && bun run check
 
 proto:
 	@echo "Generating protocol buffer code (using Docker)..."
@@ -170,7 +169,7 @@ proto:
 proto-clean:
 	@echo "Cleaning generated proto files..."
 	rm -rf pkg/proto
-	rm -rf web/discopanel/src/lib/proto
+	rm -rf web/mineserver/src/lib/proto
 	@echo "Proto files cleaned!"
 
 proto-lint:

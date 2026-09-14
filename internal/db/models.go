@@ -3,7 +3,7 @@ package db
 import (
 	"time"
 
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 type ServerStatus string
@@ -91,8 +91,8 @@ type Server struct {
 	JavaVersion     string               `json:"java_version" gorm:"column:java_version"`
 	DockerImage     string               `json:"docker_image" gorm:"column:docker_image"`
 	DataPath        string               `json:"data_path" gorm:"not null;column:data_path"`
-	Detached        bool                 `json:"detached" gorm:"default:false;column:detached"`                             // Detach server container from DiscoPanel lifecycle (default: false)
-	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when DiscoPanel starts (default: false)
+	Detached        bool                 `json:"detached" gorm:"default:false;column:detached"`                             // Detach server container from MINESERVER lifecycle (default: false)
+	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when MINESERVER starts (default: false)
 	AutoHibernate   bool                 `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`                 // Sleep/wake container on idle via cgroup freezer (MINE-18)
 	IdleTimeoutMinutes int               `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"`       // Minutes idle before auto-hibernating
 	TPSCommand      string               `json:"tps_command" gorm:"column:tps_command"`                                     // The TPS command for this server (empty if not supported)

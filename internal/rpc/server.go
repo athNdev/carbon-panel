@@ -10,26 +10,26 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
-	"github.com/nickheyer/discopanel/internal/auth"
-	"github.com/nickheyer/discopanel/internal/command"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/internal/events"
-	"github.com/nickheyer/discopanel/internal/metrics"
-	"github.com/nickheyer/discopanel/internal/module"
-	"github.com/nickheyer/discopanel/internal/packwiz"
-	"github.com/nickheyer/discopanel/internal/proxy"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/internal/rpc/handlers"
-	"github.com/nickheyer/discopanel/internal/rpc/services"
-	"github.com/nickheyer/discopanel/internal/scheduler"
-	"github.com/nickheyer/discopanel/internal/ws"
-	"github.com/nickheyer/discopanel/pkg/download"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
-	"github.com/nickheyer/discopanel/pkg/upload"
-	web "github.com/nickheyer/discopanel/web/discopanel"
+	"github.com/athNdev/mineserver/internal/auth"
+	"github.com/athNdev/mineserver/internal/command"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/internal/events"
+	"github.com/athNdev/mineserver/internal/metrics"
+	"github.com/athNdev/mineserver/internal/module"
+	"github.com/athNdev/mineserver/internal/packwiz"
+	"github.com/athNdev/mineserver/internal/proxy"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/internal/rpc/handlers"
+	"github.com/athNdev/mineserver/internal/rpc/services"
+	"github.com/athNdev/mineserver/internal/scheduler"
+	"github.com/athNdev/mineserver/internal/ws"
+	"github.com/athNdev/mineserver/pkg/download"
+	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/mineserver/pkg/upload"
+	web "github.com/athNdev/mineserver/web/mineserver"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/proto"
@@ -173,20 +173,20 @@ func (s *Server) setupHandler() {
 
 	// Add reflection for gRPC clients
 	reflector := grpcreflect.NewStaticReflector(
-		discopanelv1connect.AuthServiceName,
-		discopanelv1connect.ConfigServiceName,
-		discopanelv1connect.FileServiceName,
-		discopanelv1connect.MinecraftServiceName,
-		discopanelv1connect.ModServiceName,
-		discopanelv1connect.ModpackServiceName,
-		discopanelv1connect.ModuleServiceName,
-		discopanelv1connect.ProxyServiceName,
-		discopanelv1connect.RoleServiceName,
-		discopanelv1connect.ServerServiceName,
-		discopanelv1connect.SupportServiceName,
-		discopanelv1connect.TaskServiceName,
-		discopanelv1connect.UploadServiceName,
-		discopanelv1connect.UserServiceName,
+		mineserverv1connect.AuthServiceName,
+		mineserverv1connect.ConfigServiceName,
+		mineserverv1connect.FileServiceName,
+		mineserverv1connect.MinecraftServiceName,
+		mineserverv1connect.ModServiceName,
+		mineserverv1connect.ModpackServiceName,
+		mineserverv1connect.ModuleServiceName,
+		mineserverv1connect.ProxyServiceName,
+		mineserverv1connect.RoleServiceName,
+		mineserverv1connect.ServerServiceName,
+		mineserverv1connect.SupportServiceName,
+		mineserverv1connect.TaskServiceName,
+		mineserverv1connect.UploadServiceName,
+		mineserverv1connect.UserServiceName,
 	)
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
@@ -247,49 +247,49 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	uploadService := services.NewUploadService(s.uploadManager, s.config, s.log)
 
 	// Register service handlers
-	authPath, authHandler := discopanelv1connect.NewAuthServiceHandler(authService, opts...)
+	authPath, authHandler := mineserverv1connect.NewAuthServiceHandler(authService, opts...)
 	mux.Handle(authPath, authHandler)
 
-	configPath, configHandler := discopanelv1connect.NewConfigServiceHandler(configService, opts...)
+	configPath, configHandler := mineserverv1connect.NewConfigServiceHandler(configService, opts...)
 	mux.Handle(configPath, configHandler)
 
-	filePath, fileHandler := discopanelv1connect.NewFileServiceHandler(fileService, opts...)
+	filePath, fileHandler := mineserverv1connect.NewFileServiceHandler(fileService, opts...)
 	mux.Handle(filePath, fileHandler)
 
-	minecraftPath, minecraftHandler := discopanelv1connect.NewMinecraftServiceHandler(minecraftService, opts...)
+	minecraftPath, minecraftHandler := mineserverv1connect.NewMinecraftServiceHandler(minecraftService, opts...)
 	mux.Handle(minecraftPath, minecraftHandler)
 
-	modPath, modHandler := discopanelv1connect.NewModServiceHandler(modService, opts...)
+	modPath, modHandler := mineserverv1connect.NewModServiceHandler(modService, opts...)
 	mux.Handle(modPath, modHandler)
 
-	modpackPath, modpackHandler := discopanelv1connect.NewModpackServiceHandler(modpackService, opts...)
+	modpackPath, modpackHandler := mineserverv1connect.NewModpackServiceHandler(modpackService, opts...)
 	mux.Handle(modpackPath, modpackHandler)
 
-	proxyPath, proxyHandler := discopanelv1connect.NewProxyServiceHandler(proxyService, opts...)
+	proxyPath, proxyHandler := mineserverv1connect.NewProxyServiceHandler(proxyService, opts...)
 	mux.Handle(proxyPath, proxyHandler)
 
-	serverPath, serverHandler := discopanelv1connect.NewServerServiceHandler(serverService, opts...)
+	serverPath, serverHandler := mineserverv1connect.NewServerServiceHandler(serverService, opts...)
 	mux.Handle(serverPath, serverHandler)
 
-	nodePath, nodeHandler := discopanelv1connect.NewNodeServiceHandler(nodeService, opts...)
+	nodePath, nodeHandler := mineserverv1connect.NewNodeServiceHandler(nodeService, opts...)
 	mux.Handle(nodePath, nodeHandler)
 
-	supportPath, supportHandler := discopanelv1connect.NewSupportServiceHandler(supportService, opts...)
+	supportPath, supportHandler := mineserverv1connect.NewSupportServiceHandler(supportService, opts...)
 	mux.Handle(supportPath, supportHandler)
 
-	taskPath, taskHandler := discopanelv1connect.NewTaskServiceHandler(taskService, opts...)
+	taskPath, taskHandler := mineserverv1connect.NewTaskServiceHandler(taskService, opts...)
 	mux.Handle(taskPath, taskHandler)
 
-	userPath, userHandler := discopanelv1connect.NewUserServiceHandler(userService, opts...)
+	userPath, userHandler := mineserverv1connect.NewUserServiceHandler(userService, opts...)
 	mux.Handle(userPath, userHandler)
 
-	rolePath, roleHandler := discopanelv1connect.NewRoleServiceHandler(roleService, opts...)
+	rolePath, roleHandler := mineserverv1connect.NewRoleServiceHandler(roleService, opts...)
 	mux.Handle(rolePath, roleHandler)
 
-	modulePath, moduleHandler := discopanelv1connect.NewModuleServiceHandler(moduleService, opts...)
+	modulePath, moduleHandler := mineserverv1connect.NewModuleServiceHandler(moduleService, opts...)
 	mux.Handle(modulePath, moduleHandler)
 
-	uploadPath, uploadHandler := discopanelv1connect.NewUploadServiceHandler(uploadService, opts...)
+	uploadPath, uploadHandler := mineserverv1connect.NewUploadServiceHandler(uploadService, opts...)
 	mux.Handle(uploadPath, uploadHandler)
 }
 
@@ -362,15 +362,15 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 
 // pollingProcedures lists endpoints that are called frequently and should be excluded from logging.
 var pollingProcedures = []string{
-	"/discopanel.v1.AuthService/GetAuthStatus",
-	"/discopanel.v1.ServerService/ListServers",
-	"/discopanel.v1.ServerService/GetServer",
-	"/discopanel.v1.ServerService/GetServerLogs",
-	"/discopanel.v1.ProxyService/GetProxyStatus",
-	"/discopanel.v1.SupportService/GetApplicationLogs",
-	"/discopanel.v1.UploadService/UploadChunk",
-	"/discopanel.v1.UploadService/GetUploadStatus",
-	"/discopanel.v1.FileService/GetExtractionStatus",
+	"/mineserver.v1.AuthService/GetAuthStatus",
+	"/mineserver.v1.ServerService/ListServers",
+	"/mineserver.v1.ServerService/GetServer",
+	"/mineserver.v1.ServerService/GetServerLogs",
+	"/mineserver.v1.ProxyService/GetProxyStatus",
+	"/mineserver.v1.SupportService/GetApplicationLogs",
+	"/mineserver.v1.UploadService/UploadChunk",
+	"/mineserver.v1.UploadService/GetUploadStatus",
+	"/mineserver.v1.FileService/GetExtractionStatus",
 }
 
 // Checks if a procedure is a polling endpoint or high-frequency endpoint
@@ -442,7 +442,7 @@ func (s *Server) createFrontendHandler(fs http.FileSystem) http.HandlerFunc {
 func isConnectPath(path string) bool {
 	// Connect paths start with service names
 	connectPrefixes := []string{
-		"/discopanel.v1.",
+		"/mineserver.v1.",
 		"/grpc.reflection.",
 		"/connect.",
 	}

@@ -3,7 +3,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/mineserver-dev ./cmd/discopanel/main.go"
+  cmd = "go build -o ./tmp/mineserver-dev ./cmd/mineserver/main.go"
   bin = "./tmp/mineserver-dev"
   full_bin = ""
   include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml"]

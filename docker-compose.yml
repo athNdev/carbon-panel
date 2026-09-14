@@ -29,8 +29,8 @@ services:
       # IMPORTANT: This is where your server(s) data will be stored on the host.
       # You can set this to any path you'd like, but the path must exist AND you must use the same
       # absolute paths below for the below env vars (in the environment section at the bottom). Example:
-      # DISCOPANEL_DATA_DIR=/app/data
-      # DISCOPANEL_HOST_DATA_PATH=/opt/mineserver/data
+      # MINESERVER_DATA_DIR=/app/data
+      # MINESERVER_HOST_DATA_PATH=/opt/mineserver/data
       # (See environment)
       - /opt/mineserver/data:/app/data
       - /opt/mineserver/backups:/app/backups
@@ -39,10 +39,10 @@ services:
       # Configuration file, uncomment if you are using a config file (optional, see config.example.yaml for all available options).
       #- ./config.yaml:/app/config.yaml:ro
     environment:
-      - DISCOPANEL_DATA_DIR=/app/data
+      - MINESERVER_DATA_DIR=/app/data
 
       # IMPORTANT: THIS MUST BE SET TO THE SAME PATH AS THE SERVER DATA PATH IN "volumes" above
-      - DISCOPANEL_HOST_DATA_PATH=/opt/mineserver/data
+      - MINESERVER_HOST_DATA_PATH=/opt/mineserver/data
       - TZ=UTC
 
       # ── Authentication ──────────────────────────
@@ -50,7 +50,7 @@ services:
       # You create your first admin account on first login.
       #
       # Want to let new users sign up on their own?
-      # - DISCOPANEL_AUTH_LOCAL_ALLOW_REGISTRATION=true
+      # - MINESERVER_AUTH_LOCAL_ALLOW_REGISTRATION=true
       #
       # Want single sign-on (OIDC) with Keycloak, Authelia, etc?
       # See the oidc/ folder for examples.

@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"gorm.io/gorm"
 )
 
-var _ discopanelv1connect.ConfigServiceHandler = (*ConfigService)(nil)
+var _ mineserverv1connect.ConfigServiceHandler = (*ConfigService)(nil)
 
 type ConfigService struct {
 	store  *storage.Store

@@ -1,45 +1,45 @@
-# DiscoPanel + Keycloak (OIDC)
+# MINESERVER + Keycloak (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Keycloak.
 #
-# Keycloak takes ~30-60 seconds to start. DiscoPanel waits for it.
+# Keycloak takes ~30-60 seconds to start. MINESERVER waits for it.
 #
 # Keycloak Admin UI (See KC_BOOTSTRAP_ADMIN_USERNAME/KC_BOOTSTRAP_ADMIN_PASSWORD below): http://localhost:8180/admin
 
 services:
-  discopanel:
+  mineserver:
     build:
       context: ../../
-      dockerfile: docker/Dockerfile.discopanel
-    #image: nickheyer/discopanel:dev
-    container_name: discopanel
+      dockerfile: docker/Dockerfile.mineserver
+    #image: athNdev/mineserver:dev
+    container_name: mineserver
     restart: unless-stopped
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/discopanel:/app/data
+      - /tmp/mineserver:/app/data
     environment:
-      - DISCOPANEL_DATA_DIR=/app/data
-      - DISCOPANEL_HOST_DATA_PATH=/tmp/discopanel
+      - MINESERVER_DATA_DIR=/app/data
+      - MINESERVER_HOST_DATA_PATH=/tmp/mineserver
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR DISCOPANEL + KEYCLOAK ------------------------------------
-      - DISCOPANEL_AUTH_LOCAL_ENABLED=true
-      - DISCOPANEL_AUTH_OIDC_ENABLED=true
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR MINESERVER + KEYCLOAK ------------------------------------
+      - MINESERVER_AUTH_LOCAL_ENABLED=true
+      - MINESERVER_AUTH_OIDC_ENABLED=true
 
       # ONLY CHANGE THIS IF YOU ARE HOSTING OIDC ON ANOTHER MACHINE OR WITH A DIFFERENT "realm" NAME
-      - DISCOPANEL_AUTH_OIDC_ISSUER_URI=http://localhost:8180/realms/discopanel
+      - MINESERVER_AUTH_OIDC_ISSUER_URI=http://localhost:8180/realms/MINESERVER
 
       # ONLY CHANGE THIS IF YOUR CLIENT NAME IS DIFFERENT
-      - DISCOPANEL_AUTH_OIDC_CLIENT_ID=discopanel
+      - MINESERVER_AUTH_OIDC_CLIENT_ID=MINESERVER
 
       # YOU SHOULD CHANGE THIS HERE AS WELL AS IN oidc/keycloak/config/realm.json (inside the clients object)
-      - DISCOPANEL_AUTH_OIDC_CLIENT_SECRET=discopanel-dev-secret
+      - MINESERVER_AUTH_OIDC_CLIENT_SECRET=MINESERVER-dev-secret
 
-      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR DISCOPANEL (ie: https://mypanel.com/api/v1/auth/oidc/callback)
-      - DISCOPANEL_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback 
+      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR MINESERVER (ie: https://mypanel.com/api/v1/auth/oidc/callback)
+      - MINESERVER_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback 
 
-      - DISCOPANEL_AUTH_OIDC_ROLE_CLAIM=groups
+      - MINESERVER_AUTH_OIDC_ROLE_CLAIM=groups
 
     depends_on:
       keycloak:
@@ -50,7 +50,7 @@ services:
     container_name: keycloak
     command: start-dev --import-realm
     volumes:
-      # THIS IS AN EXAMPLE REALM CONFIG, MODIFY AS NEEDED (WHICH MAY REQUIRE MODIFYING DISCOPANEL CONFIG TO MATCH, SEE ABOVE)
+      # THIS IS AN EXAMPLE REALM CONFIG, MODIFY AS NEEDED (WHICH MAY REQUIRE MODIFYING MINESERVER CONFIG TO MATCH, SEE ABOVE)
       - ./config/realm.json:/opt/keycloak/data/import/realm.json:ro
     environment:
       # KEYCLOAK ADMIN LOGIN CREDENTIALS - CHANGE THESE!!!!!

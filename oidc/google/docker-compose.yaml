@@ -1,4 +1,4 @@
-# DiscoPanel + Google (OIDC)
+# MINESERVER + Google (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Google as the identity provider.
 #
@@ -14,54 +14,54 @@
 #
 # NOTE ON ROLES:
 #   Google does not include a "groups" claim in its ID token by default.
-#   Users will be assigned DiscoPanel's default roles on first login.
-#   To promote a user to admin, use the DiscoPanel UI after they log in.
+#   Users will be assigned MINESERVER's default roles on first login.
+#   To promote a user to admin, use the MINESERVER UI after they log in.
 #
 #   If you use Google Workspace and want automatic role mapping, you can:
-#     - Use "hd" (hosted domain) as DISCOPANEL_AUTH_OIDC_ROLE_CLAIM with a role mapping
+#     - Use "hd" (hosted domain) as MINESERVER_AUTH_OIDC_ROLE_CLAIM with a role mapping
 #     - Or use Google Workspace Admin SDK to populate a custom claim via middleware
 #     - See: https://developers.google.com/identity/openid-connect/openid-connect
 
 services:
-  discopanel:
+  mineserver:
     build:
       context: ../../
-      dockerfile: docker/Dockerfile.discopanel
-    #image: nickheyer/discopanel:dev
-    container_name: discopanel
+      dockerfile: docker/Dockerfile.mineserver
+    #image: athNdev/mineserver:dev
+    container_name: mineserver
     restart: unless-stopped
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/discopanel:/app/data
+      - /tmp/mineserver:/app/data
     environment:
-      - DISCOPANEL_DATA_DIR=/app/data
-      - DISCOPANEL_HOST_DATA_PATH=/tmp/discopanel
+      - MINESERVER_DATA_DIR=/app/data
+      - MINESERVER_HOST_DATA_PATH=/tmp/mineserver
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR DISCOPANEL + GOOGLE ------------------------------------
-      - DISCOPANEL_AUTH_LOCAL_ENABLED=true
-      - DISCOPANEL_AUTH_OIDC_ENABLED=true
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR MINESERVER + GOOGLE ------------------------------------
+      - MINESERVER_AUTH_LOCAL_ENABLED=true
+      - MINESERVER_AUTH_OIDC_ENABLED=true
 
       # GOOGLE OIDC ISSUER - DO NOT CHANGE
-      - DISCOPANEL_AUTH_OIDC_ISSUER_URI=https://accounts.google.com
+      - MINESERVER_AUTH_OIDC_ISSUER_URI=https://accounts.google.com
 
       # PASTE YOUR GOOGLE OAUTH CLIENT ID HERE (from Google Cloud Console)
-      - DISCOPANEL_AUTH_OIDC_CLIENT_ID=REPLACE_ME.apps.googleusercontent.com
+      - MINESERVER_AUTH_OIDC_CLIENT_ID=REPLACE_ME.apps.googleusercontent.com
 
       # PASTE YOUR GOOGLE OAUTH CLIENT SECRET HERE (from Google Cloud Console)
-      - DISCOPANEL_AUTH_OIDC_CLIENT_SECRET=GOCSPX-REPLACE_ME
+      - MINESERVER_AUTH_OIDC_CLIENT_SECRET=GOCSPX-REPLACE_ME
 
       # FOR LOCAL DEV: Google allows http://localhost redirects without HTTPS.
       # FOR PRODUCTION: Google requires HTTPS - change to your public domain (ie: https://mypanel.com/api/v1/auth/oidc/callback)
       # THIS MUST MATCH EXACTLY WHAT YOU ENTERED IN GOOGLE CLOUD CONSOLE UNDER "Authorized redirect URIs"
-      - DISCOPANEL_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
+      - MINESERVER_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
 
       # Google does not provide a "groups" claim by default.
       # Leave empty to skip automatic role mapping - users get default roles and can be promoted manually.
       # If using Google Workspace, you can set this to "hd" and add a role mapping (see below).
-      - DISCOPANEL_AUTH_OIDC_ROLE_CLAIM=
+      - MINESERVER_AUTH_OIDC_ROLE_CLAIM=
 
-      # OPTIONAL: Map Google Workspace domain to a DiscoPanel role.
+      # OPTIONAL: Map Google Workspace domain to a MINESERVER role.
       # Uncomment and modify if using "hd" as ROLE_CLAIM above:
-      # - DISCOPANEL_AUTH_OIDC_ROLE_MAPPING={"yourdomain.com":"admin"}
+      # - MINESERVER_AUTH_OIDC_ROLE_MAPPING={"yourdomain.com":"admin"}

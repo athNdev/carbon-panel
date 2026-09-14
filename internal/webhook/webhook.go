@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	storage "github.com/nickheyer/discopanel/internal/db"
+	storage "github.com/athNdev/mineserver/internal/db"
 )
 
 // Builds, signs, and delivers HTTP webhooks for server events
@@ -126,12 +126,12 @@ func deliverOnce(ctx context.Context, cfg Config, payload *Payload) Result {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "DiscoPanel-Webhook/1.0")
-	req.Header.Set("X-DiscoPanel-Event", payload.Event)
-	req.Header.Set("X-DiscoPanel-Delivery", uuid.New().String())
+	req.Header.Set("User-Agent", "MINESERVER-Webhook/1.0")
+	req.Header.Set("X-MINESERVER-Event", payload.Event)
+	req.Header.Set("X-MINESERVER-Delivery", uuid.New().String())
 
 	if cfg.Secret != "" {
-		req.Header.Set("X-DiscoPanel-Signature", "sha256="+sign(body, cfg.Secret))
+		req.Header.Set("X-MINESERVER-Signature", "sha256="+sign(body, cfg.Secret))
 	}
 	for k, v := range cfg.Headers {
 		req.Header.Set(k, v)
