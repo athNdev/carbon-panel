@@ -946,10 +946,10 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 
 	// Handle docker overrides update
 	if msg.DockerOverrides != nil {
-		// Check that labels do not start with "CARBONPANEL."
+		// Check that labels do not start with "carbon-panel."
 		for key := range msg.DockerOverrides.Labels {
-			if strings.HasPrefix(key, "CARBONPANEL.") {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("docker label keys cannot start with 'CARBONPANEL.', namespace reserved for internal management"))
+			if strings.HasPrefix(key, "carbon-panel.") {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("docker label keys cannot start with 'carbon-panel.', namespace reserved for internal management"))
 			}
 		}
 
@@ -1521,7 +1521,7 @@ func (s *ServerService) UploadToMCLogs(ctx context.Context, req *connect.Request
 	// Build mclo.gs request
 	payload, _ := json.Marshal(map[string]string{
 		"content": string(content),
-		"source":  fmt.Sprintf("CARBONPANEL-%s", server.Name),
+		"source":  fmt.Sprintf("carbon-panel-%s", server.Name),
 	})
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.mclo.gs/1/log", bytes.NewReader(payload))

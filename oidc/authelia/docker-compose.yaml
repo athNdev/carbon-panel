@@ -1,4 +1,4 @@
-# CARBONPANEL + Authelia (OIDC)
+# Carbon Panel + Authelia (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Authelia.
 #
@@ -22,7 +22,7 @@ services:
       - CARBONPANEL_HOST_DATA_PATH=/tmp/carbon-panel
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBONPANEL + AUTHELIA ------------------------------------
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBON PANEL + AUTHELIA ------------------------------------
       - CARBONPANEL_AUTH_LOCAL_ENABLED=true
       - CARBONPANEL_AUTH_OIDC_ENABLED=true
 
@@ -35,7 +35,7 @@ services:
       # YOU SHOULD CHANGE THIS HERE AS WELL AS THE HASHED ONE IN oidc/authelia/config/configuration.yaml (inside the identity_providers.client)
       - CARBONPANEL_AUTH_OIDC_CLIENT_SECRET=CARBONPANEL-dev-secret
 
-      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR CARBONPANEL (ie: https://mypanel.com/api/v1/auth/oidc/callback)
+      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR CARBON PANEL (ie: https://mypanel.com/api/v1/auth/oidc/callback)
       - CARBONPANEL_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
 
       - CARBONPANEL_AUTH_OIDC_ROLE_CLAIM=groups

@@ -1,5 +1,5 @@
 ---
-# CARBONPANEL - Authelia Users
+# Carbon Panel - Authelia Users
 #
 # Do NOT use default admin in production.          
 # Default login is "admin" / "admin"     
@@ -13,9 +13,9 @@
 users:
   admin: # username
     disabled: false
-    displayname: 'CARBONPANEL Admin'
+    displayname: 'Carbon Panel Admin'
     password: '$argon2id$v=19$m=65536,t=3,p=4$9X6yDiM/+/Wi1dBCzPGftw$7hqUauLP/Hh9Z5KlLQn/2IVNdX+/vbWLFgz/i+TtchI' # password (hash of "admin")
-    email: 'admin@CARBONPANEL.local'
+    email: 'admin@carbon-panel.local'
     groups:
       - 'admin'
 

@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	ValkeyChannelRoutingEvents = "CARBONPANEL:routing:events"
-	ValkeyRouteKeyPrefix       = "CARBONPANEL:routes:"
+	ValkeyChannelRoutingEvents = "carbon-panel:routing:events"
+	ValkeyRouteKeyPrefix       = "carbon-panel:routes:"
 )
 
 // RouteInfo holds stored route details in Valkey / Dragonfly KV

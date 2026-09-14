@@ -1,13 +1,13 @@
 ---
 title: Keycloak (OIDC)
-description: Set up CARBONPANEL with Keycloak as an OpenID Connect identity provider.
+description: Set up Carbon Panel with Keycloak as an OpenID Connect identity provider.
 ---
 
 import { Code, Aside } from '@astrojs/starlight/components';
 import composeFile from '../../../../../../../oidc/keycloak/docker-compose.yaml?raw';
 import realmJson from '../../../../../../../oidc/keycloak/config/realm.json?raw';
 
-This guide walks through running CARBONPANEL with [Keycloak](https://www.keycloak.org/) as an OIDC identity provider using a ready-made Docker Compose stack. The included realm config pre-creates a client, roles, groups, protocol mappers, and a default admin user so everything works out of the box.
+This guide walks through running Carbon Panel with [Keycloak](https://www.keycloak.org/) as an OIDC identity provider using a ready-made Docker Compose stack. The included realm config pre-creates a client, roles, groups, protocol mappers, and a default admin user so everything works out of the box.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ cd oidc/keycloak
 docker compose up -d
 ```
 
-Keycloak takes 30–60 seconds to start. CARBONPANEL waits for it via a health check.
+Keycloak takes 30–60 seconds to start. Carbon Panel waits for it via a health check.
 
 <Code code={composeFile} lang="yaml" title="oidc/keycloak/docker-compose.yaml" />
 
@@ -35,7 +35,7 @@ Keycloak takes 30–60 seconds to start. CARBONPANEL waits for it via a health c
 | `CARBONPANEL_AUTH_OIDC_CLIENT_ID` | Must match the `clientId` in the realm config |
 | `CARBONPANEL_AUTH_OIDC_CLIENT_SECRET` | Must match the `secret` in the realm config — **change this for production** |
 | `CARBONPANEL_AUTH_OIDC_REDIRECT_URL` | The callback URL — update `localhost:8080` to your public domain |
-| `CARBONPANEL_AUTH_OIDC_ROLE_CLAIM` | Set to `groups` to read Keycloak group membership as CARBONPANEL roles |
+| `CARBONPANEL_AUTH_OIDC_ROLE_CLAIM` | Set to `groups` to read Keycloak group membership as Carbon Panel roles |
 
 ## Realm configuration
 
@@ -53,7 +53,7 @@ The included realm JSON is imported automatically on first start via `--import-r
 
 | Service | URL | Username | Password |
 |---|---|---|---|
-| CARBONPANEL | [http://localhost:8080](http://localhost:8080) | — | Log in via OIDC |
+| Carbon Panel | [http://localhost:8080](http://localhost:8080) | — | Log in via OIDC |
 | Keycloak Admin Console | [http://localhost:8180/admin](http://localhost:8180/admin) | `admin` | `admin` |
 | Keycloak OIDC user | — | `admin` | `admin` |
 

@@ -607,7 +607,7 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 		"game":          "minecraft",
 		"versionId":     pack.Version,
 		"name":          pack.Name,
-		"summary":       fmt.Sprintf("%s modpack created in CARBONPANEL Studio", pack.Name),
+		"summary":       fmt.Sprintf("%s modpack created in Carbon Panel Studio", pack.Name),
 		"files":         files,
 		"dependencies":  deps,
 	}

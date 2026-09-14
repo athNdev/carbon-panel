@@ -1,4 +1,4 @@
-# CARBONPANEL + Discord (OIDC)
+# Carbon Panel + Discord (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Discord as the identity provider.
 #
@@ -33,7 +33,7 @@ services:
       - CARBONPANEL_HOST_DATA_PATH=/tmp/carbon-panel
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBONPANEL + DISCORD ------------------------------------
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBON PANEL + DISCORD ------------------------------------
       - CARBONPANEL_AUTH_LOCAL_ENABLED=true
       - CARBONPANEL_AUTH_OIDC_ENABLED=true
 
@@ -73,7 +73,7 @@ services:
       #
       # ------------------------------------ ROLE MAPPING (OPTIONAL) ------------------------------------
       #
-      # OPTION B: Restrict to a guild AND map Discord server roles to CARBONPANEL roles.
+      # OPTION B: Restrict to a guild AND map Discord server roles to Carbon Panel roles.
       #   1. Add "guilds.members.read" to SCOPES above → openid,identify,email,guilds.members.read
       #   2. Install your Discord application in the server (OAuth2 → URL Generator → select "bot" scope → invite)
       #   3. Set EXTRA_CLAIMS_URL to the guild member endpoint with your server ID:

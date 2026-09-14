@@ -1,11 +1,11 @@
 ---
 title: Building from Source
-description: Build CARBONPANEL from source code.
+description: Build Carbon Panel from source code.
 ---
 
 ## Prerequisites
 
-CARBONPANEL manages Minecraft servers as Docker containers, so Docker is required both at build time and runtime.
+Carbon Panel manages Minecraft servers as Docker containers, so Docker is required both at build time and runtime.
 
 - **Go** 1.24+
 - **Bun** 1.2+
@@ -17,7 +17,7 @@ CARBONPANEL manages Minecraft servers as Docker containers, so Docker is require
 ```bash
 # Clone the repo
 git clone https://github.com/athNdev/carbon-panel.git
-cd CARBONPANEL
+cd carbon-panel
 
 # Generate protobuf code (Go + TypeScript) via Docker buf
 make gen
@@ -67,7 +67,7 @@ All config options can also be set via environment variables with the `CARBONPAN
 :::tip[Host path mapping]
 When running the binary directly on a host (not in a Docker container), do **not** set `CARBONPANEL_DATA_DIR` or `CARBONPANEL_HOST_DATA_PATH` — those are only for container path translation.
 
-To change where CARBONPANEL stores its database and server data, set `CARBONPANEL_STORAGE_DATA_DIR` or configure it in your config file:
+To change where Carbon Panel stores its database and server data, set `CARBONPANEL_STORAGE_DATA_DIR` or configure it in your config file:
 
 ```yaml
 storage:

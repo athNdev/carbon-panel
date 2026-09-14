@@ -319,10 +319,10 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
-	// Validate custom Docker labels do not use reserved namespace 'CARBONPANEL.'
+	// Validate custom Docker labels do not use reserved namespace 'carbon-panel.'
 	for k := range cfg.Docker.Labels {
-		if strings.HasPrefix(k, "CARBONPANEL.") {
-			return fmt.Errorf("custom docker labels cannot begin with 'CARBONPANEL.', namespace reserved for internal management, invalid key: %s", k)
+		if strings.HasPrefix(k, "carbon-panel.") {
+			return fmt.Errorf("custom docker labels cannot begin with 'carbon-panel.', namespace reserved for internal management, invalid key: %s", k)
 		}
 	}
 

@@ -1,15 +1,15 @@
 ---
 title: Google (OIDC)
-description: Set up CARBONPANEL with Google as an OpenID Connect identity provider.
+description: Set up Carbon Panel with Google as an OpenID Connect identity provider.
 ---
 
 import { Code, Aside, Steps } from '@astrojs/starlight/components';
 import composeFile from '../../../../../../../oidc/google/docker-compose.yaml?raw';
 
-This guide walks through running CARBONPANEL with [Google](https://developers.google.com/identity/openid-connect/openid-connect) as an OIDC identity provider. Unlike Keycloak or Authelia, Google is an external cloud provider — no IdP container is needed.
+This guide walks through running Carbon Panel with [Google](https://developers.google.com/identity/openid-connect/openid-connect) as an OIDC identity provider. Unlike Keycloak or Authelia, Google is an external cloud provider — no IdP container is needed.
 
 <Aside>
-Google does not include a `groups` claim in its OIDC tokens. Users are assigned CARBONPANEL's default roles on first login and can be promoted to admin via the CARBONPANEL UI. See [Role mapping](#role-mapping) below for Google Workspace options.
+Google does not include a `groups` claim in its OIDC tokens. Users are assigned Carbon Panel's default roles on first login and can be promoted to admin via the Carbon Panel UI. See [Role mapping](#role-mapping) below for Google Workspace options.
 </Aside>
 
 ## Prerequisites
@@ -64,7 +64,7 @@ docker compose up -d
 
 Google's OIDC tokens include standard claims (`sub`, `email`, `name`, `picture`, `hd`) but **not** a `groups` claim. This means automatic group-to-role mapping isn't available out of the box.
 
-**For most setups**: leave `CARBONPANEL_AUTH_OIDC_ROLE_CLAIM` empty. Users get default roles on first login, and an admin can promote them in the CARBONPANEL UI.
+**For most setups**: leave `CARBONPANEL_AUTH_OIDC_ROLE_CLAIM` empty. Users get default roles on first login, and an admin can promote them in the Carbon Panel UI.
 
 **For Google Workspace organizations**: you can use the `hd` (hosted domain) claim to map an entire domain to a role:
 
@@ -79,7 +79,7 @@ This assigns the `admin` role to everyone who logs in from `yourdomain.com`.
 
 | Service | URL | Login |
 |---|---|---|
-| CARBONPANEL | [http://localhost:8080](http://localhost:8080) | Log in via Google |
+| Carbon Panel | [http://localhost:8080](http://localhost:8080) | Log in via Google |
 
 ## Production notes
 

@@ -60,7 +60,7 @@ func TestGetContainerIP_SpecificNetwork(t *testing.T) {
 						"bridge": {
 							IPAddress: "172.17.0.2",
 						},
-						"CARBONPANEL-net": {
+						"carbon-panel-net": {
 							IPAddress: "172.20.0.5",
 						},
 					},
@@ -69,7 +69,7 @@ func TestGetContainerIP_SpecificNetwork(t *testing.T) {
 		},
 	}
 
-	ip, err := GetContainerIP(mockCli, "container-123", "CARBONPANEL-net")
+	ip, err := GetContainerIP(mockCli, "container-123", "carbon-panel-net")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

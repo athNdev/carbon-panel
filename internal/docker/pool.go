@@ -44,7 +44,7 @@ func NewClientPool(store NodeStore, defaultClient *Client, log *logger.Logger, c
 		baseCfg = cfg[0]
 	} else {
 		baseCfg = ClientConfig{
-			NetworkName: "CARBONPANEL-network",
+			NetworkName: "carbon-panel-network",
 		}
 	}
 
@@ -392,7 +392,7 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 }
 
 func resolveTLSCertFiles(node *models.Node) (caFile, certFile, keyFile string, err error) {
-	certDir := filepath.Join(os.TempDir(), "CARBONPANEL-node-certs", node.ID)
+	certDir := filepath.Join(os.TempDir(), "carbon-panel-node-certs", node.ID)
 
 	writeIfPEM := func(name, content string) (string, error) {
 		trimmed := strings.TrimSpace(content)

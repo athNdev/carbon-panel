@@ -126,7 +126,7 @@ func deliverOnce(ctx context.Context, cfg Config, payload *Payload) Result {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "CARBONPANEL-Webhook/1.0")
+	req.Header.Set("User-Agent", "CarbonPanel-Webhook/1.0")
 	req.Header.Set("X-CARBONPANEL-Event", payload.Event)
 	req.Header.Set("X-CARBONPANEL-Delivery", uuid.New().String())
 
