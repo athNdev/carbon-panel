@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import 'carbon-components-svelte/css/g100.css';
 
 @custom-variant dark (&:is(.dark *));
 
