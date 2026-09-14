@@ -676,8 +676,9 @@
 									</button>
 									<button
 										type="button"
-										class="h-6 w-6 rounded-none flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-[#353535] text-[#8d8d8d] hover:text-white cursor-pointer transition-all"
+										class="h-6 w-6 rounded-none flex items-center justify-center hover:bg-[#353535] text-[#8d8d8d] hover:text-white cursor-pointer transition-colors"
 										onclick={() => copyLinkToClipboard(prop.key)}
+										title="Copy link to field"
 									>
 										<Link class="h-3 w-3" />
 									</button>
