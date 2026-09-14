@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // HTTPProxy handles HTTP reverse proxying with Host header based routing

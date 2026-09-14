@@ -11,16 +11,16 @@ import (
 	"connectrpc.com/connect"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/athNdev/mineserver/internal/auth"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/rbac"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/carbon-panel/internal/auth"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/rbac"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ mineserverv1connect.AuthServiceHandler = (*AuthService)(nil)
+var _ carbonpanelv1connect.AuthServiceHandler = (*AuthService)(nil)
 
 type AuthService struct {
 	store       *storage.Store

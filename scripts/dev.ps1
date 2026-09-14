@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    MineServer Local Development Server Launcher (PowerShell)
+    Carbon Panel Local Development Server Launcher (PowerShell)
 .DESCRIPTION
     Launches Air (Go backend hot reloading) and Bun (SvelteKit Vite HMR) concurrently.
 #>
@@ -8,7 +8,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "   MineServer Live Development Environment" -ForegroundColor Cyan
+Write-Host "   Carbon Panel Live Development Environment" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "  Frontend (Vite HMR):  http://localhost:5174" -ForegroundColor Green
 Write-Host "  Backend API / RPC:    http://localhost:8080" -ForegroundColor Green
@@ -28,15 +28,15 @@ if (-not $hasAir) {
     }
 }
 
-$frontendDir = Join-Path $PSScriptRoot "..\web\mineserver"
+$frontendDir = Join-Path $PSScriptRoot "..\web\carbon-panel"
 
 if ($hasAir) {
     Write-Host "[dev] Starting backend with Air (hot reloading)..." -ForegroundColor Magenta
     $backendProc = Start-Process -FilePath $airCmd -NoNewWindow -PassThru
 } else {
-    Write-Host "[dev] Air not found. Starting with 'go run cmd/mineserver/main.go'..." -ForegroundColor Yellow
+    Write-Host "[dev] Air not found. Starting with 'go run cmd/carbon-panel/main.go'..." -ForegroundColor Yellow
     Write-Host "[dev] (Tip: install air with 'go install github.com/air-verse/air@latest' for live reloading)" -ForegroundColor Gray
-    $backendProc = Start-Process -FilePath "go" -ArgumentList "run", "cmd/mineserver/main.go" -NoNewWindow -PassThru
+    $backendProc = Start-Process -FilePath "go" -ArgumentList "run", "cmd/carbon-panel/main.go" -NoNewWindow -PassThru
 }
 
 Write-Host "[dev] Starting frontend with Bun (Vite HMR)..." -ForegroundColor Cyan

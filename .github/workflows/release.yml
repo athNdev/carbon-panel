@@ -1,4 +1,4 @@
-name: MineServer Releaser
+name: Carbon Panel Releaser
 
 on:
   push:
@@ -33,14 +33,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: proto-ts
-          path: web/mineserver/src/lib/proto
+          path: web/carbon-panel/src/lib/proto
           retention-days: 1
   
       - name: Upload generated oapi schema
         uses: actions/upload-artifact@v4
         with:
           name: api-schema-yaml
-          path: web/mineserver/static/schemav1.yaml
+          path: web/carbon-panel/static/schemav1.yaml
           retention-days: 1
 
   build-frontend:
@@ -57,13 +57,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: proto-ts
-          path: web/mineserver/src/lib/proto
+          path: web/carbon-panel/src/lib/proto
 
       - name: Download generated oapi schema
         uses: actions/download-artifact@v4
         with:
           name: api-schema-yaml
-          path: web/mineserver/static
+          path: web/carbon-panel/static
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -72,19 +72,19 @@ jobs:
 
       - name: Install frontend dependencies
         run: |
-          cd web/mineserver
+          cd web/carbon-panel
           bun install --frozen-lockfile
 
       - name: Build frontend
         run: |
-          cd web/mineserver
+          cd web/carbon-panel
           APP_VERSION=${{ github.ref_name }} bun run build
 
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: web/mineserver/build
+          path: web/carbon-panel/build
           retention-days: 1
 
   build-binaries:
@@ -150,7 +150,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: web/mineserver/build
+          path: web/carbon-panel/build
 
       - name: Build binary
         env:
@@ -159,25 +159,25 @@ jobs:
           CC: ${{ matrix.cc || '' }}
           CXX: ${{ matrix.cxx || '' }}
         run: |
-          go build -o mineserver-${{ matrix.suffix }} ./cmd/mineserver
+          go build -o carbon-panel-${{ matrix.suffix }} ./cmd/carbon-panel
 
       - name: Compress binary (non-Windows)
         if: matrix.goos != 'windows'
         run: |
-          tar -czf mineserver-${{ matrix.suffix }}.tar.gz mineserver-${{ matrix.suffix }}
+          tar -czf carbon-panel-${{ matrix.suffix }}.tar.gz carbon-panel-${{ matrix.suffix }}
 
       - name: Compress binary (Windows)
         if: matrix.goos == 'windows'
         run: |
-          zip mineserver-${{ matrix.suffix }}.zip mineserver-${{ matrix.suffix }}
+          zip carbon-panel-${{ matrix.suffix }}.zip carbon-panel-${{ matrix.suffix }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.suffix }}
           path: |
-            mineserver-${{ matrix.suffix }}.tar.gz
-            mineserver-${{ matrix.suffix }}.zip
+            carbon-panel-${{ matrix.suffix }}.tar.gz
+            carbon-panel-${{ matrix.suffix }}.zip
           if-no-files-found: error
           retention-days: 1
 
@@ -207,7 +207,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            athndev/mineserver
+            athndev/carbon-panel
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -220,7 +220,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            athndev/mineserver
+            athndev/carbon-panel
           tags: |
             type=ref,event=tag
             type=raw,value=dev
@@ -231,7 +231,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.mineserver
+          file: docker/Dockerfile.carbon-panel
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags || steps.meta-dev.outputs.tags }}
@@ -287,7 +287,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          name: MineServer ${{ github.ref_name }}
+          name: Carbon Panel ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -313,8 +313,8 @@ jobs:
           curl -H "Content-Type: application/json" \
             -d '{
               "embeds": [{
-                "title": "MineServer '"${VERSION}"' Released!",
-                "description": "A new version of MineServer has been released.",
+                "title": "Carbon Panel '"${VERSION}"' Released!",
+                "description": "A new version of Carbon Panel has been released.",
                 "url": "'"${RELEASE_URL}"'",
                 "color": 5814783,
                 "image": {
@@ -333,12 +333,12 @@ jobs:
                   },
                   {
                     "name": "Docker Hub",
-                    "value": "[View Images](https://hub.docker.com/r/athNdev/mineserver)",
+                    "value": "[View Images](https://hub.docker.com/r/athNdev/carbon-panel)",
                     "inline": true
                   }
                 ],
                 "footer": {
-                  "text": "MineServer Release"
+                  "text": "Carbon Panel Release"
                 },
                 "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"'"
               }]

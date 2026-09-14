@@ -7,17 +7,17 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/scheduler"
-	"github.com/athNdev/mineserver/internal/webhook"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/scheduler"
+	"github.com/athNdev/carbon-panel/internal/webhook"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Compile-time check that TaskService implements the interface
-var _ mineserverv1connect.TaskServiceHandler = (*TaskService)(nil)
+var _ carbonpanelv1connect.TaskServiceHandler = (*TaskService)(nil)
 
 // TaskService implements the Task service
 type TaskService struct {

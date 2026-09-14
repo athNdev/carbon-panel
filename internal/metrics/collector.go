@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/athNdev/mineserver/internal/command"
-	"github.com/athNdev/mineserver/internal/config"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/internal/events"
-	"github.com/athNdev/mineserver/internal/minecraft"
-	"github.com/athNdev/mineserver/internal/proxy"
-	"github.com/athNdev/mineserver/pkg/files"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/carbon-panel/internal/command"
+	"github.com/athNdev/carbon-panel/internal/config"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/events"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/pkg/files"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 type ServerMetrics struct {

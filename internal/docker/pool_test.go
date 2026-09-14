@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	models "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/pkg/logger"
+	models "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // mockNodeStore implements NodeStore for unit tests

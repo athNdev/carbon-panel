@@ -1,4 +1,4 @@
-# MINESERVER + Authelia (OIDC)
+# Carbon Panel + Authelia (OIDC)
 #
 # This is a complete docker-compose with OIDC authentication pre-configured using Authelia.
 #
@@ -9,39 +9,39 @@
 # Feel free to throw away the example configuration.yml and users_database.yml !!!! Just make sure groups are included in claims.
 
 services:
-  mineserver:
-    image: athNdev/mineserver:dev
-    container_name: mineserver
+  carbon-panel:
+    image: athNdev/carbon-panel:dev
+    container_name: carbon-panel
     restart: unless-stopped
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/mineserver:/app/data
+      - /tmp/carbon-panel:/app/data
     environment:
-      - MINESERVER_DATA_DIR=/app/data
-      - MINESERVER_HOST_DATA_PATH=/tmp/mineserver
+      - CARBONPANEL_DATA_DIR=/app/data
+      - CARBONPANEL_HOST_DATA_PATH=/tmp/carbon-panel
       - TZ=UTC
 
-      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR MINESERVER + AUTHELIA ------------------------------------
-      - MINESERVER_AUTH_LOCAL_ENABLED=true
-      - MINESERVER_AUTH_OIDC_ENABLED=true
+      #  ------------------------------------ AUTH CONFIG STARTS HERE FOR CARBON PANEL + AUTHELIA ------------------------------------
+      - CARBONPANEL_AUTH_LOCAL_ENABLED=true
+      - CARBONPANEL_AUTH_OIDC_ENABLED=true
 
       # MUST MATCH oidc/authelia/config/configuration.yaml
-      - MINESERVER_AUTH_OIDC_ISSUER_URI=https://authelia.traefik.me:9091
+      - CARBONPANEL_AUTH_OIDC_ISSUER_URI=https://authelia.traefik.me:9091
 
       # ONLY CHANGE THIS IF YOUR CLIENT NAME IS DIFFERENT
-      - MINESERVER_AUTH_OIDC_CLIENT_ID=MINESERVER
+      - CARBONPANEL_AUTH_OIDC_CLIENT_ID=CARBONPANEL
 
       # YOU SHOULD CHANGE THIS HERE AS WELL AS THE HASHED ONE IN oidc/authelia/config/configuration.yaml (inside the identity_providers.client)
-      - MINESERVER_AUTH_OIDC_CLIENT_SECRET=MINESERVER-dev-secret
+      - CARBONPANEL_AUTH_OIDC_CLIENT_SECRET=CARBONPANEL-dev-secret
 
-      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR MINESERVER (ie: https://mypanel.com/api/v1/auth/oidc/callback)
-      - MINESERVER_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
+      # YOU SHOULD CHANGE "localhost:8080" TO WHATEVER YOUR PUBLIC DOMAIN IS FOR CARBON PANEL (ie: https://mypanel.com/api/v1/auth/oidc/callback)
+      - CARBONPANEL_AUTH_OIDC_REDIRECT_URL=http://localhost:8080/api/v1/auth/oidc/callback
 
-      - MINESERVER_AUTH_OIDC_ROLE_CLAIM=groups
+      - CARBONPANEL_AUTH_OIDC_ROLE_CLAIM=groups
 
       # SKIPPING TLS VERIFY HERE BECAUSE TLS CERTS ARE SELF SIGNED. IF USING YOUR OWN CERTS (in authelia mounts), REMOVE THIS.
-      - MINESERVER_AUTH_OIDC_SKIP_TLS_VERIFY=true
+      - CARBONPANEL_AUTH_OIDC_SKIP_TLS_VERIFY=true
 
     depends_on:
       authelia:

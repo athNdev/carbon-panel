@@ -17,19 +17,19 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	storage "github.com/athNdev/mineserver/internal/db"
-	"github.com/athNdev/mineserver/internal/docker"
-	"github.com/athNdev/mineserver/pkg/download"
-	"github.com/athNdev/mineserver/pkg/files"
-	"github.com/athNdev/mineserver/pkg/logger"
-	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
-	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
-	"github.com/athNdev/mineserver/pkg/upload"
-	"github.com/athNdev/mineserver/pkg/utils"
+	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/pkg/download"
+	"github.com/athNdev/carbon-panel/pkg/files"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/upload"
+	"github.com/athNdev/carbon-panel/pkg/utils"
 )
 
 // Compile-time check that FileService implements the interface
-var _ mineserverv1connect.FileServiceHandler = (*FileService)(nil)
+var _ carbonpanelv1connect.FileServiceHandler = (*FileService)(nil)
 
 // extractionOp tracks an in-progress or completed extraction.
 type extractionOp struct {
@@ -509,7 +509,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 			op.Error = fmt.Sprintf("failed to create HTTP request: %v", err)
 			return
 		}
-		httpReq.Header.Set("User-Agent", "MineServer/2.x (Archive Downloader)")
+		httpReq.Header.Set("User-Agent", "CarbonPanel/2.x (Archive Downloader)")
 
 		resp, err := client.Do(httpReq)
 		if err != nil {

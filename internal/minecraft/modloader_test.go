@@ -3,7 +3,7 @@ package minecraft
 import (
 	"testing"
 
-	models "github.com/athNdev/mineserver/internal/db"
+	models "github.com/athNdev/carbon-panel/internal/db"
 )
 
 func TestGetModLoaderInfo_Folia(t *testing.T) {

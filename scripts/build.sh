@@ -2,7 +2,7 @@
 
 set -e
 
-IMAGE_NAME="mineserver"
+IMAGE_NAME="carbon-panel"
 IMAGE_TAG="${1:-dev}"
 REGISTRY="${DOCKER_REGISTRY:-athndev}"
 FULL_IMAGE_NAME="${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -11,7 +11,7 @@ echo "Building ${FULL_IMAGE_NAME}..."
 
 docker build \
     -t "${FULL_IMAGE_NAME}" \
-    -f docker/Dockerfile.mineserver \
+    -f docker/Dockerfile.carbon-panel \
     .
 
 if [ "$PUSH" = "true" ] || [ "$2" = "--push" ]; then

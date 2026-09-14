@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/athNdev/mineserver/internal/config"
-	models "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/carbon-panel/internal/config"
+	models "github.com/athNdev/carbon-panel/internal/db"
 )
 
 // Category groups aliases by their source type
@@ -509,7 +509,7 @@ func getModuleFieldValue(module *models.Module, field string) string {
 	switch field {
 	case "host":
 		// Docker container name for internal networking
-		return fmt.Sprintf("MINESERVER-module-%s", module.ID)
+		return fmt.Sprintf("carbon-panel-module-%s", module.ID)
 	case "port":
 		// Return the first port's container port
 		if len(module.Ports) > 0 && module.Ports[0] != nil && module.Ports[0].ContainerPort > 0 {

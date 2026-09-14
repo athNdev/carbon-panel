@@ -5,14 +5,14 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/athNdev/mineserver/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // CleanupOrphanedContainers removes containers that are no longer tracked in the database
 func (c *Client) CleanupOrphanedContainers(ctx context.Context, trackedContainerIDs map[string]bool, log *logger.Logger) error {
-	// List all containers managed by MINESERVER
+	// List all containers managed by Carbon Panel
 	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", "MINESERVER.managed=true")
+	filterArgs.Add("label", "carbon-panel.managed=true")
 
 	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
 		All:     true,

@@ -1,0 +1,257 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Server file management
+service FileService {
+  // Browse server directory
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  // Download file content
+  rpc GetFile(GetFileRequest) returns (GetFileResponse);
+  // Save an uploaded file
+  rpc SaveUploadedFile(SaveUploadedFileRequest) returns (SaveUploadedFileResponse);
+  // Modify file content
+  rpc UpdateFile(UpdateFileRequest) returns (UpdateFileResponse);
+  // Remove file or directory
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+  // Change file name
+  rpc RenameFile(RenameFileRequest) returns (RenameFileResponse);
+  // Unzip archive file
+  rpc ExtractArchive(ExtractArchiveRequest) returns (ExtractArchiveResponse);
+  // Create a new folder
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse);
+  // Move a file or directory
+  rpc MoveFile(MoveFileRequest) returns (MoveFileResponse);
+  // Copy a file or directory
+  rpc CopyFile(CopyFileRequest) returns (CopyFileResponse);
+  // Create a zip archive from selected paths
+  rpc CreateArchive(CreateArchiveRequest) returns (CreateArchiveResponse);
+  // Download multiple files/folders as a zip
+  rpc DownloadArchive(DownloadArchiveRequest) returns (DownloadArchiveResponse);
+  // Initiate a single-file download session (actual bytes served via GET /api/v1/download/{session_id})
+  rpc InitFileDownload(InitFileDownloadRequest) returns (InitFileDownloadResponse);
+  // Poll extraction progress
+  rpc GetExtractionStatus(GetExtractionStatusRequest) returns (GetExtractionStatusResponse);
+  // Download archive from remote URL (GitHub Releases, CDN, S3) with SHA256 verification and auto-extraction
+  rpc DownloadRemoteArchive(DownloadRemoteArchiveRequest) returns (DownloadRemoteArchiveResponse);
+  // Poll remote archive download progress
+  rpc GetRemoteArchiveProgress(GetRemoteArchiveProgressRequest) returns (GetRemoteArchiveProgressResponse);
+}
+
+// File metadata and tree
+message FileInfo {
+  string name = 1;
+  string path = 2;
+  bool is_dir = 3;
+  int64 size = 4;
+  int64 modified = 5;
+  bool is_editable = 6;
+  repeated FileInfo children = 7;
+}
+
+// Directory listing parameters
+message ListFilesRequest {
+  string server_id = 1;
+  string path = 2;
+  bool tree = 3;
+}
+
+// Directory contents
+message ListFilesResponse {
+  repeated FileInfo files = 1;
+}
+
+// File download parameters
+message GetFileRequest {
+  string server_id = 1;
+  string path = 2;
+}
+
+// File binary content
+message GetFileResponse {
+  bytes content = 1;
+  string mime_type = 2;
+}
+
+// File upload data
+message SaveUploadedFileRequest {
+  string server_id = 1;
+  string upload_session_id = 2;
+  string destination_path = 3; // Target dir
+  string filename = 4; // Target filename
+}
+
+// Save uploaded file result
+message SaveUploadedFileResponse {
+  string message = 1;
+  string path = 2;
+}
+
+// File content update
+message UpdateFileRequest {
+  string server_id = 1;
+  string path = 2;
+  bytes content = 3;
+}
+
+// Update confirmation
+message UpdateFileResponse {
+  string message = 1;
+  string path = 2;
+}
+
+// File to delete
+message DeleteFileRequest {
+  string server_id = 1;
+  string path = 2;
+  repeated string paths = 3; // Bulk delete
+}
+
+// Empty delete response
+message DeleteFileResponse {}
+
+// Folder creation parameters
+message CreateFolderRequest {
+  string server_id = 1;
+  string path = 2;
+}
+
+// Folder creation result
+message CreateFolderResponse {
+  string message = 1;
+}
+
+// File move parameters
+message MoveFileRequest {
+  string server_id = 1;
+  string source_path = 2;
+  string destination_path = 3;
+}
+
+// File move result
+message MoveFileResponse {
+  string message = 1;
+}
+
+// File copy parameters
+message CopyFileRequest {
+  string server_id = 1;
+  string source_path = 2;
+  string destination_path = 3;
+}
+
+// File copy result
+message CopyFileResponse {
+  string message = 1;
+}
+
+// Archive creation parameters
+message CreateArchiveRequest {
+  string server_id = 1;
+  repeated string paths = 2;
+  string destination_path = 3;
+  string archive_name = 4;
+}
+
+// Archive creation result
+message CreateArchiveResponse {
+  string message = 1;
+  string archive_path = 2;
+  int32 files_archived = 3;
+}
+
+// Archive download parameters
+message DownloadArchiveRequest {
+  string server_id = 1;
+  repeated string paths = 2;
+}
+
+// Archive download session
+message DownloadArchiveResponse {
+  string session_id = 1;
+  string filename = 2;
+  int64 total_size = 3;
+}
+
+// File rename parameters
+message RenameFileRequest {
+  string server_id = 1;
+  string path = 2;
+  string new_name = 3;
+}
+
+// Rename result
+message RenameFileResponse {
+  string message = 1;
+  string new_path = 2;
+}
+
+// Archive to extract
+message ExtractArchiveRequest {
+  string server_id = 1;
+  string path = 2;
+}
+
+// Extraction started
+message ExtractArchiveResponse {
+  string operation_id = 1;
+}
+
+// Extraction status poll
+message GetExtractionStatusRequest {
+  string operation_id = 1;
+}
+
+// Extraction progress
+message GetExtractionStatusResponse {
+  string state = 1;
+  int32 files_extracted = 2;
+  string error = 3;
+}
+
+// Single file download session
+message InitFileDownloadRequest {
+  string server_id = 1;
+  string path = 2;
+}
+
+// Download session
+message InitFileDownloadResponse {
+  string session_id = 1;
+  string filename = 2;
+  int64 total_size = 3;
+}
+
+// Download archive from remote URL request
+message DownloadRemoteArchiveRequest {
+  string server_id = 1;
+  string url = 2;
+  string destination_path = 3;
+  string sha256_checksum = 4;
+  bool auto_extract = 5;
+}
+
+// Download archive from remote URL response
+message DownloadRemoteArchiveResponse {
+  string task_id = 1;
+  string message = 2;
+}
+
+// Get remote archive download progress request
+message GetRemoteArchiveProgressRequest {
+  string server_id = 1;
+  string task_id = 2;
+}
+
+// Get remote archive download progress response
+message GetRemoteArchiveProgressResponse {
+  string task_id = 1;
+  string status = 2;
+  int64 bytes_downloaded = 3;
+  int64 total_bytes = 4;
+  int32 progress_percent = 5;
+  string error = 6;
+}
+
