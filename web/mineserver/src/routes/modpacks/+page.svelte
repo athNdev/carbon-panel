@@ -2,27 +2,21 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
 	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
-	import { Progress } from '$lib/components/ui/progress';
+		CarbonButton,
+		CarbonTile,
+		CarbonTag,
+		CarbonSearch,
+		CarbonSelect,
+		CarbonModal,
+		CarbonTextInput
+	} from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
 		Heart,
 		Download,
-		Search,
 		RefreshCw,
 		ExternalLink,
-		AlertCircle,
 		Settings,
 		Upload,
 		Package,
@@ -36,15 +30,6 @@
 		FileSearch
 	} from '@lucide/svelte';
 	import ManifestInspectorDialog from '$lib/components/manifest-inspector-dialog.svelte';
-	import { Label } from '$lib/components/ui/label';
-	import {
-		Dialog,
-		DialogContent,
-		DialogDescription,
-		DialogFooter,
-		DialogHeader,
-		DialogTitle
-	} from '$lib/components/ui/dialog';
 	import { create } from '@bufbuild/protobuf';
 	import type {
 		IndexedModpack,
@@ -82,7 +67,7 @@
 	let uploading = $state(false);
 	let uploadProgress = $state<UploadProgress | null>(null);
 	let uploadAbortController = $state<AbortController | null>(null);
-	let selectedIndexer = $state('modrinth'); // Default Modrinth since no API key initially
+	let selectedIndexer = $state('modrinth'); // Default Modrinth
 	let indexerName = $derived(selectedIndexer === 'fuego' ? 'CurseForge' : 'Modrinth');
 
 	// Remote modpack import state
@@ -153,7 +138,6 @@
 	async function searchModpacks(resetPage = true) {
 		loading = true;
 		try {
-			// Reset to page 1 when searching
 			if (resetPage) {
 				searchParams.page = 1;
 			}
@@ -180,7 +164,6 @@
 				indexer: selectedIndexer
 			});
 			toast.success(`Synced ${result.syncedCount} modpacks from ${indexerName}`);
-			// Refresh search results
 			await searchModpacks();
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to sync modpacks');
@@ -190,42 +173,30 @@
 		}
 	}
 
-	// Debounce sync to prevent indexer rate limiting the backend
 	const syncModpacks = debounce(_syncModpacks, 1000, { leading: true, trailing: false });
 
 	async function toggleFavorite(modpack: IndexedModpack) {
 		try {
 			const result = await rpcClient.modpack.toggleFavorite({ id: modpack.id });
 
-			// Update the modpack in search results
 			if (searchResults) {
 				searchResults.modpacks = searchResults.modpacks.map((m) =>
 					m.id === modpack.id ? { ...m, isFavorited: result.isFavorited } : m
 				);
 			}
 
-			// Update the modpack in uploaded packs
 			uploadedPacks = uploadedPacks.map((m) =>
 				m.id === modpack.id ? { ...m, isFavorited: result.isFavorited } : m
 			);
 
-			// Update favorites list immediately
 			if (result.isFavorited) {
-				// Add to favorites if not already there
 				if (!favorites.find((f) => f.id === modpack.id)) {
 					favorites = [...favorites, { ...modpack, isFavorited: true }];
 				}
 				toast.success('Added to favorites');
 			} else {
-				// Remove from favorites
 				favorites = favorites.filter((f) => f.id !== modpack.id);
 				toast.success('Removed from favorites');
-			}
-
-			// If viewing favorites, we may need to update the display
-			if (showFavorites && !result.isFavorited) {
-				// Item was removed from favorites while viewing favorites
-				// The reactive displayModpacks will automatically update
 			}
 		} catch (error) {
 			toast.error('Failed to toggle favorite');
@@ -245,7 +216,6 @@
 
 	async function loadUploadedPacks() {
 		try {
-			// Use the indexer parameter to get only manual uploads
 			const result = await rpcClient.modpack.searchModpacks({
 				query: '',
 				gameVersion: '',
@@ -293,7 +263,6 @@
 		uploadProgress = null;
 
 		try {
-			// Use chunked upload
 			const uploadResult = await uploadFile(file, {
 				onProgress: (progress) => {
 					uploadProgress = progress;
@@ -304,7 +273,6 @@
 				throw new Error('Upload completed but no session ID returned');
 			}
 
-			// Import the uploaded modpack
 			const result = await rpcClient.modpack.importUploadedModpack({
 				uploadSessionId: uploadResult.sessionId,
 				name: file.name.replace('.zip', ''),
@@ -312,8 +280,6 @@
 			});
 
 			toast.success(`Modpack "${result.modpack?.name}" uploaded successfully`);
-
-			// Refresh the modpack list and uploaded packs
 			await Promise.all([searchModpacks(), loadUploadedPacks()]);
 		} catch (error: unknown) {
 			if (error instanceof Error && error.message === 'Upload cancelled') {
@@ -381,14 +347,11 @@
 
 		try {
 			await rpcClient.modpack.deleteModpack({ id: modpack.id });
-
 			toast.success(`Modpack "${modpack.name}" deleted successfully`);
 
-			// Remove from local state
 			uploadedPacks = uploadedPacks.filter((m) => m.id !== modpack.id);
 			favorites = favorites.filter((m) => m.id !== modpack.id);
 
-			// Refresh search results if showing
 			if (!showFavorites && !showUploaded) {
 				await searchModpacks();
 			}
@@ -397,7 +360,6 @@
 		}
 	}
 
-	// Computed display list with uploaded packs first
 	let displayModpacks = $derived(
 		showFavorites
 			? favorites
@@ -413,332 +375,477 @@
 	);
 </script>
 
-<div class="h-full flex-1 space-y-8 bg-linear-to-br from-background to-muted/10 p-8 pt-6">
-	<div class="flex items-center justify-between border-b-2 border-border/50 pb-6">
+<svelte:head>
+	<title>Modpacks - MineServer</title>
+</svelte:head>
+
+<div class="h-full flex-1 space-y-6 font-sans text-[#f4f4f4] rounded-none">
+	<!-- Top Bar -->
+	<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#393939] pb-6 rounded-none">
 		<div class="flex items-center gap-4">
-			<div
-				class="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/10 shadow-lg"
-			>
-				<Package class="h-8 w-8 text-primary" />
+			<div class="flex h-12 w-12 items-center justify-center bg-[#262626] border border-[#393939] rounded-none text-[#0f62fe]">
+				<Package class="h-6 w-6" />
 			</div>
-			<div class="space-y-1">
-				<h2
-					class="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent"
-				>
-					Modpacks
-				</h2>
-				<p class="text-base text-muted-foreground">Browse and install modpacks for your servers</p>
+			<div class="space-y-0.5">
+				<h1 class="text-3xl font-semibold tracking-tight text-white">Modpacks</h1>
+				<p class="text-xs text-[#a8a8a8]">Browse, upload, and deploy modpacks to Minecraft servers</p>
 			</div>
 		</div>
-		<div class="flex items-center gap-2">
-			<Button
-				variant={showUploaded ? 'outline' : 'default'}
+
+		<!-- Top Action Buttons -->
+		<div class="flex items-center gap-2 flex-wrap">
+			<CarbonButton
+				kind={showUploaded ? 'primary' : 'secondary'}
+				size="sm"
+				class="rounded-none"
 				onclick={() => {
 					showUploaded = !showUploaded;
 					if (showUploaded) showFavorites = false;
 				}}
-				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
 			>
 				{#if showUploaded}
-					<ArrowLeft class="mr-2 h-5 w-5" />
-					Back to all
+					<ArrowLeft class="mr-1.5 h-4 w-4" />
+					All Packs
 				{:else}
-					<Upload class="mr-2 h-5 w-5" />
+					<Upload class="mr-1.5 h-4 w-4" />
 					Uploaded ({uploadedPacks.length})
 				{/if}
-			</Button>
-			<Button
-				variant={showFavorites ? 'outline' : 'default'}
+			</CarbonButton>
+
+			<CarbonButton
+				kind={showFavorites ? 'primary' : 'secondary'}
+				size="sm"
+				class="rounded-none"
 				onclick={() => {
 					showFavorites = !showFavorites;
 					if (showFavorites) showUploaded = false;
 				}}
-				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
 			>
 				{#if showFavorites}
-					<ArrowLeft class="mr-2 h-5 w-5" />
-					Back to all
+					<ArrowLeft class="mr-1.5 h-4 w-4" />
+					All Packs
 				{:else}
-					<Heart class="mr-2 h-5 w-5" />
+					<Heart class="mr-1.5 h-4 w-4" />
 					Favorites ({favorites.length})
 				{/if}
-			</Button>
-			<Button
-				variant="default"
-				onclick={() => goto('/modpacks/studio')}
-				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
+			</CarbonButton>
+
+			<CarbonButton
+				kind="tertiary"
+				size="sm"
+				class="rounded-none"
+				onclick={() => goto(resolve('/modpacks/studio'))}
 			>
-				<Boxes class="mr-2 h-5 w-5" />
+				<Boxes class="mr-1.5 h-4 w-4 text-[#0f62fe]" />
 				Modpack Studio
-			</Button>
-			<Button
-				variant="outline"
+			</CarbonButton>
+
+			<CarbonButton
+				kind="tertiary"
+				size="sm"
+				class="rounded-none"
 				onclick={() => (showManifestInspector = true)}
-				class="shadow-md transition-all hover:scale-[1.02] hover:shadow-lg"
 			>
-				<FileSearch class="mr-2 h-5 w-5" />
+				<FileSearch class="mr-1.5 h-4 w-4" />
 				Inspect Manifest
-			</Button>
+			</CarbonButton>
 		</div>
 	</div>
 
 	{#if selectedIndexer === 'fuego'}
-		<div class="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-			<div class="flex items-center justify-between">
-				<div class="flex items-center gap-2 font-medium text-primary">
-					<KeyRound class="h-4 w-4" />
-					CurseForge Keyless Mode Active
-				</div>
-				<Button size="sm" variant="ghost" class="h-7 text-xs" href="/settings?tab=api-keys">
-					<Settings class="mr-1 h-3.5 w-3.5" />
-					Custom API Key (Optional)
-				</Button>
+		<div class="p-3.5 bg-[#262626] border-l-4 border-[#0f62fe] border-y border-r border-[#393939] text-xs text-[#c6c6c6] flex items-center justify-between rounded-none">
+			<div class="flex items-center gap-2">
+				<KeyRound class="h-4 w-4 text-[#78a9ff] shrink-0" />
+				<span>CurseForge Keyless Mode: syncing and browsing modpacks operates through community proxies.</span>
 			</div>
-			<p class="mt-1 text-xs text-muted-foreground">
-				Syncing and browsing CurseForge modpacks works out-of-the-box via community proxies. If you have your own API key, you can configure it in Settings.
-			</p>
+			<CarbonButton kind="ghost" size="sm" class="h-7 text-xs rounded-none" href="/settings?tab=api-keys">
+				<Settings class="mr-1 h-3.5 w-3.5" />
+				Custom API Key
+			</CarbonButton>
 		</div>
 	{/if}
 
 	{#if !showFavorites && !showUploaded}
-		<div class="flex flex-col gap-4">
-			<div class="flex gap-2">
-				<Input
-					placeholder="Search modpacks..."
-					bind:value={searchParams.query}
-					onkeydown={(e) => e.key === 'Enter' && searchModpacks()}
-					class="flex-1"
-				/>
-				<Select
-					type="single"
-					value={searchParams.gameVersion}
-					onValueChange={(v: string | undefined) => (searchParams.gameVersion = v || '')}
-					disabled={loading}
-				>
-					<SelectTrigger class="w-45">
-						<span>{searchParams.gameVersion || 'All Versions'}</span>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="">All Versions</SelectItem>
+		<!-- Search & Filter Controls -->
+		<div class="space-y-4">
+			<div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+				<div class="md:col-span-4">
+					<CarbonSearch
+						placeholder="Search modpacks by name or description..."
+						bind:value={searchParams.query}
+						onkeydown={(e) => e.key === 'Enter' && searchModpacks()}
+						size="md"
+					/>
+				</div>
+
+				<div class="md:col-span-2">
+					<CarbonSelect
+						bind:value={searchParams.gameVersion}
+						disabled={loading}
+					>
+						<option value="">All MC Versions</option>
 						{#each gameVersions as version}
-							<SelectItem value={version}>{version}</SelectItem>
+							<option value={version}>{version}</option>
 						{/each}
-					</SelectContent>
-				</Select>
-				<Select
-					type="single"
-					value={searchParams.modLoader}
-					onValueChange={(v: string | undefined) => (searchParams.modLoader = v || '')}
-					disabled={loading}
-				>
-					<SelectTrigger class="w-40">
-						<span>{searchParams.modLoader ? searchParams.modLoader.toUpperCase() : 'All Loaders'}</span>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="">All Loaders</SelectItem>
-						<SelectItem value="forge">Forge</SelectItem>
-						<SelectItem value="fabric">Fabric</SelectItem>
-						<SelectItem value="neoforge">NeoForge</SelectItem>
-						<SelectItem value="quilt">Quilt</SelectItem>
-					</SelectContent>
-				</Select>
-				<Select
-					type="single"
-					value={selectedIndexer}
-					onValueChange={(v: string | undefined) => {
-						selectedIndexer = v || 'modrinth';
-						syncModpacks();
-					}}
-					disabled={syncing}
-				>
-					<SelectTrigger class="w-45">
-						<span>{indexerName}</span>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="modrinth">Modrinth</SelectItem>
-						<SelectItem value="fuego">CurseForge</SelectItem>
-					</SelectContent>
-				</Select>
-				<Button
-					onclick={() => searchModpacks(true)}
-					disabled={loading}
-					class="bg-linear-to-r from-primary to-primary/80 shadow-md transition-all hover:scale-[1.02] hover:from-primary/90 hover:to-primary/70 hover:shadow-lg"
-				>
-					<Search class="mr-2 h-5 w-5" />
-					Search
-				</Button>
-				<Button
-					onclick={syncModpacks}
-					disabled={syncing}
-					variant="outline"
-					class="border-2 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
-				>
-					<RefreshCw class={`mr-2 h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
-					Sync {indexerName}
-				</Button>
-				<Button
-					onclick={() => fileInput?.click()}
-					disabled={uploading}
-					variant="outline"
-					class="border-2 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
-				>
-					<Upload class="mr-2 h-5 w-5" />
-					Upload Modpack
-				</Button>
-				<Button
-					onclick={() => (showRemoteModal = true)}
-					disabled={importingRemote}
-					variant="outline"
-					class="border-2 shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
-				>
-					<Globe class="mr-2 h-5 w-5" />
-					Add from URL / GitHub
-				</Button>
-				<input
-					bind:this={fileInput}
-					type="file"
-					accept=".zip"
-					onchange={handleModpackUpload}
-					class="hidden"
-				/>
+					</CarbonSelect>
+				</div>
+
+				<div class="md:col-span-2">
+					<CarbonSelect
+						bind:value={searchParams.modLoader}
+						disabled={loading}
+					>
+						<option value="">All Loaders</option>
+						<option value="forge">Forge</option>
+						<option value="fabric">Fabric</option>
+						<option value="neoforge">NeoForge</option>
+						<option value="quilt">Quilt</option>
+					</CarbonSelect>
+				</div>
+
+				<div class="md:col-span-2">
+					<CarbonSelect
+						bind:value={selectedIndexer}
+						disabled={syncing}
+						onchange={() => syncModpacks()}
+					>
+						<option value="modrinth">Modrinth</option>
+						<option value="fuego">CurseForge</option>
+					</CarbonSelect>
+				</div>
+
+				<div class="md:col-span-2 flex items-center gap-1">
+					<CarbonButton
+						kind="primary"
+						class="w-full justify-center rounded-none"
+						onclick={() => searchModpacks(true)}
+						disabled={loading}
+					>
+						Search
+					</CarbonButton>
+				</div>
 			</div>
-			{#if searchResults?.total === 0 && !loading}
-				<p class="text-sm text-muted-foreground">
-					No modpacks found locally. Click "Sync" to fetch modpacks from Indexers.
-				</p>
-			{/if}
+
+			<!-- Secondary Action Row -->
+			<div class="flex items-center justify-between gap-2 flex-wrap pt-1">
+				<div class="flex items-center gap-2">
+					<CarbonButton
+						kind="tertiary"
+						size="sm"
+						class="rounded-none"
+						onclick={syncModpacks}
+						disabled={syncing}
+					>
+						<RefreshCw class={`mr-1.5 h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+						Sync {indexerName}
+					</CarbonButton>
+
+					<CarbonButton
+						kind="tertiary"
+						size="sm"
+						class="rounded-none"
+						onclick={() => fileInput?.click()}
+						disabled={uploading}
+					>
+						<Upload class="mr-1.5 h-3.5 w-3.5" />
+						Upload ZIP
+					</CarbonButton>
+
+					<CarbonButton
+						kind="tertiary"
+						size="sm"
+						class="rounded-none"
+						onclick={() => (showRemoteModal = true)}
+						disabled={importingRemote}
+					>
+						<Globe class="mr-1.5 h-3.5 w-3.5" />
+						Add from URL
+					</CarbonButton>
+
+					<input
+						bind:this={fileInput}
+						type="file"
+						accept=".zip"
+						onchange={handleModpackUpload}
+						class="hidden"
+					/>
+				</div>
+
+				<div class="text-xs text-[#8d8d8d] font-mono">
+					{#if searchResults}
+						TOTAL: {searchResults.total} PACKS
+					{/if}
+				</div>
+			</div>
+
 			{#if uploading && uploadProgress}
-				<div class="mt-4 rounded-lg border bg-card p-4">
-					<div class="mb-2 flex items-center justify-between">
-						<span class="text-sm font-medium"> Uploading modpack... </span>
-						<div class="flex items-center gap-2">
-							<span class="text-sm text-muted-foreground">
-								{uploadProgress.percentComplete.toFixed(0)}%
-							</span>
-							<Button
-								size="icon"
-								variant="ghost"
-								class="h-6 w-6"
+				<div class="p-4 bg-[#262626] border border-[#393939] rounded-none space-y-2">
+					<div class="flex items-center justify-between text-xs">
+						<span class="font-medium text-white">Uploading modpack archive...</span>
+						<div class="flex items-center gap-3 font-mono text-[#a8a8a8]">
+							<span>{uploadProgress.percentComplete.toFixed(0)}%</span>
+							<span>{formatBytes(uploadProgress.bytesUploaded)} / {formatBytes(uploadProgress.totalBytes)}</span>
+							<button
+								type="button"
 								onclick={cancelCurrentUpload}
+								class="text-[#da1e28] hover:text-white cursor-pointer"
 								title="Cancel upload"
 							>
 								<X class="h-4 w-4" />
-							</Button>
+							</button>
 						</div>
 					</div>
-					<Progress value={uploadProgress.percentComplete} class="h-2" />
-					<p class="mt-1 text-xs text-muted-foreground">
-						{formatBytes(uploadProgress.bytesUploaded)} / {formatBytes(uploadProgress.totalBytes)}
-					</p>
+					<div class="w-full h-2 bg-[#161616] rounded-none overflow-hidden">
+						<div class="h-full bg-[#0f62fe] transition-all" style="width: {uploadProgress.percentComplete}%"></div>
+					</div>
 				</div>
 			{/if}
 		</div>
 	{/if}
 
-	<Dialog bind:open={showRemoteModal}>
-		<DialogContent class="sm:max-w-lg">
-			<DialogHeader>
-				<DialogTitle class="flex items-center gap-2">
-					<Globe class="h-5 w-5 text-primary" />
-					Add Modpack from URL / GitHub / CDN
-				</DialogTitle>
-				<DialogDescription>
-					Import a modpack archive (.zip or .mrpack) directly from GitHub Releases, static file hosting, or any CDN.
-				</DialogDescription>
-			</DialogHeader>
+	<!-- Modpack Packages Grid with CarbonTiles -->
+	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+		{#each displayModpacks as modpack (modpack.id)}
+			<CarbonTile class="flex flex-col justify-between p-5 rounded-none border-[#393939] hover:border-[#525252] transition-colors group">
+				<div class="space-y-3">
+					<!-- Tile Header -->
+					<div class="flex items-start gap-3">
+						{#if modpack.logoUrl}
+							<img
+								src={modpack.logoUrl}
+								alt={modpack.name}
+								class="h-14 w-14 object-cover border border-[#393939] bg-[#161616] shrink-0 rounded-none"
+							/>
+						{:else}
+							<div class="h-14 w-14 border border-[#393939] bg-[#161616] flex items-center justify-center text-[#525252] shrink-0 rounded-none">
+								<Package class="h-7 w-7" />
+							</div>
+						{/if}
 
-			<div class="space-y-4 py-2">
-				<div class="space-y-2">
-					<Label for="remote-url">Modpack URL <span class="text-destructive">*</span></Label>
-					<Input
-						id="remote-url"
-						placeholder="https://github.com/owner/repo/releases/download/v1.0/modpack.zip"
-						bind:value={remoteUrl}
-						disabled={importingRemote}
-					/>
-					<p class="text-xs text-muted-foreground">
-						Direct link to a modpack archive from GitHub releases, Cloudflare R2, S3, or any static host.
-					</p>
-				</div>
+						<div class="min-w-0 flex-1">
+							<h3 class="font-semibold text-base text-white truncate" title={modpack.name}>
+								{modpack.name}
+							</h3>
+							<div class="flex items-center gap-2 mt-1 flex-wrap">
+								<CarbonTag type={modpack.indexer === 'manual' ? 'purple' : 'blue'} size="sm">
+									{modpack.indexer === 'manual' ? 'Manual Upload' : modpack.indexer}
+								</CarbonTag>
+								<span class="text-xs text-[#8d8d8d] font-mono flex items-center gap-1">
+									<Download class="h-3 w-3 inline" />
+									{formatNumber(modpack.downloadCount)}
+								</span>
+							</div>
+						</div>
 
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-2">
-						<Label for="remote-name">Pack Name</Label>
-						<Input
-							id="remote-name"
-							placeholder="Auto-detected if empty"
-							bind:value={remoteName}
-							disabled={importingRemote}
-						/>
-					</div>
-					<div class="space-y-2">
-						<Label for="remote-mc-version">Minecraft Version</Label>
-						<Input
-							id="remote-mc-version"
-							placeholder="e.g. 1.20.1 (or auto-detect)"
-							bind:value={remoteMcVersion}
-							disabled={importingRemote}
-						/>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-2">
-						<Label for="remote-loader">Mod Loader</Label>
-						<Select
-							type="single"
-							value={remoteModLoader}
-							onValueChange={(v: string | undefined) => (remoteModLoader = v || '')}
-							disabled={importingRemote}
+						<button
+							type="button"
+							onclick={() => toggleFavorite(modpack)}
+							class="p-2 text-[#8d8d8d] hover:text-[#da1e28] transition-colors cursor-pointer rounded-none"
+							title={modpack.isFavorited ? 'Remove favorite' : 'Add favorite'}
 						>
-							<SelectTrigger id="remote-loader">
-								<span>{remoteModLoader ? modLoaders.find((l) => l.value === remoteModLoader)?.label || remoteModLoader : 'Auto-detect'}</span>
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="">Auto-detect / Manifest</SelectItem>
-								<SelectItem value="fabric">Fabric</SelectItem>
-								<SelectItem value="forge">Forge</SelectItem>
-								<SelectItem value="neoforge">NeoForge</SelectItem>
-								<SelectItem value="quilt">Quilt</SelectItem>
-								<SelectItem value="custom">Custom</SelectItem>
-							</SelectContent>
-						</Select>
+							<Heart class={`h-4 w-4 ${modpack.isFavorited ? 'fill-[#da1e28] text-[#da1e28]' : ''}`} />
+						</button>
 					</div>
-					<div class="space-y-2">
-						<Label for="remote-token">Auth Token (Optional)</Label>
-						<Input
-							id="remote-token"
-							type="password"
-							placeholder="ghp_... for private repos"
-							bind:value={remoteAuthToken}
-							disabled={importingRemote}
-						/>
+
+					<!-- Description -->
+					<p class="text-xs text-[#a8a8a8] line-clamp-2 min-h-8">
+						{modpack.summary || 'No summary available for this modpack.'}
+					</p>
+
+					<!-- Loaders & Versions -->
+					<div class="space-y-1.5 pt-1">
+						{#if parseJsonArray(modpack.modLoaders).length > 0}
+							<div class="flex flex-wrap gap-1">
+								{#each parseJsonArray(modpack.modLoaders) as loader (loader)}
+									<CarbonTag type="cyan" size="sm">{loader}</CarbonTag>
+								{/each}
+							</div>
+						{/if}
+
+						{#if parseJsonArray(modpack.gameVersions).length > 0}
+							<div class="text-[11px] text-[#8d8d8d] font-mono truncate">
+								MC: {parseJsonArray(modpack.gameVersions).slice(0, 3).join(', ')}
+								{#if parseJsonArray(modpack.gameVersions).length > 3}
+									+{parseJsonArray(modpack.gameVersions).length - 3} more
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 
-				<div class="space-y-2">
-					<Label for="remote-desc">Description (Optional)</Label>
-					<Input
-						id="remote-desc"
-						placeholder="Short summary or description"
-						bind:value={remoteDescription}
-						disabled={importingRemote}
-					/>
+				<!-- Tile Actions -->
+				<div class="mt-4 pt-3 border-t border-[#393939] flex items-center justify-between gap-2">
+					<div class="flex items-center gap-1">
+						{#if modpack.websiteUrl}
+							<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
+								<CarbonButton kind="ghost" size="sm" class="rounded-none">
+									<ExternalLink class="mr-1 h-3 w-3" />
+									View
+								</CarbonButton>
+							</a>
+						{/if}
+						{#if modpack.indexer === 'manual'}
+							<CarbonButton
+								kind="danger"
+								size="sm"
+								class="rounded-none"
+								onclick={() => deleteModpack(modpack)}
+							>
+								<Trash2 class="mr-1 h-3 w-3" />
+								Delete
+							</CarbonButton>
+						{/if}
+					</div>
+
+					<CarbonButton
+						kind="primary"
+						size="sm"
+						class="rounded-none"
+						onclick={() => goto(resolve(`/servers/new?modpack=${modpack.id}`))}
+					>
+						Use in Server
+					</CarbonButton>
 				</div>
+			</CarbonTile>
+		{/each}
+	</div>
+
+	<!-- Empty state -->
+	{#if displayModpacks.length === 0}
+		<div class="py-16 text-center border border-dashed border-[#393939] bg-[#262626] rounded-none">
+			<Package class="mx-auto mb-3 h-10 w-10 text-[#525252]" />
+			<p class="text-sm font-semibold text-[#f4f4f4]">
+				{#if showFavorites}
+					No favorite modpacks found
+				{:else if loading}
+					Loading modpack catalog...
+				{:else if syncing}
+					Syncing modpacks from indexers...
+				{:else if searchParams.query}
+					No modpacks matching "{searchParams.query}"
+				{:else}
+					No modpacks available locally
+				{/if}
+			</p>
+			<p class="text-xs text-[#8d8d8d] mt-1 max-w-sm mx-auto">
+				{#if showFavorites}
+					Click the heart icon on any package to add it to your pinned favorites.
+				{:else if !loading && !syncing}
+					Click "Sync" to index popular modpacks or import a custom modpack from URL or ZIP.
+				{/if}
+			</p>
+		</div>
+	{/if}
+
+	<!-- Pagination -->
+	{#if !showFavorites && !showUploaded && searchResults && searchResults.total > searchResults.pageSize}
+		<div class="flex items-center justify-center gap-3 pt-4 border-t border-[#393939]">
+			<CarbonButton
+				kind="tertiary"
+				size="sm"
+				class="rounded-none"
+				disabled={(searchParams.page || 1) === 1}
+				onclick={() => {
+					searchParams.page = Math.max(1, (searchParams.page || 1) - 1);
+					searchModpacks(false);
+				}}
+			>
+				Previous
+			</CarbonButton>
+			<span class="text-xs text-[#a8a8a8] font-mono">
+				Page {searchParams.page} of {Math.ceil(searchResults.total / searchResults.pageSize)}
+			</span>
+			<CarbonButton
+				kind="tertiary"
+				size="sm"
+				class="rounded-none"
+				disabled={(searchParams.page || 1) >= Math.ceil(searchResults.total / searchResults.pageSize)}
+				onclick={() => {
+					searchParams.page = (searchParams.page || 1) + 1;
+					searchModpacks(false);
+				}}
+			>
+				Next
+			</CarbonButton>
+		</div>
+	{/if}
+
+	<!-- Remote Import Modal with Carbon Design System Fidelity -->
+	<CarbonModal
+		bind:open={showRemoteModal}
+		title="Add Modpack from URL / GitHub"
+		description="Import archive directly from GitHub Releases, Cloudflare R2, or static CDN"
+		hasFooter={false}
+		size="3xl"
+	>
+		<div class="space-y-4">
+			<CarbonTextInput
+				label="Modpack Archive URL *"
+				placeholder="https://github.com/owner/repo/releases/download/v1.0/modpack.zip"
+				bind:value={remoteUrl}
+				disabled={importingRemote}
+				helperText="Direct link to .zip or .mrpack archive file"
+			/>
+
+			<div class="grid grid-cols-2 gap-4">
+				<CarbonTextInput
+					label="Pack Name (Optional)"
+					placeholder="Auto-detected if blank"
+					bind:value={remoteName}
+					disabled={importingRemote}
+				/>
+				<CarbonTextInput
+					label="Minecraft Version"
+					placeholder="e.g. 1.20.1 (or auto-detect)"
+					bind:value={remoteMcVersion}
+					disabled={importingRemote}
+				/>
 			</div>
 
-			<DialogFooter class="flex items-center justify-end gap-2">
-				<Button
-					variant="outline"
-					onclick={() => (showRemoteModal = false)}
+			<div class="grid grid-cols-2 gap-4">
+				<CarbonSelect
+					label="Mod Loader"
+					bind:value={remoteModLoader}
 					disabled={importingRemote}
 				>
+					<option value="">Auto-detect from manifest</option>
+					<option value="fabric">Fabric</option>
+					<option value="forge">Forge</option>
+					<option value="neoforge">NeoForge</option>
+					<option value="quilt">Quilt</option>
+					<option value="custom">Custom</option>
+				</CarbonSelect>
+
+				<CarbonTextInput
+					type="password"
+					label="Auth Token (Optional)"
+					placeholder="Bearer token or GitHub PAT"
+					bind:value={remoteAuthToken}
+					disabled={importingRemote}
+				/>
+			</div>
+
+			<CarbonTextInput
+				label="Description (Optional)"
+				placeholder="Brief description or release summary"
+				bind:value={remoteDescription}
+				disabled={importingRemote}
+			/>
+
+			<div class="flex items-center justify-end gap-3 pt-4 border-t border-[#393939]">
+				<CarbonButton
+					kind="secondary"
+					onclick={() => (showRemoteModal = false)}
+					disabled={importingRemote}
+					class="rounded-none"
+				>
 					Cancel
-				</Button>
-				<Button
+				</CarbonButton>
+				<CarbonButton
+					kind="primary"
 					onclick={handleRemoteImport}
 					disabled={importingRemote || !remoteUrl.trim()}
-					class="bg-linear-to-r from-primary to-primary/80"
+					class="rounded-none"
 				>
 					{#if importingRemote}
 						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
@@ -747,162 +854,10 @@
 						<Download class="mr-2 h-4 w-4" />
 						Import Modpack
 					{/if}
-				</Button>
-			</DialogFooter>
-		</DialogContent>
-	</Dialog>
-
-	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-		{#each displayModpacks as modpack (modpack.id)}
-			<Card
-				class="group relative overflow-hidden border-2 bg-linear-to-br from-card to-card/80 transition-all duration-300 hover:border-primary/50 hover:shadow-2xl"
-			>
-				<div
-					class="absolute inset-0 bg-linear-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-				></div>
-				<CardHeader class="relative">
-					<div class="flex items-start gap-4">
-						{#if modpack.logoUrl}
-							<img
-								src={modpack.logoUrl}
-								alt={modpack.name}
-								class="h-16 w-16 rounded-md object-cover"
-							/>
-						{/if}
-						<div class="min-w-0 flex-1">
-							<CardTitle class="line-clamp-1 text-xl font-semibold">{modpack.name}</CardTitle>
-							<div class="mt-1 flex items-center gap-2">
-								<Badge variant="secondary" class="text-xs font-semibold">
-									{modpack.indexer === 'manual' ? 'Manual Upload' : modpack.indexer}
-								</Badge>
-								{#if modpack.indexer === 'manual'}
-									<Badge variant="outline" class="text-xs">
-										<Upload class="mr-1 h-3 w-3" />
-										Uploaded
-									</Badge>
-								{/if}
-								<span class="text-xs text-muted-foreground">
-									<Download class="mr-1 inline h-3 w-3" />
-									{formatNumber(modpack.downloadCount)}
-								</span>
-							</div>
-						</div>
-						<Button
-							size="icon"
-							variant={modpack.isFavorited ? 'default' : 'outline'}
-							onclick={() => toggleFavorite(modpack)}
-							class="transition-transform hover:scale-110"
-						>
-							<Heart class={`h-4 w-4 ${modpack.isFavorited ? 'fill-current' : ''}`} />
-						</Button>
-					</div>
-				</CardHeader>
-				<CardContent class="relative">
-					<CardDescription class="mb-4 line-clamp-2">
-						{modpack.summary}
-					</CardDescription>
-
-					<div class="space-y-2">
-						{#if parseJsonArray(modpack.modLoaders).length > 0}
-							<div class="flex flex-wrap gap-1">
-								{#each parseJsonArray(modpack.modLoaders) as loader (loader)}
-									<Badge variant="outline" class="text-xs">{loader}</Badge>
-								{/each}
-							</div>
-						{/if}
-
-						{#if parseJsonArray(modpack.gameVersions).length > 0}
-							<div class="text-xs text-muted-foreground">
-								MC: {parseJsonArray(modpack.gameVersions).slice(0, 3).join(', ')}
-								{#if parseJsonArray(modpack.gameVersions).length > 3}
-									+{parseJsonArray(modpack.gameVersions).length - 3} more
-								{/if}
-							</div>
-						{/if}
-					</div>
-
-					<div class="mt-4 flex items-center justify-between gap-2">
-						<div class="flex items-center gap-2">
-							{#if modpack.websiteUrl}
-								<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
-									<Button variant="outline" size="sm">
-										<ExternalLink class="mr-1 h-3 w-3" />
-										View
-									</Button>
-								</a>
-							{/if}
-							{#if modpack.indexer === 'manual'}
-								<Button
-									variant="outline"
-									size="sm"
-									onclick={() => deleteModpack(modpack)}
-									class="hover:text-destructive-foreground text-destructive hover:bg-destructive"
-								>
-									<Trash2 class="mr-1 h-3 w-3" />
-									Delete
-								</Button>
-							{/if}
-						</div>
-						<Button
-							size="sm"
-							onclick={() => goto(resolve(`/servers/new?modpack=${modpack.id}`))}
-							class="font-semibold shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
-						>
-							Use in Server
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
-		{/each}
-	</div>
-
-	{#if !showFavorites && !showUploaded && searchResults && searchResults.total > searchResults.pageSize}
-		<div class="mt-6 flex items-center justify-center gap-2">
-			<Button
-				variant="outline"
-				disabled={(searchParams.page || 1) === 1}
-				onclick={() => {
-					searchParams.page = Math.max(1, (searchParams.page || 1) - 1);
-					searchModpacks(false);
-				}}
-			>
-				Previous
-			</Button>
-			<span class="text-sm text-muted-foreground">
-				Page {searchParams.page} of {Math.ceil(searchResults.total / searchResults.pageSize)}
-			</span>
-			<Button
-				variant="outline"
-				disabled={(searchParams.page || 1) >=
-					Math.ceil(searchResults.total / searchResults.pageSize)}
-				onclick={() => {
-					searchParams.page = (searchParams.page || 1) + 1;
-					searchModpacks(false);
-				}}
-			>
-				Next
-			</Button>
+				</CarbonButton>
+			</div>
 		</div>
-	{/if}
-
-	{#if displayModpacks.length === 0}
-		<div class="py-12 text-center">
-			<p class="text-muted-foreground">
-				{#if showFavorites}
-					No favorite modpacks yet. Browse the modpacks list and click the heart icon to add
-					favorites.
-				{:else if loading}
-					Loading modpacks...
-				{:else if syncing}
-					Syncing modpacks...
-				{:else if searchParams.query}
-					No modpacks found matching your search.
-				{:else}
-					No modpacks found.
-				{/if}
-			</p>
-		</div>
-	{/if}
+	</CarbonModal>
 
 	<ManifestInspectorDialog
 		bind:open={showManifestInspector}

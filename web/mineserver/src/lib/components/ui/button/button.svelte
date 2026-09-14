@@ -4,23 +4,23 @@
 	import { type VariantProps, tv } from 'tailwind-variants';
 
 	export const buttonVariants = tv({
-		base: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		base: "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0f62fe] inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-none text-sm font-normal outline-none transition-colors disabled:pointer-events-none disabled:opacity-40 disabled:bg-[#393939] disabled:text-[#8d8d8d] aria-disabled:pointer-events-none aria-disabled:opacity-40 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 cursor-pointer",
 		variants: {
 			variant: {
-				default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
+				default: 'bg-[#0f62fe] text-white hover:bg-[#0353e9] active:bg-[#002d9c] border-none shadow-none',
 				destructive:
-					'bg-destructive shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 text-white',
+					'bg-[#da1e28] text-white hover:bg-[#ba1b23] active:bg-[#750e13] border-none shadow-none',
 				outline:
-					'bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 border',
-				secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
-				ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
-				link: 'text-primary underline-offset-4 hover:underline'
+					'bg-transparent border border-[#0f62fe] text-[#78a9ff] hover:bg-[#0f62fe] hover:text-white shadow-none',
+				secondary: 'bg-[#393939] text-white hover:bg-[#4c4c4c] active:bg-[#6f6f6f] border-none shadow-none',
+				ghost: 'bg-transparent text-[#78a9ff] hover:bg-[#353535] hover:text-white border-none shadow-none',
+				link: 'text-[#78a9ff] underline-offset-4 hover:underline shadow-none'
 			},
 			size: {
-				default: 'h-9 px-4 py-2 has-[>svg]:px-3',
-				sm: 'h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5',
-				lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
-				icon: 'size-9'
+				default: 'h-10 px-4 py-2 has-[>svg]:px-3',
+				sm: 'h-8 gap-1.5 px-3 has-[>svg]:px-2 text-xs',
+				lg: 'h-12 px-6 has-[>svg]:px-4 text-base',
+				icon: 'size-10'
 			}
 		},
 		defaultVariants: {

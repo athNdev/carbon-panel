@@ -1,46 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
 	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Dialog as DialogPrimitive } from 'bits-ui';
-	import {
-		DialogContent,
-		DialogDescription,
-		DialogFooter,
-		DialogHeader,
-		DialogTitle
-	} from '$lib/components/ui/dialog';
+		CarbonButton,
+		CarbonTile,
+		CarbonTag,
+		CarbonSearch,
+		CarbonSelect,
+		CarbonModal,
+		CarbonTextInput
+	} from '$lib/components/carbon';
 	import {
 		Package,
 		Plus,
 		ArrowLeft,
-		Blocks,
 		Boxes,
-		PackagePlus,
-		Download,
-		Rocket,
 		Trash2,
 		Copy,
 		UploadCloud,
-		Search,
-		ExternalLink,
 		Loader2,
 		Calendar
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { apiFetch } from '$lib/api/fetch';
-	import ModpackDeployDialog from '$lib/components/modpack-deploy-dialog.svelte';
 
 	interface PackSummary {
 		id: string;
@@ -77,10 +59,6 @@
 	let importFile = $state<File | null>(null);
 	let importFormat = $state<'auto' | 'mrpack' | 'curseforge' | 'packwiz'>('auto');
 	let importName = $state('');
-
-	// Deploy Dialog State
-	let deployDialogOpen = $state(false);
-	let deployPack = $state<PackSummary | null>(null);
 
 	const MC_VERSIONS = [
 		'1.21.4',
@@ -296,350 +274,373 @@
 	});
 </script>
 
-<div class="h-full flex-1 space-y-6 bg-linear-to-br from-background to-muted/20 p-8 pt-6">
+<svelte:head>
+	<title>Modpack Studio - MineServer</title>
+</svelte:head>
+
+<div class="h-full flex-1 space-y-6 font-sans text-[#f4f4f4] rounded-none">
 	<!-- Top Bar -->
-	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-border/50 pb-5">
+	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#393939] pb-6 rounded-none">
 		<div class="flex items-center gap-4">
-			<Button variant="ghost" size="icon" onclick={() => goto('/modpacks')} class="h-10 w-10">
+			<CarbonButton
+				kind="ghost"
+				size="md"
+				iconOnly
+				onclick={() => goto('/modpacks')}
+				class="rounded-none text-[#c6c6c6] hover:text-white"
+				title="Back to Modpacks"
+			>
 				<ArrowLeft class="h-5 w-5" />
-			</Button>
+			</CarbonButton>
 
 			<div class="space-y-0.5">
 				<div class="flex items-center gap-3">
-					<h2 class="text-3xl font-bold tracking-tight text-foreground">Modpack Studio</h2>
-					<Badge variant="outline" class="font-mono text-xs">PACKWIZ ENGINE</Badge>
+					<h1 class="text-3xl font-semibold tracking-tight text-white">Modpack Studio</h1>
+					<CarbonTag type="cyan" size="sm">PACKWIZ ENGINE</CarbonTag>
 				</div>
-				<p class="text-xs text-muted-foreground">
-					Visual Packwiz workspace: create, import (.mrpack, CurseForge, Packwiz), customize, and deploy modpacks.
+				<p class="text-xs text-[#a8a8a8]">
+					Visual workspace for custom modpacks: create, import (.mrpack, CurseForge, Packwiz), edit overrides, and deploy.
 				</p>
 			</div>
 		</div>
 
 		<div class="flex items-center gap-3">
-			<Button variant="outline" onclick={() => (importDialogOpen = true)}>
-				<UploadCloud class="mr-2 h-4 w-4 text-primary" />
+			<CarbonButton
+				kind="secondary"
+				class="rounded-none"
+				onclick={() => (importDialogOpen = true)}
+			>
+				<UploadCloud class="mr-2 h-4 w-4 text-[#0f62fe]" />
 				Import Modpack
-			</Button>
+			</CarbonButton>
 
-			<Button onclick={() => (createDialogOpen = true)}>
+			<CarbonButton
+				kind="primary"
+				class="rounded-none"
+				onclick={() => (createDialogOpen = true)}
+			>
 				<Plus class="mr-2 h-4 w-4" />
 				Create Modpack
-			</Button>
+			</CarbonButton>
 		</div>
 	</div>
 
 	<!-- Search & Summary Bar -->
 	<div class="flex items-center justify-between gap-4">
-		<div class="relative w-72">
-			<Input
+		<div class="w-72">
+			<CarbonSearch
 				placeholder="Search modpack projects..."
 				bind:value={filterQuery}
-				class="h-9 pl-9 text-xs"
+				size="sm"
 			/>
-			<Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 		</div>
-		<p class="text-xs text-muted-foreground">
-			Showing {filteredPacks.length} of {packs.length} projects
+		<p class="text-xs text-[#8d8d8d] font-mono">
+			SHOWING {filteredPacks.length} OF {packs.length} PROJECTS
 		</p>
 	</div>
 
 	<!-- Projects Grid -->
 	{#if loading}
-		<div class="flex flex-col items-center justify-center py-20 text-muted-foreground">
-			<Loader2 class="h-8 w-8 animate-spin text-primary" />
-			<p class="mt-3 text-sm">Loading modpack projects...</p>
+		<div class="flex flex-col items-center justify-center py-24 text-[#8d8d8d]">
+			<Loader2 class="h-8 w-8 animate-spin text-[#0f62fe]" />
+			<p class="mt-3 text-xs">Loading modpack projects...</p>
 		</div>
 	{:else if filteredPacks.length === 0}
-		<Card class="border-dashed py-16 text-center">
-			<CardContent class="flex flex-col items-center justify-center space-y-4">
-				<div class="rounded-full bg-primary/10 p-4">
-					<Boxes class="h-10 w-10 text-primary" />
-				</div>
-				<div class="space-y-1">
-					<h3 class="text-lg font-semibold">No Modpack Projects Found</h3>
-					<p class="text-xs text-muted-foreground max-w-sm">
-						Get started by creating a new custom modpack from scratch or importing an existing Modrinth (.mrpack), CurseForge (.zip), or Packwiz archive.
-					</p>
-				</div>
-				<div class="flex items-center gap-3 pt-2">
-					<Button variant="outline" size="sm" onclick={() => (importDialogOpen = true)}>
-						<UploadCloud class="mr-2 h-4 w-4" />
-						Import Modpack
-					</Button>
-					<Button size="sm" onclick={() => (createDialogOpen = true)}>
-						<Plus class="mr-2 h-4 w-4" />
-						Create Project
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+		<div class="border border-dashed border-[#393939] bg-[#262626] p-16 text-center space-y-4 rounded-none">
+			<div class="mx-auto h-12 w-12 bg-[#161616] border border-[#393939] flex items-center justify-center text-[#0f62fe] rounded-none">
+				<Boxes class="h-6 w-6" />
+			</div>
+			<div class="space-y-1">
+				<h3 class="text-base font-semibold text-white">No Modpack Projects Found</h3>
+				<p class="text-xs text-[#a8a8a8] max-w-sm mx-auto">
+					Initialize a new custom modpack or import an existing Modrinth (.mrpack), CurseForge (.zip), or Packwiz archive.
+				</p>
+			</div>
+			<div class="flex items-center justify-center gap-3 pt-2">
+				<CarbonButton
+					kind="secondary"
+					size="sm"
+					class="rounded-none"
+					onclick={() => (importDialogOpen = true)}
+				>
+					<UploadCloud class="mr-2 h-4 w-4" />
+					Import Modpack
+				</CarbonButton>
+				<CarbonButton
+					kind="primary"
+					size="sm"
+					class="rounded-none"
+					onclick={() => (createDialogOpen = true)}
+				>
+					<Plus class="mr-2 h-4 w-4" />
+					Create Project
+				</CarbonButton>
+			</div>
+		</div>
 	{:else}
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 			{#each filteredPacks as pack (pack.id)}
-				<Card class="group hover:border-primary/50 transition-all duration-200 flex flex-col justify-between shadow-xs">
-					<CardHeader class="pb-3">
+				<CarbonTile class="flex flex-col justify-between p-5 rounded-none border-[#393939] hover:border-[#525252] transition-colors group">
+					<div class="space-y-3">
+						<!-- Tile Header -->
 						<div class="flex items-start justify-between gap-3">
-							<div class="space-y-1 min-w-0">
-								<CardTitle class="text-lg font-bold truncate group-hover:text-primary transition-colors">
-									<a href={`/modpacks/studio/${pack.id}`}>{pack.name}</a>
-								</CardTitle>
-								<CardDescription class="text-xs truncate">
-									v{pack.version}  by {pack.author || 'Admin'}
-								</CardDescription>
+							<div class="space-y-1 min-w-0 flex-1">
+								<h3 class="text-lg font-semibold truncate">
+									<a href={`/modpacks/studio/${pack.id}`} class="text-white hover:text-[#0f62fe] transition-colors">
+										{pack.name}
+									</a>
+								</h3>
+								<p class="text-xs text-[#a8a8a8] truncate">
+									v{pack.version} · by {pack.author || 'Admin'}
+								</p>
 							</div>
 
-							<div class="flex items-center gap-1.5 flex-shrink-0">
-								<Badge variant="outline" class="font-mono text-[10px] uppercase">
+							<div class="flex items-center gap-1 shrink-0">
+								<CarbonTag type="blue" size="sm">
 									{pack.mod_loader}
-								</Badge>
-								<Badge variant="secondary" class="font-mono text-[10px]">
+								</CarbonTag>
+								<CarbonTag type="gray" size="sm">
 									MC {pack.mc_version}
-								</Badge>
+								</CarbonTag>
 							</div>
 						</div>
-					</CardHeader>
 
-					<CardContent class="py-2 text-xs text-muted-foreground">
-						<div class="flex items-center justify-between border-t border-b py-2 my-1">
-							<span class="flex items-center gap-1.5">
-								<Package class="h-3.5 w-3.5 text-primary" />
-								<strong>{pack.mod_count}</strong> {pack.mod_count === 1 ? 'mod' : 'mods'}
+						<!-- Metadata summary -->
+						<div class="flex items-center justify-between py-2 border-y border-[#393939] text-xs text-[#a8a8a8]">
+							<span class="flex items-center gap-1.5 font-mono">
+								<Package class="h-3.5 w-3.5 text-[#0f62fe]" />
+								<strong class="text-white">{pack.mod_count}</strong> {pack.mod_count === 1 ? 'mod' : 'mods'}
 							</span>
-							<span class="flex items-center gap-1 text-[11px]">
+							<span class="flex items-center gap-1 text-[11px] font-mono text-[#8d8d8d]">
 								<Calendar class="h-3 w-3" />
 								{new Date(pack.updated_at).toLocaleDateString()}
 							</span>
 						</div>
-					</CardContent>
+					</div>
 
-					<div class="p-4 pt-2 border-t flex items-center justify-between gap-2">
+					<!-- Tile Footer Actions -->
+					<div class="mt-4 pt-3 border-t border-[#393939] flex items-center justify-between gap-2">
 						<div class="flex items-center gap-1">
-							<Button
-								variant="ghost"
-								size="icon"
-								class="h-8 w-8 text-muted-foreground hover:text-foreground"
+							<CarbonButton
+								kind="ghost"
+								size="sm"
+								iconOnly
+								class="rounded-none text-[#a8a8a8] hover:text-white"
 								onclick={() => clonePack(pack)}
 								title="Duplicate / Clone modpack"
 							>
 								<Copy class="h-3.5 w-3.5" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								class="h-8 w-8 text-destructive hover:bg-destructive/10"
+							</CarbonButton>
+							<CarbonButton
+								kind="ghost"
+								size="sm"
+								iconOnly
+								class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 								onclick={() => deletePack(pack)}
 								title="Delete modpack"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
-							</Button>
+							</CarbonButton>
 						</div>
 
 						<div class="flex items-center gap-1.5">
-							<!-- Export Options -->
-							<Button
-								variant="outline"
+							<CarbonButton
+								kind="tertiary"
 								size="sm"
-								class="h-8 px-2 text-[11px]"
+								class="rounded-none h-8 px-2 text-[11px]"
 								onclick={() => exportPack(pack.id, 'packwiz', pack.name)}
 								disabled={exportingPack === `${pack.id}-packwiz`}
 								title="Export Native Packwiz .zip"
 							>
 								Packwiz
-							</Button>
-							<Button
-								variant="outline"
+							</CarbonButton>
+							<CarbonButton
+								kind="tertiary"
 								size="sm"
-								class="h-8 px-2 text-[11px]"
+								class="rounded-none h-8 px-2 text-[11px]"
 								onclick={() => exportPack(pack.id, 'mrpack', pack.name)}
 								disabled={exportingPack === `${pack.id}-mrpack`}
 								title="Export Modrinth .mrpack"
 							>
 								.mrpack
-							</Button>
+							</CarbonButton>
 
-							<Button
+							<CarbonButton
+								kind="primary"
 								size="sm"
-								class="h-8 text-xs"
+								class="rounded-none h-8 text-xs"
 								onclick={() => goto(`/modpacks/studio/${pack.id}`)}
 							>
 								Open Studio
-							</Button>
+							</CarbonButton>
 						</div>
 					</div>
-				</Card>
+				</CarbonTile>
 			{/each}
 		</div>
 	{/if}
 </div>
 
-<!-- Create Dialog -->
-<DialogPrimitive.Root bind:open={createDialogOpen}>
-	<DialogContent class="sm:max-w-[480px]">
-		<DialogHeader>
-			<DialogTitle class="flex items-center gap-2">
-				<PackagePlus class="h-5 w-5 text-primary" />
-				Create New Modpack
-			</DialogTitle>
-			<DialogDescription>
-				Initialize a new custom modpack managed with Packwiz.
-			</DialogDescription>
-		</DialogHeader>
+<!-- Create Dialog with Carbon Design System Fidelity -->
+<CarbonModal
+	bind:open={createDialogOpen}
+	title="Create New Modpack Project"
+	description="Initialize a new visual Packwiz workspace"
+	hasFooter={false}
+	size="lg"
+>
+	<div class="space-y-4">
+		<CarbonTextInput
+			label="Modpack Name *"
+			placeholder="e.g. Odyssey SMP"
+			bind:value={newName}
+			disabled={creating}
+		/>
 
-		<div class="space-y-4 py-3">
-			<div class="space-y-2">
-				<Label for="packName">Modpack Name</Label>
-				<Input id="packName" bind:value={newName} placeholder="e.g. Odyssey SMP" />
-			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-2">
-					<Label for="packAuthor">Author</Label>
-					<Input id="packAuthor" bind:value={newAuthor} placeholder="Admin" />
-				</div>
-				<div class="space-y-2">
-					<Label for="packVer">Initial Version</Label>
-					<Input id="packVer" bind:value={newVersion} placeholder="1.0.0" />
-				</div>
-			</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-2">
-					<Label for="mcVer">Minecraft Version</Label>
-					<Select type="single" bind:value={newMcVersion}>
-						<SelectTrigger id="mcVer">
-							<span>{newMcVersion}</span>
-						</SelectTrigger>
-						<SelectContent>
-							{#each MC_VERSIONS as v}
-								<SelectItem value={v}>{v}</SelectItem>
-							{/each}
-						</SelectContent>
-					</Select>
-				</div>
-
-				<div class="space-y-2">
-					<Label for="loader">Mod Loader</Label>
-					<Select type="single" bind:value={newLoader}>
-						<SelectTrigger id="loader">
-							<span class="capitalize">{newLoader}</span>
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="fabric">Fabric</SelectItem>
-							<SelectItem value="neoforge">NeoForge</SelectItem>
-							<SelectItem value="forge">Forge</SelectItem>
-							<SelectItem value="quilt">Quilt</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
-
-			<div class="space-y-2">
-				<div class="flex items-center justify-between">
-					<Label for="loaderVer">Loader Version</Label>
-					{#if loadingLoaderVersions}
-						<span class="inline-flex items-center text-[10px] text-muted-foreground">
-							<Loader2 class="h-2.5 w-2.5 mr-1 animate-spin" />
-							fetching versions...
-						</span>
-					{/if}
-				</div>
-				<Select type="single" bind:value={newLoaderVersion}>
-					<SelectTrigger id="loaderVer">
-						<span>{newLoaderVersion}</span>
-					</SelectTrigger>
-					<SelectContent class="max-h-56 overflow-y-auto">
-						{#each availableLoaderVersions as v}
-							<SelectItem value={v}>{v}</SelectItem>
-						{/each}
-					</SelectContent>
-				</Select>
-			</div>
+		<div class="grid grid-cols-2 gap-4">
+			<CarbonTextInput
+				label="Author"
+				placeholder="Admin"
+				bind:value={newAuthor}
+				disabled={creating}
+			/>
+			<CarbonTextInput
+				label="Initial Version"
+				placeholder="1.0.0"
+				bind:value={newVersion}
+				disabled={creating}
+			/>
 		</div>
 
-		<DialogFooter>
-			<Button variant="outline" onclick={() => (createDialogOpen = false)} disabled={creating}>
+		<div class="grid grid-cols-2 gap-4">
+			<CarbonSelect
+				label="Minecraft Version"
+				bind:value={newMcVersion}
+				disabled={creating}
+			>
+				{#each MC_VERSIONS as v}
+					<option value={v}>{v}</option>
+				{/each}
+			</CarbonSelect>
+
+			<CarbonSelect
+				label="Mod Loader"
+				bind:value={newLoader}
+				disabled={creating}
+			>
+				<option value="fabric">Fabric</option>
+				<option value="neoforge">NeoForge</option>
+				<option value="forge">Forge</option>
+				<option value="quilt">Quilt</option>
+			</CarbonSelect>
+		</div>
+
+		<CarbonSelect
+			label="Loader Version"
+			bind:value={newLoaderVersion}
+			disabled={creating}
+			helperText={loadingLoaderVersions ? 'Fetching compatible loader versions...' : undefined}
+		>
+			{#each availableLoaderVersions as v}
+				<option value={v}>{v}</option>
+			{/each}
+		</CarbonSelect>
+
+		<div class="flex items-center justify-end gap-3 pt-4 border-t border-[#393939]">
+			<CarbonButton
+				kind="secondary"
+				onclick={() => (createDialogOpen = false)}
+				disabled={creating}
+				class="rounded-none"
+			>
 				Cancel
-			</Button>
-			<Button onclick={handleCreatePack} disabled={creating}>
+			</CarbonButton>
+			<CarbonButton
+				kind="primary"
+				onclick={handleCreatePack}
+				disabled={creating || !newName.trim()}
+				class="rounded-none"
+			>
 				{#if creating}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 					Creating...
 				{:else}
 					Create Project
 				{/if}
-			</Button>
-		</DialogFooter>
-	</DialogContent>
-</DialogPrimitive.Root>
+			</CarbonButton>
+		</div>
+	</div>
+</CarbonModal>
 
-<!-- Import Dialog -->
-<DialogPrimitive.Root bind:open={importDialogOpen}>
-	<DialogContent class="sm:max-w-[500px]">
-		<DialogHeader>
-			<DialogTitle class="flex items-center gap-2">
-				<UploadCloud class="h-5 w-5 text-primary" />
-				Import Existing Modpack
-			</DialogTitle>
-			<DialogDescription>
-				Import a modpack archive from Modrinth (.mrpack), CurseForge (.zip), or a native Packwiz archive (.zip).
-			</DialogDescription>
-		</DialogHeader>
-
-		<div class="space-y-4 py-3">
-			<div class="space-y-2">
-				<Label for="importFile">Modpack Archive File</Label>
-				<Input
-					id="importFile"
-					type="file"
-					accept=".mrpack,.zip"
-					onchange={(e) => {
-						const target = e.target as HTMLInputElement;
-						if (target.files && target.files.length > 0) {
-							importFile = target.files[0];
-							if (!importName && importFile.name) {
-								importName = importFile.name.replace(/\.(mrpack|zip)$/i, '');
-							}
+<!-- Import Dialog with Carbon Design System Fidelity -->
+<CarbonModal
+	bind:open={importDialogOpen}
+	title="Import Existing Modpack"
+	description="Import a Modrinth (.mrpack), CurseForge (.zip), or Packwiz archive"
+	hasFooter={false}
+	size="lg"
+>
+	<div class="space-y-4">
+		<div class="space-y-1.5">
+			<label class="text-xs font-normal text-[#c6c6c6] tracking-[0.32px]">
+				Modpack Archive File (.mrpack or .zip) *
+			</label>
+			<input
+				type="file"
+				accept=".mrpack,.zip"
+				onchange={(e) => {
+					const target = e.target as HTMLInputElement;
+					if (target.files && target.files.length > 0) {
+						importFile = target.files[0];
+						if (!importName && importFile.name) {
+							importName = importFile.name.replace(/\.(mrpack|zip)$/i, '');
 						}
-					}}
-				/>
-				<p class="text-[11px] text-muted-foreground">
-					Supported formats: Modrinth (.mrpack), CurseForge manifest (.zip), or Packwiz archive (.zip).
-				</p>
-			</div>
-
-			<div class="space-y-2">
-				<Label for="importFormat">Format Detection</Label>
-				<Select type="single" bind:value={importFormat}>
-					<SelectTrigger id="importFormat">
-						<span class="capitalize">{importFormat === 'auto' ? 'Auto-detect format' : importFormat}</span>
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="auto">Auto-detect from file</SelectItem>
-						<SelectItem value="mrpack">Modrinth (.mrpack)</SelectItem>
-						<SelectItem value="curseforge">CurseForge (.zip manifest)</SelectItem>
-						<SelectItem value="packwiz">Native Packwiz (.zip)</SelectItem>
-					</SelectContent>
-				</Select>
-			</div>
-
-			<div class="space-y-2">
-				<Label for="importName">Project Name Override (Optional)</Label>
-				<Input id="importName" bind:value={importName} placeholder="Leave blank to use metadata name" />
-			</div>
+					}
+				}}
+				class="w-full p-2.5 bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none focus:outline-none focus:border-[#0f62fe]"
+			/>
 		</div>
 
-		<DialogFooter>
-			<Button variant="outline" onclick={() => (importDialogOpen = false)} disabled={importing}>
+		<CarbonSelect
+			label="Format Detection"
+			bind:value={importFormat}
+			disabled={importing}
+		>
+			<option value="auto">Auto-detect from file</option>
+			<option value="mrpack">Modrinth (.mrpack)</option>
+			<option value="curseforge">CurseForge (.zip manifest)</option>
+			<option value="packwiz">Native Packwiz (.zip)</option>
+		</CarbonSelect>
+
+		<CarbonTextInput
+			label="Project Name Override (Optional)"
+			placeholder="Leave blank to use metadata name"
+			bind:value={importName}
+			disabled={importing}
+		/>
+
+		<div class="flex items-center justify-end gap-3 pt-4 border-t border-[#393939]">
+			<CarbonButton
+				kind="secondary"
+				onclick={() => (importDialogOpen = false)}
+				disabled={importing}
+				class="rounded-none"
+			>
 				Cancel
-			</Button>
-			<Button onclick={handleImportPack} disabled={importing || !importFile}>
+			</CarbonButton>
+			<CarbonButton
+				kind="primary"
+				onclick={handleImportPack}
+				disabled={importing || !importFile}
+				class="rounded-none"
+			>
 				{#if importing}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 					Importing...
 				{:else}
 					Import Modpack
 				{/if}
-			</Button>
-		</DialogFooter>
-	</DialogContent>
-</DialogPrimitive.Root>
+			</CarbonButton>
+		</div>
+	</div>
+</CarbonModal>

@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
 	import { FilePlus, FolderPlus, Upload, RefreshCw, Search, X } from '@lucide/svelte';
 
 	interface Props {
@@ -17,53 +15,75 @@
 	let showSearch = $state(false);
 </script>
 
-<div class="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
-	<div class="flex items-center gap-0.5">
-		<Button size="icon" variant="ghost" class="h-7 w-7" onclick={onNewFile} title="New File">
+<div class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-3 py-1.5 font-sans">
+	<div class="flex items-center gap-1">
+		<button
+			type="button"
+			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
+			onclick={onNewFile}
+			title="New File"
+		>
 			<FilePlus class="h-3.5 w-3.5" />
-		</Button>
-		<Button size="icon" variant="ghost" class="h-7 w-7" onclick={onNewFolder} title="New Folder">
+			<span class="hidden sm:inline">New File</span>
+		</button>
+		<button
+			type="button"
+			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
+			onclick={onNewFolder}
+			title="New Folder"
+		>
 			<FolderPlus class="h-3.5 w-3.5" />
-		</Button>
-		<Button size="icon" variant="ghost" class="h-7 w-7" onclick={onUpload} title="Upload Files">
+			<span class="hidden sm:inline">New Folder</span>
+		</button>
+		<button
+			type="button"
+			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
+			onclick={onUpload}
+			title="Upload Files"
+		>
 			<Upload class="h-3.5 w-3.5" />
-		</Button>
+			<span class="hidden sm:inline">Upload</span>
+		</button>
 	</div>
-	<div class="flex items-center gap-0.5">
+
+	<div class="flex items-center gap-1">
 		{#if showSearch}
 			<div class="flex items-center gap-1">
-				<Input
-					class="h-7 w-40 text-xs"
-					placeholder="Filter files..."
+				<input
+					class="h-7 w-48 px-2 bg-[#161616] border border-[#525252] focus:border-[#0f62fe] focus:outline-none text-xs text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none font-sans"
+					placeholder="Search files..."
 					value={filterText}
 					oninput={(e) => onFilterChange((e.target as HTMLInputElement).value)}
 					autofocus
 				/>
-				<Button
-					size="icon"
-					variant="ghost"
-					class="h-7 w-7"
+				<button
+					type="button"
+					class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 					onclick={() => {
 						showSearch = false;
 						onFilterChange('');
 					}}
 				>
 					<X class="h-3.5 w-3.5" />
-				</Button>
+				</button>
 			</div>
 		{:else}
-			<Button
-				size="icon"
-				variant="ghost"
-				class="h-7 w-7"
+			<button
+				type="button"
+				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 				onclick={() => (showSearch = true)}
-				title="Filter"
+				title="Filter / Search"
 			>
 				<Search class="h-3.5 w-3.5" />
-			</Button>
+			</button>
 		{/if}
-		<Button size="icon" variant="ghost" class="h-7 w-7" onclick={onRefresh} title="Refresh">
+		<button
+			type="button"
+			class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
+			onclick={onRefresh}
+			title="Refresh tree"
+		>
 			<RefreshCw class="h-3.5 w-3.5" />
-		</Button>
+		</button>
 	</div>
 </div>

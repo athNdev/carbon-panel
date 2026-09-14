@@ -1,13 +1,16 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
+	import {
+		CarbonButton,
+		CarbonDataTable,
+		CarbonTag,
+		CarbonSelect
+	} from '$lib/components/carbon';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
 	import type { ModuleTemplate } from '$lib/proto/mineserver/v1/module_pb';
 	import { ModuleTemplateType } from '$lib/proto/mineserver/v1/module_pb';
-	import { Loader2, Plus, Trash2, Settings, Package, RefreshCw, Layers } from '@lucide/svelte';
+	import { Loader2, Plus, Trash2, Settings, RefreshCw, Layers } from '@lucide/svelte';
 	import ModuleTemplateCreateDialog from '$lib/components/server/ModuleTemplateCreateDialog.svelte';
 	import { onMount } from 'svelte';
 
@@ -65,7 +68,7 @@
 		return Array.from(cats).sort();
 	});
 
-	let selectedCategory = $state<string | null>(null);
+	let selectedCategory = $state<string>('');
 
 	let filteredTemplates = $derived.by(() => {
 		if (!selectedCategory) return templates;
@@ -73,139 +76,151 @@
 	});
 </script>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h3 class="text-lg font-medium">Module Templates</h3>
-			<p class="text-sm text-muted-foreground">Manage blueprints for creating module instances.</p>
-		</div>
-		<div class="flex items-center gap-2">
-			<Button variant="outline" size="sm" onclick={() => loadTemplates()} disabled={loading}>
-				{#if loading}
-					<Loader2 class="h-4 w-4 animate-spin" />
-				{:else}
-					<RefreshCw class="h-4 w-4" />
-				{/if}
-			</Button>
-			<Button onclick={() => (createDialogOpen = true)}>
-				<Plus class="mr-2 h-4 w-4" />
-				Create Template
-			</Button>
-		</div>
-	</div>
+<div class="space-y-4 font-sans text-[#f4f4f4] rounded-none">
+	{#snippet templateToolbar()}
+		<div class="flex items-center gap-2 flex-wrap">
+			<div class="w-36">
+				<CarbonSelect
+					bind:value={selectedCategory}
+				>
+					<option value="">All Categories</option>
+					{#each categories as cat}
+						<option value={cat}>{cat}</option>
+					{/each}
+				</CarbonSelect>
+			</div>
 
-	{#if categories.length > 0}
-		<div class="flex flex-wrap gap-2">
-			<Button
-				variant={selectedCategory === null ? 'default' : 'outline'}
+			<CarbonButton
+				kind="tertiary"
 				size="sm"
-				onclick={() => (selectedCategory = null)}
-				class="h-8 px-3"
+				class="rounded-none"
+				onclick={() => loadTemplates()}
+				disabled={loading}
+				title="Refresh templates"
 			>
-				All
-			</Button>
-			{#each categories as cat (cat)}
-				<Button
-					variant={selectedCategory === cat ? 'default' : 'outline'}
-					size="sm"
-					onclick={() => (selectedCategory = cat)}
-					class="h-8 px-3"
-				>
-					{cat}
-				</Button>
-			{/each}
-		</div>
-	{/if}
+				<RefreshCw class={`mr-1.5 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+				Refresh
+			</CarbonButton>
 
-	{#if loading && templates.length === 0}
-		<div class="flex items-center justify-center py-12">
-			<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
-		</div>
-	{:else if templates.length === 0}
-		<div
-			class="flex flex-col items-center justify-center rounded-lg border bg-card py-12 text-center"
-		>
-			<Layers class="mb-4 h-12 w-12 text-muted-foreground/50" />
-			<h3 class="mb-1 text-lg font-medium">No Templates Found</h3>
-			<p class="mb-4 max-w-sm text-sm text-muted-foreground">
-				You don't have any module templates configured yet.
-			</p>
-			<Button onclick={() => (createDialogOpen = true)}>
-				<Plus class="mr-2 h-4 w-4" />
+			<CarbonButton
+				kind="primary"
+				size="sm"
+				class="rounded-none"
+				onclick={() => (createDialogOpen = true)}
+			>
+				<Plus class="mr-1.5 h-4 w-4" />
 				Create Template
-			</Button>
+			</CarbonButton>
 		</div>
-	{:else}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+	{/snippet}
+
+	{#snippet templateHeader()}
+		<tr>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template Name</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Type</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Category</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Docker Image</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Description</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
+		</tr>
+	{/snippet}
+
+	<CarbonDataTable
+		title="Module Templates"
+		description="Blueprints for provisioning containerized services, monitoring sidecars, and proxies"
+		toolbar={templateToolbar}
+		header={templateHeader}
+		class="rounded-none"
+	>
+		{#if loading && templates.length === 0}
+			<tr>
+				<td colspan="6" class="py-16 text-center text-[#8d8d8d]">
+					<Loader2 class="mx-auto h-6 w-6 animate-spin text-[#0f62fe] mb-2" />
+					Loading templates...
+				</td>
+			</tr>
+		{:else if filteredTemplates.length === 0}
+			<tr>
+				<td colspan="6" class="py-16 text-center text-[#8d8d8d]">
+					<Layers class="mx-auto mb-3 h-10 w-10 text-[#525252]" />
+					<p class="text-sm font-semibold text-white">No module templates found</p>
+					<p class="text-xs text-[#8d8d8d] mt-1">Create your first custom module blueprint to get started.</p>
+					<div class="mt-4">
+						<CarbonButton size="sm" class="rounded-none" onclick={() => (createDialogOpen = true)}>
+							<Plus class="mr-1.5 h-4 w-4" />
+							Create Template
+						</CarbonButton>
+					</div>
+				</td>
+			</tr>
+		{:else}
 			{#each filteredTemplates as template (template.name)}
-				<Card
-					class="group relative overflow-hidden border shadow-sm transition-all hover:shadow-md"
-				>
-					<CardContent class="flex h-full flex-col p-5">
-						<div class="mb-4 flex items-start gap-4">
-							<div
-								class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10"
-							>
-								<DynamicIcon name={template.icon} class="h-6 w-6 text-primary" fallback="Package" />
+				<tr class="hover:bg-[#353535] transition-colors">
+					<td class="py-3 px-4 font-medium text-white">
+						<div class="flex items-center gap-2.5">
+							<div class="h-7 w-7 bg-[#161616] border border-[#393939] flex items-center justify-center text-[#0f62fe] shrink-0 rounded-none">
+								<DynamicIcon name={template.icon} class="h-4 w-4 text-[#0f62fe]" fallback="Package" />
 							</div>
-							<div class="min-w-0 flex-1">
-								<h3 class="truncate text-lg font-semibold">{template.name}</h3>
-								<div class="mt-1 flex flex-wrap items-center gap-2">
-									{#if template.type === ModuleTemplateType.BUILTIN}
-										<Badge variant="default" class="px-1.5 py-0 text-[10px]">Built-in</Badge>
-									{:else}
-										<Badge variant="outline" class="px-1.5 py-0 text-[10px]">Custom</Badge>
-									{/if}
-									{#if template.category}
-										<Badge variant="secondary" class="px-1.5 py-0 text-[10px]"
-											>{template.category}</Badge
-										>
-									{/if}
-								</div>
-							</div>
+							<span class="font-semibold text-sm">{template.name}</span>
 						</div>
+					</td>
 
-						<p class="mb-4 line-clamp-2 flex-1 text-sm text-muted-foreground">
-							{template.description || 'No description provided'}
-						</p>
+					<td class="py-3 px-4">
+						{#if template.type === ModuleTemplateType.BUILTIN}
+							<CarbonTag type="blue" size="sm">Built-in</CarbonTag>
+						{:else}
+							<CarbonTag type="purple" size="sm">Custom</CarbonTag>
+						{/if}
+					</td>
 
-						<div class="mt-auto flex items-center justify-between border-t pt-4">
-							<div class="max-w-[150px] truncate font-mono text-xs text-muted-foreground">
-								{template.dockerImage}
-							</div>
+					<td class="py-3 px-4">
+						{#if template.category}
+							<CarbonTag type="gray" size="sm">{template.category}</CarbonTag>
+						{:else}
+							<span class="text-xs text-[#8d8d8d] font-mono">-</span>
+						{/if}
+					</td>
 
+					<td class="py-3 px-4 font-mono text-xs text-[#a8a8a8] max-w-[180px] truncate" title={template.dockerImage}>
+						{template.dockerImage}
+					</td>
+
+					<td class="py-3 px-4 text-xs text-[#a8a8a8] max-w-[240px] truncate" title={template.description}>
+						{template.description || 'No description provided'}
+					</td>
+
+					<td class="py-3 px-4 text-right">
+						<div class="flex items-center justify-end gap-1">
 							{#if template.type === ModuleTemplateType.CUSTOM}
-								<div class="flex items-center gap-1">
-									<Button
-										size="icon"
-										variant="ghost"
-										onclick={() => openEditDialog(template)}
-										title="Edit template"
-										class="h-8 w-8"
-									>
-										<Settings class="h-4 w-4" />
-									</Button>
-									<Button
-										size="icon"
-										variant="ghost"
-										onclick={() => handleDeleteTemplate(template)}
-										title="Delete template"
-										class="h-8 w-8 text-destructive hover:text-destructive"
-									>
-										<Trash2 class="h-4 w-4" />
-									</Button>
-								</div>
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									class="rounded-none text-[#c6c6c6] hover:text-white"
+									onclick={() => openEditDialog(template)}
+									title="Edit template"
+								>
+									<Settings class="h-3.5 w-3.5" />
+								</CarbonButton>
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
+									onclick={() => handleDeleteTemplate(template)}
+									title="Delete template"
+								>
+									<Trash2 class="h-3.5 w-3.5" />
+								</CarbonButton>
 							{:else}
-								<div class="rounded bg-muted px-2 py-1 text-xs text-muted-foreground/50">
-									Read-only
-								</div>
+								<CarbonTag type="gray" size="sm">Read-only</CarbonTag>
 							{/if}
 						</div>
-					</CardContent>
-				</Card>
+					</td>
+				</tr>
 			{/each}
-		</div>
-	{/if}
+		{/if}
+	</CarbonDataTable>
 </div>
 
 <ModuleTemplateCreateDialog

@@ -12,8 +12,6 @@
 		UploadToMCLogsRequestSchema
 	} from '$lib/proto/mineserver/v1/server_pb';
 	import { ResizablePaneGroup, ResizablePane, ResizableHandle } from '$lib/components/ui/resizable';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from 'svelte-sonner';
 	import {
 		Terminal,
@@ -30,11 +28,11 @@
 	import AnsiToHtml from 'ansi-to-html';
 	import { getStringForEnum } from '$lib/utils';
 	import { wsClient } from '$lib/stores/websocket.svelte';
+	import { CarbonTag } from '$lib/components/carbon';
 
-	// Create ansi-to-html converter with proper options
 	const ansiConverter = new AnsiToHtml({
-		fg: '#e8e8e8',
-		bg: '#000000',
+		fg: '#f4f4f4',
+		bg: '#161616',
 		newline: false,
 		escapeXML: true,
 		stream: true
@@ -50,20 +48,14 @@
 	let tailLines = $state(500);
 	const MAX_LOG_ENTRIES = 5000;
 
-	// Ws state
 	let wsConnectionState = $derived(wsClient.state.connectionState);
-
-	// Cleanup functions for handlers
 	let cleanupHandlers: (() => void)[] = [];
-
-	// Track previous server ID
 	let previousServerId = server.id;
 
 	onDestroy(() => {
 		untrack(() => cleanupWebSocket());
 	});
 
-	// Start/stop polling based on active prop
 	$effect(() => {
 		if (active) {
 			untrack(() => setupWebSocket());
@@ -72,7 +64,6 @@
 		}
 	});
 
-	// Handle server changes
 	$effect(() => {
 		const currentServerId = server.id;
 		if (currentServerId !== previousServerId) {
@@ -80,12 +71,10 @@
 			previousServerId = currentServerId;
 
 			untrack(() => {
-				// Unsubscribe from old server
 				wsClient.unsubscribe(oldServerId);
 				logEntries = [];
 				command = '';
 
-				// Subscribe to new server
 				if (active) {
 					wsClient.subscribe(currentServerId, tailLines);
 				}
@@ -94,13 +83,9 @@
 	});
 
 	function setupWebSocket() {
-		// Clean up any existing handlers
 		cleanupWebSocket();
-
-		// Connect WebSocket
 		wsClient.connect();
 
-		// Register handlers
 		const unsubLogs = wsClient.onLogs((serverId, logs) => {
 			if (serverId === server.id) {
 				logEntries = logs.length > MAX_LOG_ENTRIES ? logs.slice(-MAX_LOG_ENTRIES) : logs;
@@ -109,7 +94,6 @@
 
 		const unsubLogEntry = wsClient.onLogEntry((serverId, logs) => {
 			if (serverId === server.id && logs.length > 0) {
-				// Just append logs - browser preserves scrollTop naturally
 				const combined = [...logEntries, ...logs];
 				logEntries =
 					combined.length > MAX_LOG_ENTRIES ? combined.slice(-MAX_LOG_ENTRIES) : combined;
@@ -120,7 +104,7 @@
 			if (result.serverId === server.id) {
 				loading = false;
 				if (result.success) {
-					toast.success('Command sent successfully');
+					toast.success('Command executed');
 				} else {
 					toast.error(result.error || 'Failed to execute command');
 				}
@@ -128,24 +112,17 @@
 		});
 
 		cleanupHandlers = [unsubLogs, unsubLogEntry, unsubCommandResult];
-
-		// Subscribe to server logs
 		wsClient.subscribe(server.id, tailLines);
 	}
 
 	function cleanupWebSocket() {
-		// Unsubscribe from current server
 		wsClient.unsubscribe(server.id);
-
-		// Clean up handlers
 		cleanupHandlers.forEach((cleanup) => cleanup());
 		cleanupHandlers = [];
 	}
 
-	// Handle auto-scrolling
 	$effect(() => {
 		if (logEntries.length > 0 && autoScroll && scrollAreaRef) {
-			// Use a microtask to ensure DOM has updated
 			queueMicrotask(() => {
 				if (scrollAreaRef) {
 					scrollAreaRef.scrollTop = scrollAreaRef.scrollHeight;
@@ -156,87 +133,93 @@
 
 	function handleScroll() {
 		if (!scrollAreaRef) return;
-
 		const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef;
-		const isAtBottom = scrollHeight - scrollTop - clientHeight < 5;
-
-		if (isAtBottom && !autoScroll) {
-			autoScroll = true;
-		} else if (!isAtBottom && autoScroll) {
-			autoScroll = false;
-		}
+		const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+		autoScroll = atBottom;
 	}
 
 	async function fetchLogs() {
-		if (loading) return;
-
-		// Don't try to fetch logs if server is not running
-		if (server.status === ServerStatus.STOPPED) {
-			return;
-		}
-
+		loading = true;
 		try {
 			const request = create(GetServerLogsRequestSchema, {
 				id: server.id,
 				tail: tailLines
 			});
 			const response = await rpcClient.server.getServerLogs(request);
-			const logs = response.logs || [];
-			logEntries = logs.length > MAX_LOG_ENTRIES ? logs.slice(-MAX_LOG_ENTRIES) : logs;
+			logEntries = response.logs;
 		} catch (error) {
-			console.error('Failed to fetch logs:', error);
-		}
-	}
-
-	async function sendCommand() {
-		if (!command.trim()) return;
-
-		loading = true;
-		const cmdToSend = command;
-		command = '';
-
-		// Use WebSocket if connected, otherwise fallback to RPC
-		if (wsClient.isReady) {
-			wsClient.sendCommand(server.id, cmdToSend);
-		} else {
-			try {
-				const request = create(SendCommandRequestSchema, {
-					id: server.id,
-					command: cmdToSend
-				});
-				const response = await rpcClient.server.sendCommand(request);
-				if (!response.success) {
-					toast.error(response.error || 'Failed to execute command');
-				}
-			} catch (error) {
-				console.error(
-					'Failed to send command: ' + (error instanceof Error ? error.message : 'Unknown error')
-				);
-			} finally {
-				loading = false;
-			}
+			toast.error(
+				'Failed to fetch logs: ' + (error instanceof Error ? error.message : 'Unknown error')
+			);
+		} finally {
+			loading = false;
 		}
 	}
 
 	async function clearLogs() {
-		const request = create(ClearServerLogsRequestSchema, {
-			id: server.id
-		});
-		await rpcClient.server.clearServerLogs(request);
-		logEntries = [];
-		toast.success('Console cleared');
+		try {
+			const request = create(ClearServerLogsRequestSchema, { id: server.id });
+			await rpcClient.server.clearServerLogs(request);
+			logEntries = [];
+			toast.success('Logs cleared');
+		} catch (error) {
+			toast.error(
+				'Failed to clear logs: ' + (error instanceof Error ? error.message : 'Unknown error')
+			);
+		}
+	}
+
+	async function sendCommand() {
+		if (!command.trim() || loading) return;
+
+		const currentCommand = command.trim();
+		command = '';
+		loading = true;
+
+		if (wsClient.isReady) {
+			wsClient.sendCommand(server.id, currentCommand);
+		} else {
+			await sendCommandViaRpc(currentCommand);
+		}
+	}
+
+	async function sendCommandViaRpc(cmdText: string) {
+		try {
+			const request = create(SendCommandRequestSchema, {
+				id: server.id,
+				command: cmdText
+			});
+			const response = await rpcClient.server.sendCommand(request);
+			if (response.success) {
+				toast.success('Command executed');
+				await fetchLogs();
+			} else {
+				toast.error(response.error || 'Failed to execute command');
+			}
+		} catch (error) {
+			toast.error(
+				'Failed to execute command: ' + (error instanceof Error ? error.message : 'Unknown error')
+			);
+		} finally {
+			loading = false;
+		}
 	}
 
 	let uploading = $state(false);
-
 	async function uploadToMCLogs() {
 		if (uploading) return;
 		uploading = true;
 		try {
-			const request = create(UploadToMCLogsRequestSchema, { id: server.id });
+			const request = create(UploadToMCLogsRequestSchema, {
+				id: server.id
+			});
 			const response = await rpcClient.server.uploadToMCLogs(request);
-			await navigator.clipboard.writeText(response.url);
-			toast.success('mclo.gs URL copied to clipboard');
+			if (response.url) {
+				window.open(response.url, '_blank');
+				toast.success('Logs uploaded to mclo.gs');
+			} else {
+				toast.error('Failed to upload logs');
+			}
 		} catch (error) {
 			toast.error(
 				'Failed to upload to mclo.gs: ' + (error instanceof Error ? error.message : 'Unknown error')
@@ -261,7 +244,6 @@
 	}
 
 	function handleTailChange() {
-		// Re-subscribe with new tail count
 		if (wsClient.isReady) {
 			wsClient.unsubscribe(server.id);
 			wsClient.subscribe(server.id, tailLines);
@@ -273,124 +255,135 @@
 	function getConnectionColor() {
 		switch (wsConnectionState) {
 			case 'authenticated':
-				return 'text-green-500';
+				return 'text-[#6fdc8c]';
 			case 'connected':
-				return 'text-yellow-500';
 			case 'connecting':
-				return 'text-yellow-500';
+				return 'text-[#f1c21b]';
 			default:
-				return 'text-zinc-500';
+				return 'text-[#8d8d8d]';
 		}
 	}
 </script>
 
+<!-- Carbon Code/Terminal Container (Requirement 5) -->
 <ResizablePaneGroup
 	direction="vertical"
-	class="h-full max-h-[800px] min-h-[400px] w-full overflow-hidden rounded-lg border bg-black"
+	class="h-full max-h-[800px] min-h-[450px] w-full overflow-hidden rounded-none border border-[#393939] bg-[#161616] font-mono text-[#f4f4f4]"
 >
-	<ResizablePane defaultSize={75} minSize={30}>
+	<ResizablePane defaultSize={78} minSize={30}>
 		<div class="flex h-full flex-col">
-			<div class="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
-				<div class="flex items-center gap-2">
-					<Terminal class="h-4 w-4 text-green-500" />
-					<span class="font-mono text-sm text-green-500">Server Console</span>
-					<Badge
-						variant={server.status === ServerStatus.RUNNING ||
-						server.status === ServerStatus.UNHEALTHY
-							? 'default'
-							: 'secondary'}
-						class="text-xs"
+			<!-- Terminal Header -->
+			<div class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-4 py-2">
+				<div class="flex items-center gap-2.5">
+					<Terminal class="h-4 w-4 text-[#0f62fe]" />
+					<span class="font-mono text-xs font-semibold text-[#f4f4f4] tracking-wider uppercase">
+						Server Console
+					</span>
+					<CarbonTag
+						type={server.status === ServerStatus.RUNNING ? 'green' : 'gray'}
+						size="sm"
 					>
-						{getStringForEnum(ServerStatus, server.status)?.toLowerCase()}
-					</Badge>
+						{getStringForEnum(ServerStatus, server.status)?.toUpperCase()}
+					</CarbonTag>
 					{#if wsConnectionState === 'authenticated'}
-						<Wifi class="h-3 w-3 {getConnectionColor()}" />
+						<Wifi class="h-3.5 w-3.5 {getConnectionColor()}" />
 					{:else}
-						<WifiOff class="h-3 w-3 {getConnectionColor()}" />
+						<WifiOff class="h-3.5 w-3.5 {getConnectionColor()}" />
 					{/if}
 				</div>
+
+				<!-- Toolbar Icon Buttons -->
 				<div class="flex items-center gap-1">
 					<Tooltip.Root>
 						<Tooltip.Trigger>
-							<Button
-								size="sm"
-								variant="ghost"
+							<button
+								type="button"
 								onclick={fetchLogs}
 								disabled={loading}
-								class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 							>
 								{#if loading}
-									<Loader2 class="h-3 w-3 animate-spin" />
+									<Loader2 class="h-3.5 w-3.5 animate-spin" />
 								{:else}
-									<RefreshCw class="h-3 w-3" />
+									<RefreshCw class="h-3.5 w-3.5" />
 								{/if}
-							</Button>
+							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content>Refresh logs</Tooltip.Content>
+						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+							Refresh logs
+						</Tooltip.Content>
 					</Tooltip.Root>
+
 					<Tooltip.Root>
 						<Tooltip.Trigger>
-							<Button
-								size="sm"
-								variant="ghost"
+							<button
+								type="button"
 								onclick={uploadToMCLogs}
 								disabled={uploading}
-								class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 							>
 								{#if uploading}
-									<Loader2 class="h-3 w-3 animate-spin" />
+									<Loader2 class="h-3.5 w-3.5 animate-spin" />
 								{:else}
-									<Upload class="h-3 w-3" />
+									<Upload class="h-3.5 w-3.5" />
 								{/if}
-							</Button>
+							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content>Upload to mclo.gs</Tooltip.Content>
+						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+							Upload to mclo.gs
+						</Tooltip.Content>
 					</Tooltip.Root>
+
 					<Tooltip.Root>
 						<Tooltip.Trigger>
-							<Button
-								size="sm"
-								variant="ghost"
+							<button
+								type="button"
 								onclick={downloadLogs}
 								disabled={logEntries.length === 0}
-								class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer disabled:opacity-40"
 							>
-								<Download class="h-3 w-3" />
-							</Button>
+								<Download class="h-3.5 w-3.5" />
+							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content>Download logs</Tooltip.Content>
+						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+							Download raw log
+						</Tooltip.Content>
 					</Tooltip.Root>
+
 					<Tooltip.Root>
 						<Tooltip.Trigger>
-							<Button
-								size="sm"
-								variant="ghost"
+							<button
+								type="button"
 								onclick={clearLogs}
 								disabled={logEntries.length === 0}
-								class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-[#ff8389] hover:bg-[#353535] rounded-none transition-colors cursor-pointer disabled:opacity-40"
 							>
-								<Trash2 class="h-3 w-3" />
-							</Button>
+								<Trash2 class="h-3.5 w-3.5" />
+							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content>Clear console</Tooltip.Content>
+						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+							Clear buffer
+						</Tooltip.Content>
 					</Tooltip.Root>
 				</div>
 			</div>
+
+			<!-- Terminal Output Stream -->
 			<div
-				class="custom-scrollbar min-h-0 flex-1 overflow-x-auto overflow-y-auto bg-black px-4 py-2"
+				class="custom-scrollbar min-h-0 flex-1 overflow-x-auto overflow-y-auto bg-[#161616] p-4 selection:bg-[#0f62fe] selection:text-white"
 				bind:this={scrollAreaRef}
 				onscroll={handleScroll}
 			>
-				<div class="font-mono text-xs text-zinc-300">
+				<div class="font-mono text-xs leading-relaxed text-[#f4f4f4]">
 					{#if logEntries.length === 0}
-						<div class="py-8 text-center text-zinc-500">
+						<div class="py-12 text-center text-[#6f6f6f] font-mono text-xs">
 							No logs available. {[
 								ServerStatus.RUNNING,
 								ServerStatus.STARTING,
 								ServerStatus.UNHEALTHY
 							].includes(server.status)
-								? 'Try refreshing the page.'
-								: 'Start the server to see output.'}
+								? 'Try refreshing or emitting server events.'
+								: 'Start server to view live container telemetry.'}
 						</div>
 					{:else}
 						{#each logEntries as entry, i (i)}
@@ -405,47 +398,50 @@
 		</div>
 	</ResizablePane>
 
-	<ResizableHandle class="bg-zinc-800 hover:bg-zinc-700" />
+	<ResizableHandle class="bg-[#393939] hover:bg-[#525252] transition-colors" />
 
-	<div class="flex flex-col bg-zinc-950">
-		<div class="flex shrink-0 gap-2 border-t border-zinc-800 p-3">
-			<div class="flex flex-1 items-center gap-2">
-				<span class="font-mono text-sm text-green-500">$</span>
-				<input
-					type="text"
-					placeholder={server.status === ServerStatus.RUNNING ||
-					server.status === ServerStatus.UNHEALTHY
-						? 'Enter command...'
-						: 'Server must be running'}
-					bind:value={command}
-					disabled={server.status !== ServerStatus.RUNNING &&
-						server.status !== ServerStatus.UNHEALTHY}
-					onkeydown={(e) => e.key === 'Enter' && sendCommand()}
-					class="flex-1 bg-transparent font-mono text-sm text-white outline-none placeholder:text-zinc-600"
-				/>
-			</div>
-			<Button
+	<!-- Carbon Command Input Bar -->
+	<div class="flex flex-col bg-[#262626]">
+		<div class="flex shrink-0 items-center gap-2 p-3">
+			<span class="font-mono text-sm text-[#0f62fe] font-bold select-none">$</span>
+			<input
+				type="text"
+				placeholder={server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY
+					? 'Enter Minecraft server command (e.g. op, whitelist, stop)...'
+					: 'Server must be active to execute commands'}
+				bind:value={command}
+				disabled={server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY}
+				onkeydown={(e) => e.key === 'Enter' && sendCommand()}
+				class="flex-1 h-9 px-3 bg-[#161616] border border-[#525252] focus:border-[#0f62fe] focus:outline-none font-mono text-xs text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none transition-all disabled:opacity-40"
+			/>
+			<button
+				type="button"
 				onclick={sendCommand}
 				disabled={server.status === ServerStatus.STOPPED || !command.trim()}
-				size="sm"
-				class="h-7 bg-zinc-800 px-3 text-white hover:bg-zinc-700"
+				class="h-9 px-4 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-xs font-mono flex items-center gap-1.5 rounded-none transition-colors cursor-pointer disabled:opacity-40 disabled:bg-[#393939]"
 			>
-				<Send class="h-3 w-3" />
-			</Button>
+				<Send class="h-3.5 w-3.5" />
+				<span>Send</span>
+			</button>
 		</div>
 
-		<div class="flex shrink-0 items-center justify-between px-3 pb-2 text-xs text-zinc-500">
+		<!-- Status / Config Footer -->
+		<div class="flex shrink-0 items-center justify-between border-t border-[#393939] bg-[#161616] px-3 py-1.5 text-xs text-[#8d8d8d] font-mono">
 			<div class="flex items-center gap-4">
-				<label class="flex items-center gap-2">
-					<input type="checkbox" bind:checked={autoScroll} class="h-3 w-3 rounded" />
-					Auto-scroll
+				<label class="flex items-center gap-2 cursor-pointer select-none">
+					<input
+						type="checkbox"
+						bind:checked={autoScroll}
+						class="h-3.5 w-3.5 rounded-none accent-[#0f62fe]"
+					/>
+					<span>Auto-scroll</span>
 				</label>
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-1.5">
 					<span>Tail:</span>
 					<select
 						bind:value={tailLines}
 						onchange={handleTailChange}
-						class="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs"
+						class="h-6 px-1.5 bg-[#262626] border border-[#393939] text-xs font-mono text-[#f4f4f4] rounded-none focus:outline-none focus:border-[#0f62fe]"
 					>
 						<option value={100}>100</option>
 						<option value={500}>500</option>
@@ -454,8 +450,8 @@
 					</select>
 				</div>
 			</div>
-			<div class="font-mono">
-				{logEntries.length} lines
+			<div class="font-mono text-[11px] text-[#8d8d8d]">
+				{logEntries.length} lines in buffer
 			</div>
 		</div>
 	</div>
@@ -464,52 +460,48 @@
 <style>
 	.custom-scrollbar {
 		scrollbar-width: thin;
-		scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+		scrollbar-color: #393939 transparent;
 	}
 
 	.custom-scrollbar::-webkit-scrollbar {
-		width: 12px;
+		width: 10px;
 	}
 
 	.custom-scrollbar::-webkit-scrollbar-track {
-		background: transparent;
+		background: #161616;
 	}
 
 	.custom-scrollbar::-webkit-scrollbar-thumb {
-		background-color: hsl(var(--muted-foreground) / 0.3);
-		border-radius: 6px;
-		border: 3px solid transparent;
-		background-clip: content-box;
+		background-color: #393939;
+		border-radius: 0px;
 	}
 
 	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-		background-color: hsl(var(--muted-foreground) / 0.5);
+		background-color: #525252;
 	}
 
 	.log-line {
-		padding: 0.125rem 0;
-		line-height: 1.4;
+		padding: 1px 0;
+		line-height: 1.5;
 	}
 
 	.log-line:hover {
-		background-color: rgba(39, 39, 42, 0.5);
+		background-color: #262626;
 	}
 
-	/* Visually distinguish command inputs */
 	.log-line[data-type='command'] {
-		color: #4ade80;
+		color: #78a9ff;
 		font-weight: 500;
 	}
 
 	.log-line[data-type='command']::before {
 		content: '$ ';
-		color: #22c55e;
+		color: #0f62fe;
 		font-weight: bold;
 	}
 
-	/* Style command output differently */
 	.log-line[data-type='command_output'] {
 		opacity: 0.9;
-		padding-left: 1rem;
+		padding-left: 0.75rem;
 	}
 </style>
