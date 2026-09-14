@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package proxy
 
 import (
@@ -123,6 +132,15 @@ func ReadHandshakePacket(r io.Reader) (*HandshakePacket, error) {
 	addressLen, err := ReadVarInt(buf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read address length: %w", err)
+	}
+
+	// addressLen is attacker-controlled: a crafted 5-byte VarInt can decode
+	// to a negative int32 (make() panics on a negative length) or to a large
+	// positive value (a multi-GB allocation attempt) before the subsequent
+	// ReadFull would ever fail. Bound it to what's actually left in the
+	// packet buffer, which is itself already capped to 255 bytes above.
+	if addressLen < 0 || int(addressLen) > buf.Len() {
+		return nil, fmt.Errorf("invalid address length: %d", addressLen)
 	}
 
 	addressBytes := make([]byte, addressLen)
