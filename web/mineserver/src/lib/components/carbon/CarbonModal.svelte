@@ -9,9 +9,12 @@
 		primaryButtonText?: string;
 		secondaryButtonText?: string;
 		danger?: boolean;
+		size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+		hasFooter?: boolean;
 		onprimary?: () => void;
 		onsecondary?: () => void;
 		onclose?: () => void;
+		footer?: Snippet;
 		children?: Snippet;
 	}
 
@@ -22,11 +25,26 @@
 		primaryButtonText = 'Confirm',
 		secondaryButtonText = 'Cancel',
 		danger = false,
+		size = '2xl',
+		hasFooter = true,
 		onprimary,
 		onsecondary,
 		onclose,
+		footer,
 		children
 	}: Props = $props();
+
+	const sizeClasses = {
+		sm: 'max-w-sm',
+		md: 'max-w-md',
+		lg: 'max-w-lg',
+		xl: 'max-w-xl',
+		'2xl': 'max-w-2xl',
+		'3xl': 'max-w-3xl',
+		'4xl': 'max-w-4xl',
+		'5xl': 'max-w-5xl',
+		full: 'max-w-[95vw] w-[95vw] h-[90vh]'
+	};
 
 	function handleClose() {
 		open = false;
@@ -35,10 +53,10 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none">
-		<div class="w-full max-w-2xl bg-[#161616] border border-[#393939] shadow-2xl flex flex-col max-h-[90vh]">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none rounded-none">
+		<div class="w-full {sizeClasses[size]} bg-[#161616] border border-[#393939] shadow-2xl flex flex-col max-h-[90vh] rounded-none">
 			<!-- Header -->
-			<div class="p-6 border-b border-[#393939] flex items-start justify-between bg-[#262626]">
+			<div class="p-6 border-b border-[#393939] flex items-start justify-between bg-[#262626] rounded-none">
 				<div>
 					{#if description}
 						<span class="font-sans text-xs font-normal text-[#c6c6c6]">{description}</span>
@@ -48,7 +66,7 @@
 				<button
 					type="button"
 					onclick={handleClose}
-					class="text-[#c6c6c6] hover:text-white hover:bg-[#353535] p-2 transition-colors cursor-pointer"
+					class="text-[#c6c6c6] hover:text-white hover:bg-[#353535] p-2 transition-colors cursor-pointer rounded-none"
 					aria-label="Close modal"
 				>
 					<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -58,31 +76,37 @@
 			</div>
 
 			<!-- Body -->
-			<div class="p-6 overflow-y-auto flex-1 font-sans text-sm text-[#f4f4f4] space-y-4">
+			<div class="p-6 overflow-y-auto flex-1 font-sans text-sm text-[#f4f4f4] space-y-4 rounded-none">
 				{@render children?.()}
 			</div>
 
 			<!-- Footer -->
-			<div class="flex items-center justify-end border-t border-[#393939] bg-[#262626]">
-				<CarbonButton
-					kind="secondary"
-					size="lg"
-					class="w-1/2 justify-center"
-					onclick={() => {
-						onsecondary ? onsecondary() : handleClose();
-					}}
-				>
-					{secondaryButtonText}
-				</CarbonButton>
-				<CarbonButton
-					kind={danger ? 'danger' : 'primary'}
-					size="lg"
-					class="w-1/2 justify-center"
-					onclick={onprimary}
-				>
-					{primaryButtonText}
-				</CarbonButton>
-			</div>
+			{#if footer}
+				<div class="border-t border-[#393939] bg-[#262626] rounded-none">
+					{@render footer()}
+				</div>
+			{:else if hasFooter}
+				<div class="flex items-center justify-end border-t border-[#393939] bg-[#262626] rounded-none">
+					<CarbonButton
+						kind="secondary"
+						size="lg"
+						class="w-1/2 justify-center rounded-none"
+						onclick={() => {
+							onsecondary ? onsecondary() : handleClose();
+						}}
+					>
+						{secondaryButtonText}
+					</CarbonButton>
+					<CarbonButton
+						kind={danger ? 'danger' : 'primary'}
+						size="lg"
+						class="w-1/2 justify-center rounded-none"
+						onclick={onprimary}
+					>
+						{primaryButtonText}
+					</CarbonButton>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}

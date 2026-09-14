@@ -1,14 +1,4 @@
 <script lang="ts">
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Input } from '$lib/components/ui/input';
 	import { resolve } from '$app/paths';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { rpcClient } from '$lib/api/rpc-client';
@@ -25,13 +15,19 @@
 		Users,
 		Zap,
 		MemoryStick,
-		Wifi
+		Wifi,
+		Table as TableIcon,
+		LayoutGrid,
+		ArrowRight
 	} from '@lucide/svelte';
 	import { type Server, ServerStatus, ModLoader } from '$lib/proto/mineserver/v1/common_pb';
+	import { CarbonTag } from '$lib/components/carbon';
 
 	let servers = $derived($serversStore);
 	let filteredServers = $state<Server[]>([]);
 	let searchQuery = $state('');
+	let statusFilter = $state<'all' | 'running' | 'stopped' | 'issues'>('all');
+	let viewMode = $state<'table' | 'tiles'>('table');
 	let loading = $state(false);
 
 	$effect(() => {
@@ -40,24 +36,39 @@
 
 	function filterServers() {
 		let sorted = sortServersByActivity([...servers]);
-		if (!searchQuery) {
+
+		// Status filter
+		if (statusFilter === 'running') {
+			sorted = sorted.filter((s) => s.status === ServerStatus.RUNNING);
+		} else if (statusFilter === 'stopped') {
+			sorted = sorted.filter((s) => s.status === ServerStatus.STOPPED);
+		} else if (statusFilter === 'issues') {
+			sorted = sorted.filter(
+				(s) => s.status === ServerStatus.ERROR || s.status === ServerStatus.UNHEALTHY
+			);
+		}
+
+		if (!searchQuery.trim()) {
 			filteredServers = sorted;
 		} else {
-			const query = searchQuery.toLowerCase();
+			const query = searchQuery.toLowerCase().trim();
 			filteredServers = sorted.filter(
 				(server) =>
 					server.name.toLowerCase().includes(query) ||
 					server.description.toLowerCase().includes(query) ||
 					server.mcVersion.toLowerCase().includes(query) ||
-					String(server.modLoader).toLowerCase().includes(query)
+					String(server.modLoader).toLowerCase().includes(query) ||
+					String(server.port).includes(query)
 			);
 		}
 	}
 
 	async function handleServerAction(
 		action: 'start' | 'stop' | 'restart' | 'recreate',
-		server: Server
+		server: Server,
+		event?: MouseEvent
 	) {
+		event?.stopPropagation();
 		loading = true;
 		try {
 			switch (action) {
@@ -87,7 +98,8 @@
 		}
 	}
 
-	async function deleteServer(server: Server) {
+	async function deleteServer(server: Server, event?: MouseEvent) {
+		event?.stopPropagation();
 		if (
 			!confirm(`Are you sure you want to delete "${server.name}"? This action cannot be undone.`)
 		) {
@@ -108,80 +120,49 @@
 		}
 	}
 
-	function getStatusBadgeColor(status: ServerStatus): string {
+	function getStatusTagType(
+		status: ServerStatus
+	): 'green' | 'gray' | 'blue' | 'red' | 'warm-gray' | 'purple' {
 		switch (status) {
 			case ServerStatus.RUNNING:
-				return 'bg-green-500/10 text-green-500 border-green-500/20';
+				return 'green';
+			case ServerStatus.STOPPED:
+				return 'gray';
 			case ServerStatus.STARTING:
-			case ServerStatus.STOPPING:
 			case ServerStatus.CREATING:
+				return 'blue';
 			case ServerStatus.RESTARTING:
-				return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+				return 'purple';
+			case ServerStatus.STOPPING:
+				return 'warm-gray';
 			case ServerStatus.ERROR:
 			case ServerStatus.UNHEALTHY:
-				return 'bg-red-500/10 text-red-500 border-red-500/20';
-			case ServerStatus.STOPPED:
+				return 'red';
 			default:
-				return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-		}
-	}
-
-	function getStatusAccentColor(status: ServerStatus): string {
-		switch (status) {
-			case ServerStatus.RUNNING:
-				return 'via-green-500/50';
-			case ServerStatus.STARTING:
-			case ServerStatus.STOPPING:
-			case ServerStatus.CREATING:
-			case ServerStatus.RESTARTING:
-				return 'via-yellow-500/50';
-			case ServerStatus.ERROR:
-			case ServerStatus.UNHEALTHY:
-				return 'via-red-500/50';
-			case ServerStatus.STOPPED:
-			default:
-				return 'via-gray-500/30';
+				return 'gray';
 		}
 	}
 
 	function getStatusDisplayName(status: ServerStatus): string {
 		switch (status) {
 			case ServerStatus.RUNNING:
-				return 'Running';
+				return 'RUNNING';
 			case ServerStatus.STOPPED:
-				return 'Stopped';
+				return 'STOPPED';
 			case ServerStatus.STARTING:
-				return 'Starting';
+				return 'STARTING';
 			case ServerStatus.STOPPING:
-				return 'Stopping';
+				return 'STOPPING';
 			case ServerStatus.ERROR:
-				return 'Error';
+				return 'ERROR';
 			case ServerStatus.CREATING:
-				return 'Creating';
+				return 'CREATING';
 			case ServerStatus.RESTARTING:
-				return 'Restarting';
+				return 'RESTARTING';
 			case ServerStatus.UNHEALTHY:
-				return 'Unhealthy';
+				return 'UNHEALTHY';
 			default:
-				return 'Unknown';
-		}
-	}
-
-	function getStatusDotColor(status: ServerStatus): string {
-		switch (status) {
-			case ServerStatus.RUNNING:
-				return 'bg-green-500 animate-pulse';
-			case ServerStatus.STARTING:
-			case ServerStatus.STOPPING:
-			case ServerStatus.CREATING:
-			case ServerStatus.RESTARTING:
-				return 'bg-yellow-500 animate-pulse';
-			case ServerStatus.ERROR:
-			case ServerStatus.UNHEALTHY:
-				return 'bg-red-500 animate-pulse';
-			case ServerStatus.STOPPED:
-			default:
-				return 'bg-gray-400';
+				return 'UNKNOWN';
 		}
 	}
 
@@ -190,168 +171,370 @@
 	}
 </script>
 
-<div class="h-full flex-1 space-y-8 bg-linear-to-br from-background to-muted/10 p-8 pt-6">
-	<div class="flex items-center justify-between border-b-2 border-border/50 pb-6">
+<div class="h-full flex-1 space-y-6 bg-[#161616] p-6 text-[#f4f4f4] font-sans">
+	<!-- Carbon Page Header -->
+	<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#393939] gap-4">
 		<div class="flex items-center gap-4">
-			<div
-				class="flex h-16 w-16 animate-in items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/10 shadow-lg duration-500 fade-in-50"
-			>
-				<ServerIcon class="h-8 w-8 text-primary" />
+			<div class="flex h-12 w-12 shrink-0 items-center justify-center bg-[#262626] border border-[#393939] text-[#0f62fe]">
+				<ServerIcon class="h-6 w-6" />
 			</div>
-			<div class="animate-in space-y-1 duration-500 slide-in-from-left-5">
-				<h2
-					class="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent"
-				>
-					Servers
-				</h2>
-				<p class="text-base text-muted-foreground">
-					Manage and monitor your Minecraft server instances
+			<div>
+				<div class="flex items-center gap-2.5">
+					<h1 class="text-2xl font-light tracking-tight text-[#f4f4f4]">Servers</h1>
+					<span class="px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 text-xs font-mono">
+						MANAGEMENT
+					</span>
+				</div>
+				<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
+					Manage, inspect, and deploy your Minecraft server instances
 				</p>
 			</div>
 		</div>
-		<div class="flex animate-in items-center gap-2 duration-500 slide-in-from-right-5">
-			<Button
+		<div class="flex items-center gap-2">
+			<a
 				href="/servers/new"
-				size="default"
-				class="bg-linear-to-r from-primary to-primary/80 shadow-lg transition-all hover:scale-[1.02] hover:from-primary/90 hover:to-primary/70 hover:shadow-xl"
+				class="h-10 px-4 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-sm font-sans font-medium flex items-center gap-2 rounded-none transition-colors cursor-pointer select-none"
 			>
-				<Plus class="mr-2 h-5 w-5" />
-				New Server
-			</Button>
+				<Plus class="h-4 w-4" />
+				<span>Create Server</span>
+			</a>
 		</div>
 	</div>
 
-	<div
-		class="flex animate-in items-center gap-4 duration-500 fade-in-50 slide-in-from-bottom-2"
-		style="animation-delay: 100ms"
-	>
-		<div class="relative max-w-md flex-1">
-			<Search class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-			<Input
-				type="search"
-				placeholder="Search by name, version, or mod loader..."
-				class="h-11 border-2 pl-10 focus:border-primary/50"
-				bind:value={searchQuery}
-			/>
+	<!-- Carbon Action Bar: Search, Filters, View Toggles -->
+	<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#262626] border border-[#393939] p-3">
+		<!-- Search Input (Carbon Style) -->
+		<div class="relative flex-1 max-w-lg">
+			<div class="relative flex items-center">
+				<Search class="absolute left-3 h-4 w-4 text-[#8d8d8d] pointer-events-none" />
+				<input
+					type="search"
+					placeholder="Search by name, description, version, loader, or port..."
+					bind:value={searchQuery}
+					class="w-full h-9 pl-9 pr-3 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:outline-none text-xs font-sans text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none transition-all"
+				/>
+			</div>
 		</div>
-		{#if servers.length > 0}
-			<div class="flex items-center gap-4 text-sm text-muted-foreground">
-				<div class="flex items-center gap-1.5">
-					<div class="h-2 w-2 rounded-full bg-green-500"></div>
-					<span>{servers.filter((s) => s.status === ServerStatus.RUNNING).length} running</span>
-				</div>
-				<div class="flex items-center gap-1.5">
-					<div class="h-2 w-2 rounded-full bg-gray-400"></div>
-					<span>{servers.filter((s) => s.status === ServerStatus.STOPPED).length} stopped</span>
-				</div>
+
+		<!-- Status Filter Tags and View Toggles -->
+		<div class="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+			<!-- Filter Tags -->
+			<div class="flex items-center gap-1 border-r border-[#393939] pr-2 mr-1">
+				<button
+					type="button"
+					onclick={() => (statusFilter = 'all')}
+					class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'all' ? 'bg-[#0f62fe] text-white border-[#0f62fe]' : 'bg-[#161616] text-[#c6c6c6] border-[#393939] hover:bg-[#353535]'}"
+				>
+					All ({servers.length})
+				</button>
+				<button
+					type="button"
+					onclick={() => (statusFilter = 'running')}
+					class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'running' ? 'bg-[#198038] text-white border-[#198038]' : 'bg-[#161616] text-[#6fdc8c] border-[#198038]/50 hover:bg-[#353535]'}"
+				>
+					Running ({servers.filter((s) => s.status === ServerStatus.RUNNING).length})
+				</button>
+				<button
+					type="button"
+					onclick={() => (statusFilter = 'stopped')}
+					class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'stopped' ? 'bg-[#525252] text-white border-[#525252]' : 'bg-[#161616] text-[#c6c6c6] border-[#525252]/60 hover:bg-[#353535]'}"
+				>
+					Stopped ({servers.filter((s) => s.status === ServerStatus.STOPPED).length})
+				</button>
 				{#if servers.some((s) => s.status === ServerStatus.ERROR || s.status === ServerStatus.UNHEALTHY)}
-					<div class="flex items-center gap-1.5">
-						<div class="h-2 w-2 rounded-full bg-red-500"></div>
-						<span class="text-red-500"
-							>{servers.filter(
-								(s) => s.status === ServerStatus.ERROR || s.status === ServerStatus.UNHEALTHY
-							).length} issues</span
-						>
-					</div>
+					<button
+						type="button"
+						onclick={() => (statusFilter = 'issues')}
+						class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'issues' ? 'bg-[#da1e28] text-white border-[#da1e28]' : 'bg-[#161616] text-[#ff8389] border-[#da1e28]/50 hover:bg-[#353535]'}"
+					>
+						Issues ({servers.filter((s) => s.status === ServerStatus.ERROR || s.status === ServerStatus.UNHEALTHY).length})
+					</button>
 				{/if}
 			</div>
-		{/if}
+
+			<!-- View Mode Switcher -->
+			<div class="flex items-center border border-[#393939] bg-[#161616]">
+				<button
+					type="button"
+					onclick={() => (viewMode = 'table')}
+					title="Table View"
+					class="h-8 w-8 flex items-center justify-center transition-colors cursor-pointer rounded-none {viewMode === 'table' ? 'bg-[#393939] text-[#f4f4f4]' : 'text-[#8d8d8d] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+				>
+					<TableIcon class="h-4 w-4" />
+				</button>
+				<button
+					type="button"
+					onclick={() => (viewMode = 'tiles')}
+					title="Tile View"
+					class="h-8 w-8 flex items-center justify-center transition-colors cursor-pointer rounded-none {viewMode === 'tiles' ? 'bg-[#393939] text-[#f4f4f4]' : 'text-[#8d8d8d] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+				>
+					<LayoutGrid class="h-4 w-4" />
+				</button>
+			</div>
+		</div>
 	</div>
 
+	<!-- Empty State -->
 	{#if filteredServers.length === 0}
-		<Card class="animate-in border-border/50 duration-500 fade-in-50 slide-in-from-bottom-5">
-			<CardContent class="py-16 text-center">
-				{#if servers.length === 0}
-					<div
-						class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/20 to-primary/10"
-					>
-						<ServerIcon class="h-8 w-8 text-primary" />
-					</div>
-					<h3 class="mb-1 text-lg font-semibold">No servers yet</h3>
-					<p class="mb-6 text-sm text-muted-foreground">
-						Create your first Minecraft server to get started
-					</p>
-					<Button
-						href="/servers/new"
-						class="bg-linear-to-r from-primary to-primary/80 shadow-lg transition-all hover:scale-[1.02] hover:from-primary/90 hover:to-primary/70 hover:shadow-xl"
-					>
-						<Plus class="mr-2 h-4 w-4" />
-						Create Server
-					</Button>
-				{:else}
-					<div
-						class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-muted to-muted/50"
-					>
-						<Search class="h-8 w-8 text-muted-foreground" />
-					</div>
-					<h3 class="mb-1 text-lg font-semibold">No results found</h3>
-					<p class="text-sm text-muted-foreground">Try adjusting your search query.</p>
-				{/if}
-			</CardContent>
-		</Card>
-	{:else}
-		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-			{#each filteredServers as server, i (server.id)}
-				<Card
-					class="group relative h-full animate-in overflow-hidden border-0 bg-linear-to-br from-background via-background/95 to-background/90 shadow-lg transition-all duration-500 fade-in-50 slide-in-from-bottom-3 hover:-translate-y-1 hover:shadow-2xl"
-					style="animation-delay: {150 + i * 75}ms"
+		<div class="bg-[#262626] border border-[#393939] p-12 text-center rounded-none">
+			{#if servers.length === 0}
+				<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center bg-[#161616] border border-[#393939] text-[#0f62fe]">
+					<ServerIcon class="h-7 w-7" />
+				</div>
+				<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">No servers configured</h3>
+				<p class="mb-6 text-xs text-[#a8a8a8] max-w-md mx-auto font-sans">
+					Create your first Minecraft server instance to begin managing containers and game topology.
+				</p>
+				<a
+					href="/servers/new"
+					class="inline-flex h-10 px-4 bg-[#0f62fe] hover:bg-[#0353e9] text-white text-sm font-sans font-medium items-center gap-2 rounded-none transition-colors"
 				>
-					<!-- Status accent line -->
-					<div
-						class="absolute top-0 right-0 left-0 h-1 bg-linear-to-r from-transparent {getStatusAccentColor(
-							server.status
-						)} to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-					></div>
-					<!-- Hover wash -->
-					<div
-						class="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-					></div>
+					<Plus class="h-4 w-4" />
+					<span>Create Server</span>
+				</a>
+			{:else}
+				<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center bg-[#161616] border border-[#393939] text-[#8d8d8d]">
+					<Search class="h-7 w-7" />
+				</div>
+				<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">No matching servers</h3>
+				<p class="text-xs text-[#a8a8a8]">Try adjusting your search criteria or status filter.</p>
+				<button
+					type="button"
+					onclick={() => {
+						searchQuery = '';
+						statusFilter = 'all';
+					}}
+					class="mt-4 inline-flex h-8 px-3 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs font-sans items-center rounded-none transition-colors cursor-pointer"
+				>
+					Reset filters
+				</button>
+			{/if}
+		</div>
 
-					<CardHeader class="relative pb-3">
-						<div class="flex items-start justify-between gap-2">
-							<div class="flex min-w-0 flex-1 items-start gap-3">
-								<div
-									class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500/20 to-blue-600/10 transition-transform duration-300 group-hover:scale-110"
-								>
-									<ServerIcon class="h-5 w-5 text-blue-500" />
+	<!-- Carbon DataTable Layout (Requirement 2) -->
+	{:else if viewMode === 'table'}
+		<div class="w-full bg-[#161616] border border-[#393939] rounded-none overflow-x-auto">
+			<table class="w-full border-collapse text-left font-sans text-sm">
+				<!-- Sharp Header Row #393939 -->
+				<thead class="bg-[#393939] text-[#f4f4f4] border-b border-[#525252] text-xs uppercase font-medium tracking-wider select-none">
+					<tr>
+						<th class="px-4 py-3 w-28">Status</th>
+						<th class="px-4 py-3">Server Instance</th>
+						<th class="px-4 py-3">Engine & Loader</th>
+						<th class="px-4 py-3">Host / Port</th>
+						<th class="px-4 py-3">Memory</th>
+						<th class="px-4 py-3">Players & TPS</th>
+						<th class="px-4 py-3 text-right">Actions</th>
+					</tr>
+				</thead>
+
+				<!-- Sharp Alternating/Hover Rows #353535 -->
+				<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
+					{#each filteredServers as server (server.id)}
+						<tr
+							class="hover:bg-[#353535] transition-colors group cursor-pointer"
+							onclick={() => window.location.assign(resolve(`/servers/${server.id}`))}
+						>
+							<!-- Status Cell -->
+							<td class="px-4 py-3.5 whitespace-nowrap">
+								<CarbonTag type={getStatusTagType(server.status)} size="sm">
+									{getStatusDisplayName(server.status)}
+								</CarbonTag>
+							</td>
+
+							<!-- Name & Description -->
+							<td class="px-4 py-3.5 min-w-[200px]">
+								<div class="flex items-center gap-2.5">
+									<div class="flex h-8 w-8 shrink-0 items-center justify-center bg-[#161616] border border-[#393939] text-[#78a9ff]">
+										<ServerIcon class="h-4 w-4" />
+									</div>
+									<div class="min-w-0">
+										<a
+											href={resolve(`/servers/${server.id}`)}
+											class="font-medium text-sm text-[#f4f4f4] hover:text-[#78a9ff] hover:underline truncate block"
+											onclick={(e) => e.stopPropagation()}
+										>
+											{server.name}
+										</a>
+										<p class="text-xs text-[#a8a8a8] line-clamp-1">
+											{server.description || 'No description provided'}
+										</p>
+									</div>
 								</div>
-								<div class="min-w-0 flex-1 space-y-1">
-									<CardTitle class="truncate text-lg font-semibold">{server.name}</CardTitle>
-									<CardDescription class="line-clamp-1 text-xs">
+							</td>
+
+							<!-- Engine & Loader -->
+							<td class="px-4 py-3.5 whitespace-nowrap">
+								<div class="flex items-center gap-1.5 font-mono text-xs">
+									<span class="text-[#f4f4f4]">{server.mcVersion || 'Latest'}</span>
+									{#if server.modLoader !== ModLoader.VANILLA && server.modLoader !== ModLoader.UNSPECIFIED}
+										<CarbonTag type="teal" size="sm">
+											{getModLoaderDisplay(server.modLoader)}
+										</CarbonTag>
+									{:else}
+										<span class="text-[#8d8d8d] text-[11px]">Vanilla</span>
+									{/if}
+								</div>
+							</td>
+
+							<!-- Host / Port -->
+							<td class="px-4 py-3.5 whitespace-nowrap">
+								<div class="flex items-center gap-1.5 font-mono text-xs">
+									<Wifi class="h-3.5 w-3.5 text-[#8d8d8d]" />
+									<span class="text-[#c6c6c6]">
+										{server.proxyHostname ? server.proxyHostname : `:${server.port}`}
+									</span>
+								</div>
+							</td>
+
+							<!-- Memory -->
+							<td class="px-4 py-3.5 whitespace-nowrap">
+								<div class="flex items-center gap-1.5 font-mono text-xs text-[#c6c6c6]">
+									<MemoryStick class="h-3.5 w-3.5 text-[#8d8d8d]" />
+									<span>{(server.memory / 1024).toFixed(1)} GB</span>
+								</div>
+							</td>
+
+							<!-- Players & TPS -->
+							<td class="px-4 py-3.5 whitespace-nowrap">
+								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
+									<div class="flex items-center gap-3 font-mono text-xs">
+										<span class="text-[#6fdc8c] flex items-center gap-1">
+											<Users class="h-3.5 w-3.5" />
+											{server.playersOnline || 0}/{server.maxPlayers}
+										</span>
+										<span class="flex items-center gap-1 {server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : server.tps && server.tps >= 15 ? 'text-[#f1c21b]' : 'text-[#ff8389]'}">
+											<Zap class="h-3.5 w-3.5" />
+											{server.tps ? server.tps.toFixed(1) : '—'}
+										</span>
+									</div>
+								{:else}
+									<span class="text-xs text-[#6f6f6f] font-mono">—</span>
+								{/if}
+							</td>
+
+							<!-- Actions -->
+							<td class="px-4 py-3.5 text-right whitespace-nowrap" onclick={(e) => e.stopPropagation()}>
+								<div class="inline-flex items-center border border-[#393939] bg-[#161616]">
+									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
+										<button
+											title="Start"
+											disabled={loading}
+											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#6fdc8c] hover:bg-[#198038]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+											onclick={(e) => handleServerAction('start', server, e)}
+										>
+											<Play class="h-3.5 w-3.5 fill-current" />
+										</button>
+									{/if}
+
+									{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING}
+										<button
+											title="Stop"
+											disabled={loading}
+											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+											onclick={(e) => handleServerAction('stop', server, e)}
+										>
+											<Square class="h-3.5 w-3.5 fill-current" />
+										</button>
+									{/if}
+
+									{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
+										<button
+											title="Restart"
+											disabled={loading}
+											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#f1c21b] hover:bg-[#f1c21b]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+											onclick={(e) => handleServerAction('restart', server, e)}
+										>
+											<RotateCw class="h-3.5 w-3.5" />
+										</button>
+									{/if}
+
+									<button
+										title="Recreate"
+										disabled={loading}
+										class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#c6c6c6] hover:bg-[#353535] transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+										onclick={(e) => handleServerAction('recreate', server, e)}
+									>
+										<RefreshCcw class="h-3.5 w-3.5" />
+									</button>
+
+									<button
+										title="Delete"
+										disabled={loading}
+										class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+										onclick={(e) => deleteServer(server, e)}
+									>
+										<Trash2 class="h-3.5 w-3.5" />
+									</button>
+
+									<a
+										href={resolve(`/servers/${server.id}`)}
+										title="View Details"
+										class="h-8 w-8 flex items-center justify-center text-[#78a9ff] hover:bg-[#0f62fe]/20 transition-colors cursor-pointer rounded-none"
+									>
+										<ArrowRight class="h-3.5 w-3.5" />
+									</a>
+								</div>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+	<!-- Carbon Tile / Grid Layout -->
+	{:else}
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+			{#each filteredServers as server (server.id)}
+				<div class="bg-[#262626] border border-[#393939] hover:border-[#525252] transition-colors rounded-none p-4 flex flex-col justify-between">
+					<div>
+						<!-- Header & Actions -->
+						<div class="flex items-start justify-between gap-3 pb-3 border-b border-[#393939]">
+							<div class="flex items-center gap-3 min-w-0">
+								<div class="flex h-10 w-10 shrink-0 items-center justify-center bg-[#161616] border border-[#393939] text-[#78a9ff]">
+									<ServerIcon class="h-5 w-5" />
+								</div>
+								<div class="min-w-0">
+									<a
+										href={resolve(`/servers/${server.id}`)}
+										class="font-semibold text-base text-[#f4f4f4] hover:text-[#78a9ff] truncate block"
+									>
+										{server.name}
+									</a>
+									<p class="text-xs text-[#a8a8a8] truncate">
 										{server.description || 'No description provided'}
-									</CardDescription>
+									</p>
 								</div>
 							</div>
-							<!-- Action bar -->
-							<div
-								class="flex shrink-0 overflow-hidden rounded-md border border-border/60 shadow-sm"
-							>
+
+							<!-- Action Buttons Bar -->
+							<div class="flex shrink-0 border border-[#393939] bg-[#161616]">
 								{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
 									<button
 										title="Start"
 										disabled={loading}
-										class="flex h-7 w-7 items-center justify-center border-r border-border/60 text-muted-foreground transition-colors hover:bg-green-500/10 hover:text-green-500 disabled:opacity-50"
-										onclick={() => handleServerAction('start', server)}
+										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#6fdc8c] hover:bg-[#198038]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+										onclick={(e) => handleServerAction('start', server, e)}
 									>
-										<Play class="h-3 w-3" />
+										<Play class="h-3 w-3 fill-current" />
 									</button>
 								{/if}
 								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING}
 									<button
 										title="Stop"
 										disabled={loading}
-										class="flex h-7 w-7 items-center justify-center border-r border-border/60 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
-										onclick={() => handleServerAction('stop', server)}
+										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+										onclick={(e) => handleServerAction('stop', server, e)}
 									>
-										<Square class="h-2.5 w-2.5" />
+										<Square class="h-2.5 w-2.5 fill-current" />
 									</button>
 								{/if}
 								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
 									<button
 										title="Restart"
 										disabled={loading}
-										class="flex h-7 w-7 items-center justify-center border-r border-border/60 text-muted-foreground transition-colors hover:bg-yellow-500/10 hover:text-yellow-500 disabled:opacity-50"
-										onclick={() => handleServerAction('restart', server)}
+										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#f1c21b] hover:bg-[#f1c21b]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+										onclick={(e) => handleServerAction('restart', server, e)}
 									>
 										<RotateCw class="h-3 w-3" />
 									</button>
@@ -359,105 +542,87 @@
 								<button
 									title="Recreate"
 									disabled={loading}
-									class="flex h-7 w-7 items-center justify-center border-r border-border/60 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
-									onclick={() => handleServerAction('recreate', server)}
+									class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#c6c6c6] hover:bg-[#353535] transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+									onclick={(e) => handleServerAction('recreate', server, e)}
 								>
 									<RefreshCcw class="h-3 w-3" />
 								</button>
 								<button
 									title="Delete"
 									disabled={loading}
-									class="flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-									onclick={() => deleteServer(server)}
+									class="flex h-7 w-7 items-center justify-center text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+									onclick={(e) => deleteServer(server, e)}
 								>
 									<Trash2 class="h-3 w-3" />
 								</button>
 							</div>
 						</div>
 
-						<!-- Status badge row -->
-						<div class="mt-2 flex items-center gap-2">
-							<div class="h-2 w-2 rounded-full {getStatusDotColor(server.status)}"></div>
-							<Badge variant="outline" class="border text-xs {getStatusBadgeColor(server.status)}">
+						<!-- Status & Version row -->
+						<div class="my-3 flex items-center gap-2">
+							<CarbonTag type={getStatusTagType(server.status)} size="sm">
 								{getStatusDisplayName(server.status)}
-							</Badge>
-							<span class="text-xs text-muted-foreground">{server.mcVersion}</span>
+							</CarbonTag>
+							<span class="font-mono text-xs text-[#a8a8a8]">{server.mcVersion}</span>
 							{#if server.modLoader !== ModLoader.VANILLA && server.modLoader !== ModLoader.UNSPECIFIED}
-								<Badge variant="outline" class="text-xs capitalize"
-									>{getModLoaderDisplay(server.modLoader)}</Badge
-								>
+								<CarbonTag type="teal" size="sm">
+									{getModLoaderDisplay(server.modLoader)}
+								</CarbonTag>
 							{/if}
 						</div>
-					</CardHeader>
 
-					<CardContent class="relative flex-1 pt-0 pb-3">
-						<!-- Stats grid -->
-						<div class="grid grid-cols-2 gap-3">
-							<div class="flex items-center gap-2 rounded-lg bg-muted/30 p-2.5">
-								<Wifi class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+						<!-- Stats Sharp Grid -->
+						<div class="grid grid-cols-2 gap-2 mt-3">
+							<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+								<Wifi class="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
 								<div class="min-w-0">
-									<p class="text-[10px] tracking-wider text-muted-foreground uppercase">Port</p>
-									<p class="truncate font-mono text-sm font-semibold">{server.port}</p>
+									<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">Port</p>
+									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">{server.port}</p>
 								</div>
 							</div>
-							<div class="flex items-center gap-2 rounded-lg bg-muted/30 p-2.5">
-								<MemoryStick class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+							<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+								<MemoryStick class="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
 								<div class="min-w-0">
-									<p class="text-[10px] tracking-wider text-muted-foreground uppercase">Memory</p>
-									<p class="truncate text-sm font-semibold">
+									<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">Memory</p>
+									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">
 										{(server.memory / 1024).toFixed(1)} GB
 									</p>
 								</div>
 							</div>
 							{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
-								<div class="flex items-center gap-2 rounded-lg bg-muted/30 p-2.5">
-									<Users class="h-3.5 w-3.5 shrink-0 text-green-500" />
+								<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+									<Users class="h-3.5 w-3.5 shrink-0 text-[#6fdc8c]" />
 									<div class="min-w-0">
-										<p class="text-[10px] tracking-wider text-muted-foreground uppercase">
-											Players
-										</p>
-										<p class="text-sm font-semibold">
-											{server.playersOnline || 0}
-											<span class="font-normal text-muted-foreground">/ {server.maxPlayers}</span>
+										<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">Players</p>
+										<p class="font-mono text-xs font-semibold text-[#6fdc8c]">
+											{server.playersOnline || 0} / {server.maxPlayers}
 										</p>
 									</div>
 								</div>
-								<div class="flex items-center gap-2 rounded-lg bg-muted/30 p-2.5">
-									<Zap
-										class="h-3.5 w-3.5 {server.tps && server.tps >= 18
-											? 'text-green-500'
-											: server.tps && server.tps >= 15
-												? 'text-yellow-500'
-												: server.tps
-													? 'text-red-500'
-													: 'text-muted-foreground'} shrink-0"
-									/>
+								<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+									<Zap class="h-3.5 w-3.5 shrink-0 {server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : server.tps && server.tps >= 15 ? 'text-[#f1c21b]' : 'text-[#ff8389]'}" />
 									<div class="min-w-0">
-										<p class="text-[10px] tracking-wider text-muted-foreground uppercase">TPS</p>
-										<p
-											class="text-sm font-semibold {server.tps && server.tps >= 18
-												? 'text-green-500'
-												: server.tps && server.tps >= 15
-													? 'text-yellow-500'
-													: server.tps
-														? 'text-red-500'
-														: ''}"
-										>
-{server.tps ? server.tps.toFixed(1) : '—'}
+										<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">TPS</p>
+										<p class="font-mono text-xs font-semibold {server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : server.tps && server.tps >= 15 ? 'text-[#f1c21b]' : 'text-[#ff8389]'}">
+											{server.tps ? server.tps.toFixed(1) : '—'}
 										</p>
 									</div>
 								</div>
 							{/if}
 						</div>
-					</CardContent>
+					</div>
 
-					<!-- Clickable overlay for bottom half -->
-					<a
-						href={resolve(`/servers/${server.id}`)}
-						class="absolute inset-x-0 bottom-0 z-10 flex h-1/2 cursor-pointer items-end justify-center bg-gradient-to-t from-primary/10 to-transparent pb-4 opacity-0 transition-all duration-300 group-hover:opacity-100"
-					>
-					</a>
-				</Card>
+					<!-- Bottom Link -->
+					<div class="mt-4 pt-3 border-t border-[#393939]">
+						<a
+							href={resolve(`/servers/${server.id}`)}
+							class="w-full h-8 px-3 bg-[#161616] hover:bg-[#353535] border border-[#393939] text-xs font-sans text-[#f4f4f4] flex items-center justify-between transition-colors rounded-none"
+						>
+							<span>View Server Details</span>
+							<ArrowRight class="h-3.5 w-3.5 text-[#78a9ff]" />
+						</a>
+					</div>
+				</div>
 			{/each}
 		</div>
 	{/if}

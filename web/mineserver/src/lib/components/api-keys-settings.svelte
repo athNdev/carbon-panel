@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -147,36 +144,35 @@
 
 <div class="space-y-6">
 	<!-- CurseForge API Key Card -->
-	<Card>
-		<CardHeader>
-			<div class="flex items-center justify-between">
-				<div class="space-y-1">
-					<CardTitle class="flex items-center gap-2 text-xl font-bold">
-						<Key class="h-5 w-5 text-primary" />
-						CurseForge API Key
-					</CardTitle>
-					<CardDescription>
-						Required to search, browse, and synchronize CurseForge modpacks and mods.
-					</CardDescription>
-				</div>
-				<div>
-					{#if cfApiKey.trim()}
-						<Badge variant="default" class="bg-emerald-600/90 text-white">
-							<CheckCircle2 class="mr-1 h-3.5 w-3.5" />
-							Configured
-						</Badge>
-					{:else}
-						<Badge variant="secondary">
-							<AlertCircle class="mr-1 h-3.5 w-3.5" />
-							Not Configured
-						</Badge>
-					{/if}
-				</div>
+	<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+		<div class="flex items-start justify-between border-b border-[#393939] pb-4">
+			<div class="space-y-1">
+				<h3 class="flex items-center gap-2 text-base font-normal text-[#f4f4f4]">
+					<Key class="h-4 w-4 text-[#0f62fe]" />
+					CurseForge API Key
+				</h3>
+				<p class="text-xs text-[#a8a8a8]">
+					Required to search, browse, and synchronize CurseForge modpacks and mods.
+				</p>
 			</div>
-		</CardHeader>
-		<CardContent class="space-y-4">
-			<div class="rounded-lg border border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
-				<p class="font-medium text-foreground">How to get a CurseForge API Key:</p>
+			<div>
+				{#if cfApiKey.trim()}
+					<span class="inline-flex items-center gap-1 rounded-none border border-[#24a148] bg-[#24a148]/20 px-2 py-0.5 text-xs font-mono text-[#42be65]">
+						<CheckCircle2 class="h-3 w-3" />
+						Configured
+					</span>
+				{:else}
+					<span class="inline-flex items-center gap-1 rounded-none border border-[#da1e28] bg-[#da1e28]/20 px-2 py-0.5 text-xs font-mono text-[#ff8389]">
+						<AlertCircle class="h-3 w-3" />
+						Not Configured
+					</span>
+				{/if}
+			</div>
+		</div>
+
+		<div class="space-y-4">
+			<div class="rounded-none border border-[#393939] bg-[#1e1e1e] p-4 text-xs text-[#a8a8a8]">
+				<p class="font-medium text-[#f4f4f4]">How to get a CurseForge API Key:</p>
 				<ol class="mt-2 list-inside list-decimal space-y-1">
 					<li>
 						Log in to the
@@ -184,7 +180,7 @@
 							href="https://console.curseforge.com/#/api-keys"
 							target="_blank"
 							rel="noopener noreferrer"
-							class="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+							class="inline-flex items-center gap-1 font-medium text-[#78a9ff] hover:underline"
 						>
 							CurseForge Developer Console <ExternalLink class="h-3 w-3" />
 						</a>.
@@ -195,7 +191,7 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label for="cf-api-key">API Key</Label>
+				<Label for="cf-api-key" class="text-xs text-[#c6c6c6]">API Key</Label>
 				<div class="flex gap-2">
 					<div class="relative flex-1">
 						<Input
@@ -203,12 +199,12 @@
 							type={showCfKey ? 'text' : 'password'}
 							placeholder="$2a$10$..."
 							bind:value={cfApiKey}
-							class="pr-10 font-mono text-sm"
+							class="pr-10 font-mono text-sm rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
 						/>
 						<button
 							type="button"
 							onclick={() => (showCfKey = !showCfKey)}
-							class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							class="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer rounded-none"
 						>
 							{#if showCfKey}
 								<EyeOff class="h-4 w-4" />
@@ -217,68 +213,70 @@
 							{/if}
 						</button>
 					</div>
-					<Button
-						variant="outline"
+					<button
+						type="button"
 						onclick={testCurseForge}
 						disabled={testingCf || !cfApiKey.trim()}
+						class="h-10 px-4 inline-flex items-center gap-2 rounded-none border border-[#0f62fe] text-[#78a9ff] hover:bg-[#0f62fe] hover:text-white text-xs font-sans font-medium cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 					>
 						{#if testingCf}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-							Testing...
+							<Loader2 class="h-3.5 w-3.5 animate-spin" />
+							<span>Testing...</span>
 						{:else}
-							<ShieldCheck class="mr-2 h-4 w-4" />
-							Test Connection
+							<ShieldCheck class="h-3.5 w-3.5" />
+							<span>Test Connection</span>
 						{/if}
-					</Button>
+					</button>
 				</div>
 			</div>
 
 			{#if cfTestResult}
 				{#if cfTestResult.valid}
-					<Alert class="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-						<CheckCircle2 class="h-4 w-4 text-emerald-500" />
-						<AlertTitle>Connection Valid</AlertTitle>
-						<AlertDescription>{cfTestResult.message}</AlertDescription>
+					<Alert class="rounded-none border border-[#24a148]/40 bg-[#24a148]/10 text-[#42be65]">
+						<CheckCircle2 class="h-4 w-4 text-[#42be65]" />
+						<AlertTitle class="text-xs font-medium">Connection Valid</AlertTitle>
+						<AlertDescription class="text-xs">{cfTestResult.message}</AlertDescription>
 					</Alert>
 				{:else}
-					<Alert variant="destructive">
-						<XCircle class="h-4 w-4" />
-						<AlertTitle>Validation Failed</AlertTitle>
-						<AlertDescription>{cfTestResult.message}</AlertDescription>
+					<Alert variant="destructive" class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]">
+						<XCircle class="h-4 w-4 text-[#da1e28]" />
+						<AlertTitle class="text-xs font-medium">Validation Failed</AlertTitle>
+						<AlertDescription class="text-xs">{cfTestResult.message}</AlertDescription>
 					</Alert>
 				{/if}
 			{/if}
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Modrinth Configuration Card -->
-	<Card>
-		<CardHeader>
-			<div class="flex items-center justify-between">
-				<div class="space-y-1">
-					<CardTitle class="flex items-center gap-2 text-xl font-bold">
-						<Key class="h-5 w-5 text-primary" />
-						Modrinth Credentials & User-Agent
-					</CardTitle>
-					<CardDescription>
-						Configure Modrinth API authentication token and identification headers.
-					</CardDescription>
-				</div>
-				<div>
-					{#if modrinthToken.trim()}
-						<Badge variant="default" class="bg-emerald-600/90 text-white">
-							<CheckCircle2 class="mr-1 h-3.5 w-3.5" />
-							Authenticated
-						</Badge>
-					{:else}
-						<Badge variant="outline">Public Access</Badge>
-					{/if}
-				</div>
+	<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+		<div class="flex items-start justify-between border-b border-[#393939] pb-4">
+			<div class="space-y-1">
+				<h3 class="flex items-center gap-2 text-base font-normal text-[#f4f4f4]">
+					<Key class="h-4 w-4 text-[#0f62fe]" />
+					Modrinth Credentials & User-Agent
+				</h3>
+				<p class="text-xs text-[#a8a8a8]">
+					Configure Modrinth API authentication token and identification headers.
+				</p>
 			</div>
-		</CardHeader>
-		<CardContent class="space-y-4">
-			<div class="rounded-lg border border-border/60 bg-muted/30 p-4 text-sm text-muted-foreground">
-				<p>
+			<div>
+				{#if modrinthToken.trim()}
+					<span class="inline-flex items-center gap-1 rounded-none border border-[#24a148] bg-[#24a148]/20 px-2 py-0.5 text-xs font-mono text-[#42be65]">
+						<CheckCircle2 class="h-3 w-3" />
+						Authenticated
+					</span>
+				{:else}
+					<span class="inline-flex items-center gap-1 rounded-none border border-[#525252] bg-transparent px-2 py-0.5 text-xs font-mono text-[#c6c6c6]">
+						Public Access
+					</span>
+				{/if}
+			</div>
+		</div>
+
+		<div class="space-y-4">
+			<div class="rounded-none border border-[#393939] bg-[#1e1e1e] p-4 text-xs text-[#a8a8a8]">
+				<p class="font-medium text-[#f4f4f4]">
 					Modrinth modpack and mod indexing works publicly without authentication. Supplying a Personal
 					Access Token (PAT) unlocks elevated rate limits and enables accessing private or unlisted projects.
 				</p>
@@ -288,7 +286,7 @@
 						href="https://modrinth.com/settings/pats"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+						class="inline-flex items-center gap-1 font-medium text-[#78a9ff] hover:underline"
 					>
 						Modrinth PAT Settings <ExternalLink class="h-3 w-3" />
 					</a>.
@@ -296,19 +294,19 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label for="modrinth-token">Personal Access Token (PAT)</Label>
+				<Label for="modrinth-token" class="text-xs text-[#c6c6c6]">Personal Access Token (PAT)</Label>
 				<div class="relative">
 					<Input
 						id="modrinth-token"
 						type={showModrinthToken ? 'text' : 'password'}
 						placeholder="mrp_..."
 						bind:value={modrinthToken}
-						class="pr-10 font-mono text-sm"
+						class="pr-10 font-mono text-sm rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
 					/>
 					<button
 						type="button"
 						onclick={() => (showModrinthToken = !showModrinthToken)}
-						class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+						class="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer rounded-none"
 					>
 						{#if showModrinthToken}
 							<EyeOff class="h-4 w-4" />
@@ -320,63 +318,69 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label for="modrinth-ua">User-Agent Header</Label>
+				<Label for="modrinth-ua" class="text-xs text-[#c6c6c6]">User-Agent Header</Label>
 				<Input
 					id="modrinth-ua"
 					type="text"
 					placeholder="MineServer/1.0 (contact@example.com)"
 					bind:value={modrinthUserAgent}
-					class="font-mono text-sm"
+					class="font-mono text-sm rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
 				/>
-				<p class="text-xs text-muted-foreground">
+				<p class="text-xs text-[#8d8d8d]">
 					Modrinth API policy encourages client identification including application name and contact info.
 				</p>
 			</div>
 
 			<div class="pt-2">
-				<Button
-					variant="outline"
+				<button
+					type="button"
 					onclick={testModrinth}
 					disabled={testingModrinth}
+					class="h-10 px-4 inline-flex items-center gap-2 rounded-none border border-[#0f62fe] text-[#78a9ff] hover:bg-[#0f62fe] hover:text-white text-xs font-sans font-medium cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				>
 					{#if testingModrinth}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						Testing...
+						<Loader2 class="h-3.5 w-3.5 animate-spin" />
+						<span>Testing...</span>
 					{:else}
-						<ShieldCheck class="mr-2 h-4 w-4" />
-						Test Connection
+						<ShieldCheck class="h-3.5 w-3.5" />
+						<span>Test Connection</span>
 					{/if}
-				</Button>
+				</button>
 			</div>
 
 			{#if modrinthTestResult}
 				{#if modrinthTestResult.valid}
-					<Alert class="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-						<CheckCircle2 class="h-4 w-4 text-emerald-500" />
-						<AlertTitle>Connection Valid</AlertTitle>
-						<AlertDescription>{modrinthTestResult.message}</AlertDescription>
+					<Alert class="rounded-none border border-[#24a148]/40 bg-[#24a148]/10 text-[#42be65]">
+						<CheckCircle2 class="h-4 w-4 text-[#42be65]" />
+						<AlertTitle class="text-xs font-medium">Connection Valid</AlertTitle>
+						<AlertDescription class="text-xs">{modrinthTestResult.message}</AlertDescription>
 					</Alert>
 				{:else}
-					<Alert variant="destructive">
-						<XCircle class="h-4 w-4" />
-						<AlertTitle>Validation Failed</AlertTitle>
-						<AlertDescription>{modrinthTestResult.message}</AlertDescription>
+					<Alert variant="destructive" class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]">
+						<XCircle class="h-4 w-4 text-[#da1e28]" />
+						<AlertTitle class="text-xs font-medium">Validation Failed</AlertTitle>
+						<AlertDescription class="text-xs">{modrinthTestResult.message}</AlertDescription>
 					</Alert>
 				{/if}
 			{/if}
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Actions -->
 	<div class="flex justify-end gap-3">
-		<Button onclick={saveKeys} disabled={saving || loading}>
+		<button
+			type="button"
+			onclick={saveKeys}
+			disabled={saving || loading}
+			class="h-10 px-6 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-sm font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+		>
 			{#if saving}
-				<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-				Saving...
+				<Loader2 class="h-4 w-4 animate-spin" />
+				<span>Saving...</span>
 			{:else}
-				<Save class="mr-2 h-4 w-4" />
-				Save API Keys
+				<Save class="h-4 w-4" />
+				<span>Save API Keys</span>
 			{/if}
-		</Button>
+		</button>
 	</div>
 </div>

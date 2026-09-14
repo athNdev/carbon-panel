@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
+	import {
+		CarbonButton,
+		CarbonDataTable,
+		CarbonTag
+	} from '$lib/components/carbon';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
 	import type { Module } from '$lib/proto/mineserver/v1/module_pb';
@@ -16,7 +18,6 @@
 		Terminal,
 		Cpu,
 		Server,
-		ExternalLink,
 		Package,
 		RefreshCw
 	} from '@lucide/svelte';
@@ -49,7 +50,6 @@
 	async function loadModules(silent = false) {
 		try {
 			if (!silent) loading = true;
-			// Without serverId, it fetches all modules
 			const response = await rpcClient.module.listModules(
 				{},
 				silent ? silentCallOptions : undefined
@@ -137,20 +137,18 @@
 		logsDialogOpen = true;
 	}
 
-	function getStatusBadgeVariant(
-		status: ModuleStatus
-	): 'default' | 'secondary' | 'destructive' | 'outline' {
+	function getStatusTagType(status: ModuleStatus): 'green' | 'blue' | 'red' | 'gray' {
 		switch (status) {
 			case ModuleStatus.RUNNING:
-				return 'default';
+				return 'green';
 			case ModuleStatus.STARTING:
 			case ModuleStatus.STOPPING:
 			case ModuleStatus.CREATING:
-				return 'secondary';
+				return 'blue';
 			case ModuleStatus.ERROR:
-				return 'destructive';
+				return 'red';
 			default:
-				return 'outline';
+				return 'gray';
 		}
 	}
 
@@ -174,185 +172,215 @@
 	}
 </script>
 
-<div class="space-y-4">
-	<div class="flex items-center justify-between">
-		<div>
-			<h3 class="text-lg font-medium">Active Instances</h3>
-			<p class="text-sm text-muted-foreground">All modules running across all your servers.</p>
-		</div>
-		<Button variant="outline" size="sm" onclick={() => loadModules()} disabled={loading}>
-			{#if loading}
-				<Loader2 class="h-4 w-4 animate-spin" />
-			{:else}
-				<RefreshCw class="h-4 w-4" />
-			{/if}
-		</Button>
-	</div>
-
-	{#if loading && modules.length === 0}
-		<div class="flex items-center justify-center py-12">
-			<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
-		</div>
-	{:else if modules.length === 0}
-		<div
-			class="flex flex-col items-center justify-center rounded-lg border bg-card py-12 text-center"
+<div class="space-y-4 font-sans text-[#f4f4f4] rounded-none">
+	{#snippet activeToolbar()}
+		<CarbonButton
+			kind="tertiary"
+			size="sm"
+			class="rounded-none"
+			onclick={() => loadModules()}
+			disabled={loading}
+			title="Refresh active modules"
 		>
-			<Package class="mb-4 h-12 w-12 text-muted-foreground/50" />
-			<h3 class="mb-1 text-lg font-medium">No Active Modules</h3>
-			<p class="max-w-sm text-sm text-muted-foreground">
-				You don't have any modules running on any of your servers right now.
-			</p>
-		</div>
-	{:else}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<RefreshCw class={`mr-1.5 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+			Refresh
+		</CarbonButton>
+	{/snippet}
+
+	{#snippet activeHeader()}
+		<tr>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Module / Server</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Status</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Memory</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">CPU</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Auto-Start</th>
+			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
+		</tr>
+	{/snippet}
+
+	<CarbonDataTable
+		title="Active Instances"
+		description="Sidecar modules and containerized services running across all servers"
+		toolbar={activeToolbar}
+		header={activeHeader}
+		class="rounded-none"
+	>
+		{#if loading && modules.length === 0}
+			<tr>
+				<td colspan="7" class="py-16 text-center text-[#8d8d8d]">
+					<Loader2 class="mx-auto h-6 w-6 animate-spin text-[#0f62fe] mb-2" />
+					Loading active modules...
+				</td>
+			</tr>
+		{:else if modules.length === 0}
+			<tr>
+				<td colspan="7" class="py-16 text-center text-[#8d8d8d]">
+					<Package class="mx-auto mb-3 h-10 w-10 text-[#525252]" />
+					<p class="text-sm font-semibold text-white">No active module instances</p>
+					<p class="text-xs text-[#8d8d8d] mt-1">Attach modules to a Minecraft server to provision sidecar containers.</p>
+				</td>
+			</tr>
+		{:else}
 			{#each modules as module (module.id)}
 				{@const isLoading = actionLoading === module.id}
-				<Card
-					class="group relative overflow-hidden border shadow-sm transition-all hover:shadow-md"
-				>
-					<div
-						class="absolute top-0 right-0 left-0 h-1 {module.status === ModuleStatus.RUNNING
-							? 'bg-green-500'
-							: module.status === ModuleStatus.ERROR
-								? 'bg-red-500'
-								: 'bg-gray-300'}"
-					></div>
-					<CardContent class="p-4">
-						<div class="mb-3 flex items-start justify-between">
-							<div class="min-w-0 flex-1">
-								<div class="mb-1 flex items-center gap-2">
-									<h3 class="truncate font-semibold">{module.name}</h3>
-									<Badge variant={getStatusBadgeVariant(module.status)} class="text-xs">
-										{getStatusLabel(module.status)}
-									</Badge>
-								</div>
-								<div class="flex items-center gap-2 truncate text-xs text-muted-foreground">
-									<span class="flex items-center gap-1"
-										><Server class="h-3 w-3" /> {module.serverName || module.serverId}</span
-									>
-<span>•</span>
-									<span class="truncate">{module.templateName}</span>
-								</div>
+				<tr class="hover:bg-[#353535] transition-colors">
+					<td class="py-3 px-4">
+						<div class="space-y-0.5">
+							<div class="font-semibold text-sm text-white flex items-center gap-2">
+								<span>{module.name}</span>
 							</div>
-							<div class="ml-2 flex items-center gap-1">
-								{#if module.status === ModuleStatus.STOPPED}
-									<Button
-										size="icon"
-										variant="ghost"
-										onclick={() => handleStartModule(module)}
-										disabled={isLoading}
-										title="Start module"
-										class="h-8 w-8"
-									>
-										{#if isLoading}
-											<Loader2 class="h-4 w-4 animate-spin" />
-										{:else}
-											<Play class="h-4 w-4 text-green-500" />
-										{/if}
-									</Button>
-								{:else if module.status === ModuleStatus.RUNNING}
-									<Button
-										size="icon"
-										variant="ghost"
-										onclick={() => handleStopModule(module)}
-										disabled={isLoading}
-										title="Stop module"
-										class="h-8 w-8"
-									>
-										{#if isLoading}
-											<Loader2 class="h-4 w-4 animate-spin" />
-										{:else}
-											<Square class="h-4 w-4 text-red-500" />
-										{/if}
-									</Button>
-									<Button
-										size="icon"
-										variant="ghost"
-										onclick={() => handleRestartModule(module)}
-										disabled={isLoading}
-										title="Restart module"
-										class="h-8 w-8"
-									>
-										<RotateCw class="h-4 w-4" />
-									</Button>
-								{:else if module.status === ModuleStatus.STARTING || module.status === ModuleStatus.STOPPING || module.status === ModuleStatus.CREATING}
-									<Button size="icon" variant="ghost" disabled class="h-8 w-8">
-										<Loader2 class="h-4 w-4 animate-spin" />
-									</Button>
-								{:else if module.status === ModuleStatus.ERROR}
-									<Button
-										size="icon"
-										variant="ghost"
-										onclick={() => handleStartModule(module)}
-										disabled={isLoading}
-										title="Start module"
-										class="h-8 w-8"
-									>
-										{#if isLoading}
-											<Loader2 class="h-4 w-4 animate-spin" />
-										{:else}
-											<Play class="h-4 w-4 text-green-500" />
-										{/if}
-									</Button>
-								{/if}
+							<div class="flex items-center gap-1.5 text-xs text-[#a8a8a8] font-mono">
+								<Server class="h-3 w-3 text-[#0f62fe]" />
+								<span>{module.serverName || module.serverId}</span>
 							</div>
 						</div>
+					</td>
 
-						<div class="mb-3 space-y-1 text-xs">
-							{#if module.status === ModuleStatus.RUNNING && module.memoryUsage > 0}
-								<div class="flex items-center gap-3 text-muted-foreground">
-									<span><Cpu class="mr-1 inline h-3 w-3" />{module.memoryUsage.toFixed(0)} MB</span>
-									<span>CPU: {module.cpuPercent.toFixed(1)}%</span>
-								</div>
-							{:else}
-								<div class="invisible flex items-center gap-3 text-muted-foreground/60">
-									<span><Cpu class="mr-1 inline h-3 w-3" />0 MB</span>
-								</div>
-							{/if}
-						</div>
+					<td class="py-3 px-4 text-xs font-mono text-[#c6c6c6]">
+						{module.templateName}
+					</td>
 
-						<div class="flex items-center justify-between border-t pt-2">
-							<div class="flex items-center gap-1">
-								{#if module.autoStart}
-									<Badge variant="secondary" class="px-1.5 py-0 text-[10px]">Auto-start</Badge>
-								{/if}
-							</div>
-							<div class="flex items-center gap-1">
-								<Button
-									size="icon"
-									variant="ghost"
-									onclick={() => openLogsDialog(module)}
-									title="View logs"
-									class="h-7 w-7"
-								>
-									<Terminal class="h-3.5 w-3.5" />
-								</Button>
-								<Button
-									size="icon"
-									variant="ghost"
-									onclick={() => openEditDialog(module)}
-									title="Edit module"
-									class="h-7 w-7"
-								>
-									<Settings class="h-3.5 w-3.5" />
-								</Button>
-								<Button
-									size="icon"
-									variant="ghost"
-									onclick={() => handleDeleteModule(module)}
+					<td class="py-3 px-4">
+						<CarbonTag type={getStatusTagType(module.status)} size="sm">
+							{getStatusLabel(module.status)}
+						</CarbonTag>
+					</td>
+
+					<td class="py-3 px-4 font-mono text-xs text-[#a8a8a8]">
+						{#if module.status === ModuleStatus.RUNNING && module.memoryUsage > 0}
+							{module.memoryUsage.toFixed(0)} MB
+						{:else}
+							-
+						{/if}
+					</td>
+
+					<td class="py-3 px-4 font-mono text-xs text-[#a8a8a8]">
+						{#if module.status === ModuleStatus.RUNNING}
+							{module.cpuPercent.toFixed(1)}%
+						{:else}
+							-
+						{/if}
+					</td>
+
+					<td class="py-3 px-4">
+						{#if module.autoStart}
+							<CarbonTag type="blue" size="sm">Enabled</CarbonTag>
+						{:else}
+							<span class="text-xs text-[#8d8d8d] font-mono">Disabled</span>
+						{/if}
+					</td>
+
+					<td class="py-3 px-4 text-right">
+						<div class="flex items-center justify-end gap-1">
+							<!-- Start / Stop / Restart Control -->
+							{#if module.status === ModuleStatus.STOPPED}
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									class="rounded-none text-emerald-500 hover:bg-emerald-500/20"
+									onclick={() => handleStartModule(module)}
 									disabled={isLoading}
-									title="Delete module"
-									class="h-7 w-7 text-destructive hover:text-destructive"
+									title="Start module"
 								>
-									<Trash2 class="h-3.5 w-3.5" />
-								</Button>
-							</div>
+									{#if isLoading}
+										<Loader2 class="h-3.5 w-3.5 animate-spin" />
+									{:else}
+										<Play class="h-3.5 w-3.5" />
+									{/if}
+								</CarbonButton>
+							{:else if module.status === ModuleStatus.RUNNING}
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									class="rounded-none text-red-500 hover:bg-red-500/20"
+									onclick={() => handleStopModule(module)}
+									disabled={isLoading}
+									title="Stop module"
+								>
+									{#if isLoading}
+										<Loader2 class="h-3.5 w-3.5 animate-spin" />
+									{:else}
+										<Square class="h-3.5 w-3.5" />
+									{/if}
+								</CarbonButton>
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									class="rounded-none text-[#c6c6c6] hover:text-white"
+									onclick={() => handleRestartModule(module)}
+									disabled={isLoading}
+									title="Restart module"
+								>
+									<RotateCw class="h-3.5 w-3.5" />
+								</CarbonButton>
+							{:else if module.status === ModuleStatus.STARTING || module.status === ModuleStatus.STOPPING || module.status === ModuleStatus.CREATING}
+								<CarbonButton kind="ghost" size="sm" iconOnly disabled class="rounded-none">
+									<Loader2 class="h-3.5 w-3.5 animate-spin text-[#0f62fe]" />
+								</CarbonButton>
+							{:else if module.status === ModuleStatus.ERROR}
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									class="rounded-none text-emerald-500 hover:bg-emerald-500/20"
+									onclick={() => handleStartModule(module)}
+									disabled={isLoading}
+									title="Retry start"
+								>
+									{#if isLoading}
+										<Loader2 class="h-3.5 w-3.5 animate-spin" />
+									{:else}
+										<Play class="h-3.5 w-3.5" />
+									{/if}
+								</CarbonButton>
+							{/if}
+
+							<!-- Logs -->
+							<CarbonButton
+								kind="ghost"
+								size="sm"
+								iconOnly
+								class="rounded-none text-[#c6c6c6] hover:text-white"
+								onclick={() => openLogsDialog(module)}
+								title="View logs"
+							>
+								<Terminal class="h-3.5 w-3.5" />
+							</CarbonButton>
+
+							<!-- Edit -->
+							<CarbonButton
+								kind="ghost"
+								size="sm"
+								iconOnly
+								class="rounded-none text-[#c6c6c6] hover:text-white"
+								onclick={() => openEditDialog(module)}
+								title="Edit module"
+							>
+								<Settings class="h-3.5 w-3.5" />
+							</CarbonButton>
+
+							<!-- Delete -->
+							<CarbonButton
+								kind="ghost"
+								size="sm"
+								iconOnly
+								class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
+								onclick={() => handleDeleteModule(module)}
+								disabled={isLoading}
+								title="Delete module"
+							>
+								<Trash2 class="h-3.5 w-3.5" />
+							</CarbonButton>
 						</div>
-					</CardContent>
-				</Card>
+					</td>
+				</tr>
 			{/each}
-		</div>
-	{/if}
+		{/if}
+	</CarbonDataTable>
 </div>
 
 {#if selectedModule}

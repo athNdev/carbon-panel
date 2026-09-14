@@ -22,16 +22,16 @@
 	}: Props = $props();
 </script>
 
-<div class="flex flex-col space-y-1 font-sans {className}">
+<div class="flex flex-col space-y-1 font-sans rounded-none {className}">
 	{#if label}
 		<label class="text-xs font-normal text-[#c6c6c6] tracking-[0.32px]">
 			{label}
 		</label>
 	{/if}
-	<div class="relative">
+	<div class="relative rounded-none">
 		<select
 			bind:value
-			class="w-full h-10 pl-4 pr-10 bg-[#262626] border-b border-[#8d8d8d] text-sm text-[#f4f4f4] transition-all appearance-none focus:outline-none focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] cursor-pointer disabled:bg-[#161616] disabled:border-[#393939] disabled:text-[#6f6f6f] {error ? '!border-b-2 !border-[#da1e28]' : ''}"
+			class="w-full h-10 pl-4 pr-10 bg-[#262626] border-b border-[#8d8d8d] text-sm text-[#f4f4f4] rounded-none transition-all appearance-none focus:outline-none focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] cursor-pointer disabled:bg-[#161616] disabled:border-[#393939] disabled:text-[#6f6f6f] {error ? '!border-b-2 !border-[#da1e28]' : ''}"
 			{...restProps}
 		>
 			{@render children?.()}

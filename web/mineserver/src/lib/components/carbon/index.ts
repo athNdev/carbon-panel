@@ -9,3 +9,7 @@ export { default as CarbonTabs } from './CarbonTabs.svelte';
 export { default as CarbonInlineLoading } from './CarbonInlineLoading.svelte';
 export { default as CarbonBreadcrumbs } from './CarbonBreadcrumbs.svelte';
 export { default as CarbonShell } from './CarbonShell.svelte';
+export { default as CarbonSearch } from './CarbonSearch.svelte';
+export { default as CarbonAccordion } from './CarbonAccordion.svelte';
+export { default as CarbonAccordionItem } from './CarbonAccordionItem.svelte';
+export { default as CarbonStructuredList } from './CarbonStructuredList.svelte';
