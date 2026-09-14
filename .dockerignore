@@ -15,7 +15,7 @@
 build/
 backups/
 mineserver
-!cmd/mineserver
+!web/mineserver/
 web/mineserver/build/
 web/mineserver/node_modules/
 web/mineserver/.svelte-kit/
