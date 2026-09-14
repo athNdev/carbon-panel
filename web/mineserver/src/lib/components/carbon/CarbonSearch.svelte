@@ -23,15 +23,15 @@
 	}: Props = $props();
 
 	const sizeClasses = {
-		sm: 'h-8 text-xs pl-8 pr-7',
+		sm: 'h-8 text-xs pl-9 pr-7',
 		md: 'h-10 text-sm pl-10 pr-9',
 		lg: 'h-12 text-base pl-12 pr-10'
 	};
 
 	const iconSizeClasses = {
-		sm: 'h-3.5 w-3.5 left-2.5',
-		md: 'h-4 w-4 left-3',
-		lg: 'h-5 w-5 left-3.5'
+		sm: 'h-3.5 w-3.5',
+		md: 'h-4 w-4',
+		lg: 'h-4.5 w-4.5'
 	};
 
 	function handleClear() {
@@ -41,8 +41,8 @@
 </script>
 
 <div class="relative w-full font-sans rounded-none {className}">
-	<div class="pointer-events-none absolute inset-y-0 flex items-center {iconSizeClasses[size]} text-[#a8a8a8]">
-		<svg class="h-full w-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#8d8d8d]">
+		<svg class="{iconSizeClasses[size]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 		</svg>
 	</div>
