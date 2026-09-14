@@ -1,5 +1,5 @@
-# DiscoPanel Configuration File
-# This file contains all configuration options for DiscoPanel
+# MineServer Configuration File
+# This file contains all configuration options for MineServer
 # 
 # These can all be set via env, like we do in our docker compose example(s). For example:
 # 
@@ -8,20 +8,20 @@
 #
 # - is the same as -
 #
-# DISCOPANEL_SERVER_PORT="8080"
+# MINESERVER_SERVER_PORT="8080"
 
-# Server configuration for the DiscoPanel application itself
+# Server configuration for the MineServer application itself
 server:
   port: "8080"
   host: "0.0.0.0"
   read_timeout: 15
   write_timeout: 15
   idle_timeout: 60
-  user_agent: "DiscoPanel/1.0 (github.com/nickheyer/discopanel)"
+  user_agent: "MineServer/1.0 (github.com/athNdev/discopanel)"
 
 # Database configuration
 database:
-  path: "./data/discopanel.db"
+  path: "./data/mineserver.db"
   max_connections: 25
   max_idle_conns: 5
   conn_max_lifetime: 300
@@ -30,7 +30,7 @@ database:
 docker:
   host: "unix:///var/run/docker.sock"
   version: ""
-  network_name: "discopanel-network"
+  network_name: "mineserver-network"
   registry_url: ""
   sync_interval: 5  # Seconds between docker state sync
   # Can be configure like labels: {"your.label.key": "your_label_value", "other.label.key": "other_label_value"}

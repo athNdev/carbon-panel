@@ -889,7 +889,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 		// Sync files into server.DataPath (excluding internal directories)
 		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
-		cmdRsync := exec.CommandContext(ctx, "rsync", "-av",
+		cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
 			"--exclude=.git",
 			"--exclude=.discopanel_modpack_git",
 			"--exclude=.discopanel_modpack_staged",
