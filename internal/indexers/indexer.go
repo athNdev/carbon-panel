@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/config"
+	"github.com/athNdev/mineserver/internal/config"
 )
 
 // ModpackIndexer defines the interface for modpack indexing services

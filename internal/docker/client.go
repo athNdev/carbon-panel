@@ -26,11 +26,11 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
-	models "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/minecraft"
-	"github.com/nickheyer/discopanel/pkg/utils"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	models "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/mineserver/pkg/utils"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 const (
@@ -78,13 +78,13 @@ type dockerImagesCache struct {
 var dockerCache = &dockerImagesCache{}
 
 // Converts a container-internal path to a host path.
-// When DISCOPANEL_HOST_DATA_PATH is not set (running on host), it returns the path unchanged.
+// When MINESERVER_HOST_DATA_PATH is not set (running on host), it returns the path unchanged.
 func TranslateToHostPath(path string) string {
-	hostDataPath := os.Getenv("DISCOPANEL_HOST_DATA_PATH")
+	hostDataPath := os.Getenv("MINESERVER_HOST_DATA_PATH")
 	if hostDataPath == "" {
 		return path
 	}
-	containerDataDir := os.Getenv("DISCOPANEL_DATA_DIR")
+	containerDataDir := os.Getenv("MINESERVER_DATA_DIR")
 	if containerDataDir == "" {
 		containerDataDir = "/app/data"
 	}
@@ -236,7 +236,7 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 	} else {
 		// Set defaults
 		c.config = ClientConfig{
-			NetworkName:     "discopanel-network",
+			NetworkName:     "MINESERVER-network",
 			EnableRateLimit: true,
 			RateLimitPerMin: 10,
 			RateLimitBurst:  20,
@@ -494,7 +494,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		c.log.Debug("Additional port mapping: %s (%d:%d/%s)", port.GetName(), port.GetHostPort(), port.GetContainerPort(), protocol)
 	}
 
-	// Handle path translation when DiscoPanel runs in a container
+	// Handle path translation when MINESERVER runs in a container
 	dataPath := TranslateToHostPath(server.DataPath)
 
 	if err := os.MkdirAll(server.DataPath, 0755); err != nil {
@@ -509,11 +509,11 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		AttachStderr: true,
 		ExposedPorts: exposedPorts,
 		Labels: map[string]string{
-			"discopanel.server.id":      server.ID,
-			"discopanel.server.name":    server.Name,
-			"discopanel.server.loader":  string(server.ModLoader),
-			"discopanel.server.version": server.MCVersion,
-			"discopanel.managed":        "true",
+			"MINESERVER.server.id":      server.ID,
+			"MINESERVER.server.name":    server.Name,
+			"MINESERVER.server.loader":  string(server.ModLoader),
+			"MINESERVER.server.version": server.MCVersion,
+			"MINESERVER.managed":        "true",
 		},
 	}
 
@@ -569,7 +569,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 
 	resp, err := c.docker.ContainerCreate(
 		ctx, config, hostConfig, networkConfig, nil,
-		fmt.Sprintf("discopanel-server-%s", server.ID),
+		fmt.Sprintf("MINESERVER-server-%s", server.ID),
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create container: %w", err)
@@ -922,7 +922,7 @@ func (c *Client) EnsureNetwork() error {
 		createOpts := network.CreateOptions{
 			Driver: "bridge",
 			Labels: map[string]string{
-				"discopanel.managed": "true",
+				"MINESERVER.managed": "true",
 			},
 		}
 
@@ -935,7 +935,7 @@ func (c *Client) EnsureNetwork() error {
 	return nil
 }
 
-// Connects discopanel to its own bridge network if running as container
+// Connects MINESERVER to its own bridge network if running as container
 // NOTE: Only really needed for bridge mode though
 func (c *Client) attachSelfToNetwork(ctx context.Context) {
 	if _, err := os.Stat("/.dockerenv"); err != nil {
@@ -963,11 +963,11 @@ func (c *Client) attachSelfToNetwork(ctx context.Context) {
 	}
 
 	if err := c.docker.NetworkConnect(ctx, c.config.NetworkName, info.ID, nil); err != nil {
-		c.log.Error("Failed to attach DiscoPanel container to network %s: %v", c.config.NetworkName, err)
+		c.log.Error("Failed to attach MINESERVER container to network %s: %v", c.config.NetworkName, err)
 		return
 	}
 
-	c.log.Info("Attached DiscoPanel container to network %s", c.config.NetworkName)
+	c.log.Info("Attached MINESERVER container to network %s", c.config.NetworkName)
 }
 
 var (

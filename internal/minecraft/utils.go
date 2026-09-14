@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	models "github.com/nickheyer/discopanel/internal/db"
+	models "github.com/athNdev/mineserver/internal/db"
 )
 
 // ParseTPSFromOutput parses TPS value from various server command outputs
@@ -146,8 +146,8 @@ func ParsePlayerListFromOutput(output string) (int, []string) {
 }
 
 func stripMinecraftColors(text string) string {
-	// Remove Minecraft color codes (§ followed by a character)
-	re := regexp.MustCompile(`§.`)
+	// Remove Minecraft color codes (Â§ followed by a character)
+	re := regexp.MustCompile(`Â§.`)
 	text = re.ReplaceAllString(text, "")
 
 	// Also remove ANSI color codes

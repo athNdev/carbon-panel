@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 const (
-	ValkeyChannelRoutingEvents = "discopanel:routing:events"
-	ValkeyRouteKeyPrefix       = "discopanel:routes:"
+	ValkeyChannelRoutingEvents = "MINESERVER:routing:events"
+	ValkeyRouteKeyPrefix       = "MINESERVER:routes:"
 )
 
 // RouteInfo holds stored route details in Valkey / Dragonfly KV

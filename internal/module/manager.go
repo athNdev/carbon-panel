@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/command"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/internal/proxy"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/internal/command"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/internal/proxy"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // Manager handles the lifecycle of modules

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	web "github.com/nickheyer/discopanel/web/discopanel"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/logger"
+	web "github.com/athNdev/mineserver/web/mineserver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,9 +31,9 @@ func NewOpenAPIHandler(log *logger.Logger, isAuthEnabled func() bool) http.Handl
 			}
 			if len(raw) == 0 {
 				for _, fallbackPath := range []string{
-					"web/discopanel/static/schemav1.yaml",
+					"web/mineserver/static/schemav1.yaml",
 					"static/schemav1.yaml",
-					"/workspace/discopanel/web/discopanel/static/schemav1.yaml",
+					"/workspace/mineserver/web/mineserver/static/schemav1.yaml",
 				} {
 					if data, err := os.ReadFile(fallbackPath); err == nil && len(data) > 0 {
 						raw = data

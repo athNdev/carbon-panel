@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,7 +53,7 @@ func TestSnapshot_CreateAndList(t *testing.T) {
 	require.NoError(t, store.CreateServer(ctx, server))
 
 	engine := NewEngine(store, nil, nil, log, Config{
-		BackupDir:    "", // uses .discopanel_snapshots inside server dir
+		BackupDir:    "", // uses .mineserver_snapshots inside server dir
 		MaxSnapshots: 5,
 	})
 

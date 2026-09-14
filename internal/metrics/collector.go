@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/nickheyer/discopanel/internal/command"
-	"github.com/nickheyer/discopanel/internal/config"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/docker"
-	"github.com/nickheyer/discopanel/internal/events"
-	"github.com/nickheyer/discopanel/internal/minecraft"
-	"github.com/nickheyer/discopanel/internal/proxy"
-	"github.com/nickheyer/discopanel/pkg/files"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	"github.com/athNdev/mineserver/internal/command"
+	"github.com/athNdev/mineserver/internal/config"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/docker"
+	"github.com/athNdev/mineserver/internal/events"
+	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/mineserver/internal/proxy"
+	"github.com/athNdev/mineserver/pkg/files"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 type ServerMetrics struct {

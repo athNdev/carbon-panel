@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/auth"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/internal/auth"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // ValidateKeyRequest represents incoming request payload
@@ -102,7 +102,7 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 							resp.Message = "Connected successfully! CurseForge API key is valid and approved for mod searches."
 						} else if resSearch.StatusCode == http.StatusForbidden || resSearch.StatusCode == http.StatusUnauthorized {
 							resp.Valid = true
-							resp.Message = "CurseForge API key accepted, but Overwolf restricts direct mod search (403). DiscoPanel will automatically use the keyless community proxy for mod searches!"
+							resp.Message = "CurseForge API key accepted, but Overwolf restricts direct mod search (403). MINESERVER will automatically use the keyless community proxy for mod searches!"
 						} else {
 							resp.Valid = true
 							resp.Message = "Connected successfully! CurseForge API key is valid."
@@ -126,7 +126,7 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 			token := strings.TrimSpace(req.APIKey)
 			ua := strings.TrimSpace(req.UserAgent)
 			if ua == "" {
-				ua = "MineServer/1.0 (discopanel-admin)"
+				ua = "MineServer/1.0 (MINESERVER-admin)"
 			}
 
 			if token != "" {

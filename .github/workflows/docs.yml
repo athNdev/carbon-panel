@@ -35,17 +35,17 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        working-directory: docs/discopanel
+        working-directory: docs/mineserver
         run: npm ci
 
       - name: Build docs
-        working-directory: docs/discopanel
+        working-directory: docs/mineserver
         run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/discopanel/dist
+          path: docs/mineserver/dist
 
   deploy:
     needs: build

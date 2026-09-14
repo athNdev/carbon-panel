@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nickheyer/discopanel/internal/auth"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/minecraft"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/internal/auth"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/minecraft"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 type SearchModResult struct {
@@ -225,7 +225,7 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 	} else {
 		// Modrinth
 		token := ""
-		ua := "MineServer/1.0 (discopanel-admin)"
+		ua := "MineServer/1.0 (MINESERVER-admin)"
 		if globalSettings != nil {
 			if globalSettings.ModrinthToken != nil && *globalSettings.ModrinthToken != "" {
 				token = *globalSettings.ModrinthToken
@@ -404,7 +404,7 @@ func (m *ModOnlineManager) fetchCurseForgeMods(ctx context.Context, apiKey strin
 			return []SearchModResult{}
 		}
 		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", "MineServer/1.0 (discopanel-admin)")
+		req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER-admin)")
 		resp, err = m.httpClient.Do(req)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			if resp != nil {
@@ -506,7 +506,7 @@ func (m *ModOnlineManager) handleVersions(w http.ResponseWriter, r *http.Request
 		m.handleCurseForgeVersions(w, r, apiKey, slug, loader, mcVersion)
 	} else {
 		token := ""
-		ua := "MineServer/1.0 (discopanel-admin)"
+		ua := "MineServer/1.0 (MINESERVER-admin)"
 		if globalSettings != nil {
 			if globalSettings.ModrinthToken != nil && *globalSettings.ModrinthToken != "" {
 				token = *globalSettings.ModrinthToken
@@ -639,7 +639,7 @@ func (m *ModOnlineManager) resolveCurseForgeSlug(ctx context.Context, apiKey, sl
 	if err != nil {
 		return ""
 	}
-	req.Header.Set("User-Agent", "MineServer/1.0 (discopanel-admin)")
+	req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER-admin)")
 	req.Header.Set("Accept", "application/json")
 	if apiKey != "" {
 		req.Header.Set("x-api-key", apiKey)
@@ -746,7 +746,7 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 			return nil, rErr
 		}
 		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", "MineServer/1.0 (discopanel-admin)")
+		req.Header.Set("User-Agent", "MineServer/1.0 (MINESERVER-admin)")
 		return m.httpClient.Do(req)
 	}
 

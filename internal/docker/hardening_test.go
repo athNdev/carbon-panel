@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 func TestContainerHardening_ApplyOverrides(t *testing.T) {

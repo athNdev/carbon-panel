@@ -11,9 +11,9 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/nickheyer/discopanel/internal/alias"
-	"github.com/nickheyer/discopanel/internal/config"
-	models "github.com/nickheyer/discopanel/internal/db"
+	"github.com/athNdev/mineserver/internal/alias"
+	"github.com/athNdev/mineserver/internal/config"
+	models "github.com/athNdev/mineserver/internal/db"
 )
 
 // ModuleVolumeMount represents a volume mount from module configuration
@@ -107,11 +107,11 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 		AttachStderr: true,
 		ExposedPorts: exposedPorts,
 		Labels: map[string]string{
-			"discopanel.module.id":          module.ID,
-			"discopanel.module.name":        module.Name,
-			"discopanel.module.server_id":   module.ServerID,
-			"discopanel.module.template_id": module.TemplateID,
-			"discopanel.managed":            "true",
+			"MINESERVER.module.id":          module.ID,
+			"MINESERVER.module.name":        module.Name,
+			"MINESERVER.module.server_id":   module.ServerID,
+			"MINESERVER.module.template_id": module.TemplateID,
+			"MINESERVER.managed":            "true",
 		},
 	}
 
@@ -176,7 +176,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 	// Create the container
 	resp, err := c.docker.ContainerCreate(
 		ctx, config, hostConfig, networkConfig, nil,
-		fmt.Sprintf("discopanel-module-%s", module.ID),
+		fmt.Sprintf("MINESERVER-module-%s", module.ID),
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create module container: %w", err)
@@ -189,19 +189,19 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 func (c *Client) buildModuleEnv(module *models.Module, server *models.Server, aliasCtx *alias.Context) []string {
 	env := make([]string, 0)
 
-	// Add DiscoPanel context variables
+	// Add MINESERVER context variables
 	env = append(env,
-		fmt.Sprintf("DISCOPANEL_SERVER_ID=%s", server.ID),
-		fmt.Sprintf("DISCOPANEL_SERVER_NAME=%s", server.Name),
-		fmt.Sprintf("DISCOPANEL_SERVER_HOST=discopanel-server-%s", server.ID),
-		fmt.Sprintf("DISCOPANEL_SERVER_PORT=%d", DefaultMinecraftPort),
-		fmt.Sprintf("DISCOPANEL_MODULE_ID=%s", module.ID),
-		fmt.Sprintf("DISCOPANEL_MODULE_NAME=%s", module.Name),
+		fmt.Sprintf("MINESERVER_SERVER_ID=%s", server.ID),
+		fmt.Sprintf("MINESERVER_SERVER_NAME=%s", server.Name),
+		fmt.Sprintf("MINESERVER_SERVER_HOST=MINESERVER-server-%s", server.ID),
+		fmt.Sprintf("MINESERVER_SERVER_PORT=%d", DefaultMinecraftPort),
+		fmt.Sprintf("MINESERVER_MODULE_ID=%s", module.ID),
+		fmt.Sprintf("MINESERVER_MODULE_NAME=%s", module.Name),
 	)
 
 	// Add module API token if available
 	if module.TokenPlaintext != "" {
-		env = append(env, fmt.Sprintf("DISCOPANEL_API_TOKEN=%s", module.TokenPlaintext))
+		env = append(env, fmt.Sprintf("MINESERVER_API_TOKEN=%s", module.TokenPlaintext))
 	}
 
 	// Add module environment variables (frontend sends complete config with alias substitution)
@@ -273,7 +273,7 @@ func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount) []mount.Moun
 	return mounts
 }
 
-// GetModuleContainerIP gets the IP address of a module container on the discopanel network
+// GetModuleContainerIP gets the IP address of a module container on the MINESERVER network
 func (c *Client) GetModuleContainerIP(ctx context.Context, containerID string) (string, error) {
 	inspect, err := c.docker.ContainerInspect(ctx, containerID)
 	if err != nil {
