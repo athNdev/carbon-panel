@@ -12,7 +12,7 @@ package proxy
 import (
 	"context"
 
-	"github.com/nickheyer/discopanel/pkg/logger"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // Proxier is the interface for all proxy types (TCP, UDP, Minecraft, HTTP)

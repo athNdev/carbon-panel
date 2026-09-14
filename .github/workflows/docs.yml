@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT AND MPL-2.0
+# This file includes DiscoPanel material under the MIT License,
+# Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+# and still applies to that inherited material.
+# Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain
+# one at https://mozilla.org/MPL/2.0/.
+
+
 name: Deploy Docs to GitHub Pages
 
 on:
@@ -35,17 +44,17 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        working-directory: docs/discopanel
+        working-directory: docs/mineserver
         run: npm ci
 
       - name: Build docs
-        working-directory: docs/discopanel
+        working-directory: docs/mineserver
         run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/discopanel/dist
+          path: docs/mineserver/dist
 
   deploy:
     needs: build

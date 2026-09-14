@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package services
 
 import (
@@ -6,15 +15,15 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	storage "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/internal/rbac"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
+	storage "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/internal/rbac"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ discopanelv1connect.RoleServiceHandler = (*RoleService)(nil)
+var _ mineserverv1connect.RoleServiceHandler = (*RoleService)(nil)
 
 type RoleService struct {
 	store    *storage.Store
@@ -204,7 +213,7 @@ func (s *RoleService) GetPermissionMatrix(ctx context.Context, req *connect.Requ
 	// Populate available objects for scoped permissions when requested.
 	// Driven entirely by ProcedurePermissions: any resource with a non-empty
 	// ObjectIDField is scopeable, and the field name determines which entity
-	// type provides the objects (e.g. "server_id" → servers).
+	// type provides the objects (e.g. "server_id" â†’ servers).
 	if req.Msg.IncludeObjects {
 		type idName struct{ id, name string }
 

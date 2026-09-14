@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package services
 
 import (
@@ -5,15 +14,15 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
-	"github.com/nickheyer/discopanel/internal/config"
-	"github.com/nickheyer/discopanel/pkg/logger"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
-	"github.com/nickheyer/discopanel/pkg/proto/discopanel/v1/discopanelv1connect"
-	"github.com/nickheyer/discopanel/pkg/upload"
+	"github.com/athNdev/mineserver/internal/config"
+	"github.com/athNdev/mineserver/pkg/logger"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
+	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
+	"github.com/athNdev/mineserver/pkg/upload"
 )
 
 // Compile-time check that UploadService implements the interface
-var _ discopanelv1connect.UploadServiceHandler = (*UploadService)(nil)
+var _ mineserverv1connect.UploadServiceHandler = (*UploadService)(nil)
 
 // UploadService implements the Upload service
 type UploadService struct {
