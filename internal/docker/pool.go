@@ -18,8 +18,8 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
-	models "github.com/nickheyer/discopanel/internal/db"
-	"github.com/nickheyer/discopanel/pkg/logger"
+	models "github.com/athNdev/mineserver/internal/db"
+	"github.com/athNdev/mineserver/pkg/logger"
 )
 
 // NodeStore defines the DB interface needed by ClientPool
@@ -50,7 +50,7 @@ func NewClientPool(store NodeStore, defaultClient *Client, log *logger.Logger, c
 		baseCfg = cfg[0]
 	} else {
 		baseCfg = ClientConfig{
-			NetworkName: "discopanel-network",
+			NetworkName: "MINESERVER-network",
 		}
 	}
 
@@ -398,7 +398,7 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 }
 
 func resolveTLSCertFiles(node *models.Node) (caFile, certFile, keyFile string, err error) {
-	certDir := filepath.Join(os.TempDir(), "discopanel-node-certs", node.ID)
+	certDir := filepath.Join(os.TempDir(), "MINESERVER-node-certs", node.ID)
 
 	writeIfPEM := func(name, content string) (string, error) {
 		trimmed := strings.TrimSpace(content)

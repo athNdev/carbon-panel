@@ -1,10 +1,19 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package module
 
 import (
 	"context"
 
-	storage "github.com/nickheyer/discopanel/internal/db"
-	v1 "github.com/nickheyer/discopanel/pkg/proto/discopanel/v1"
+	storage "github.com/athNdev/mineserver/internal/db"
+	v1 "github.com/athNdev/mineserver/pkg/proto/mineserver/v1"
 )
 
 // InitBuiltinTemplates creates/updates built-in module templates
@@ -18,7 +27,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			Name:           "Geyser",
 			Description:    "Allows Bedrock Edition players to join Java Edition servers. Requires Floodgate plugin on the server for seamless authentication.",
 			Type:           storage.ModuleTemplateTypeBuiltin,
-			DockerImage:    "nickheyer/discopanel-geyser:latest",
+			DockerImage:    "athndev/mineserver-geyser:latest",
 			Category:       "proxy",
 			SupportsProxy:  true,
 			RequiresServer: true,
@@ -36,7 +45,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 				"BEDROCK_MOTD1": "GeyserMC",
 				"BEDROCK_MOTD2": "Minecraft Server",
 				"BEDROCK_SERVERNAME": "Geyser",
-				"REMOTE_ADDRESS": "discopanel-server-{{server.id}}",
+				"REMOTE_ADDRESS": "MINESERVER-server-{{server.id}}",
 				"REMOTE_PORT": "25565",
 				"REMOTE_AUTH_TYPE": "offline"
 			}`,
@@ -57,7 +66,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			Icon:           "archive",
 			Ports:          []*v1.ModulePort{},
 			DefaultEnv: `{
-				"RCON_HOST": "discopanel-server-{{server.id}}",
+				"RCON_HOST": "MINESERVER-server-{{server.id}}",
 				"RCON_PORT": "{{server.config.rconPort}}",
 				"RCON_PASSWORD": "{{server.config.rconPassword}}",
 				"SRC_DIR": "/data",
@@ -97,7 +106,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			DefaultEnv: `{
 				"RWA_ADMIN": "true",
 				"RWA_PASSWORD": "admin",
-				"RWA_RCON_HOST": "discopanel-server-{{server.id}}",
+				"RWA_RCON_HOST": "MINESERVER-server-{{server.id}}",
 				"RWA_RCON_PORT": "{{server.config.rconPort}}",
 				"RWA_RCON_PASSWORD": "{{server.config.rconPassword}}",
 				"RWA_WEBSOCKET_URL": "ws://{{server.proxy_hostname}}:{{module.ports.WS.host_port}}"
@@ -124,7 +133,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			},
 			DefaultAccessUrls: []string{"http://{{host.hostname}}:{{module.ports.Metrics.host_port}}/metrics"},
 			DefaultEnv: `{
-				"EXPORT_SERVERS": "discopanel-server-{{server.id}}:25565",
+				"EXPORT_SERVERS": "MINESERVER-server-{{server.id}}:25565",
 				"EXPORT_PORT": "{{module.ports.Metrics.container_port}}"
 			}`,
 			DefaultVolumes:  `[]`,
@@ -168,9 +177,9 @@ func InitBuiltinTemplates(store *storage.Store) error {
 		{
 			ID:             "builtin-status-panel",
 			Name:           "Status Panel",
-			Description:    "Real-time server status dashboard showing player count, TPS, memory usage, and server info via the DiscoPanel API.",
+			Description:    "Real-time server status dashboard showing player count, TPS, memory usage, and server info via the MineServer API.",
 			Type:           storage.ModuleTemplateTypeBuiltin,
-			DockerImage:    "nickheyer/discopanel-status:latest",
+			DockerImage:    "athndev/mineserver-status:latest",
 			Category:       "monitoring",
 			SupportsProxy:  true,
 			RequiresServer: true,
@@ -180,14 +189,14 @@ func InitBuiltinTemplates(store *storage.Store) error {
 			},
 			DefaultAccessUrls: []string{"http://{{host.hostname}}:{{module.ports.Web.host_port}}"},
 			DefaultEnv: `{
-				"DISCOPANEL_URL": "http://host.docker.internal:{{config.server.port}}",
+				"MINESERVER_URL": "http://host.docker.internal:{{config.server.port}}",
 				"POLL_INTERVAL": "10s",
 				"PORT": "{{module.ports.Web.container_port}}"
 			}`,
 			DefaultVolumes:  `[]`,
 			HealthCheckPath: "/health",
 			HealthCheckPort: 8181,
-			Documentation:   "Displays a real-time status dashboard for the attached Minecraft server. Fetches status via the DiscoPanel API including player count, TPS, CPU/memory usage, and server configuration. Automatically refreshes every 10 seconds.",
+			Documentation:   "Displays a real-time status dashboard for the attached Minecraft server. Fetches status via the MINESERVER API including player count, TPS, CPU/memory usage, and server configuration. Automatically refreshes every 10 seconds.",
 			DefaultMemory:   512,
 		},
 	}

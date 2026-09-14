@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package alias
 
 import (
@@ -8,8 +17,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nickheyer/discopanel/internal/config"
-	models "github.com/nickheyer/discopanel/internal/db"
+	"github.com/athNdev/mineserver/internal/config"
+	models "github.com/athNdev/mineserver/internal/db"
 )
 
 // Category groups aliases by their source type
@@ -509,7 +518,7 @@ func getModuleFieldValue(module *models.Module, field string) string {
 	switch field {
 	case "host":
 		// Docker container name for internal networking
-		return fmt.Sprintf("discopanel-module-%s", module.ID)
+		return fmt.Sprintf("MINESERVER-module-%s", module.ID)
 	case "port":
 		// Return the first port's container port
 		if len(module.Ports) > 0 && module.Ports[0] != nil && module.Ports[0].ContainerPort > 0 {

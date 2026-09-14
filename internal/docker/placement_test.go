@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"testing"
 
-	models "github.com/nickheyer/discopanel/internal/db"
+	models "github.com/athNdev/mineserver/internal/db"
 )
 
 // mockPlacementStore implements PlacementStore for unit tests

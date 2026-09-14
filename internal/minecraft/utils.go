@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package minecraft
 
 import (
@@ -5,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	models "github.com/nickheyer/discopanel/internal/db"
+	models "github.com/athNdev/mineserver/internal/db"
 )
 
 // ParseTPSFromOutput parses TPS value from various server command outputs
@@ -146,8 +155,8 @@ func ParsePlayerListFromOutput(output string) (int, []string) {
 }
 
 func stripMinecraftColors(text string) string {
-	// Remove Minecraft color codes (§ followed by a character)
-	re := regexp.MustCompile(`§.`)
+	// Remove Minecraft color codes (Â§ followed by a character)
+	re := regexp.MustCompile(`Â§.`)
 	text = re.ReplaceAllString(text, "")
 
 	// Also remove ANSI color codes

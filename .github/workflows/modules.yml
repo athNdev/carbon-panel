@@ -1,3 +1,12 @@
+# SPDX-License-Identifier: MIT AND MPL-2.0
+# This file includes DiscoPanel material under the MIT License,
+# Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+# and still applies to that inherited material.
+# Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain
+# one at https://mozilla.org/MPL/2.0/.
+
+
 name: Module Builder
 
 on:
@@ -66,11 +75,11 @@ jobs:
 
           for dockerfile in docker/Dockerfile.*; do
             name=$(basename "$dockerfile" | sed 's/Dockerfile\.//')
-            if [ "$name" != "discopanel" ]; then
-              echo "Building nickheyer/discopanel-$name (linux/amd64,linux/arm64)..."
-              TAGS="--tag nickheyer/discopanel-$name:latest"
+            if [ "$name" != "mineserver" ]; then
+              echo "Building athndev/mineserver-$name (linux/amd64,linux/arm64)..."
+              TAGS="--tag athndev/mineserver-$name:latest"
               if [ -n "$VERSION" ]; then
-                TAGS="$TAGS --tag nickheyer/discopanel-$name:$VERSION"
+                TAGS="$TAGS --tag athndev/mineserver-$name:$VERSION"
               fi
 
               docker buildx build \
@@ -80,7 +89,7 @@ jobs:
                 --push \
                 .
 
-              echo "Pushed nickheyer/discopanel-$name"
+              echo "Pushed athndev/mineserver-$name"
             fi
           done
 
