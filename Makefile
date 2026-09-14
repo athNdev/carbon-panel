@@ -68,8 +68,13 @@ build: build-frontend
 
 # Build and push Docker image to :dev tag
 image:
-	@echo "Building and pushing Docker image..."
+	@echo "Building Docker image..."
 	@bash scripts/build.sh
+
+# Build and push Docker image to Docker Hub
+image-push:
+	@echo "Building and pushing Docker image..."
+	@bash scripts/build.sh dev --push
 
 # Build and push all module Docker images
 modules: gen
