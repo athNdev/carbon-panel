@@ -29,7 +29,7 @@ import (
 	"github.com/athNdev/mineserver/pkg/logger"
 	"github.com/athNdev/mineserver/pkg/proto/mineserver/v1/mineserverv1connect"
 	"github.com/athNdev/mineserver/pkg/upload"
-	web "github.com/athNdev/mineserver/web/MINESERVER"
+	web "github.com/athNdev/mineserver/web/mineserver"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/proto"

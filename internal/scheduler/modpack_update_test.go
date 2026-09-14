@@ -133,7 +133,7 @@ func TestModpackUpdate_CloningStagingAndSync(t *testing.T) {
 	assert.Equal(t, `{"version": "1.1.0"}`, string(newContent))
 
 	// Verify staging manifest was created
-	stagedManifestPath := filepath.Join(serverDir, ".MINESERVER_modpack_staged", "staged_manifest.json")
+	stagedManifestPath := filepath.Join(serverDir, ".mineserver_modpack_staged", "staged_manifest.json")
 	manifestBytes, err := os.ReadFile(stagedManifestPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(manifestBytes), "config/modpack.json")

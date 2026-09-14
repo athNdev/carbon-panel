@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -779,7 +780,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	// Prepare git repository clone directory inside server directory or app cache
-	cacheDir := filepath.Join(server.DataPath, ".MINESERVER_modpack_git")
+	cacheDir := filepath.Join(server.DataPath, ".mineserver_modpack_git")
 	gitURL := cfg.GitURL
 	if cfg.AuthToken != "" && strings.HasPrefix(gitURL, "https://") {
 		// Embed auth token into clone URL
@@ -866,7 +867,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 		// Stage configuration updates if requested
 		if cfg.StageConfigUpdates {
-			stagedDir := filepath.Join(server.DataPath, ".MINESERVER_modpack_staged")
+			stagedDir := filepath.Join(server.DataPath, ".mineserver_modpack_staged")
 			_ = os.MkdirAll(stagedDir, 0755)
 			manifest := map[string]any{
 				"from_commit":   currentHash,
@@ -891,19 +892,23 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
 		cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
 			"--exclude=.git",
-			"--exclude=.MINESERVER_modpack_git",
-			"--exclude=.MINESERVER_modpack_staged",
-			"--exclude=.MINESERVER_snapshots",
+			"--exclude=.mineserver_modpack_git",
+			"--exclude=.mineserver_modpack_staged",
+			"--exclude=.mineserver_snapshots",
 			srcDir+"/", server.DataPath+"/")
 		if out, err := cmdRsync.CombinedOutput(); err != nil {
 			// Fallback to cp -rf if rsync is not installed
 			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
 			if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
-				// If copying failed and we took a snapshot, rollback if enabled
-				if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
-					_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
+				// Pure Go fallback if neither rsync nor cp are available (e.g. on Windows)
+				excludes := []string{".git", ".mineserver_modpack_git", ".mineserver_modpack_staged", ".mineserver_snapshots"}
+				if goErr := copyDirExcluding(srcDir, server.DataPath, excludes); goErr != nil {
+					// If copying failed and we took a snapshot, rollback if enabled
+					if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
+						_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
+					}
+					return string(out) + "\n" + string(cpOut), fmt.Errorf("failed to copy modpack files: %w", goErr)
 				}
-				return string(out) + "\n" + string(cpOut), fmt.Errorf("failed to copy modpack files: %w", cpErr)
 			}
 		}
 
@@ -1050,3 +1055,53 @@ func (s *Scheduler) executeChunkyPregen(ctx context.Context, server *storage.Ser
 	return strings.Join(results, "\n"), nil
 }
 
+func copyDirExcluding(src, dst string, excludes []string) error {
+	excludeMap := make(map[string]bool, len(excludes))
+	for _, e := range excludes {
+		excludeMap[e] = true
+	}
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		parts := strings.Split(rel, string(filepath.Separator))
+		if len(parts) > 0 && excludeMap[parts[0]] {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		targetPath := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(targetPath, info.Mode())
+		}
+		return copyFileHelper(path, targetPath, info.Mode())
+	})
+}
+
+func copyFileHelper(src, dst string, mode os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	sf, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sf.Close()
+
+	df, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+
+	_, err = io.Copy(df, sf)
+	return err
+}
