@@ -254,83 +254,84 @@
 
 <div class="space-y-6">
 	<!-- Global Proxy Configuration -->
-	<Card>
-		<CardHeader>
-			<div class="flex items-center justify-between">
-				<div class="flex items-center gap-3">
-					<Network class="h-5 w-5 text-primary" />
-					<div>
-						<CardTitle>Proxy Configuration</CardTitle>
-						<CardDescription>Global proxy settings and base domain configuration</CardDescription>
-					</div>
+	<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+		<div class="flex items-center justify-between border-b border-[#393939] pb-4">
+			<div class="flex items-center gap-3">
+				<Network class="h-5 w-5 text-[#0f62fe]" />
+				<div>
+					<h3 class="font-sans text-base font-normal text-[#f4f4f4]">Proxy Configuration</h3>
+					<p class="text-xs text-[#a8a8a8]">Global proxy settings and base domain configuration</p>
 				</div>
-				<Switch
-					checked={proxyEnabled}
-					onCheckedChange={(checked) => (proxyEnabled = checked)}
-					disabled={loading || saving}
-				/>
 			</div>
-		</CardHeader>
-		<CardContent class="space-y-4">
+			<Switch
+				checked={proxyEnabled}
+				onCheckedChange={(checked) => (proxyEnabled = checked)}
+				disabled={loading || saving}
+			/>
+		</div>
+		<div class="space-y-4">
 			<div class="space-y-2">
-				<Label for="base-url">Base Domain</Label>
+				<Label for="base-url" class="text-xs text-[#c6c6c6]">Base Domain</Label>
 				<Input
 					id="base-url"
 					type="text"
 					bind:value={baseURL}
 					placeholder="minecraft.example.com"
 					disabled={saving || !proxyEnabled}
+					class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
 				/>
-				<p class="text-xs text-muted-foreground">
+				<p class="text-xs text-[#8d8d8d]">
 					Optional base domain that will be appended to server hostnames (e.g., "survival" becomes
 					"survival.minecraft.example.com")
 				</p>
 			</div>
 
 			<div class="flex justify-end">
-				<Button onclick={saveProxyConfig} disabled={saving}>
+				<button
+					type="button"
+					onclick={saveProxyConfig}
+					disabled={saving}
+					class="h-10 px-6 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-sm font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				>
 					{#if saving}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 class="h-4 w-4 animate-spin" />
+						<span>Saving...</span>
 					{:else}
-						<Save class="mr-2 h-4 w-4" />
+						<Save class="h-4 w-4" />
+						<span>Save Configuration</span>
 					{/if}
-					Save Configuration
-				</Button>
+				</button>
 			</div>
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	{#if loading}
-		<Card>
-			<CardContent class="flex items-center justify-center py-12">
-				<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
-			</CardContent>
-		</Card>
+		<div class="border border-[#393939] bg-[#262626] p-12 rounded-none flex items-center justify-center">
+			<div class="mx-auto h-8 w-8 border-2 border-[#0f62fe] border-t-transparent animate-spin"></div>
+		</div>
 	{:else if !proxyEnabled}
-		<Alert>
-			<Info class="h-4 w-4" />
-			<AlertDescription>
+		<Alert class="rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6]">
+			<Info class="h-4 w-4 text-[#78a9ff]" />
+			<AlertDescription class="text-xs text-[#a8a8a8]">
 				Enable the proxy system to allow servers to use custom hostnames instead of direct port
 				connections.
 			</AlertDescription>
 		</Alert>
 	{:else}
 		<!-- Proxy Listeners -->
-		<Card>
-			<CardHeader>
-				<div class="flex items-center justify-between">
-					<div>
-						<CardTitle>Proxy Listeners</CardTitle>
-						<CardDescription>Configure individual proxy listening ports</CardDescription>
-					</div>
-					<Badge variant="outline" class="gap-1">
-						<Server class="h-3 w-3" />
-						{listenersWithCount.length}
-						{listenersWithCount.length === 1 ? 'Listener' : 'Listeners'}
-					</Badge>
+		<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+			<div class="flex items-center justify-between border-b border-[#393939] pb-4">
+				<div>
+					<h3 class="font-sans text-base font-normal text-[#f4f4f4]">Proxy Listeners</h3>
+					<p class="text-xs text-[#a8a8a8]">Configure individual proxy listening ports</p>
 				</div>
-			</CardHeader>
-			<CardContent class="space-y-4">
+				<span class="inline-flex items-center gap-1 rounded-none border border-[#525252] bg-[#161616] px-2 py-0.5 text-xs font-mono text-[#c6c6c6]">
+					<Server class="h-3 w-3 text-[#78a9ff]" />
+					{listenersWithCount.length}
+					{listenersWithCount.length === 1 ? 'Listener' : 'Listeners'}
+				</span>
+			</div>
+			<div class="space-y-4">
 				<!-- Existing Listeners -->
 				{#if listenersWithCount.length > 0}
 					<div class="space-y-3">
@@ -339,28 +340,29 @@
 							{@const status = getListenerStatus(listener, lwc.serverCount)}
 							{@const StatusIcon = getStatusIcon(status)}
 							{#if listener}
-								<div class="rounded-lg border bg-card p-4">
+								<div class="rounded-none border border-[#393939] bg-[#1e1e1e] p-4">
 									{#if editingListener?.id === listener.id}
 										<!-- Edit Mode -->
 										<div class="space-y-3">
 											<div class="grid grid-cols-2 gap-3">
 												<div class="space-y-2">
-													<Label>Name</Label>
-													<Input bind:value={editingListener.name} placeholder="Listener name" />
+													<Label class="text-xs text-[#c6c6c6]">Name</Label>
+													<Input bind:value={editingListener.name} placeholder="Listener name" class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]" />
 												</div>
 												<div class="space-y-2">
-													<Label>Port</Label>
-													<Input type="number" value={listener.port} disabled class="bg-muted" />
+													<Label class="text-xs text-[#c6c6c6]">Port</Label>
+													<Input type="number" value={listener.port} disabled class="rounded-none border border-[#393939] bg-[#161616] text-[#8d8d8d]" />
 												</div>
 											</div>
 											<div class="space-y-2">
-												<Label>Description</Label>
+												<Label class="text-xs text-[#c6c6c6]">Description</Label>
 												<Input
 													bind:value={editingListener.description}
 													placeholder="Optional description"
+													class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]"
 												/>
 											</div>
-											<div class="flex items-center justify-between">
+											<div class="flex items-center justify-between pt-2">
 												<div class="flex items-center gap-4">
 													<div class="flex items-center gap-2">
 														<Switch
@@ -369,7 +371,7 @@
 																if (editingListener) editingListener.enabled = checked;
 															}}
 														/>
-														<Label>Enabled</Label>
+														<Label class="text-xs text-[#c6c6c6]">Enabled</Label>
 													</div>
 													<div class="flex items-center gap-2">
 														<Switch
@@ -378,20 +380,24 @@
 																if (editingListener) editingListener.isDefault = checked;
 															}}
 														/>
-														<Label>Default</Label>
+														<Label class="text-xs text-[#c6c6c6]">Default</Label>
 													</div>
 												</div>
 												<div class="flex gap-2">
-													<Button
-														variant="outline"
-														size="sm"
+													<button
+														type="button"
+														class="h-8 px-3 inline-flex items-center rounded-none border border-[#393939] bg-[#353535] text-xs text-[#f4f4f4] hover:bg-[#393939] cursor-pointer"
 														onclick={() => (editingListener = null)}
 													>
 														Cancel
-													</Button>
-													<Button size="sm" onclick={() => updateListener(editingListener!)}>
+													</button>
+													<button
+														type="button"
+														class="h-8 px-4 inline-flex items-center rounded-none bg-[#0f62fe] text-white hover:bg-[#0353e9] text-xs font-medium cursor-pointer"
+														onclick={() => updateListener(editingListener!)}
+													>
 														Save
-													</Button>
+													</button>
 												</div>
 											</div>
 										</div>
@@ -401,64 +407,61 @@
 											<div class="space-y-2">
 												<div class="flex items-center gap-3">
 													<StatusIcon class="h-4 w-4 {getStatusColor(status)}" />
-													<span class="font-semibold">{listener.name}</span>
-													<Badge variant="secondary" class="font-mono">:{listener.port}</Badge>
+													<span class="font-normal text-sm text-[#f4f4f4]">{listener.name}</span>
+													<span class="rounded-none border border-[#525252] bg-[#161616] px-1.5 py-0.5 text-xs font-mono text-[#c6c6c6]">:{listener.port}</span>
 													{#if listener.isDefault}
-														<Badge variant="default" class="gap-1">
+														<span class="inline-flex items-center gap-1 rounded-none border border-[#0f62fe] bg-[#0043ce]/20 px-1.5 py-0.5 text-xs font-mono text-[#78a9ff]">
 															<Star class="h-3 w-3" />
 															Default
-														</Badge>
+														</span>
 													{/if}
 													{#if !listener.enabled}
-														<Badge variant="outline">Disabled</Badge>
+														<span class="rounded-none border border-[#525252] bg-transparent px-1.5 py-0.5 text-xs font-mono text-[#8d8d8d]">Disabled</span>
 													{/if}
 												</div>
 
 												{#if listener.description}
-													<p class="text-sm text-muted-foreground">{listener.description}</p>
+													<p class="text-xs text-[#a8a8a8]">{listener.description}</p>
 												{/if}
 
 												{#if lwc.serverCount > 0}
-													<p class="text-xs text-muted-foreground">
+													<p class="text-xs text-[#8d8d8d]">
 														{lwc.serverCount}
 														{lwc.serverCount === 1 ? 'server' : 'servers'} using this listener
 													</p>
 												{:else}
-													<p class="text-xs text-muted-foreground">
+													<p class="text-xs text-[#8d8d8d]">
 														No servers using this listener
 													</p>
 												{/if}
 											</div>
 
-											<div class="flex gap-2">
+											<div class="flex gap-1">
 												{#if !listener.isDefault}
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-8 w-8"
+													<button
+														type="button"
+														class="h-8 w-8 rounded-none inline-flex items-center justify-center hover:bg-[#353535] text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer transition-colors"
 														onclick={() => setDefaultListener(listener)}
 														title="Set as default"
 													>
 														<Star class="h-4 w-4" />
-													</Button>
+													</button>
 												{/if}
-												<Button
-													variant="ghost"
-													size="icon"
-													class="h-8 w-8"
+												<button
+													type="button"
+													class="h-8 w-8 rounded-none inline-flex items-center justify-center hover:bg-[#353535] text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer transition-colors"
 													onclick={() => (editingListener = { ...listener })}
 												>
 													<Edit class="h-4 w-4" />
-												</Button>
+												</button>
 												{#if listenersWithCount.length > 1 && lwc.serverCount === 0}
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-8 w-8"
+													<button
+														type="button"
+														class="h-8 w-8 rounded-none inline-flex items-center justify-center hover:bg-[#da1e28]/20 text-[#8d8d8d] hover:text-[#ff8389] cursor-pointer transition-colors"
 														onclick={() => deleteListener(lwc)}
 													>
 														<Trash2 class="h-4 w-4" />
-													</Button>
+													</button>
 												{/if}
 											</div>
 										</div>
@@ -470,42 +473,43 @@
 				{/if}
 
 				<!-- Add New Listener -->
-				<div class="border-t pt-4">
-					<h4 class="mb-3 font-medium">Add New Listener</h4>
+				<div class="border-t border-[#393939] pt-4">
+					<h4 class="mb-3 text-sm font-normal text-[#f4f4f4]">Add New Listener</h4>
 					<div class="space-y-3">
 						<div class="grid grid-cols-2 gap-3">
 							<div class="space-y-2">
-								<Label>Name</Label>
-								<Input bind:value={newListener.name} placeholder="e.g., Secondary, Development" />
+								<Label class="text-xs text-[#c6c6c6]">Name</Label>
+								<Input bind:value={newListener.name} placeholder="e.g., Secondary, Development" class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]" />
 							</div>
 							<div class="space-y-2">
-								<Label>Port</Label>
+								<Label class="text-xs text-[#c6c6c6]">Port</Label>
 								<Input
 									type="number"
 									bind:value={newListener.port}
 									oninput={(e) => validatePort(Number(e.currentTarget.value))}
-									class={portError ? 'border-destructive' : ''}
+									class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {portError ? 'border-[#da1e28]' : ''}"
 								/>
 								{#if portError}
-									<p class="text-xs text-destructive">{portError}</p>
+									<p class="text-xs text-[#ff8389]">{portError}</p>
 								{/if}
 							</div>
 						</div>
 						<div class="space-y-2">
-							<Label>Description (Optional)</Label>
+							<Label class="text-xs text-[#c6c6c6]">Description (Optional)</Label>
 							<Input
 								bind:value={newListener.description}
 								placeholder="Optional description for this listener"
+								class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]"
 							/>
 						</div>
-						<div class="flex items-center justify-between">
+						<div class="flex items-center justify-between pt-2">
 							<div class="flex items-center gap-4">
 								<div class="flex items-center gap-2">
 									<Switch
 										checked={newListener.enabled}
 										onCheckedChange={(checked) => (newListener.enabled = checked)}
 									/>
-									<Label>Enabled</Label>
+									<Label class="text-xs text-[#c6c6c6]">Enabled</Label>
 								</div>
 								{#if listenersWithCount.length === 0}
 									<div class="flex items-center gap-2">
@@ -513,48 +517,51 @@
 											checked={newListener.isDefault}
 											onCheckedChange={(checked) => (newListener.isDefault = checked)}
 										/>
-										<Label>Set as Default</Label>
+										<Label class="text-xs text-[#c6c6c6]">Set as Default</Label>
 									</div>
 								{/if}
 							</div>
-							<Button onclick={createListener} disabled={!newListener.name || !!portError}>
-								<Plus class="mr-2 h-4 w-4" />
-								Add Listener
-							</Button>
+							<button
+								type="button"
+								onclick={createListener}
+								disabled={!newListener.name || !!portError}
+								class="h-10 px-4 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-xs font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+							>
+								<Plus class="h-4 w-4" />
+								<span>Add Listener</span>
+							</button>
 						</div>
 					</div>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 
 		<!-- Active Routes -->
 		{#if activeRoutes.length > 0}
-			<Card>
-				<CardHeader>
-					<CardTitle>Active Routes</CardTitle>
-					<CardDescription>Servers currently using proxy routing</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div class="space-y-2">
-						{#each activeRoutes as route (route.serverId)}
-							<div class="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-								<div class="flex items-center gap-3">
-									<Activity class="h-4 w-4 {route.active ? 'text-green-500' : 'text-gray-500'}" />
-									<div>
-										<p class="font-mono text-sm">{route.hostname}</p>
-										<p class="text-xs text-muted-foreground">
-											Server: {route.serverId.slice(0, 8)}...
-										</p>
-									</div>
+			<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+				<div class="border-b border-[#393939] pb-4">
+					<h3 class="font-sans text-base font-normal text-[#f4f4f4]">Active Routes</h3>
+					<p class="text-xs text-[#a8a8a8]">Servers currently using proxy routing</p>
+				</div>
+				<div class="space-y-2">
+					{#each activeRoutes as route (route.serverId)}
+						<div class="flex items-center justify-between rounded-none border border-[#393939] bg-[#1e1e1e] p-3">
+							<div class="flex items-center gap-3">
+								<Activity class="h-4 w-4 {route.active ? 'text-[#42be65]' : 'text-[#8d8d8d]'}" />
+								<div>
+									<p class="font-mono text-xs text-[#f4f4f4]">{route.hostname}</p>
+									<p class="text-xs text-[#8d8d8d]">
+										Server: {route.serverId.slice(0, 8)}...
+									</p>
 								</div>
-								<Badge variant={route.active ? 'default' : 'outline'}>
-									{route.active ? 'Active' : 'Inactive'}
-								</Badge>
 							</div>
-						{/each}
-					</div>
-				</CardContent>
-			</Card>
+							<span class="rounded-none border px-2 py-0.5 text-xs font-mono {route.active ? 'border-[#24a148] bg-[#24a148]/20 text-[#42be65]' : 'border-[#525252] bg-transparent text-[#8d8d8d]'}">
+								{route.active ? 'Active' : 'Inactive'}
+							</span>
+						</div>
+					{/each}
+				</div>
+			</div>
 		{/if}
 	{/if}
 </div>
