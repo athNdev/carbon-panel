@@ -75,12 +75,30 @@ jobs:
           echo "::add-mask::$PASS_CLEAN"
           echo "::add-mask::$USER_CLEAN"
 
-          # Authenticate via password-stdin with no trailing newlines
-          echo "Authenticating with Docker Hub..."
+          # Direct Docker Hub API verification
+          echo "Checking Docker Hub API authentication directly..."
+          AUTH_RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -H "Content-Type: application/json" \
+            -X POST -d "{\"username\": \"$USER_CLEAN\", \"password\": \"$PASS_CLEAN\"}" \
+            https://hub.docker.com/v2/users/login/)
+          HTTP_CODE=$(echo "$AUTH_RESP" | grep "HTTP_STATUS" | cut -d: -f2)
+          BODY=$(echo "$AUTH_RESP" | grep -v "HTTP_STATUS")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Docker Hub API token validation: SUCCESS (HTTP 200)"
+          else
+            echo "::error::Docker Hub API returned HTTP $HTTP_CODE: $BODY"
+          fi
+
+          # Reset docker config to ensure clean state
+          rm -f ~/.docker/config.json
+          docker logout || true
+
+          # Authenticate via password-stdin
+          echo "Authenticating Docker CLI..."
           if printf '%s' "$PASS_CLEAN" | docker login -u "$USER_CLEAN" --password-stdin; then
             echo "has_creds=true" >> "$GITHUB_OUTPUT"
             echo "login_ok=true" >> "$GITHUB_OUTPUT"
-            echo "Authentication succeeded."
+            echo "Docker CLI login succeeded."
           else
             LOGIN_STATUS=$?
             echo "has_creds=false" >> "$GITHUB_OUTPUT"
