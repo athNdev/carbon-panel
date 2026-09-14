@@ -1,0 +1,66 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - 'staging/*'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-backend:
+    name: Backend Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Ensure embedded web build directory exists
+        run: mkdir -p web/discopanel/build && touch web/discopanel/build/.gitkeep
+
+      - name: Run Packwiz, Scheduler & Core Tests
+        run: |
+          go test -v ./internal/packwiz/...
+          go test -v ./internal/rpc/handlers/ -run "TestPackwiz"
+          go test -v ./internal/scheduler/...
+
+  test-frontend:
+    name: Frontend Quality & Build Gate
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web/discopanel
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/discopanel/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: SvelteKit Type & Component Diagnostics
+        run: npm run check
+
+      - name: Production Vite Build
+        run: npm run build

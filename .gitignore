@@ -4,14 +4,17 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 backups/
 sandbox/
-build/
-discopanel
+/build/
+/discopanel
+/mineserver
 !proto/discopanel
 !docs/discopanel
 web/discopanel/src/lib/proto/gnostic/
 !cmd/discopanel
 !web/discopanel
 !pkg/proto/discopanel
+!web/discopanel/src/lib/proto
+!web/discopanel/build/.gitkeep
 data/
 *.db
 config.yaml
