@@ -11,6 +11,7 @@
     "check": "cd web/carbon-panel && bun run check",
     "lint": "cd web/carbon-panel && bun run lint",
     "format": "cd web/carbon-panel && bun run format",
-    "test": "go test ./internal/packwiz/... ./internal/scheduler/... ./internal/snapshot/... ./internal/docker/..."
+    "test": "make test",
+    "test:frontend": "cd web/carbon-panel && bun run test"
   }
 }
