@@ -35,7 +35,16 @@ deploy_ref() {
     sha=$(git -C "$SRC" rev-parse --short=12 HEAD)
     echo "building $IMAGE @ $sha ..."
     docker build -f "$SRC/docker/Dockerfile.carbon-panel" -t "$IMAGE" "$SRC"
-    (cd /opt/staging && docker compose up -d --force-recreate)
+    docker rm -f carbon-panel-staging 2>/dev/null || true
+    # NOTE: plain docker run (this host has no compose plugin).
+    # staging/docker-compose.yml documents the equivalent service.
+    docker run -d --name carbon-panel-staging --restart unless-stopped \
+      -p 8081:8080 \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v /opt/staging/data:/app/data -v /opt/staging/backups:/app/backups -v /opt/staging/tmp:/app/tmp \
+      -e CARBONPANEL_DATA_DIR=/app/data -e CARBONPANEL_HOST_DATA_PATH=/opt/staging/data -e TZ=UTC \
+      --add-host host.docker.internal:host-gateway \
+      "$IMAGE"
     echo "$ref @ $sha $(date -u +%FT%TZ)" > "$REF_FILE"
     echo "=== staging live: $ref ($sha) on :8081 ==="
 }
