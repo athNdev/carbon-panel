@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -486,7 +487,7 @@ func (m *Manager) GetRecoveryKey() string {
 }
 
 func (m *Manager) UseRecoveryKey(ctx context.Context, key string) error {
-	if m.recoveryKey == "" || key != m.recoveryKey {
+	if m.recoveryKey == "" || subtle.ConstantTimeCompare([]byte(key), []byte(m.recoveryKey)) != 1 {
 		return ErrInvalidRecoveryKey
 	}
 	if err := m.store.ResetAllUsers(ctx); err != nil {
