@@ -8,6 +8,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut, cubicIn } from 'svelte/easing';
 	import CarbonButton from './CarbonButton.svelte';
 
 	interface Props {
@@ -61,8 +63,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none rounded-none">
-		<div class="w-full {sizeClasses[size]} bg-[#161616] border border-[#393939] shadow-2xl flex flex-col max-h-[90vh] rounded-none">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none rounded-none" transition:fade={{ duration: 150, easing: cubicOut }}>
+		<div class="w-full {sizeClasses[size]} bg-[#161616] border border-[#393939] shadow-2xl flex flex-col max-h-[90vh] rounded-none" in:scale={{ start: 0.97, opacity: 0, duration: 200, easing: cubicOut }} out:scale={{ start: 0.97, opacity: 0, duration: 150, easing: cubicIn }}>
 			<!-- Header -->
 			<div class="p-6 border-b border-[#393939] flex items-start justify-between bg-[#262626] rounded-none">
 				<div>

@@ -13,6 +13,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		type?: 'blue' | 'green' | 'red' | 'purple' | 'cyan' | 'teal' | 'magenta' | 'gray' | 'warm-gray' | 'cool-gray';
 		size?: 'sm' | 'md';
 		filter?: boolean;
+		pulse?: boolean;
 		onclose?: () => void;
 		class?: string;
 		children?: Snippet;
@@ -22,6 +23,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		type = 'gray',
 		size = 'md',
 		filter = false,
+		pulse = false,
 		onclose,
 		class: className = '',
 		children
@@ -46,7 +48,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	};
 </script>
 
-<span class="inline-flex items-center gap-1 font-mono uppercase tracking-wider font-semibold rounded-none select-none {sizeClasses[size]} {typeClasses[type]} {className}">
+<span class="inline-flex items-center gap-1 font-mono uppercase tracking-wider font-semibold rounded-none select-none transition-[color,background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-out-quart)] {pulse ? 'motion-pulse' : ''} {sizeClasses[size]} {typeClasses[type]} {className}">
 	{@render children?.()}
 	{#if filter}
 		<button
