@@ -29,6 +29,24 @@ const (
 	ActionStop    = "stop"
 	ActionRestart = "restart"
 	ActionCommand = "command"
+
+	// ActionManageDockerPrivileged gates host-breakout-capable Docker
+	// container overrides: full --privileged mode, added Linux
+	// capabilities (CapAdd), and confinement-weakening SecurityOpt values
+	// (e.g. apparmor:unconfined, seccomp:unconfined, label:disable).
+	//
+	// Unlike the other actions above, this is not tied 1:1 to an RPC
+	// procedure - ServerService/CreateServer and UpdateServer are ordinary
+	// ResourceServers create/update operations for most requests, but when
+	// the request payload's DockerOverrides contains one of the dangerous
+	// fields above, the handler performs an *additional* enforcer check for
+	// (ResourceServers, ActionManageDockerPrivileged) before honoring it.
+	// Because it is derived from payload content rather than from
+	// ProcedurePermissions, it intentionally does not appear in
+	// ResourceActionsFromProcedures' output; only the built-in admin role
+	// (which matches "*" actions) has it until an operator explicitly
+	// grants it to another role.
+	ActionManageDockerPrivileged = "manage_docker_privileged"
 )
 
 // ResourceActionEntry pairs a resource with its valid actions.
