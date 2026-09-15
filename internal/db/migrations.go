@@ -42,6 +42,7 @@ func allModels() []any {
 		&SystemSetting{},
 		&Node{},
 		&ServerSnapshot{},
+		&StagedConfigChange{},
 	}
 }
 
