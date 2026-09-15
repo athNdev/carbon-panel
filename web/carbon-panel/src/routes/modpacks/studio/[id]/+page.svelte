@@ -121,6 +121,9 @@
 	let pack = $state<Pack | null>(null);
 	let loading = $state(true);
 	let saving = $state(false);
+	// MC version the pack had when last loaded/saved — used to detect an MC
+	// version change that marks installed mods stale (ticket: stale + resolve).
+	let loadedMCVersion = $state('');
 	let exportingPack = $state<'mrpack' | 'curseforge' | 'packwiz' | null>(null);
 	let availableLoaderVersions = $state<string[]>(['latest']);
 	let loadingLoaderVersions = $state(false);
@@ -274,6 +277,7 @@
 				data.mods = data.mods || [];
 			}
 			pack = data;
+			loadedMCVersion = data.mc_version || '';
 		} catch (err) {
 			console.error('Failed to load pack:', err);
 			toast.error('Failed to load modpack project');
@@ -284,6 +288,7 @@
 
 	async function saveMetadata() {
 		if (!pack) return;
+		const mcChanged = loadedMCVersion !== '' && pack.mc_version !== loadedMCVersion;
 		saving = true;
 		try {
 			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}`, {
@@ -292,7 +297,20 @@
 				body: JSON.stringify(pack)
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			toast.success('Modpack settings saved');
+			if (mcChanged) {
+				// MC version change marks installed mods stale: jump to the
+				// migration tab and simulate so the user can update & resolve
+				// conflicts in one flow.
+				loadedMCVersion = pack.mc_version;
+				migrateMC = pack.mc_version;
+				activeTab = 'migrate';
+				toast.warning(
+					`MC version changed to ${pack.mc_version} — installed mods are now stale. Review compatibility below.`
+				);
+				await simulateMigration(false);
+			} else {
+				toast.success('Modpack settings saved');
+			}
 		} catch (err) {
 			console.error('Failed to save pack:', err);
 			toast.error('Failed to save modpack settings');
@@ -582,11 +600,108 @@
 			if (!addRes.ok) throw new Error(`HTTP ${addRes.status}`);
 
 			toast.success(`Added ${item.title} (${side.toUpperCase()}) to pack!`);
+
+			// Resolve transitive required dependencies (best-effort, depth-bounded).
+			const visited = new Set<string>();
+			for (const m of pack.mods || []) {
+				if (m.project_id) visited.add(`${(m.platform || item.platform).toLowerCase()}:${m.project_id.toLowerCase()}`);
+				if (m.slug) visited.add(`slug:${m.slug.toLowerCase()}`);
+			}
+			visited.add(`${item.platform.toLowerCase()}:${item.id.toLowerCase()}`);
+			try {
+				const depCount = await resolveAndAddDependencies(
+					selectedVer.dependencies || [],
+					item.platform,
+					side,
+					0,
+					visited
+				);
+				if (depCount > 0) {
+					toast.success(`Auto-installed ${depCount} required dependenc${depCount === 1 ? 'y' : 'ies'}`);
+				}
+			} catch (depErr) {
+				console.warn('Dependency auto-resolve failed (non-fatal):', depErr);
+			}
 			await loadPack();
 		} catch (err: any) {
 			console.error('Failed to add mod:', err);
 			toast.error(err.message || 'Failed to add mod to pack');
 		}
+	}
+
+	interface VersionDependency {
+		project_id?: string;
+		version_id?: string;
+		dependency_type?: string;
+	}
+
+	// Recursively installs required (transitive) dependencies of an added mod
+	// for the pack's loader/MC version. Skips optional deps, versions already
+	// in the pack, and cycles via the visited set. Returns the count added.
+	async function resolveAndAddDependencies(
+		deps: VersionDependency[],
+		platform: string,
+		side: 'both' | 'client' | 'server',
+		depth: number,
+		visited: Set<string>
+	): Promise<number> {
+		if (!pack || depth > 3) return 0;
+		let added = 0;
+		const required = (deps || []).filter(
+			(d) => (d.dependency_type || 'required').toLowerCase() === 'required' && d.project_id
+		);
+		for (const dep of required) {
+			const depId = dep.project_id as string;
+			const key = `${platform.toLowerCase()}:${depId.toLowerCase()}`;
+			if (visited.has(key)) continue;
+			visited.add(key);
+			if (
+				(pack.mods || []).some(
+					(m) => m.project_id === depId || m.slug === depId.toLowerCase()
+				)
+			) {
+				continue;
+			}
+			try {
+				const vParams = new URLSearchParams({
+					platform,
+					loader: pack.mod_loader.toLowerCase(),
+					mc_version: pack.mc_version
+				});
+				const vRes = await apiFetch(`/api/v1/servers/none/mods/${depId}/versions?${vParams.toString()}`);
+				if (!vRes.ok) continue;
+				const vData = await vRes.json();
+				const versions = vData.versions || [];
+				if (versions.length === 0) continue;
+				const ver = versions[0];
+				const depSlug = depId.toLowerCase();
+				if (visited.has(`slug:${depSlug}`)) continue;
+				visited.add(`slug:${depSlug}`);
+				const depMod: ModItem = {
+					slug: depSlug,
+					name: ver.name || ver.version_number || depSlug,
+					file_name: ver.file_name || ver.fileName || 'mod.jar',
+					side,
+					platform,
+					project_id: depId,
+					version_id: ver.id,
+					download_url: ver.download_url || ver.downloadUrl || '',
+					file_size: ver.file_size || ver.fileSize,
+					pinned: false
+				};
+				const addRes = await apiFetch(`/api/v1/packwiz/packs/${packId}/mods`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(depMod)
+				});
+				if (!addRes.ok) continue;
+				added++;
+				added += await resolveAndAddDependencies(ver.dependencies || [], platform, side, depth + 1, visited);
+			} catch (err) {
+				console.warn(`Skipping unresolvable dependency ${depId}:`, err);
+			}
+		}
+		return added;
 	}
 
 	async function handleAddUrlMod() {

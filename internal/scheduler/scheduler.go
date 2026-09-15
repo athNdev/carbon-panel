@@ -229,6 +229,9 @@ func (s *Scheduler) checkAndRunDueTasks() {
 
 	ctx := context.Background()
 
+	// Apply staged config rollouts whose cron schedule has fired (MINE staged rollout MVP).
+	s.applyDueStagedConfigs(ctx)
+
 	// Get all due tasks
 	tasks, err := s.store.ListDueScheduledTasks(ctx, time.Now())
 	if err != nil {
