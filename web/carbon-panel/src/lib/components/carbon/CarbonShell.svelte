@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { serversStore, runningServers, activitySortedServers } from '$lib/stores/servers';
@@ -158,15 +159,15 @@
 		<!-- IBM Carbon SideNav: off-canvas overlay on narrow screens, rail/panel on md+ -->
 		<aside
 			id="carbon-sidenav"
-			class="fixed top-12 bottom-0 left-0 w-64 bg-[#161616] border-r border-[#393939] z-40 transition-all duration-200 overflow-y-auto {sideNavExpanded ? 'translate-x-0' : '-translate-x-full'} {sideNavExpanded ? 'md:w-64' : 'md:w-12'} md:translate-x-0"
+			class="fixed top-12 bottom-0 left-0 w-64 bg-[#161616] border-r border-[#393939] z-40 transition-[width,transform] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] overflow-y-auto overflow-x-hidden {sideNavExpanded ? 'translate-x-0' : '-translate-x-full'} {sideNavExpanded ? 'md:w-64' : 'md:w-12'} md:translate-x-0"
 		>
-			<nav class="flex flex-col py-2" aria-label="Main Navigation">
+			<nav class="flex flex-col py-2 motion-stagger" aria-label="Main Navigation">
 				{#each navItems as item}
 					{#if item.href !== '/settings' || showSettingsNav}
 						<a
 							href={item.href}
 							onclick={closeMobileNav}
-							class="flex items-center gap-3 px-3.5 py-2.5 text-sm font-sans transition-colors relative {isCurrentPath(item.href) ? 'bg-[#353535] text-white font-medium before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-[#0f62fe]' : 'text-[#c6c6c6] hover:bg-[#262626] hover:text-white'}"
+							class="flex items-center gap-3 px-3.5 py-2.5 text-sm font-sans transition-colors relative {isCurrentPath(item.href) ? 'bg-[#353535] text-white font-medium before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-[#0f62fe] before:origin-center before:transition-transform before:duration-[var(--motion-fast)] before:ease-[var(--ease-out-quart)]' : 'text-[#c6c6c6] hover:bg-[#262626] hover:text-white'}"
 							title={item.label}
 						>
 							<svg class="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -212,12 +213,13 @@
 				type="button"
 				aria-label="Close navigation"
 				onclick={closeMobileNav}
+				transition:fade={{ duration: 150 }}
 				class="fixed inset-0 top-12 bg-black/60 z-30 md:hidden cursor-default"
 			></button>
 		{/if}
 
 		<!-- Carbon Main Content Area -->
-		<main class="flex-1 transition-all duration-200 p-6 overflow-y-auto ml-0 {sideNavExpanded ? 'md:ml-64' : 'md:ml-12'}">
+		<main class="flex-1 transition-[margin] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] p-6 overflow-y-auto ml-0 {sideNavExpanded ? 'md:ml-64' : 'md:ml-12'}">
 			<div class="max-w-7xl mx-auto space-y-6">
 				{@render children?.()}
 			</div>

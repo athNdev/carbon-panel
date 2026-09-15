@@ -7,6 +7,7 @@
 		size?: 'sm' | 'md' | 'lg' | 'xl';
 		iconOnly?: boolean;
 		disabled?: boolean;
+		loading?: boolean;
 		children?: Snippet;
 		class?: string;
 	};
@@ -20,13 +21,14 @@
 		size = 'md',
 		iconOnly = false,
 		disabled = false,
+		loading = false,
 		href = undefined,
 		class: className = '',
 		children,
 		...restProps
 	}: Props = $props();
 
-	const baseClasses = 'inline-flex items-center justify-between font-sans text-sm font-normal tracking-[0.16px] transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none';
+	const baseClasses = 'inline-flex items-center justify-between font-sans text-sm font-normal tracking-[0.16px] transition-[color,background-color,border-color,transform] motion-press focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none';
 
 	const sizeClasses = {
 		sm: 'h-8 px-3 text-xs',
@@ -47,18 +49,26 @@
 {#if href}
 	<a
 		{href}
-		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly ? '!p-2 !w-10 !h-10 !justify-center' : ''} {className}"
+		aria-busy={loading ? 'true' : undefined}
+		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly ? '!p-2 !w-10 !h-10 !justify-center' : ''} {loading ? 'pointer-events-none opacity-60' : ''} {className}"
 		{...(restProps as HTMLAnchorAttributes)}
 	>
+		{#if loading}
+			<span class="h-4 w-4 shrink-0 border-2 border-current border-t-transparent animate-spin" aria-hidden="true"></span>
+		{/if}
 		{@render children?.()}
 	</a>
 {:else}
 	<button
 		type="button"
-		{disabled}
+		disabled={disabled || loading}
+		aria-busy={loading ? 'true' : undefined}
 		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly ? '!p-2 !w-10 !h-10 !justify-center' : ''} {className}"
 		{...(restProps as HTMLButtonAttributes)}
 	>
+		{#if loading}
+			<span class="h-4 w-4 shrink-0 border-2 border-current border-t-transparent animate-spin" aria-hidden="true"></span>
+		{/if}
 		{@render children?.()}
 	</button>
 {/if}
