@@ -490,6 +490,43 @@ type ServerSnapshot struct {
 	Server    *Server   `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
 }
 
+// StagedApplyMode defines when a staged config change takes effect.
+type StagedApplyMode string
+
+const (
+	StagedApplyOnRestart StagedApplyMode = "on_restart" // applied on next server restart
+	StagedApplyScheduled StagedApplyMode = "scheduled"  // applied once its cron schedule fires
+)
+
+// StagedStatus defines the lifecycle state of a staged config change.
+type StagedStatus string
+
+const (
+	StagedStatusStaged    StagedStatus = "staged"
+	StagedStatusApplied   StagedStatus = "applied"
+	StagedStatusDiscarded StagedStatus = "discarded"
+)
+
+// StagedConfigChange records a config change made to an instance regardless of
+// its operational state. Payload holds the diff vs the live ServerConfig at
+// stage time (JSON object of ServerConfig json field names to values).
+// MVP scope: one-shot semantics — a "scheduled" change applies the first time
+// its cron expression fires after creation, then flips to "applied".
+// Remaining work (see staged_config.go): recurring schedules, per-field
+// conflict detection when the live config moved since staging, RBAC-gated
+// approvals, and audit linkage.
+type StagedConfigChange struct {
+	ID        string          `json:"id" gorm:"primaryKey"`
+	ServerID  string          `json:"server_id" gorm:"not null;index;column:server_id"`
+	Payload   string          `json:"payload" gorm:"type:text;column:payload"` // JSON diff vs live config
+	ApplyMode StagedApplyMode `json:"apply_mode" gorm:"not null;column:apply_mode"`
+	CronExpr  string          `json:"cron_expr" gorm:"column:cron_expr"` // required when ApplyMode == scheduled
+	Status    StagedStatus    `json:"status" gorm:"not null;default:staged;index"`
+	CreatedAt time.Time       `json:"created_at" gorm:"autoCreateTime;index"`
+	AppliedAt *time.Time      `json:"applied_at" gorm:"column:applied_at"`
+	Server    *Server         `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
+}
+
 // TaskType defines the type of scheduled task
 type TaskType string
 
