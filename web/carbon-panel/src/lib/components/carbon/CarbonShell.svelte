@@ -103,8 +103,9 @@
 	}
 </script>
 
+<svelte:window onkeydown={handleWindowKeydown} />
+
 <div class="min-h-screen bg-[#161616] text-[#f4f4f4] font-sans antialiased flex flex-col selection:bg-[#0f62fe] selection:text-white">
-	<svelte:window onkeydown={handleWindowKeydown} />
 	<!-- IBM Carbon Global Header (48px fixed) -->
 	<header class="fixed top-0 left-0 right-0 h-12 bg-[#161616] border-b border-[#393939] z-50 flex items-center justify-between px-3">
 		<div class="flex items-center gap-2">
