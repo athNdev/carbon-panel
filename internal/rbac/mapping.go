@@ -129,6 +129,19 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.ModuleService/GetAvailableAliases":        {Resource: ResourceModules, Action: ActionRead},
 	"/carbonpanel.v1.ModuleService/GetResolvedAliases":         {Resource: ResourceModules, Action: ActionRead},
 
+	// â”€â”€ NodeService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+	// Node responses embed the Docker daemon host and TLS client key/cert
+	// used to reach it, and Create/Update/Delete let a caller point the
+	// panel at an arbitrary Docker host. These were previously absent from
+	// this table, which meant any authenticated user fell through the
+	// interceptor's "no mapping found" path with zero RBAC enforcement.
+	"/carbonpanel.v1.NodeService/ListNodes":  {Resource: ResourceNodes, Action: ActionRead},
+	"/carbonpanel.v1.NodeService/GetNode":    {Resource: ResourceNodes, Action: ActionRead, ObjectIDField: "id"},
+	"/carbonpanel.v1.NodeService/CreateNode": {Resource: ResourceNodes, Action: ActionCreate},
+	"/carbonpanel.v1.NodeService/UpdateNode": {Resource: ResourceNodes, Action: ActionUpdate, ObjectIDField: "id"},
+	"/carbonpanel.v1.NodeService/DeleteNode": {Resource: ResourceNodes, Action: ActionDelete, ObjectIDField: "id"},
+	"/carbonpanel.v1.NodeService/PingNode":   {Resource: ResourceNodes, Action: ActionRead, ObjectIDField: "id"},
+
 	// â”€â”€ ProxyService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.ProxyService/GetProxyRoutes":      {Resource: ResourceProxy, Action: ActionRead},
 	"/carbonpanel.v1.ProxyService/GetProxyStatus":      {Resource: ResourceProxy, Action: ActionRead},
