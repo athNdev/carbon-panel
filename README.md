@@ -200,7 +200,7 @@ curl -X POST http://localhost:8080/carbonpanel.v1.ServerService/RestartServer \
 
 ## Acknowledgments & Credits
 
-Carbon Panel (formerly MineServer) is built upon the open-source foundation of the original [DiscoPanel](https://github.com/discohaus/discopanel) project created by [nickheyer](https://github.com/nickheyer). We gratefully credit the original authors and contributors for their work in pioneering the containerized Minecraft server and proxy architecture.
+Carbon Panel (formerly MineServer) is built upon the open-source foundation of the original [DiscoPanel](https://github.com/discohaus/discopanel) project created by [nickheyer](https://github.com/nickheyer).
 
 ---
 
