@@ -449,7 +449,10 @@ func (m *Manager) writePackFiles(p *Pack) error {
 				ProjectID: pID,
 				FileID:    fID,
 			}
-		} else {
+		} else if mod.Platform == "modrinth" {
+			// Only true Modrinth mods carry update metadata. Direct-URL
+			// ("url") mods are download-only entries: emitting a fabricated
+			// modrinth block would make them round-trip as tracked mods.
 			tm.Update.Modrinth = &tomlModUpdateModrinth{
 				ModID:   mod.ProjectID,
 				Version: mod.VersionID,

@@ -51,7 +51,7 @@ func newStagedTestStore(t *testing.T, serverID string) *Store {
 	t.Helper()
 	ctx := context.Background()
 	store := newTestStore(t)
-	t.Cleanup(func() { store.Close() })
+	t.Cleanup(func() { _ = store.Close() })
 
 	require.NoError(t, store.CreateServer(ctx, &Server{ID: serverID, Name: "staged-test"}))
 	cfg := store.CreateDefaultServerConfig(serverID)

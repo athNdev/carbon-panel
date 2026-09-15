@@ -26,8 +26,10 @@ type StaleReport struct {
 }
 
 // SetMCVersion switches the pack to newMCVersion without touching installed
-// mod versions, and reports every mod that is now stale. Direct-URL ("url")
-// mods carry no MC-scoped upstream version, so they are never marked stale.
+// mod versions, and reports every mod that is now stale. Only version-tracked
+// mods (curseforge, or modrinth with a project ID) carry an MC-scoped upstream
+// version: direct-URL ("url") mods — including ones that round-tripped through
+// pack files without update metadata — are never marked stale.
 // Callers should follow up with SimulateMigration/ApplyMigration to offer the
 // update-and-resolve-conflicts flow.
 func (m *Manager) SetMCVersion(packID, newMCVersion string) (*StaleReport, error) {
@@ -58,7 +60,7 @@ func (m *Manager) SetMCVersion(packID, newMCVersion string) (*StaleReport, error
 	pack.UpdatedAt = time.Now()
 
 	for _, mod := range pack.Mods {
-		if mod.Platform == "url" {
+		if !isVersionTracked(mod) {
 			continue
 		}
 		report.StaleMods = append(report.StaleMods, StaleModInfo{
@@ -75,6 +77,21 @@ func (m *Manager) SetMCVersion(packID, newMCVersion string) (*StaleReport, error
 		return nil, err
 	}
 	return report, nil
+}
+
+// isVersionTracked reports whether a mod has upstream version metadata that
+// is scoped to a Minecraft version. Pack files without an update block
+// round-trip as platform "modrinth" with an empty project ID; those carry no
+// resolvable upstream version and are treated like direct-URL mods.
+func isVersionTracked(mod ModItem) bool {
+	switch mod.Platform {
+	case "curseforge":
+		return true
+	case "modrinth":
+		return mod.ProjectID != ""
+	default:
+		return false
+	}
 }
 
 // DryRunMCVersion reports which mods would go stale if the pack moved to
@@ -99,7 +116,7 @@ func (m *Manager) DryRunMCVersion(packID, newMCVersion string) (*StaleReport, er
 		return report, nil
 	}
 	for _, mod := range pack.Mods {
-		if mod.Platform == "url" {
+		if !isVersionTracked(mod) {
 			continue
 		}
 		report.StaleMods = append(report.StaleMods, StaleModInfo{

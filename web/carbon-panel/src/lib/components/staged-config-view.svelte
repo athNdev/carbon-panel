@@ -156,7 +156,7 @@
 				bind:value={stageJson}
 				rows={4}
 				class="w-full p-3 bg-[#262626] border-b border-[#8d8d8d] text-xs font-mono text-[#f4f4f4] rounded-none focus:outline-none focus:border-[#0f62fe]"
-				placeholder='{"motd": "Event night!"}'
+				placeholder={'{"motd": "Event night!"}'}
 			></textarea>
 		</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

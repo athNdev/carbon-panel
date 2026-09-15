@@ -48,7 +48,7 @@ func newDepTestManager(t *testing.T) *Manager {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "packwiz_deps_test_*")
 	require.NoError(t, err)
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	mgr := NewManager(dir, logger.New())
 	_, err = mgr.CreatePack(&Pack{ID: "p1", Name: "P", MCVersion: "1.20.1", ModLoader: "fabric"})
 	require.NoError(t, err)
