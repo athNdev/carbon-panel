@@ -71,7 +71,7 @@ func DetectDockerDaemons(ctx context.Context) []DockerCandidate {
 				for _, port := range dockerProbePorts {
 					add(ip.String(), port, "interface:"+iface.Name)
 				}
-				if gw := gatewayGuess(ip); gw != "" && !gw.Equal(ip) {
+				if gw := gatewayGuess(ip); gw != nil && !gw.Equal(ip) {
 					for _, port := range dockerProbePorts {
 						add(gw.String(), port, "gateway-guess")
 					}
