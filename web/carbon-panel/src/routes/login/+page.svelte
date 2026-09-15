@@ -207,7 +207,7 @@
 </svelte:head>
 
 <div class="min-h-screen flex items-center justify-center bg-[#161616] p-4 font-sans text-[#f4f4f4] rounded-none">
-	<div class="w-full max-w-md bg-[#262626] border border-[#393939] p-8 rounded-none shadow-2xl">
+	<div class="w-full max-w-md bg-[#262626] border border-[#393939] p-8 rounded-none shadow-2xl motion-scale-in">
 		<!-- Header -->
 		<div class="mb-8 text-center">
 			<div class="flex items-center justify-center gap-3 mb-2">
@@ -226,10 +226,12 @@
 		</div>
 
 		{#if error}
-			<div class="mb-6 p-4 bg-[#da1e28]/10 border-l-4 border-[#da1e28] text-xs text-[#ff8389] flex items-start gap-2.5 rounded-none">
-				<AlertCircle class="h-4 w-4 shrink-0 mt-0.5" />
-				<span>{error}</span>
-			</div>
+			{#key error}
+				<div class="mb-6 p-4 bg-[#da1e28]/10 border-l-4 border-[#da1e28] text-xs text-[#ff8389] flex items-start gap-2.5 rounded-none motion-rise-in">
+					<AlertCircle class="h-4 w-4 shrink-0 mt-0.5" />
+					<span>{error}</span>
+				</div>
+			{/key}
 		{/if}
 
 		{#if authStatus.firstUserSetup}
@@ -293,7 +295,7 @@
 			{/if}
 
 			{#if mode === 'login'}
-				<div class="space-y-4">
+				<div class="space-y-4 motion-fade-in">
 					{#if localAuthEnabled}
 						<form onsubmit={handleSubmit} class="space-y-4">
 							<CarbonTextInput
@@ -346,7 +348,7 @@
 				</div>
 			{:else}
 				<!-- Registration Form -->
-				<form onsubmit={handleSubmit} class="space-y-4">
+				<form onsubmit={handleSubmit} class="space-y-4 motion-fade-in">
 					{#if inviteValid && inviteDescription}
 						<div class="p-3 bg-[#198038]/15 border-l-4 border-[#198038] text-xs text-[#6fdc8c] flex items-center gap-2 rounded-none">
 							<TicketCheck class="h-4 w-4 shrink-0" />

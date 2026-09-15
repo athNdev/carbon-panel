@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
+	import { fade } from 'svelte/transition';
 
 	interface Props extends Omit<HTMLInputAttributes, 'size'> {
 		value?: string;
@@ -60,6 +61,7 @@
 			type="button"
 			onclick={handleClear}
 			aria-label="Clear search"
+			transition:fade={{ duration: 100 }}
 			class="absolute inset-y-0 right-0 flex items-center px-2.5 text-[#a8a8a8] hover:text-[#f4f4f4] cursor-pointer rounded-none"
 		>
 			<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">

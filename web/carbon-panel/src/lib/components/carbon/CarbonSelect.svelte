@@ -43,8 +43,8 @@
 		</div>
 	</div>
 	{#if error}
-		<span class="text-xs text-[#ff8389] font-sans mt-0.5">{error}</span>
+		<span class="text-xs text-[#ff8389] font-sans mt-0.5 motion-rise-in">{error}</span>
 	{:else if helperText}
-		<span class="text-xs text-[#a8a8a8] font-sans mt-0.5">{helperText}</span>
+		<span class="text-xs text-[#a8a8a8] font-sans mt-0.5 motion-rise-in">{helperText}</span>
 	{/if}
 </div>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { tick } from 'svelte';
+
 	interface TabItem {
 		id: string;
 		label: string;
@@ -19,18 +21,51 @@
 		onselect
 	}: Props = $props();
 
+	let container = $state<HTMLDivElement | null>(null);
+	let indicatorLeft = $state(0);
+	let indicatorWidth = $state(0);
+
+	function measure() {
+		if (!container) return;
+		const buttons = container.querySelectorAll<HTMLButtonElement>('[data-tab]');
+		const index = tabs.findIndex((tab) => tab.id === selectedTab);
+		const button = buttons[index >= 0 ? index : 0];
+		if (!button) {
+			indicatorWidth = 0;
+			return;
+		}
+		indicatorLeft = button.offsetLeft;
+		indicatorWidth = button.offsetWidth;
+	}
+
+	$effect(() => {
+		tabs;
+		selectedTab;
+		tick().then(() => requestAnimationFrame(measure));
+	});
+
+	$effect(() => {
+		const onResize = () => measure();
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
+
 	function handleTabClick(id: string) {
 		selectedTab = id;
 		onselect?.(id);
 	}
 </script>
 
-<div class="flex items-center border-b border-[#393939] bg-[#161616] font-sans {className}">
+<div
+	bind:this={container}
+	class="relative flex items-center border-b border-[#393939] bg-[#161616] font-sans {className}"
+>
 	{#each tabs as tab}
 		<button
 			type="button"
+			data-tab
 			onclick={() => handleTabClick(tab.id)}
-			class="h-10 px-4 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 cursor-pointer select-none {selectedTab === tab.id ? 'border-[#0f62fe] text-[#f4f4f4] bg-[#262626] font-semibold' : 'border-transparent text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+			class="h-10 px-4 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 border-transparent cursor-pointer select-none {selectedTab === tab.id ? 'text-[#f4f4f4] bg-[#262626] font-semibold' : 'text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
 		>
 			<span>{tab.label}</span>
 			{#if tab.badge !== undefined}
@@ -40,4 +75,10 @@
 			{/if}
 		</button>
 	{/each}
+	{#if indicatorWidth > 0}
+		<div
+			class="absolute bottom-[-1px] h-0.5 bg-[#0f62fe] transition-[transform,width] duration-[var(--motion-fast)] ease-[var(--ease-in-out-standard)]"
+			style="width: {indicatorWidth}px; transform: translateX({indicatorLeft}px)"
+		></div>
+	{/if}
 </div>

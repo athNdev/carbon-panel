@@ -179,3 +179,193 @@
 	}
 }
 
+/* ------------------------------------------------------------------ *
+ * Carbon motion system
+ * Consumed by the Carbon primitives and view surfaces. Kept intentionally
+ * mechanical and fast to match Carbon's utilitarian character: no bounce,
+ * no elastic, transform/opacity first.
+ * ------------------------------------------------------------------ */
+:root {
+	--motion-instant: 100ms;
+	--motion-fast: 150ms;
+	--motion-base: 200ms;
+	--motion-slow: 300ms;
+	--motion-surface: 500ms;
+
+	--ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+	--ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out-standard: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+
+	--motion-stagger-step: 40ms;
+}
+
+@keyframes carbon-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes carbon-rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes carbon-scale-in {
+	from {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes carbon-indicator-in {
+	from {
+		transform: scaleY(0);
+	}
+	to {
+		transform: scaleY(1);
+	}
+}
+
+@keyframes carbon-status-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
+@keyframes carbon-shimmer {
+	from {
+		background-position: -180% 0;
+	}
+	to {
+		background-position: 180% 0;
+	}
+}
+
+@keyframes carbon-indeterminate {
+	0% {
+		transform: translateX(-110%);
+	}
+	100% {
+		transform: translateX(410%);
+	}
+}
+
+@keyframes carbon-check-draw {
+	from {
+		stroke-dashoffset: 24;
+	}
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@layer utilities {
+	.motion-fade-in {
+		animation: carbon-fade-in var(--motion-base) var(--ease-out-quart) both;
+	}
+
+	.motion-rise-in {
+		animation: carbon-rise-in var(--motion-base) var(--ease-out-quart) both;
+	}
+
+	.motion-scale-in {
+		animation: carbon-scale-in var(--motion-base) var(--ease-out-quart) both;
+	}
+
+	.motion-indicator-in {
+		transform-origin: center;
+		animation: carbon-indicator-in var(--motion-fast) var(--ease-out-quart) both;
+	}
+
+	.motion-pulse {
+		animation: carbon-status-pulse 1.6s var(--ease-in-out-standard) infinite;
+	}
+
+	.motion-press {
+		transition: transform var(--motion-instant) var(--ease-out-quart);
+	}
+	.motion-press:active {
+		transform: scale(0.97);
+	}
+
+	.motion-skeleton {
+		background-image: linear-gradient(90deg, #262626 0%, #353535 50%, #262626 100%);
+		background-size: 200% 100%;
+		animation: carbon-shimmer 1.4s linear infinite;
+	}
+
+	/* Sequenced entrance for small groups (nav items, KPI tiles, rows).
+	   Cap the chain so the last child never arrives late. */
+	.motion-stagger > * {
+		animation: carbon-rise-in var(--motion-base) var(--ease-out-quart) both;
+	}
+	.motion-stagger > *:nth-child(1) {
+		animation-delay: 0ms;
+	}
+	.motion-stagger > *:nth-child(2) {
+		animation-delay: calc(var(--motion-stagger-step) * 1);
+	}
+	.motion-stagger > *:nth-child(3) {
+		animation-delay: calc(var(--motion-stagger-step) * 2);
+	}
+	.motion-stagger > *:nth-child(4) {
+		animation-delay: calc(var(--motion-stagger-step) * 3);
+	}
+	.motion-stagger > *:nth-child(5) {
+		animation-delay: calc(var(--motion-stagger-step) * 4);
+	}
+	.motion-stagger > *:nth-child(6) {
+		animation-delay: calc(var(--motion-stagger-step) * 5);
+	}
+	.motion-stagger > *:nth-child(7) {
+		animation-delay: calc(var(--motion-stagger-step) * 6);
+	}
+	.motion-stagger > *:nth-child(n + 8) {
+		animation-delay: calc(var(--motion-stagger-step) * 7);
+	}
+}
+
+/* Carbon top-of-page indeterminate loading rail */
+.carbon-progress-track {
+	position: relative;
+	overflow: hidden;
+	background-color: #393939;
+}
+.carbon-progress-bar {
+	position: absolute;
+	inset-block: 0;
+	width: 25%;
+	background-color: #0f62fe;
+	animation: carbon-indeterminate 1.1s var(--ease-in-out-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+

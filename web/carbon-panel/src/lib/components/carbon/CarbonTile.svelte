@@ -17,8 +17,8 @@
 		children
 	}: Props = $props();
 
-	const baseClasses = 'bg-[#262626] border border-[#393939] p-4 text-[#f4f4f4] transition-all relative select-none';
-	const hoverClasses = clickable || href ? 'hover:bg-[#353535] hover:border-[#525252] cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616]' : '';
+	const baseClasses = 'bg-[#262626] border border-[#393939] p-4 text-[#f4f4f4] transition-[background-color,border-color,transform] duration-[var(--motion-base)] ease-[var(--ease-out-quart)] relative select-none';
+	const hoverClasses = clickable || href ? 'hover:bg-[#353535] hover:border-[#525252] hover:-translate-y-px cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616]' : '';
 </script>
 
 {#if href}
