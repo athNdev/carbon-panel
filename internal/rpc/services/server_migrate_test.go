@@ -21,7 +21,7 @@ func TestServerService_MigrateServer_Validation(t *testing.T) {
 	defer store.Close()
 
 	log := logger.New()
-	svc := NewServerService(store, nil, nil, nil, nil, nil, nil, nil, nil, log, nil, nil)
+	svc := NewServerService(store, nil, nil, nil, nil, nil, nil, nil, nil, log, nil, nil, nil)
 	ctx := context.Background()
 
 	// 1. Missing IDs
@@ -56,7 +56,7 @@ func TestServerService_MigrateServer_OfflineMigration(t *testing.T) {
 	defer store.Close()
 
 	log := logger.New()
-	svc := NewServerService(store, nil, nil, nil, nil, nil, nil, nil, nil, log, nil, nil)
+	svc := NewServerService(store, nil, nil, nil, nil, nil, nil, nil, nil, log, nil, nil, nil)
 	ctx := context.Background()
 
 	// Create test nodes
@@ -182,7 +182,7 @@ func TestServerService_MigrateServer_CapacityChecks(t *testing.T) {
 	defer store.Close()
 
 	log := logger.New()
-	svc := NewServerService(store, nil, nil, nil, nil, nil, nil, nil, nil, log, nil, nil)
+	svc := NewServerService(store, nil, nil, nil, nil, nil, nil, nil, nil, log, nil, nil, nil)
 	ctx := context.Background()
 
 	// Target node with strict capacity limits: max 1 server, max 2048 MB memory
