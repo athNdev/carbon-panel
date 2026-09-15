@@ -125,6 +125,15 @@ func ReadHandshakePacket(r io.Reader) (*HandshakePacket, error) {
 		return nil, fmt.Errorf("failed to read address length: %w", err)
 	}
 
+	// addressLen is attacker-controlled: a crafted 5-byte VarInt can decode
+	// to a negative int32 (make() panics on a negative length) or to a large
+	// positive value (a multi-GB allocation attempt) before the subsequent
+	// ReadFull would ever fail. Bound it to what's actually left in the
+	// packet buffer, which is itself already capped to 255 bytes above.
+	if addressLen < 0 || int(addressLen) > buf.Len() {
+		return nil, fmt.Errorf("invalid address length: %d", addressLen)
+	}
+
 	addressBytes := make([]byte, addressLen)
 	if _, err := io.ReadFull(buf, addressBytes); err != nil {
 		return nil, fmt.Errorf("failed to read address: %w", err)

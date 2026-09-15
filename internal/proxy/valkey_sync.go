@@ -142,7 +142,16 @@ func (c *RespClient) executeCommand(args ...string) (any, error) {
 		return nil, err
 	}
 
-	return parseRESP(c.reader)
+	res, err := parseRESP(c.reader)
+	if err != nil {
+		// The connection is unusable after a malformed/partial read (e.g. the
+		// peer reset mid-response). Drop it so the next call reconnects
+		// instead of repeatedly failing against a dead socket.
+		c.conn.Close()
+		c.conn = nil
+		c.reader = nil
+	}
+	return res, err
 }
 
 func (c *RespClient) Ping(ctx context.Context) error {
