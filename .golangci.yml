@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # "standard" = errcheck, govet, ineffassign, staticcheck, unused.
+  # This is golangci-lint's own default set; we're not adding anything
+  # exotic on top of it for this first pass. CI runs this with
+  # only-new-issues so it only fails on issues introduced by a given
+  # change, not the ~80 pre-existing findings across the codebase today.
+  default: standard
+
+  exclusions:
+    paths:
+      - pkg/proto # generated protobuf/connect code
