@@ -193,13 +193,23 @@ func TestServerService_MigrateServer_CapacityChecks(t *testing.T) {
 		t.Fatalf("failed to create tight node: %v", err)
 	}
 
-	// Server on default node needing 4096 MB memory
+	// Server on an explicit source node needing 4096 MB memory
+	sourceNode := &db.Node{
+		ID:      "node-source",
+		Name:    "Source Node",
+		Host:    "tcp://192.168.0.40:2376",
+		Enabled: true,
+		Status:  db.NodeStatusOnline,
+	}
+	if err := store.CreateNode(ctx, sourceNode); err != nil {
+		t.Fatalf("failed to create source node: %v", err)
+	}
 	largeServer := &db.Server{
 		ID:        "server-large",
 		Name:      "Heavy Modpack",
 		ModLoader: db.ModLoaderForge,
 		MCVersion: "1.20.1",
-		NodeID:    "default",
+		NodeID:    "node-source",
 		Status:    db.StatusStopped,
 		Port:      25565,
 		Memory:    4096,

@@ -212,6 +212,9 @@ func (s *Server) setupHandler() {
 	// API key and credentials validation endpoint (MINE-24)
 	mux.Handle("/api/v1/settings/validate-key", handlers.NewKeyValidatorHandler(s.authManager, s.enforcer, s.log))
 
+	// Docker daemon auto-detect scan across local network interfaces
+	mux.Handle("/api/v1/nodes/scan", handlers.NewNodeScanHandler(s.store, s.authManager, s.enforcer, s.log))
+
 	// Online mod search and 1-click install endpoints (MINE-25)
 	mux.Handle("/api/v1/servers/", handlers.NewModOnlineManager(s.store, s.log, s.authManager, s.enforcer))
 
