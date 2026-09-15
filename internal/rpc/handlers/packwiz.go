@@ -144,6 +144,8 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.handleApplyUpdates(w, r, packID)
 		case subRoute == "migrate" && r.Method == http.MethodPost:
 			h.handleMigrate(w, r, packID)
+		case subRoute == "mc-version" && r.Method == http.MethodPost:
+			h.handleSetMCVersion(w, r, packID)
 		case subRoute == "files" && r.Method == http.MethodGet:
 			h.handleListFiles(w, r, packID)
 		case subRoute == "files" && r.Method == http.MethodPost:
@@ -317,7 +319,40 @@ func (h *PackwizHandler) handleAddMod(w http.ResponseWriter, r *http.Request, pa
 		http.Error(w, fmt.Sprintf("failed to add mod: %v", err), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+
+	// Optional transitive dependency resolution: ?resolve_dependencies=true
+	// installs required (transitive) deps alongside the requested mod.
+	if r.URL.Query().Get("resolve_dependencies") != "true" {
+		writeJSON(w, http.StatusOK, map[string]any{"success": true})
+		return
+	}
+
+	loader := r.URL.Query().Get("loader")
+	mcVersion := r.URL.Query().Get("mc_version")
+	if loader == "" || mcVersion == "" {
+		if pack, err := h.manager.GetPack(packID); err == nil {
+			if loader == "" {
+				loader = pack.ModLoader
+			}
+			if mcVersion == "" {
+				mcVersion = pack.MCVersion
+			}
+		}
+	}
+
+	report, err := h.manager.AddModWithDependencies(packID, mod, loader, mcVersion, h.manager.NewHTTPDependencyFetcher())
+	if err != nil {
+		// The root mod is already installed; surface the resolver failure
+		// without failing the request.
+		writeJSON(w, http.StatusOK, map[string]any{"success": true, "dependency_error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":            true,
+		"added_dependencies": report.Added,
+		"skipped":            report.Skipped,
+		"unresolved":         report.Unresolved,
+	})
 }
 
 func (h *PackwizHandler) handleAddModURL(w http.ResponseWriter, r *http.Request, packID string) {
@@ -491,6 +526,54 @@ func (h *PackwizHandler) handleMigrate(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 	writeJSON(w, http.StatusOK, report)
+}
+
+// handleSetMCVersion changes the pack's Minecraft version, marking installed
+// mods stale. With apply=false it is a dry run (no writes). With apply=true
+// it writes the new version and attaches a migration simulation so the caller
+// can offer the update-and-resolve-conflicts flow in one round trip.
+func (h *PackwizHandler) handleSetMCVersion(w http.ResponseWriter, r *http.Request, packID string) {
+	var req struct {
+		TargetMC string `json:"target_mc"`
+		Apply    bool   `json:"apply"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.TargetMC == "" {
+		http.Error(w, "target_mc is required", http.StatusBadRequest)
+		return
+	}
+
+	if !req.Apply {
+		report, err := h.manager.DryRunMCVersion(packID, req.TargetMC)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to check MC version change: %v", err), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, report)
+		return
+	}
+
+	stale, err := h.manager.SetMCVersion(packID, req.TargetMC)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to set MC version: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	pack, err := h.manager.GetPack(packID)
+	if err != nil {
+		http.Error(w, "pack not found after MC version change", http.StatusInternalServerError)
+		return
+	}
+	migration, err := h.manager.SimulateMigration(packID, req.TargetMC, pack.ModLoader)
+	if err != nil {
+		// Stale marking succeeded; surface the simulation failure alongside.
+		writeJSON(w, http.StatusOK, map[string]any{"stale": stale, "migration_error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"stale": stale, "migration": migration})
 }
 
 func (h *PackwizHandler) handleImportPack(w http.ResponseWriter, r *http.Request) {

@@ -220,6 +220,9 @@ func (s *Server) setupHandler() {
 	packwizManager := packwiz.NewManager(packwizDir, s.log)
 	mux.Handle("/api/v1/packwiz/", handlers.NewPackwizHandler(packwizManager, s.store, s.log, s.authManager, s.enforcer))
 
+	// Scheduled/staged config rollout for instances (staged diffs applied on restart or cron)
+	mux.Handle("/api/v1/staged-config/", handlers.NewStagedConfigHandler(s.store, s.log, s.authManager, s.enforcer))
+
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
 
