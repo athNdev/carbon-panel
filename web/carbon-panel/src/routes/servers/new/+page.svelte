@@ -68,7 +68,7 @@
 	let nodes = $state<Node[]>([]);
 	let loadingNodes = $state(true);
 	let nodePlacementMode = $state<'auto' | 'manual'>('auto');
-	let selectedNodeId = $state<string>('default');
+	let selectedNodeId = $state<string>('');
 	let placementStrategy = $state<string>('least_memory');
 
 	// Modpack selection
@@ -158,6 +158,12 @@
 				nodes = nodesData.value.nodes || [];
 				if (nodes.length > 0) {
 					selectedNodeId = nodes[0].id;
+				}
+				const activeNodes = nodes.filter((n) => n.enabled && n.status === NodeStatus.ONLINE);
+				if (activeNodes.length === 0) {
+					toast.error(
+						'No active Docker nodes available — register a node in Settings → Docker Nodes first.'
+					);
 				}
 			}
 		} catch (error) {
@@ -315,6 +321,12 @@
 		if (!useProxyMode && !validatePort(formData.port)) {
 			toast.error('Please select a valid port');
 			currentStep = 2;
+			return;
+		}
+
+		if (nodePlacementMode === 'manual' && !selectedNodeId) {
+			toast.error('No Docker node selected — register a node in Settings → Docker Nodes first.');
+			currentStep = 3;
 			return;
 		}
 
@@ -865,7 +877,7 @@
 									</div>
 								{:else if nodes.length === 0}
 									<div class="p-4 bg-[#161616] border border-[#393939] text-xs text-[#a8a8a8]">
-										No worker nodes detected. Defaulting to local controller daemon.
+										No worker nodes available. Add and enable a Docker node in Settings → Docker Nodes before creating servers.
 									</div>
 								{:else}
 									<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

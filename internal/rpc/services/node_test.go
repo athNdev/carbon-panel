@@ -126,12 +126,15 @@ func TestNodeService_ListNodes(t *testing.T) {
 	svc := NewNodeService(store, nil, log)
 	ctx := context.Background()
 
-	// Initial list contains the seeded local/default node
+	// Fresh installs seed no phantom default node
 	listRes, err := svc.ListNodes(ctx, connect.NewRequest(&v1.ListNodesRequest{}))
 	if err != nil {
 		t.Fatalf("ListNodes failed: %v", err)
 	}
 	initialCount := len(listRes.Msg.Nodes)
+	if initialCount != 0 {
+		t.Fatalf("expected zero seeded nodes, got %d", initialCount)
+	}
 
 	// Create two nodes
 	_, err = svc.CreateNode(ctx, connect.NewRequest(&v1.CreateNodeRequest{

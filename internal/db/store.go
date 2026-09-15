@@ -1193,9 +1193,6 @@ func (s *Store) UpdateNode(ctx context.Context, node *Node) error {
 }
 
 func (s *Store) DeleteNode(ctx context.Context, id string) error {
-	if id == "default" {
-		return fmt.Errorf("cannot delete default node")
-	}
 	var node Node
 	if err := s.db.WithContext(ctx).First(&node, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -1226,6 +1223,12 @@ func (s *Store) DeleteNode(ctx context.Context, id string) error {
 	return s.db.WithContext(ctx).Delete(&node).Error
 }
 
+// EnsureDefaultNode is retained for backwards compatibility but no longer
+// seeds a phantom "default" node. Fresh installs start with zero nodes and
+// operators register Docker daemons explicitly via the Nodes settings UI.
+// It returns the existing local node if one is present, and an error
+// otherwise so callers surface "no nodes registered" instead of silently
+// falling back to a node that does not exist.
 func (s *Store) EnsureDefaultNode(ctx context.Context) (*Node, error) {
 	var node Node
 	err := s.db.WithContext(ctx).First(&node, "id = ?", "default").Error
@@ -1235,30 +1238,13 @@ func (s *Store) EnsureDefaultNode(ctx context.Context) (*Node, error) {
 	if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
-
-	host := "unix:///var/run/docker.sock"
-	if s.cfg != nil && s.cfg.Docker.Host != "" {
-		host = s.cfg.Docker.Host
-	}
-
-	defaultNode := &Node{
-		ID:           "default",
-		Name:         "Default Node (Local)",
-		Host:         host,
-		AdvertisedIP: "127.0.0.1",
-		Enabled:      true,
-		Status:       NodeStatusOnline,
-		IsLocal:      true,
-	}
-	if err := s.db.WithContext(ctx).Create(defaultNode).Error; err != nil {
-		return nil, fmt.Errorf("failed to create default node: %w", err)
-	}
-	return defaultNode, nil
+	return nil, fmt.Errorf("no default node registered: add a Docker node in Settings before creating servers")
 }
 
 func (s *Store) SeedDefaultNode() error {
-	_, err := s.EnsureDefaultNode(context.Background())
-	return err
+	// Intentionally a no-op: default-node seeding was removed so no phantom
+	// node exists on fresh installs. Existing databases keep their rows.
+	return nil
 }
 
 func (s *Store) GetNodeStats(ctx context.Context, nodeID string) (allocatedMemMB int64, serverCount int, runningCount int, err error) {

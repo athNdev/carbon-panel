@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/config"
+	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -46,6 +47,18 @@ func newDockerPrivilegeTestService(t *testing.T) (*ServerService, *rbac.Enforcer
 
 	cfg := &config.Config{
 		Storage: config.StorageConfig{DataDir: t.TempDir()},
+	}
+
+	// No phantom default node exists anymore: seed an enabled node so
+	// server creation can be placed explicitly in these tests.
+	if err := store.CreateNode(context.Background(), &db.Node{
+		ID:      "test-node",
+		Name:    "Test Node",
+		Host:    "tcp://127.0.0.1:2375",
+		Enabled: true,
+		Status:  db.NodeStatusOnline,
+	}); err != nil {
+		t.Fatalf("failed to seed test node: %v", err)
 	}
 
 	// CreateServer/UpdateServer kick off container creation on a detached
@@ -107,6 +120,7 @@ func TestCreateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 
 	resp, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
 		Name:            "test-server",
+		NodeId:          "test-node",
 		McVersion:       "1.20.1",
 		DockerImage:     "java21",
 		Port:            25566,
@@ -126,6 +140,7 @@ func TestCreateServer_BenignOverrides_AllowedWithoutElevatedPermission(t *testin
 
 	resp, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
 		Name:      "test-server-benign",
+		NodeId:    "test-node",
 		McVersion: "1.20.1",
 		DockerImage: "java21",
 		Port:      25567,
@@ -151,6 +166,7 @@ func TestCreateServer_NoOverrides_UnaffectedByPrivilegeCheck(t *testing.T) {
 
 	_, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
 		Name:      "plain-server",
+		NodeId:    "test-node",
 		McVersion: "1.20.1",
 		DockerImage: "java21",
 		Port:      25568,
@@ -166,6 +182,7 @@ func TestUpdateServer_PrivilegedOverrides_RejectedWithoutElevatedPermission(t *t
 
 	created, err := svc.CreateServer(adminCtx, connect.NewRequest(&v1.CreateServerRequest{
 		Name:      "update-target",
+		NodeId:    "test-node",
 		McVersion: "1.20.1",
 		DockerImage: "java21",
 		Port:      25569,
@@ -197,6 +214,7 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 
 	created, err := svc.CreateServer(adminCtx, connect.NewRequest(&v1.CreateServerRequest{
 		Name:      "update-target-2",
+		NodeId:    "test-node",
 		McVersion: "1.20.1",
 		DockerImage: "java21",
 		Port:      25570,
