@@ -238,7 +238,7 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	modpackService := services.NewModpackService(s.store, s.config, s.uploadManager, s.log)
 	nodeService := services.NewNodeService(s.store, s.clientPool, s.log)
 	proxyService := services.NewProxyService(s.store, s.docker, s.proxyManager, s.config, s.logStreamer, s.log)
-	serverService := services.NewServerService(s.store, s.docker, s.sender, s.config, s.proxyManager, s.logStreamer, s.metricsCollector, s.moduleManager, s.bus, s.log, s.clientPool, s.placementEngine)
+	serverService := services.NewServerService(s.store, s.docker, s.sender, s.config, s.proxyManager, s.logStreamer, s.metricsCollector, s.moduleManager, s.bus, s.log, s.clientPool, s.placementEngine, s.enforcer)
 	supportService := services.NewSupportService(s.store, s.docker, s.config, s.log)
 	taskService := services.NewTaskService(s.store, s.scheduler, s.log)
 	userService := services.NewUserService(s.store, s.authManager, s.log)
@@ -337,22 +337,36 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 				return next(ctx, req)
 			}
 
-			// Check resource permission
-			if perm, ok := rbac.ProcedurePermissions[procedure]; ok {
-				if s.enforcer != nil {
-					objectID := "*"
-					if perm.ObjectIDField != "" {
-						objectID = extractObjectID(req, perm.ObjectIDField)
-					}
-					allowed, err := s.enforcer.Enforce(user.Roles, perm.Resource, perm.Action, objectID)
-					if err != nil {
-						s.log.Error("RBAC enforcement error: %v", err)
-						return nil, connect.NewError(connect.CodeInternal, err)
-					}
-					if !allowed {
-						return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("insufficient permissions for %s/%s", perm.Resource, perm.Action))
-					}
-				}
+			// Check resource permission. Every procedure reaching this point
+			// must be explicitly covered by rbac.ProcedurePermissions - any
+			// procedure that is not public, not authenticated-only, and not
+			// in ProcedurePermissions is DENIED by default (fail closed).
+			// This also applies if the RBAC enforcer itself failed to
+			// initialize: previously a nil enforcer silently skipped the
+			// permission check entirely (fail open), which is equally
+			// unsafe.
+			perm, ok := rbac.ProcedurePermissions[procedure]
+			if !ok {
+				s.log.Warn("RBAC: denying request for unmapped procedure %s (no public/authenticated-only/permission entry)", procedure)
+				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("procedure %s has no permission mapping and is denied by default", procedure))
+			}
+
+			if s.enforcer == nil {
+				s.log.Error("RBAC: denying request for %s because the RBAC enforcer is unavailable", procedure)
+				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("rbac enforcer unavailable"))
+			}
+
+			objectID := "*"
+			if perm.ObjectIDField != "" {
+				objectID = extractObjectID(req, perm.ObjectIDField)
+			}
+			allowed, err := s.enforcer.Enforce(user.Roles, perm.Resource, perm.Action, objectID)
+			if err != nil {
+				s.log.Error("RBAC enforcement error: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+			if !allowed {
+				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("insufficient permissions for %s/%s", perm.Resource, perm.Action))
 			}
 
 			return next(ctx, req)

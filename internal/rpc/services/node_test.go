@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -12,11 +14,19 @@ import (
 )
 
 func setupTestStore(t *testing.T) *db.Store {
+	// A plain ":memory:" DSN gives every pooled connection its own,
+	// separate empty database. MaxConnections must be >1 (and, so every
+	// connection sees the same schema, the DSN must use a uniquely-named
+	// shared cache) because the casbin gorm-adapter (used by
+	// rbac.NewEnforcer, exercised by server_docker_privilege_test.go) can
+	// need a second connection while the first is still checked out;
+	// MaxConnections:1 deadlocks database/sql's pool wait in that case.
+	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
 	cfg := &config.Config{
 		Database: config.DatabaseConfig{
-			Path:           ":memory:",
+			Path:           fmt.Sprintf("file:%s?mode=memory&cache=shared", dbName),
 			AutoMigrate:    true,
-			MaxConnections: 1,
+			MaxConnections: 5,
 		},
 	}
 	store, err := db.NewSQLiteStore(cfg)
