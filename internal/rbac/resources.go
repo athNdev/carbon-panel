@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package rbac
 
 // Resource constants
@@ -16,6 +25,7 @@ const (
 	ResourceSettings        = "settings"
 	ResourceSupport         = "support"
 	ResourceUploads         = "uploads"
+	ResourceNodes           = "nodes"
 )
 
 // Action constants
@@ -48,7 +58,7 @@ var AllResources = []string{
 	ResourceModpacks, ResourceModules, ResourceModuleTemplates,
 	ResourceFiles, ResourceTasks, ResourceProxy,
 	ResourceUsers, ResourceRoles, ResourceSettings,
-	ResourceSupport, ResourceUploads,
+	ResourceSupport, ResourceUploads, ResourceNodes,
 }
 
 // ResourceScopeSource maps each scopeable resource to the resource that
@@ -65,6 +75,7 @@ var ResourceScopeSource = map[string]string{
 	ResourceModpacks:        ResourceModpacks,
 	ResourceProxy:           ResourceProxy,
 	ResourceTasks:           ResourceTasks,
+	ResourceNodes:           ResourceNodes,
 }
 
 // ResourceActionsFromProcedures derives which actions are valid for each
