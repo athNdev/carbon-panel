@@ -49,6 +49,7 @@ one at https://mozilla.org/MPL/2.0/.
 		GetIndexerStatusResponse
 	} from '$lib/proto/carbonpanel/v1/modpack_pb';
 	import { SearchModpacksRequestSchema } from '$lib/proto/carbonpanel/v1/modpack_pb';
+	import { NodeStatus } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { debounce } from 'lodash-es';
 	import { uploadFile, cancelUpload, type UploadProgress } from '$lib/utils/chunked-upload';
@@ -347,6 +348,24 @@ one at https://mozilla.org/MPL/2.0/.
 		} finally {
 			importingRemote = false;
 		}
+	}
+
+	async function handleUseInServer(modpack: IndexedModpack) {
+		try {
+			const res = await rpcClient.node.listNodes({});
+			const active = (res.nodes || []).filter((n) => n.enabled && n.status === NodeStatus.ONLINE);
+			if (active.length === 0) {
+				toast.error(
+					'No active Docker nodes available — add and enable a node in Settings → Docker Nodes before creating a server.'
+				);
+				return;
+			}
+		} catch (error) {
+			toast.error('Could not verify available nodes. Please try again.');
+			console.error(error);
+			return;
+		}
+		goto(resolve(`/servers/new?modpack=${modpack.id}`));
 	}
 
 	async function deleteModpack(modpack: IndexedModpack) {
@@ -712,7 +731,7 @@ one at https://mozilla.org/MPL/2.0/.
 						kind="primary"
 						size="sm"
 						class="rounded-none"
-						onclick={() => goto(resolve(`/servers/new?modpack=${modpack.id}`))}
+						onclick={() => handleUseInServer(modpack)}
 					>
 						Use in Server
 					</CarbonButton>
