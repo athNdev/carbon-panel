@@ -180,6 +180,7 @@ func (s *Server) setupHandler() {
 		carbonpanelv1connect.ModServiceName,
 		carbonpanelv1connect.ModpackServiceName,
 		carbonpanelv1connect.ModuleServiceName,
+		carbonpanelv1connect.NodeServiceName,
 		carbonpanelv1connect.ProxyServiceName,
 		carbonpanelv1connect.RoleServiceName,
 		carbonpanelv1connect.ServerServiceName,
