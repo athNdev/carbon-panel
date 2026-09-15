@@ -34,16 +34,19 @@
 			{/if}
 		</div>
 		<svg
-			class="h-4 w-4 shrink-0 text-[#c6c6c6] transition-transform duration-200 {open ? 'rotate-90' : ''}"
+			class="h-4 w-4 shrink-0 text-[#c6c6c6] transition-transform duration-[var(--motion-base)] ease-[var(--ease-out-quart)] {open ? 'rotate-90' : ''}"
 			fill="currentColor"
 			viewBox="0 0 20 20"
 		>
 			<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
 		</svg>
 	</button>
-	{#if open}
-		<div class="p-4 bg-[#262626]/40 text-sm text-[#c6c6c6] rounded-none">
-			{@render children?.()}
+	<div
+		inert={!open}
+		class="grid transition-[grid-template-rows] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] {open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}"
+	>
+		<div class="overflow-hidden">
+			<div class="p-4 bg-[#262626]/40 text-sm text-[#c6c6c6] rounded-none">{@render children?.()}</div>
 		</div>
-	{/if}
+	</div>
 </li>
