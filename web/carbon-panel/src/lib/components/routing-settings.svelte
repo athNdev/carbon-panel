@@ -27,6 +27,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { Switch } from '$lib/components/ui/switch';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
+	import { CarbonInlineLoading } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
 		Save,
@@ -318,7 +319,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	{#if loading}
 		<div class="border border-[#393939] bg-[#262626] p-12 rounded-none flex items-center justify-center">
-			<div class="mx-auto h-8 w-8 border-2 border-[#0f62fe] border-t-transparent animate-spin"></div>
+			<CarbonInlineLoading description="Loading proxy configuration..." />
 		</div>
 	{:else if !proxyEnabled}
 		<Alert class="rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6]">
