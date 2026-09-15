@@ -3,14 +3,15 @@
 		CarbonButton,
 		CarbonDataTable,
 		CarbonTag,
-		CarbonSelect
+		CarbonSelect,
+		CarbonInlineLoading
 	} from '$lib/components/carbon';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
 	import type { ModuleTemplate } from '$lib/proto/carbonpanel/v1/module_pb';
 	import { ModuleTemplateType } from '$lib/proto/carbonpanel/v1/module_pb';
-	import { Loader2, Plus, Trash2, Settings, RefreshCw, Layers } from '@lucide/svelte';
+	import { Plus, Trash2, Settings, RefreshCw, Layers } from '@lucide/svelte';
 	import ModuleTemplateCreateDialog from '$lib/components/server/ModuleTemplateCreateDialog.svelte';
 	import { onMount } from 'svelte';
 
@@ -134,9 +135,10 @@
 	>
 		{#if loading && templates.length === 0}
 			<tr>
-				<td colspan="6" class="py-16 text-center text-[#8d8d8d]">
-					<Loader2 class="mx-auto h-6 w-6 animate-spin text-[#0f62fe] mb-2" />
-					Loading templates...
+				<td colspan="6" class="py-16 text-center">
+					<div class="flex items-center justify-center">
+						<CarbonInlineLoading description="Loading templates..." />
+					</div>
 				</td>
 			</tr>
 		{:else if filteredTemplates.length === 0}
