@@ -226,7 +226,7 @@ func (f *httpDependencyFetcher) latestModrinthMod(projectID, loader, mcVersion s
 	if err != nil {
 		return ModItem{}, nil, fmt.Errorf("modrinth request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 {
 		return ModItem{}, nil, fmt.Errorf("modrinth returned HTTP %d for %s", resp.StatusCode, projectID)
 	}
@@ -305,7 +305,7 @@ func (f *httpDependencyFetcher) latestCurseForgeMod(modID, loader, mcVersion str
 	if err != nil {
 		return ModItem{}, nil, fmt.Errorf("curseforge request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 {
 		return ModItem{}, nil, fmt.Errorf("curseforge returned HTTP %d for %s", resp.StatusCode, modID)
 	}
