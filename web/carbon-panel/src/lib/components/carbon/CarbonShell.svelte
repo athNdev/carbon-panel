@@ -1,10 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { serversStore, runningServers, activitySortedServers } from '$lib/stores/servers';
 	import { authStore, currentUser, canAccessSettings } from '$lib/stores/auth';
 	import { ServerStatus, type User } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
+	import { type Node } from '$lib/proto/carbonpanel/v1/node_pb';
+	import { describeNodeStatus, pickPrimaryNode } from '$lib/utils/node-status';
 	import CarbonTag from './CarbonTag.svelte';
 	import CarbonButton from './CarbonButton.svelte';
 
@@ -19,6 +23,59 @@
 	let runningCount = $derived($runningServers.length);
 	let user = $derived($currentUser);
 	let showSettingsNav = $derived($canAccessSettings);
+
+	// Narrow-screen breakpoint mirrors IsMobile (768px) and Tailwind's md: prefix.
+	const MOBILE_QUERY = '(max-width: 767px)';
+
+	let isMobile = $state(false);
+	let nodes = $state<Node[]>([]);
+	let nodesLoaded = $state(false);
+	let appPort = $state('');
+
+	let primaryNode = $derived(pickPrimaryNode(nodes));
+	let primaryNodeStatus = $derived(describeNodeStatus(primaryNode?.status));
+
+	onMount(() => {
+		const media = window.matchMedia(MOBILE_QUERY);
+		const applyBreakpoint = () => {
+			isMobile = media.matches;
+			// Carbon behaviour: the sidenav starts hidden behind the hamburger on narrow screens.
+			if (media.matches) sideNavExpanded = false;
+		};
+		applyBreakpoint();
+		media.addEventListener('change', applyBreakpoint);
+
+		appPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+
+		// Best-effort: the shell must render even when the node list fails (e.g. anonymous access).
+		rpcClient.node
+			.listNodes({}, silentCallOptions)
+			.then((res) => {
+				nodes = res.nodes ?? [];
+			})
+			.catch((err) => {
+				console.error('Failed to fetch nodes for shell footer:', err);
+			})
+			.finally(() => {
+				nodesLoaded = true;
+			});
+
+		return () => {
+			media.removeEventListener('change', applyBreakpoint);
+		};
+	});
+
+	function toggleNav() {
+		sideNavExpanded = !sideNavExpanded;
+	}
+
+	function closeMobileNav() {
+		if (isMobile) sideNavExpanded = false;
+	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') closeMobileNav();
+	}
 
 	const navItems = [
 		{ href: '/', label: 'Overview', icon: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z' },
@@ -47,13 +104,16 @@
 </script>
 
 <div class="min-h-screen bg-[#161616] text-[#f4f4f4] font-sans antialiased flex flex-col selection:bg-[#0f62fe] selection:text-white">
+	<svelte:window onkeydown={handleWindowKeydown} />
 	<!-- IBM Carbon Global Header (48px fixed) -->
 	<header class="fixed top-0 left-0 right-0 h-12 bg-[#161616] border-b border-[#393939] z-50 flex items-center justify-between px-3">
 		<div class="flex items-center gap-2">
 			<!-- Hamburger Button -->
 			<button
 				type="button"
-				onclick={() => (sideNavExpanded = !sideNavExpanded)}
+				onclick={toggleNav}
+				aria-expanded={sideNavExpanded}
+				aria-controls="carbon-sidenav"
 				class="h-8 w-8 flex items-center justify-center hover:bg-[#353535] text-[#f4f4f4] transition-colors cursor-pointer"
 				aria-label="Toggle Navigation"
 			>
@@ -94,15 +154,17 @@
 
 	<!-- Layout Body (SideNav + Content) -->
 	<div class="flex-1 flex pt-12">
-		<!-- IBM Carbon SideNav -->
+		<!-- IBM Carbon SideNav: off-canvas overlay on narrow screens, rail/panel on md+ -->
 		<aside
-			class="fixed top-12 bottom-0 left-0 bg-[#161616] border-r border-[#393939] z-40 transition-all duration-200 overflow-y-auto {sideNavExpanded ? 'w-64' : 'w-12'}"
+			id="carbon-sidenav"
+			class="fixed top-12 bottom-0 left-0 w-64 bg-[#161616] border-r border-[#393939] z-40 transition-all duration-200 overflow-y-auto {sideNavExpanded ? 'translate-x-0' : '-translate-x-full'} {sideNavExpanded ? 'md:w-64' : 'md:w-12'} md:translate-x-0"
 		>
 			<nav class="flex flex-col py-2" aria-label="Main Navigation">
 				{#each navItems as item}
 					{#if item.href !== '/settings' || showSettingsNav}
 						<a
 							href={item.href}
+							onclick={closeMobileNav}
 							class="flex items-center gap-3 px-3.5 py-2.5 text-sm font-sans transition-colors relative {isCurrentPath(item.href) ? 'bg-[#353535] text-white font-medium before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-[#0f62fe]' : 'text-[#c6c6c6] hover:bg-[#262626] hover:text-white'}"
 							title={item.label}
 						>
@@ -122,20 +184,39 @@
 				{/each}
 			</nav>
 
-			<!-- SideNav Footer -->
+			<!-- SideNav Footer: live node status, links to Docker Nodes settings -->
 			{#if sideNavExpanded}
-				<div class="absolute bottom-0 left-0 right-0 p-3 bg-[#161616] border-t border-[#393939] text-[11px] font-mono text-[#8d8d8d]">
-					<div class="flex items-center justify-between">
-						<span>PROXMOX CT 108</span>
-						<span class="text-emerald-500 font-bold">ONLINE</span>
+				<a
+					href="/settings?tab=nodes"
+					onclick={closeMobileNav}
+					title="View Docker nodes"
+					class="absolute bottom-0 left-0 right-0 p-3 bg-[#161616] border-t border-[#393939] text-[11px] font-mono text-[#8d8d8d] hover:bg-[#262626] transition-colors"
+				>
+					<div class="flex items-center justify-between gap-2">
+						<span class="truncate"
+							>{nodesLoaded ? (primaryNode ? primaryNode.name.toUpperCase() : 'NO NODES') : '···'}</span
+						>
+						<span class="{primaryNodeStatus.dotClass} font-bold shrink-0"
+							>{primaryNodeStatus.label}</span
+						>
 					</div>
-<div class="mt-1 text-[10px] text-[#6f6f6f]">PORT 5174 · CARBON V11</div>
-				</div>
+					<div class="mt-1 text-[10px] text-[#6f6f6f]">PORT {appPort || '···'} · CARBON V11</div>
+				</a>
 			{/if}
 		</aside>
 
+		<!-- Backdrop for the off-canvas sidenav on narrow screens -->
+		{#if isMobile && sideNavExpanded}
+			<button
+				type="button"
+				aria-label="Close navigation"
+				onclick={closeMobileNav}
+				class="fixed inset-0 top-12 bg-black/60 z-30 md:hidden cursor-default"
+			></button>
+		{/if}
+
 		<!-- Carbon Main Content Area -->
-		<main class="flex-1 transition-all duration-200 p-6 overflow-y-auto {sideNavExpanded ? 'ml-64' : 'ml-12'}">
+		<main class="flex-1 transition-all duration-200 p-6 overflow-y-auto ml-0 {sideNavExpanded ? 'md:ml-64' : 'md:ml-12'}">
 			<div class="max-w-7xl mx-auto space-y-6">
 				{@render children?.()}
 			</div>

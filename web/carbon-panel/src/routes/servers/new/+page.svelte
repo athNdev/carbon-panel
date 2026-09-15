@@ -379,7 +379,7 @@
 					<button
 						type="button"
 						onclick={() => goToStep(step.id)}
-						class="flex items-center gap-3 p-3 text-left transition-colors border cursor-pointer rounded-none relative select-none {currentStep === step.id ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : currentStep > step.id ? 'bg-[#161616] border-[#393939] hover:bg-[#2e2e2e]' : 'bg-[#161616] border-[#2e2e2e] opacity-70 hover:opacity-100'}"
+						class="flex items-center gap-3 p-3 text-left transition-colors border cursor-pointer rounded-none relative select-none {currentStep === step.id ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : currentStep > step.id ? 'bg-[#161616] border-[#393939] hover:bg-[#2e2e2e]' : 'bg-[#161616] border-[#2e2e2e] opacity-70 hover:opacity-100'}"
 					>
 						<!-- Indicator Badge -->
 						<div
@@ -400,10 +400,6 @@
 								{step.subtitle}
 							</p>
 						</div>
-
-						{#if currentStep === step.id}
-							<div class="absolute right-0 top-0 bottom-0 w-1 bg-[#0f62fe]"></div>
-						{/if}
 					</button>
 				{/each}
 			</div>
@@ -431,7 +427,7 @@
 							<button
 								type="button"
 								onclick={() => (selectedModpack = null)}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {selectedModpack === null ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {selectedModpack === null ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<Settings class="h-4 w-4 text-[#0f62fe]" />
@@ -446,7 +442,7 @@
 							<button
 								type="button"
 								onclick={() => (showModpackDialog = true)}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {selectedModpack !== null ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {selectedModpack !== null ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<Package class="h-4 w-4 text-[#78a9ff]" />
@@ -653,7 +649,7 @@
 										formData.proxyHostname = '';
 										portError = '';
 									}}
-									class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {!useProxyMode ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+									class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {!useProxyMode ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
 								>
 									<h4 class="font-semibold text-sm text-[#f4f4f4]">Direct Port</h4>
 									<p class="text-xs text-[#a8a8a8] mt-1">
@@ -674,7 +670,7 @@
 										}
 										portError = '';
 									}}
-									class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {useProxyMode ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+									class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {useProxyMode ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
 								>
 									<h4 class="font-semibold text-sm text-[#f4f4f4]">SNI / Custom Hostname</h4>
 									<p class="text-xs text-[#a8a8a8] mt-1">
@@ -820,7 +816,7 @@
 							<button
 								type="button"
 								onclick={() => (nodePlacementMode = 'auto')}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {nodePlacementMode === 'auto' ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {nodePlacementMode === 'auto' ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<Activity class="h-4 w-4 text-[#0f62fe]" />
@@ -834,7 +830,7 @@
 							<button
 								type="button"
 								onclick={() => (nodePlacementMode = 'manual')}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {nodePlacementMode === 'manual' ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {nodePlacementMode === 'manual' ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<ServerIcon class="h-4 w-4 text-[#78a9ff]" />
@@ -877,7 +873,7 @@
 											<button
 												type="button"
 												onclick={() => { if (node.enabled) selectedNodeId = node.id; }}
-												class="p-3.5 text-left border transition-colors cursor-pointer rounded-none relative {selectedNodeId === node.id ? 'bg-[#353535] border-[#0f62fe] border-l-4 border-l-[#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'} {!node.enabled ? 'opacity-40 cursor-not-allowed' : ''}"
+												class="p-3.5 text-left border transition-colors cursor-pointer rounded-none relative {selectedNodeId === node.id ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'} {!node.enabled ? 'opacity-40 cursor-not-allowed' : ''}"
 											>
 												<div class="flex items-center justify-between">
 													<div class="flex items-center gap-2">
