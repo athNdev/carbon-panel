@@ -188,13 +188,76 @@
 		if (tps >= 17) return 'text-[#f1c21b]';
 		return 'text-[#da1e28]';
 	};
+
+	function countUp(node: HTMLElement, params: { value: number; decimals?: number }) {
+		const decimals = params.decimals ?? 0;
+		let raf = 0;
+		let current = 0;
+		const reduce =
+			typeof window !== 'undefined' &&
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const render = (v: number) => {
+			node.textContent = v.toFixed(decimals);
+		};
+		const animate = (to: number) => {
+			cancelAnimationFrame(raf);
+			if (reduce) {
+				current = to;
+				render(to);
+				return;
+			}
+			const from = current;
+			const start = performance.now();
+			const duration = 500;
+			const tick = (now: number) => {
+				const p = Math.min(1, (now - start) / duration);
+				const eased = 1 - Math.pow(1 - p, 3);
+				current = from + (to - from) * eased;
+				render(current);
+				if (p < 1) raf = requestAnimationFrame(tick);
+			};
+			raf = requestAnimationFrame(tick);
+		};
+		animate(params.value);
+		return {
+			update(next: { value: number; decimals?: number }) {
+				animate(next.value);
+			},
+			destroy() {
+				cancelAnimationFrame(raf);
+			}
+		};
+	}
 </script>
 
 {#if isLoading}
-	<div class="flex h-64 items-center justify-center p-6 bg-[#161616]">
-		<div class="flex flex-col items-center gap-3">
-			<div class="h-10 w-10 border-4 border-[#0f62fe] border-t-transparent animate-spin rounded-none"></div>
-			<p class="font-sans text-xs text-[#8d8d8d] uppercase tracking-wider font-mono">Loading telemetry & cluster data...</p>
+	<div class="space-y-6 bg-[#161616] text-[#f4f4f4]">
+		<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#393939] gap-4">
+			<div class="w-full">
+				<div class="h-8 w-56 bg-[#262626] motion-skeleton"></div>
+				<div class="mt-2 h-3 w-80 bg-[#262626] motion-skeleton"></div>
+			</div>
+			<div class="flex items-center gap-2">
+				<div class="h-8 w-28 bg-[#262626] motion-skeleton"></div>
+				<div class="h-8 w-32 bg-[#262626] motion-skeleton"></div>
+			</div>
+		</div>
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+			{#each [0, 1, 2, 3] as _}
+				<div class="cds--tile rounded-none bg-[#262626] border border-[#393939] p-5 flex flex-col justify-between h-[140px] select-none">
+					<div>
+						<div class="flex items-center justify-between">
+							<div class="h-3 w-24 bg-[#393939] motion-skeleton"></div>
+							<div class="h-4 w-4 bg-[#393939] motion-skeleton"></div>
+						</div>
+						<div class="mt-3 h-8 w-20 bg-[#393939] motion-skeleton"></div>
+					</div>
+					<div class="mt-4 pt-3 border-t border-[#393939] flex items-center justify-between">
+						<div class="h-3 w-20 bg-[#393939] motion-skeleton"></div>
+						<div class="h-3 w-12 bg-[#393939] motion-skeleton"></div>
+					</div>
+				</div>
+			{/each}
 		</div>
 	</div>
 {:else}
@@ -234,7 +297,7 @@
 		</div>
 
 		<!-- Carbon KPI Tiles (cds--tile) -->
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 motion-stagger">
 			<!-- Tile 1: Total Servers -->
 			<div class="cds--tile rounded-none bg-[#262626] border border-[#393939] p-5 flex flex-col justify-between select-none transition-colors hover:border-[#525252]">
 				<div>
@@ -243,7 +306,7 @@
 						<Server class="h-4 w-4 text-[#8d8d8d]" />
 					</div>
 					<div class="mt-2 text-3xl font-bold tracking-tight text-[#f4f4f4] font-mono">
-						{stats.total}
+						<span use:countUp={{ value: stats.total, decimals: 0 }}></span>
 					</div>
 				</div>
 				<div class="mt-4 pt-3 border-t border-[#393939] flex items-center justify-between text-xs font-mono">
@@ -270,7 +333,7 @@
 						<Users class="h-4 w-4 text-[#8d8d8d]" />
 					</div>
 					<div class="mt-2 text-3xl font-bold tracking-tight text-[#f4f4f4] font-mono">
-						{stats.totalPlayers}
+						<span use:countUp={{ value: stats.totalPlayers, decimals: 0 }}></span>
 					</div>
 				</div>
 				<div class="mt-4 pt-3 border-t border-[#393939] flex items-center justify-between text-xs font-mono">
@@ -296,9 +359,10 @@
 						<MemoryStick class="h-4 w-4 text-[#8d8d8d]" />
 					</div>
 					<div class="mt-2 flex items-baseline gap-1.5">
-						<span class="text-3xl font-bold tracking-tight text-[#f4f4f4] font-mono">
-							{stats.totalMemory > 0 ? (stats.usedMemory / 1024).toFixed(1) : '0.0'}
-						</span>
+						<span
+							class="text-3xl font-bold tracking-tight text-[#f4f4f4] font-mono"
+							use:countUp={{ value: stats.totalMemory > 0 ? stats.usedMemory / 1024 : 0, decimals: 1 }}
+						></span>
 						<span class="text-sm font-mono text-[#8d8d8d]">
 							/ {stats.totalMemory > 0 ? (stats.totalMemory / 1024).toFixed(1) : '0.0'} GB
 						</span>
@@ -306,7 +370,7 @@
 					<!-- Sharp Carbon Progress Bar -->
 					<div class="w-full bg-[#393939] h-1.5 mt-3 rounded-none overflow-hidden">
 						<div
-							class="h-full bg-[#0f62fe] transition-all duration-300"
+							class="h-full bg-[#0f62fe] transition-[width] duration-[var(--motion-slow)] ease-[var(--ease-out-quart)]"
 							style="width: {stats.memUsagePercent}%"
 						></div>
 					</div>
@@ -328,9 +392,10 @@
 						<Gauge class="h-4 w-4 text-[#8d8d8d]" />
 					</div>
 					<div class="mt-2 flex items-baseline gap-2">
-						<span class="text-3xl font-bold tracking-tight {stats.avgTps >= 18 ? 'text-[#24a148]' : stats.avgTps > 0 ? 'text-[#da1e28]' : 'text-[#f4f4f4]'} font-mono">
-							{stats.avgTps > 0 ? stats.avgTps.toFixed(1) : '20.0'}
-						</span>
+						<span
+							class="text-3xl font-bold tracking-tight {stats.avgTps >= 18 ? 'text-[#24a148]' : stats.avgTps > 0 ? 'text-[#da1e28]' : 'text-[#f4f4f4]'} font-mono"
+							use:countUp={{ value: stats.avgTps > 0 ? stats.avgTps : 20, decimals: 1 }}
+						></span>
 						<span class="text-sm font-mono text-[#8d8d8d]">AVG TPS</span>
 					</div>
 				</div>
@@ -412,7 +477,7 @@
 										<th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Actions</th>
 									</tr>
 								</thead>
-								<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
+								<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4] motion-stagger">
 									{#each sortServersByActivity([...dashboardServers]).slice(0, 5) as server (server.id)}
 										<tr class="hover:bg-[#353535] transition-colors group">
 											<td class="px-4 py-3 align-middle">
@@ -422,7 +487,11 @@
 												</a>
 											</td>
 											<td class="px-4 py-3 align-middle">
-												<CarbonTag type={getStatusTagType(server.status)} size="sm">
+												<CarbonTag
+													type={getStatusTagType(server.status)}
+													size="sm"
+													pulse={server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.STOPPED}
+												>
 													{getStringForEnum(ServerStatus, server.status)}
 												</CarbonTag>
 											</td>
@@ -511,12 +580,12 @@
 						<span>Timestamp</span>
 					</div>
 					<!-- Structured List Rows -->
-					<div class="divide-y divide-[#393939] bg-[#262626] flex-1">
+					<div class="divide-y divide-[#393939] bg-[#262626] flex-1 motion-stagger">
 						{#each recentActivity as activity (activity.server + (activity.time?.seconds ?? ''))}
 							<div class="flex items-center justify-between px-4 py-3 hover:bg-[#353535] transition-colors">
 								<div class="flex items-center gap-3 min-w-0">
 									<!-- Sharp status pip -->
-									<div class="w-2 h-2 shrink-0 {activity.status === ServerStatus.RUNNING ? 'bg-[#24a148]' : activity.status === ServerStatus.STOPPED ? 'bg-[#8d8d8d]' : 'bg-[#da1e28]'}"></div>
+									<div class="w-2 h-2 shrink-0 {activity.status === ServerStatus.RUNNING ? 'bg-[#24a148]' : activity.status === ServerStatus.STOPPED ? 'bg-[#8d8d8d]' : 'bg-[#da1e28]'} {activity.status === ServerStatus.ERROR || activity.status === ServerStatus.UNHEALTHY ? 'motion-pulse' : ''}"></div>
 									<div class="min-w-0">
 										<p class="font-medium text-sm text-[#f4f4f4] truncate">{activity.server}</p>
 										<p class="text-xs text-[#8d8d8d] font-mono">{activity.action}</p>
