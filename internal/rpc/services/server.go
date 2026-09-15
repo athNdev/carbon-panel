@@ -18,6 +18,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/command"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -28,6 +29,7 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/utils"
 	"github.com/athNdev/carbon-panel/internal/module"
 	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -52,6 +54,7 @@ type ServerService struct {
 	metricsCollector *metrics.Collector
 	moduleManager    *module.Manager
 	bus              *events.Bus
+	enforcer         *rbac.Enforcer
 }
 
 func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
@@ -87,6 +90,7 @@ func NewServerService(
 	log *logger.Logger,
 	pool *docker.ClientPool,
 	placementEngine *docker.PlacementEngine,
+	enforcer *rbac.Enforcer,
 ) *ServerService {
 	if pool == nil && dockerCli != nil {
 		pool = docker.NewClientPool(store, dockerCli, log)
@@ -107,7 +111,38 @@ func NewServerService(
 		metricsCollector: metricsCollector,
 		moduleManager:    moduleManager,
 		bus:              bus,
+		enforcer:         enforcer,
 	}
+}
+
+// checkDockerPrivilegedOverrides enforces that only callers holding the
+// elevated ResourceServers/ActionManageDockerPrivileged permission may set
+// host-breakout-capable Docker overrides (Privileged mode, CapAdd, or a
+// confinement-weakening SecurityOpt). Benign overrides are always allowed.
+// This is a payload-conditional check in addition to the ordinary
+// create/update permission already enforced by the RPC auth interceptor.
+func (s *ServerService) checkDockerPrivilegedOverrides(ctx context.Context, overrides *v1.DockerOverrides) error {
+	if !docker.IsPrivilegedDockerOverride(overrides) {
+		return nil
+	}
+
+	if s.enforcer == nil {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("privileged docker overrides require the servers/manage_docker_privileged permission, but the RBAC enforcer is unavailable"))
+	}
+
+	user := auth.GetUserFromContext(ctx)
+	if user == nil {
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+
+	allowed, err := s.enforcer.Enforce(user.Roles, rbac.ResourceServers, rbac.ActionManageDockerPrivileged, "*")
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("rbac enforcement error: %w", err))
+	}
+	if !allowed {
+		return connect.NewError(connect.CodePermissionDenied, docker.ErrElevatedDockerPermissionRequired)
+	}
+	return nil
 }
 
 // dbServerToProto converts a database server model to proto server
@@ -405,6 +440,10 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 // CreateServer creates a new server
 func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v1.CreateServerRequest]) (*connect.Response[v1.CreateServerResponse], error) {
 	msg := req.Msg
+
+	if err := s.checkDockerPrivilegedOverrides(ctx, msg.DockerOverrides); err != nil {
+		return nil, err
+	}
 
 	// Convert mod loader from proto
 	modLoader := protoModLoaderToDB(msg.ModLoader)
@@ -946,6 +985,10 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 
 	// Handle docker overrides update
 	if msg.DockerOverrides != nil {
+		if err := s.checkDockerPrivilegedOverrides(ctx, msg.DockerOverrides); err != nil {
+			return nil, err
+		}
+
 		// Check that labels do not start with "carbon-panel."
 		for key := range msg.DockerOverrides.Labels {
 			if strings.HasPrefix(key, "carbon-panel.") {
