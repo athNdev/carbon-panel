@@ -1,5 +1,18 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { Button } from '$lib/components/ui/button';
 	import { ArrowUp } from '@lucide/svelte';
 
@@ -59,16 +72,17 @@
 	});
 
 	function scrollToTop() {
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		if (scrollElement === window) {
-			window.scrollTo({ top: 0, behavior: 'smooth' });
+			window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
 		} else if (scrollElement) {
-			(scrollElement as Element).scrollTo({ top: 0, behavior: 'smooth' });
+			(scrollElement as Element).scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
 		}
 	}
 </script>
 
 {#if showButton}
-	<div class="fixed right-8 bottom-8 z-50">
+	<div class="fixed right-8 bottom-8 z-50" transition:fly={{ y: 8, duration: 200, easing: cubicOut }}>
 		<Button
 			size="icon"
 			onclick={scrollToTop}
