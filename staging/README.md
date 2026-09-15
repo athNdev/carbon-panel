@@ -29,5 +29,14 @@ echo '*/5 * * * * root /usr/local/bin/staging.sh autopin >> /var/log/staging-aut
 
 ## Files
 
-- `docker-compose.yml` — staging service (bridge, `8081:8080`, own data dirs)
+- `docker-compose.yml` — equivalent service definition (reference; the host
+  has no compose plugin, so `staging.sh` uses plain `docker run`)
 - `staging.sh` — `pin | switch <branch> | autopin | status | logs`
+
+## Notes
+
+- After changing files in `staging/`, re-copy them on the box:
+  `git -C /opt/staging/src show origin/main:staging/staging.sh > /usr/local/bin/staging.sh`
+  (same for `docker-compose.yml` → `/opt/staging/`).
+- The box needed a memory bump (4 → 6 GB) for image builds; dev stack
+  untouched. `staging.sh switch` builds can take ~10 min on this host.
