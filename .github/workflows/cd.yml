@@ -1,9 +1,16 @@
 name: Docker Hub CD
 
 on:
+  # Publish :latest from a push to main only after the "Continuous
+  # Integration" workflow has succeeded for that same commit. Previously this
+  # workflow triggered on the raw push to main, so a commit that failed CI
+  # could still publish a broken :latest image to Docker Hub (DESIGN.md §10.1
+  # finding #6).
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types:
+      - completed
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -15,17 +22,25 @@ on:
         default: true
 
 concurrency:
-  group: cd-${{ github.ref }}
+  group: cd-${{ github.event.workflow_run.head_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-and-push:
     name: Build & Push Docker Hub Image
     runs-on: ubuntu-latest
+    # Tag pushes and manual dispatches always run. A workflow_run event only
+    # runs for a push-triggered CI run (i.e. main) that succeeded - PR CI runs
+    # and failed runs never publish.
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # workflow_run events must check out the exact commit CI tested, not
+          # the default-branch tip.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
