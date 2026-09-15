@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
@@ -140,8 +141,22 @@ func migrations() []*gormigrate.Migration {
 	}
 }
 
+// isInMemorySQLitePath reports whether path addresses an in-memory SQLite
+// database (the bare ":memory:" DSN, or a "file:...?mode=memory..." DSN,
+// with or without a shared cache) rather than a real file on disk. A
+// pre-migration VACUUM INTO backup is meaningless - and fails outright,
+// since sqlite rejects a cache-mode query parameter on the backup's target
+// path - for any of these.
+func isInMemorySQLitePath(path string) bool {
+	if path == "" || path == ":memory:" {
+		return true
+	}
+	lower := strings.ToLower(path)
+	return strings.Contains(lower, ":memory:") || strings.Contains(lower, "mode=memory")
+}
+
 func (s *Store) backupDB() error {
-	if s.cfg.Database.Path == "" || s.cfg.Database.Path == ":memory:" {
+	if isInMemorySQLitePath(s.cfg.Database.Path) {
 		return nil
 	}
 
