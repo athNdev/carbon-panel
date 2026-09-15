@@ -172,7 +172,7 @@ proto-clean:
 
 proto-lint:
 	@echo "Linting proto files (using Docker)..."
-	$(BUF_RUN) lint || echo "Buf linting failed, but it's probably just missing comment documentation. Ignore it."
+	$(BUF_RUN) lint
 	@echo "Proto linting complete!"
 
 gen: proto-clean proto
