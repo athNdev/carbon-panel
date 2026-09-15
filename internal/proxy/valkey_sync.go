@@ -136,7 +136,7 @@ func (c *RespClient) executeCommand(args ...string) (any, error) {
 
 	cmd := formatRESPCommand(args...)
 	if _, err := c.conn.Write([]byte(cmd)); err != nil {
-		c.conn.Close()
+		_ = c.conn.Close()
 		c.conn = nil
 		c.reader = nil
 		return nil, err
@@ -147,7 +147,7 @@ func (c *RespClient) executeCommand(args ...string) (any, error) {
 		// The connection is unusable after a malformed/partial read (e.g. the
 		// peer reset mid-response). Drop it so the next call reconnects
 		// instead of repeatedly failing against a dead socket.
-		c.conn.Close()
+		_ = c.conn.Close()
 		c.conn = nil
 		c.reader = nil
 	}

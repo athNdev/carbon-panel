@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'staging/*'
   pull_request:
     branches:
       - main
@@ -12,6 +11,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.25.0'
 
 jobs:
   test-backend:
@@ -22,20 +24,68 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Go 1.23
+      - name: Set up Go ${{ env.GO_VERSION }}
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Ensure embedded web build directory exists
         run: mkdir -p web/carbon-panel/build && touch web/carbon-panel/build/.gitkeep
 
-      - name: Run Packwiz, Scheduler & Core Tests
-        run: |
-          go test -v ./internal/packwiz/...
-          go test -v ./internal/rpc/handlers/ -run "TestPackwiz"
-          go test -v ./internal/scheduler/...
+      # Runs the full suite (`go test ./...`), same as `make test`, so CI,
+      # Makefile and local dev all agree on what "the test suite" means.
+      - name: Run Backend Test Suite
+        run: make test
+
+  lint-backend:
+    name: Backend Lint & Vet
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Ensure embedded web build directory exists
+        run: mkdir -p web/carbon-panel/build && touch web/carbon-panel/build/.gitkeep
+
+      - name: go vet
+        run: go vet ./...
+
+      # Scoped to lines touched by this change (only-new-issues), since the
+      # existing codebase has a pre-existing baseline of ~80 findings
+      # (mostly errcheck on defer'd Close() calls and staticcheck style
+      # suggestions) that are out of scope to fix in this PR. New/changed
+      # code is held to the lint standard from here on.
+      - name: golangci-lint (new/changed code only)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2
+          only-new-issues: true
+
+  lint-proto:
+    name: Proto Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up buf
+        uses: bufbuild/buf-setup-action@v1
+        with:
+          version: '1.50.0'
+
+      - name: buf lint
+        run: buf lint
 
   test-frontend:
     name: Frontend Quality & Build Gate
@@ -59,6 +109,9 @@ jobs:
 
       - name: SvelteKit Type & Component Diagnostics
         run: bun run check
+
+      - name: Unit Tests
+        run: bun run test
 
       - name: Production Vite Build
         run: bun run build
