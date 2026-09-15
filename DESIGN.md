@@ -321,25 +321,38 @@ erDiagram
 
 ```mermaid
 flowchart LR
-    Commit["Git Push / PR"] --> CI["GitHub Actions CI"]
-    
+    Commit["Git Push / PR"] --> CI["GitHub Actions CI (ci.yml)"]
+
     subgraph CI ["Automated CI Suite"]
-        BE["Backend Test Suite\n(Go 1.23, Packwiz, Scheduler, RPC)"]
+        BE["Backend Test Suite\n(Go 1.23, narrow package scope)"]
         FE["Frontend Quality Gate\n(Bun, SvelteKit Check, Vite Build)"]
     end
 
-    CI --> CD["Docker Hub CD Pipeline"]
-    
+    Commit -->|"push to main / tag v*"| CD["Docker Hub CD (cd.yml)"]
+
     subgraph CD ["Automated Image Publishing"]
         QEMU["Set up QEMU"]
         Buildx["Buildx Multi-Arch\n(linux/amd64, linux/arm64)"]
         Push["Push to Docker Hub\n(athndev/carbon-panel)"]
     end
+
+    Tag["Git Tag v*"] --> REL["Release Workflow (release.yml)"]
+    subgraph REL ["Binary + Docker Release"]
+        Bin["Cross-compiled binaries\n(linux/darwin/windows, Go 1.24.5)"]
+        RelDocker["Docker image + GitHub Release + Discord notify"]
+    end
 ```
 
-- **Frontend Quality Gate**: Runs `bun install --frozen-lockfile`, `bun run check` (type diagnostics), and `bun run build` (production static export).
-- **Backend Quality Gate**: Runs all unit and integration tests across `./internal/packwiz/...`, `./internal/rpc/...`, and `./internal/scheduler/...`.
-- **CD Pipeline**: Automated multi-architecture image packaging (`linux/amd64` and `linux/arm64`) using Docker Buildx and GitHub Actions layer caching.
+- **`ci.yml` — Backend Test Suite**: runs on every push to `main`/`staging/*` and every PR into `main`. It does **not** run the full backend test suite (`go test ./...`, which is what `make test` runs locally). It runs three narrowly-scoped commands against Go 1.23:
+  - `go test -v ./internal/packwiz/...`
+  - `go test -v ./internal/rpc/handlers/ -run "TestPackwiz"` (only the `TestPackwiz*` subset of the `rpc/handlers` package — not the rest of `internal/rpc`)
+  - `go test -v ./internal/scheduler/...`
+
+  Every other package under `internal/` and `pkg/` (including `auth`, `config`, `rbac`, `docker`, `proxy`, `db`, `webhook`, `ws`, despite several of these having test files, e.g. `internal/docker` and `internal/proxy`) is **not exercised in CI at all**. There is also no Go linter/vet step (`golangci-lint`, `go vet`, or similar) in CI — `make lint` only lints proto (`buf lint`) and the frontend (`bun run lint`); it does not cover Go source.
+- **`ci.yml` — Frontend Quality Gate**: runs `bun install --frozen-lockfile`, `bun run check` (SvelteKit/TS type diagnostics), and `bun run build` (production Vite build). There is no frontend unit/component test step because the frontend has no test framework configured (no Vitest/Jest/Playwright in `web/carbon-panel/package.json`).
+- **`cd.yml` — Docker Hub CD**: triggers on push to `main` and on `v*` tags (PR triggers were intentionally dropped, see commit `1952877`). Builds and pushes a multi-arch (`linux/amd64`, `linux/arm64`) image via Buildx with GHA layer caching. It does not depend on `ci.yml` completing — the two workflows run independently on the same push, so a red CI run does not block an image push to `main`.
+- **`release.yml` — Tag-triggered Release**: on `v*` tags, generates proto artifacts, builds the frontend, cross-compiles binaries for linux/darwin/windows (amd64/arm64) using **Go 1.24.5**, builds/pushes a Docker image, cuts a GitHub Release, and posts a Discord notification.
+- **Go version drift**: three different Go versions are pinned across the repo — `go.mod` declares `go 1.25.0`, `ci.yml` uses `1.23`, and `release.yml` uses `1.24.5`. `go.mod`'s `go 1.25.0` directive is newer than the toolchain CI actually tests against, meaning CI is not validating against the same language/stdlib version the module declares, and release binaries are built with yet a third version.
 
 ---
 
@@ -360,3 +373,50 @@ bun run dev
 Accessible at:
 - Web Application: `http://localhost:5174`
 - Backend API / RPC: `http://localhost:8080`
+
+---
+
+## 10. Architecture Review: Risks & Proposed Improvements
+
+*Added by an independent architecture audit, 2026-09. This section reflects a point-in-time review of the code under `internal/` and `.github/workflows/` on `main` and does not describe aspirational or in-progress work.*
+
+### 10.1 Findings
+
+**1. RBAC's route-table is fail-open for unregistered procedures (high severity).**
+`internal/rpc/server.go`'s `authInterceptor` (around line 315) checks a procedure against three maps in sequence: `rbac.PublicProcedures`, `rbac.AuthenticatedOnlyProcedures`, then `rbac.ProcedurePermissions` (defined in `internal/rbac/mapping.go`). If a procedure string is present in none of the three, the interceptor authenticates the caller and then falls straight through to `next(ctx, req)` — no resource/action check is performed at all. Concretely: any new Connect-RPC method added to a `.proto` file and wired into a handler is reachable by **any authenticated user**, regardless of role, until someone remembers to add a matching entry to `ProcedurePermissions`. There is no test in the (zero-coverage) `internal/rbac` package that asserts every registered procedure has a permission entry, so this can regress silently. This is the opposite of the "deny by default, allow what you recognize" posture generally recommended for RPC authorization interceptors — see the fail-closed pattern used by connect-rpc authorization libraries such as `connectrpc-authz-go` and `rbacconnect` (pkg.go.dev), and the general principle that the risk here is a handler being "ungated, not denied" when a permission entry is missing.
+- The route-table approach (a hand-maintained Go map keyed by procedure path string) is also a maintainability risk independent of the fail-open bug: procedure names are free-form strings with no compile-time link back to the generated Connect service interfaces, so a typo or a renamed RPC silently drops out of enforcement rather than failing to build.
+
+**2. `DockerOverrides` lets scoped operators pass capabilities, bind mounts, and AppArmor overrides straight to the Docker Engine API (high severity).**
+`internal/docker/client.go`'s `ApplyOverrides` (around line 276) applies `overrides.GetCapAdd()`, `overrides.GetVolumes()` (including arbitrary host bind-mount sources/targets), `overrides.GetDevices()`, and `overrides.GetSecurityOpt()` (which can include `apparmor:unconfined`) verbatim onto the `container.HostConfig` used to create a per-server container, with no allowlist, denylist, or validation. `DockerOverrides` is reachable through `ConfigService/UpdateServerConfig`, which RBAC scopes to `server_config.update.<server_id>` — i.e. exactly the kind of narrowly-scoped, single-server "operator" role the RBAC model (DESIGN.md §7.2) is designed to support. In the current implementation, an operator scoped to one server can potentially request `CAP_SYS_ADMIN`/`SYS_PTRACE`, mount the host filesystem into their container, or disable AppArmor confinement for it — any of which are well-documented container-breakout primitives. Combined with the fact that the Carbon Panel daemon itself holds a mounted `/var/run/docker.sock` (DESIGN.md §7.1), a breakout from a single scoped operator's container reaches a process with full Docker Engine API access, and from there the host. The blast radius of a single compromised or malicious per-server operator is therefore effectively "the whole host and every other tenant's server," which is disproportionate to the permission they were granted. `internal/docker` has 8 test files but none assert that dangerous overrides are rejected.
+- General guidance on Docker socket exposure is consistent with this: mounting `docker.sock` into a container/daemon grants the equivalent of root on the host, so the operations reachable *through* that daemon on behalf of lower-privileged users need their own allowlist — the socket access itself is not the only control point.
+
+**3. Multi-node clustering keeps a single SQLite file as the system of record; only proxy routing has been offloaded (medium severity).**
+The codebase already contains real multi-node plumbing: `internal/docker/pool.go`'s `ClientPool` dials remote Docker daemons per `node_id` (with TLS config support), and `internal/proxy/valkey_sync.go` implements a Valkey/Dragonfly-backed (Redis RESP protocol) pub/sub + KV layer so proxy route tables stay in sync across nodes without going through SQLite. However, the actual system-of-record data — users, roles, servers, tasks, node registration (see the `20260307_001_multinode_default_node` migration in `internal/db/migrations.go`, which backfills `node_id` on `servers`/`modules`) — still lives in one SQLite file on the controller node (DESIGN.md §6). Remote nodes are Docker API endpoints only; there is no replica or shard of the control-plane database. That means:
+  - The controller node's SQLite file is a single point of failure for the *entire cluster's* control plane, not just one node — losing it or its disk takes down management of every node, even though the Minecraft proxy layer (via Valkey) could in principle keep routing traffic.
+  - SQLite's single-writer model caps how many concurrent RPC writes (server CRUD, task scheduling, RBAC changes) the controller can absorb as node/server count grows; this is a real scaling ceiling once the cluster is large enough that control-plane writes (not proxy traffic) become the bottleneck.
+  - DESIGN.md documents almost none of this: the only clustering mentions in the whole document are a UI "cluster indicator" label (§3) and one line in the proto file listing (`node.proto`, §5). The multi-node architecture that already exists in code (`ClientPool`, `valkey_sync.go`, `node_id` columns) has no corresponding architecture section.
+  - This is consistent with general guidance on SQLite at scale: SQLite remains an excellent choice for single-writer, embedded workloads, but common signals for outgrowing it are multiple processes needing concurrent writes and a need for HA/failover — both of which a multi-node *controller* implies once more than one control-plane instance is expected to be able to accept writes. Tools like `rqlite`/`dqlite` (Raft-replicated SQLite) or `Litestream` (streaming backup/PITR to object storage) are natural fits if the goal is HA and durability for the existing single-writer model without a rewrite to a client/server RDBMS; a full move to PostgreSQL is the more conventional path if genuine multi-writer/horizontal write scaling is needed.
+
+**4. CI validates a small fraction of the backend, with no Go linter (medium severity).**
+As corrected in §8 above, `ci.yml` only runs tests for `internal/packwiz`, `internal/scheduler`, and a filtered subset of `internal/rpc/handlers`. Thirteen of the twenty-one `internal/` packages have zero test files at all (`alias`, `auth`, `cache`, `command`, `config`, `events`, `indexers`, `metrics`, `rbac`, `rcon`, `rpc`, `webhook`, `ws`), and none of the packages that do have tests (`docker`, `proxy`, `db`, `minecraft`, `module`, `snapshot`) are exercised in CI. Given finding #1 above, `internal/rbac` — the package enforcing every authorization decision in the system — has neither test coverage nor a CI gate. There is also no `go vet`/`golangci-lint` step; `make lint` only covers proto and frontend.
+
+**5. Frontend has no automated test coverage (medium severity).**
+`web/carbon-panel/package.json` has no Vitest, Jest, Playwright, or `@testing-library` dependency, and `ci.yml`'s frontend job only runs type-checking (`bun run check`) and a production build (`bun run build`) — neither of which exercises component behavior or catches regressions in RBAC-gated UI logic, form validation, or the WebSocket-driven realtime views.
+
+**6. CD can push a new `main` image independently of CI's result (low severity).**
+`cd.yml` triggers on the same `push` to `main` that `ci.yml` does, but the two workflows are not chained — `cd.yml` has no `needs`/`workflow_run` dependency on `ci.yml`. A backend change that fails even the narrow test scope in finding #4 can still result in a new `:latest` image being built and pushed to Docker Hub from the same commit.
+
+### 10.2 Recommendations (prioritized)
+
+1. **Make RBAC fail closed, and add a CI gate that keeps it that way.** Change `authInterceptor` so that a procedure absent from all three maps is *rejected* (`connect.CodePermissionDenied`) rather than passed through — "deny by default, allow what you recognize." Then add a table-driven test in `internal/rbac` that walks every procedure registered in the generated Connect service handlers (reflection over the service descriptors, or a small codegen step) and asserts each one appears in exactly one of `PublicProcedures`, `AuthenticatedOnlyProcedures`, or `ProcedurePermissions`. Wire that test into `ci.yml` so a forgotten mapping entry fails the build instead of shipping. This is the single highest-leverage fix in this review: it closes a live authorization gap and makes the same class of bug structurally hard to reintroduce.
+2. **Constrain `DockerOverrides` to a safe subset before it reaches the Docker Engine API.** Introduce an explicit allowlist (or denylist of genuinely dangerous values) for `CapAdd`, `SecurityOpt`, and `Volumes.Source` in `ApplyOverrides`, and require a separate, more privileged RBAC action (e.g. a distinct `server_config.privileged_update` scoped only to superadmins) for anything outside the safe subset. At minimum, reject `CapAdd` entries outside a small known-safe set (e.g. `SYS_NICE`, `NET_BIND_SERVICE`), reject `apparmor:unconfined`/`seccomp:unconfined`, and reject bind-mount sources outside the server's own data directory. Add tests asserting dangerous overrides are rejected — `internal/docker/hardening_test.go` already exercises `ApplyOverrides` and is the natural home for this coverage.
+3. **Expand CI to cover the packages RBAC and container-isolation correctness depend on.** At minimum add `./internal/rbac/...`, `./internal/docker/...`, `./internal/auth/...`, and `./internal/proxy/...` to `ci.yml` (all but `auth` and `rbac` already have test files ready to run) — a one-line change with immediate signal, plus incentive to backfill `auth`/`rbac` tests given finding #1. Add `go vet ./...` and a `golangci-lint run` step; both are low-effort, high-signal additions to a Go CI pipeline that currently has neither.
+4. **Pin one Go version and reference it everywhere.** Set `go.mod`, `ci.yml`, `release.yml`, and the dev-environment docs/`.air.toml` reference to the same version (ideally via a single source of truth, e.g. `go.mod`'s directive consumed by `actions/setup-go@v5`'s `go-version-file: go.mod` input in every workflow, so there is only one place to bump).
+5. **Document the multi-node architecture that already exists, and decide deliberately whether the controller's SQLite needs HA.** Add a real "Multi-Node Clustering" section to DESIGN.md describing the current model (single controller with SQLite system-of-record + remote `ClientPool` Docker connections + Valkey-synced proxy routing) so the gap between "what's documented" and "what's built" (found in `internal/proxy/valkey_sync.go`, `internal/docker/pool.go`, and the `node_id` migration) closes. Separately, make an explicit call on controller HA: if multi-controller failover is a real near-term goal, evaluate `rqlite`/`dqlite` (Raft-replicated SQLite, minimal application changes) before a heavier move to PostgreSQL; if it isn't, `Litestream`-style continuous backup to object storage is a much cheaper way to bound data loss from the existing single-writer setup.
+6. **Chain CD to CI's result and add minimal frontend test coverage.** Add a `workflow_run`/`needs` dependency (or fold both jobs into one workflow) so `cd.yml` cannot publish an image from a commit that failed `ci.yml`. Separately, introduce Vitest + `@testing-library/svelte` for at least the RBAC-gated UI components and form validation, since the frontend currently ships with zero automated coverage of user-facing behavior.
+
+### 10.3 Sources consulted
+
+- Connect-RPC interceptor authorization patterns and the "ungated, not denied" failure mode: [connectrpc-authz-go](https://pkg.go.dev/github.com/braveokafor/connectrpc-authz-go), [rbacconnect](https://pkg.go.dev/github.com/sxwebdev/rbacconnect), [Connect Go interceptors docs](https://connectrpc.com/docs/go/interceptors/).
+- Docker socket exposure and blast radius of daemon access: [OWASP Docker Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html), [Docker container security vulnerabilities & fixes](https://www.aikido.dev/blog/docker-container-security-vulnerabilities), [Docker socket exposure Q&A](https://www.securityscientist.net/blog/12-questions-and-answers-about-docker-socket-exposure-misconfiguration/).
+- SQLite at scale, replication, and HA options: [rqlite FAQ](https://rqlite.io/docs/faq/), [Litestream vs rqlite vs dqlite comparison](https://gcore.com/learning/comparing-litestream-rqlite-dqlite), [SQLite for production: when and how](https://daily.dev/blog/sqlite-production-guide-when-how-to-use-beyond-prototyping/).
