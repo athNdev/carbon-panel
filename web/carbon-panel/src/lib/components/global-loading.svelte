@@ -1,6 +1,16 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { loadingStore } from '$lib/stores/loading.svelte';
-	import { Loader2 } from '@lucide/svelte';
 	import { fade } from 'svelte/transition';
 
 	let isLoading = $derived($loadingStore.global);
@@ -8,10 +18,11 @@
 
 {#if isLoading}
 	<div
-		class="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60"
-		transition:fade={{ duration: 200 }}
+		class="carbon-progress-track fixed top-0 left-0 right-0 z-[60] h-0.5"
+		transition:fade={{ duration: 150 }}
+		role="status"
+		aria-label="Loading"
 	>
-		<Loader2 class="h-4 w-4 animate-spin text-primary" />
-		<span class="text-sm text-muted-foreground">Loading...</span>
+		<div class="carbon-progress-bar"></div>
 	</div>
 {/if}
