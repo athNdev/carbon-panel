@@ -22,7 +22,7 @@
 	import { formatBytes } from '$lib/utils';
 	import { uploadFile, cancelUpload, type UploadProgress } from '$lib/utils/chunked-upload';
 	import ModBrowserDialog from '$lib/components/mod-browser-dialog.svelte';
-	import { CarbonTag } from '$lib/components/carbon';
+	import { CarbonTag, CarbonInlineLoading, CarbonButton } from '$lib/components/carbon';
 
 	interface Props {
 		server: Server;
@@ -256,19 +256,21 @@
 
 				{#if canHaveMods()}
 					<div class="flex items-center gap-2">
-						<button
-							type="button"
+						<CarbonButton
+							kind="primary"
+							size="sm"
+							class="justify-center gap-1.5"
 							onclick={() => (browserDialogOpen = true)}
-							class="h-9 px-3.5 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-xs font-sans font-medium flex items-center gap-1.5 rounded-none transition-colors cursor-pointer"
 						>
 							<Boxes class="h-4 w-4" />
 							<span>Browse Mods</span>
-						</button>
-						<button
-							type="button"
+						</CarbonButton>
+						<CarbonButton
+							kind="secondary"
+							size="sm"
+							class="justify-center gap-1.5"
 							onclick={() => fileInput?.click()}
 							disabled={uploading}
-							class="h-9 px-3.5 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs font-sans flex items-center gap-1.5 rounded-none border border-[#525252] transition-colors cursor-pointer disabled:opacity-50"
 						>
 							{#if uploading}
 								<Loader2 class="h-4 w-4 animate-spin" />
@@ -276,7 +278,7 @@
 								<Upload class="h-4 w-4" />
 							{/if}
 							<span>Upload .jar</span>
-						</button>
+						</CarbonButton>
 						<input
 							bind:this={fileInput}
 							type="file"
@@ -370,9 +372,8 @@
 						</p>
 					</div>
 				{:else if loading}
-					<div class="flex items-center justify-center p-12 text-xs text-[#8d8d8d]">
-						<Loader2 class="h-6 w-6 animate-spin text-[#0f62fe] mr-2" />
-						<span>Reading {getModsDirectory()}/ directory...</span>
+					<div class="flex items-center justify-center p-12">
+						<CarbonInlineLoading description="Reading {getModsDirectory()}/ directory..." />
 					</div>
 				{:else if mods.length === 0}
 					<div class="flex flex-col items-center justify-center p-12 text-center text-[#8d8d8d]">

@@ -4,21 +4,9 @@
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
 	import UserSettings from '$lib/components/user-settings.svelte';
 	import RoleSettings from '$lib/components/role-settings.svelte';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import { CarbonTabs, CarbonInlineLoading } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
-	import {
-		Settings,
-		Globe,
-		Server,
-		Shield,
-		HelpCircle,
-		ScrollText,
-		Users,
-		KeyRound,
-		Key,
-		Layers
-	} from '@lucide/svelte';
+	import { Settings } from '@lucide/svelte';
 	import type { ConfigCategory } from '$lib/proto/carbonpanel/v1/config_pb';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import RoutingSettings from '$lib/components/routing-settings.svelte';
@@ -37,6 +25,22 @@
 	let showSettings = $derived($canReadSettings);
 	let showUsers = $derived($canReadUsers && $authEnabled);
 	let showRoles = $derived($canReadRoles && $authEnabled);
+
+	let settingsTabs = $derived([
+		...(showSettings
+			? [
+					{ id: 'server-config', label: 'Server Defaults' },
+					{ id: 'api-keys', label: 'API Keys' },
+					{ id: 'routing', label: 'Routing' },
+					{ id: 'nodes', label: 'Docker Nodes' },
+					{ id: 'auth', label: 'Auth' },
+					{ id: 'logs', label: 'Logs' },
+					{ id: 'support', label: 'Support' }
+				]
+			: []),
+		...(showUsers ? [{ id: 'users', label: 'Users' }] : []),
+		...(showRoles ? [{ id: 'roles', label: 'Roles' }] : [])
+	]);
 
 	let queryTab = $derived(page.url.searchParams.get('tab'));
 
@@ -112,109 +116,53 @@
 		</div>
 	</div>
 
-	<Tabs value={activeTab} onValueChange={(v) => (activeTab = v || activeTab)} class="space-y-6">
-		<TabsList class="w-full justify-start gap-0 h-[41px] border-b border-[#393939] bg-transparent p-0 rounded-none overflow-x-auto overflow-y-hidden">
-			{#if showSettings}
-				<TabsTrigger value="server-config" class="flex items-center gap-2 px-4 rounded-none">
-					<Server class="h-4 w-4" />
-					Server Defaults
-				</TabsTrigger>
-				<TabsTrigger value="api-keys" class="flex items-center gap-2 px-4 rounded-none">
-					<Key class="h-4 w-4" />
-					API Keys
-				</TabsTrigger>
-				<TabsTrigger value="routing" class="flex items-center gap-2 px-4 rounded-none">
-					<Globe class="h-4 w-4" />
-					Routing
-				</TabsTrigger>
-				<TabsTrigger value="nodes" class="flex items-center gap-2 px-4 rounded-none">
-					<Layers class="h-4 w-4" />
-					Docker Nodes
-				</TabsTrigger>
-				<TabsTrigger value="auth" class="flex items-center gap-2 px-4 rounded-none">
-					<Shield class="h-4 w-4" />
-					Auth
-				</TabsTrigger>
-				<TabsTrigger value="logs" class="flex items-center gap-2 px-4 rounded-none">
-					<ScrollText class="h-4 w-4" />
-					Logs
-				</TabsTrigger>
-				<TabsTrigger value="support" class="flex items-center gap-2 px-4 rounded-none">
-					<HelpCircle class="h-4 w-4" />
-					Support
-				</TabsTrigger>
-			{/if}
-			{#if showUsers}
-				<TabsTrigger value="users" class="flex items-center gap-2 px-4 rounded-none">
-					<Users class="h-4 w-4" />
-					Users
-				</TabsTrigger>
-			{/if}
-			{#if showRoles}
-				<TabsTrigger value="roles" class="flex items-center gap-2 px-4 rounded-none">
-					<KeyRound class="h-4 w-4" />
-					Roles
-				</TabsTrigger>
-			{/if}
-		</TabsList>
+	<div class="space-y-6">
+		<CarbonTabs tabs={settingsTabs} bind:selectedTab={activeTab} class="overflow-x-auto overflow-y-hidden" />
 
-		{#if showSettings}
-			<TabsContent value="server-config" class="space-y-4">
+		{#if activeTab === 'server-config' && showSettings}
+			<div class="space-y-4">
 				{#if loading}
-					<div class="border border-[#393939] bg-[#262626] p-16">
-						<div class="flex items-center justify-center">
-							<div class="space-y-3 text-center">
-								<div
-									class="mx-auto flex h-10 w-10 items-center justify-center border border-[#393939] bg-[#161616]"
-								>
-									<Settings class="h-5 w-5 text-[#0f62fe] animate-spin" />
-								</div>
-								<div class="text-xs font-sans text-[#a8a8a8]">Loading settings...</div>
-							</div>
-						</div>
+					<div class="border border-[#393939] bg-[#262626] p-16 flex items-center justify-center">
+						<CarbonInlineLoading description="Loading settings..." />
 					</div>
 				{:else}
 					<ServerConfiguration config={globalConfig} onSave={saveGlobalSettings} {saving} />
 				{/if}
-			</TabsContent>
-
-			<TabsContent value="api-keys" class="space-y-4">
+			</div>
+		{:else if activeTab === 'api-keys' && showSettings}
+			<div class="space-y-4">
 				<ApiKeysSettings />
-			</TabsContent>
-
-			<TabsContent value="routing" class="space-y-4">
+			</div>
+		{:else if activeTab === 'routing' && showSettings}
+			<div class="space-y-4">
 				<RoutingSettings />
-			</TabsContent>
-
-			<TabsContent value="nodes" class="space-y-4">
+			</div>
+		{:else if activeTab === 'nodes' && showSettings}
+			<div class="space-y-4">
 				<NodeSettings />
-			</TabsContent>
-
-			<TabsContent value="auth" class="space-y-4">
+			</div>
+		{:else if activeTab === 'auth' && showSettings}
+			<div class="space-y-4">
 				<AuthSettings />
-			</TabsContent>
-
-			<TabsContent value="logs" class="space-y-4">
+			</div>
+		{:else if activeTab === 'logs' && showSettings}
+			<div class="space-y-4">
 				<LogsSettings />
-			</TabsContent>
-
-			<TabsContent value="support" class="space-y-4">
+			</div>
+		{:else if activeTab === 'support' && showSettings}
+			<div class="space-y-4">
 				<SupportSettings />
-			</TabsContent>
-		{/if}
-
-		{#if showUsers}
-			<TabsContent value="users" class="space-y-4">
+			</div>
+		{:else if activeTab === 'users' && showUsers}
+			<div class="space-y-4">
 				<UserSettings />
-			</TabsContent>
-		{/if}
-
-		{#if showRoles}
-			<TabsContent value="roles" class="space-y-4">
+			</div>
+		{:else if activeTab === 'roles' && showRoles}
+			<div class="space-y-4">
 				<RoleSettings />
-			</TabsContent>
+			</div>
 		{/if}
-	</Tabs>
+	</div>
 </div>
 
 <ScrollToTop />
