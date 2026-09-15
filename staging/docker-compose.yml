@@ -1,0 +1,26 @@
+services:
+  carbon-panel-staging:
+    image: carbon-panel:staging
+    container_name: carbon-panel-staging
+    restart: unless-stopped
+
+    # Bridge mode with published web port (dev stack owns :8080 on this host).
+    ports:
+      - "8081:8080" # Staging web interface
+
+    volumes:
+      # Docker socket so staging can manage its own test containers.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # Staging data dirs — intentionally SEPARATE from dev (/opt/carbon-panel/*).
+      - /opt/staging/data:/app/data
+      - /opt/staging/backups:/app/backups
+      - /opt/staging/tmp:/app/tmp
+
+    environment:
+      - CARBONPANEL_DATA_DIR=/app/data
+      - CARBONPANEL_HOST_DATA_PATH=/opt/staging/data
+      - TZ=UTC
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
