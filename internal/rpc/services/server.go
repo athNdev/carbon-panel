@@ -682,7 +682,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 	if nodeID == "" {
-		nodeID = "default"
+		return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no Docker nodes available: register and enable a node in Settings before creating servers"))
 	}
 	server.NodeID = nodeID
 
@@ -1757,29 +1757,15 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 	}
 
 	sourceNodeID := server.NodeID
-	if sourceNodeID == "" {
-		sourceNodeID = "default"
-	}
 
 	if sourceNodeID == targetNodeID {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("server is already hosted on node '%s'", targetNodeID))
 	}
 
 	// Retrieve target node & validate
-	var targetNode *storage.Node
-	if targetNodeID == "default" {
-		targetNode = &storage.Node{
-			ID:      "default",
-			Name:    "Local Controller Daemon",
-			Status:  storage.NodeStatusOnline,
-			Enabled: true,
-			IsLocal: true,
-		}
-	} else {
-		targetNode, err = s.store.GetNode(ctx, targetNodeID)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("target node '%s' not found: %w", targetNodeID, err))
-		}
+	targetNode, err := s.store.GetNode(ctx, targetNodeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("target node '%s' not found: %w", targetNodeID, err))
 	}
 
 	if !targetNode.Enabled {
@@ -1787,7 +1773,7 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 	}
 
 	// Verify target node connectivity
-	if s.pool != nil && targetNodeID != "default" {
+	if s.pool != nil {
 		online, pingErr := s.pool.PingNode(ctx, targetNodeID)
 		if (!online || pingErr != nil) && !force {
 			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("target node daemon is unreachable: %v", pingErr))

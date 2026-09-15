@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { apiFetch } from '$lib/api/fetch';
 	import { NodeStatus, type Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import {
 		Card,
@@ -46,6 +47,7 @@
 	let nodes = $state<Node[]>([]);
 	let pingingNodeId = $state<string | null>(null);
 	let pingLatencies = $state<Record<string, { latency: number; status: NodeStatus; message?: string }>>({});
+	let scanning = $state(false);
 
 	// Dialog state
 	let showAddDialog = $state(false);
@@ -95,6 +97,46 @@
 			toast.error('Failed to load Docker nodes');
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function handleAutoDetect() {
+		scanning = true;
+		try {
+			const res = await apiFetch('/api/v1/nodes/scan', { method: 'GET' });
+			if (!res.ok) {
+				throw new Error(`Scan endpoint returned ${res.status}`);
+			}
+			const data = await res.json();
+			const candidates: Array<{ host: string; reachable: boolean; latencyMs: number }> =
+				data.candidates || [];
+			const reachable = candidates.filter((c) => c.reachable);
+			if (reachable.length === 0) {
+				toast.info(
+					`Auto-detect scanned ${candidates.length} daemon endpoint(s) across local interfaces — none reachable. Add a node manually if its daemon needs TLS or a custom port.`
+				);
+			} else {
+				const hosts = reachable.map((c) => c.host).join(', ');
+				toast.success(
+					`Auto-detect found ${reachable.length} reachable Docker daemon(s): ${hosts}. Register any missing one with “Add Docker Node”.`
+				);
+			}
+			// Re-probe already registered nodes via the existing health endpoint.
+			await loadNodes();
+			for (const node of nodes) {
+				try {
+					await rpcClient.node.pingNode({ id: node.id });
+				} catch {
+					// Per-node ping failures already surface via loadNodes statuses.
+				}
+			}
+			await loadNodes();
+		} catch (error: unknown) {
+			toast.error(
+				`Auto-detect failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
+		} finally {
+			scanning = false;
 		}
 	}
 
@@ -292,6 +334,16 @@
 					<Button
 						variant="outline"
 						size="sm"
+						onclick={handleAutoDetect}
+						disabled={loading || scanning}
+						title="Scan local network interfaces for active Docker daemons"
+					>
+						<Radio class="mr-2 h-4 w-4 {scanning ? 'animate-pulse' : ''}" />
+						{scanning ? 'Scanning...' : 'Auto-detect'}
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
 						onclick={loadNodes}
 						disabled={loading}
 					>
@@ -330,12 +382,19 @@
 				</div>
 				<h3 class="text-lg font-semibold">No Docker nodes found</h3>
 				<p class="mt-1 text-sm text-muted-foreground">
-					Add a remote Docker host to scale server instances across multiple physical machines.
+					Add a remote Docker host to scale server instances across multiple physical machines,
+					or auto-detect daemons listening on your local network.
 				</p>
-				<Button class="mt-4" onclick={() => (showAddDialog = true)}>
-					<Plus class="mr-2 h-4 w-4" />
-					Add Docker Node
-				</Button>
+				<div class="mt-4 flex items-center justify-center gap-2">
+					<Button onclick={handleAutoDetect} variant="outline" disabled={scanning}>
+						<Radio class="mr-2 h-4 w-4 {scanning ? 'animate-pulse' : ''}" />
+						{scanning ? 'Scanning...' : 'Auto-detect Daemons'}
+					</Button>
+					<Button onclick={() => (showAddDialog = true)}>
+						<Plus class="mr-2 h-4 w-4" />
+						Add Docker Node
+					</Button>
+				</div>
 			</CardContent>
 		</Card>
 	{:else}

@@ -36,18 +36,36 @@ func TestStore_NodeCRUD(t *testing.T) {
 	store := newTestStore(t)
 	defer store.Close()
 
-	// 1. Check default node seeded
-	defNode, err := store.GetNode(ctx, "default")
+	// 1. Fresh installs seed no phantom default node
+	nodes, err := store.ListNodes(ctx)
 	if err != nil {
-		t.Fatalf("failed to get default node: %v", err)
+		t.Fatalf("failed to list nodes: %v", err)
 	}
-	if defNode.ID != "default" || !defNode.IsLocal {
-		t.Fatalf("unexpected default node: %+v", defNode)
+	if len(nodes) != 0 {
+		t.Fatalf("expected zero nodes on a fresh DB, got %d", len(nodes))
+	}
+	if _, err := store.GetNode(ctx, "default"); err == nil {
+		t.Fatalf("expected error getting phantom default node, got nil")
 	}
 
-	// 2. Cannot delete default node
-	if err := store.DeleteNode(ctx, "default"); err == nil {
-		t.Fatalf("expected error deleting default node, got nil")
+	// 2. Local nodes are protected from deletion
+	localNode := &Node{
+		ID:      "node-local-1",
+		Name:    "Local Daemon",
+		Host:    "unix:///var/run/docker.sock",
+		Enabled: true,
+		Status:  NodeStatusOnline,
+		IsLocal: true,
+	}
+	if err := store.CreateNode(ctx, localNode); err != nil {
+		t.Fatalf("failed to create local node: %v", err)
+	}
+	if err := store.DeleteNode(ctx, "node-local-1"); err == nil {
+		t.Fatalf("expected error deleting local node, got nil")
+	}
+	// Remove the fixture directly so later counts stay predictable
+	if err := store.DB().Delete(&Node{}, "id = ?", "node-local-1").Error; err != nil {
+		t.Fatalf("failed to clean up local node fixture: %v", err)
 	}
 
 	// 3. Create a custom remote node
@@ -91,12 +109,12 @@ func TestStore_NodeCRUD(t *testing.T) {
 	}
 
 	// 6. List nodes
-	nodes, err := store.ListNodes(ctx)
+	nodes, err = store.ListNodes(ctx)
 	if err != nil {
 		t.Fatalf("failed to list nodes: %v", err)
 	}
-	if len(nodes) < 2 {
-		t.Fatalf("expected at least 2 nodes, got %d", len(nodes))
+	if len(nodes) != 1 {
+		t.Fatalf("expected 1 node, got %d", len(nodes))
 	}
 
 	// 7. Attach a server to this node and check DeleteNode prevention

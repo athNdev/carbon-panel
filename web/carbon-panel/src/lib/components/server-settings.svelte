@@ -521,7 +521,7 @@
 			<div>
 				<span class="text-muted-foreground">Current Node:</span>
 				<div class="flex items-center gap-2 mt-1">
-					<span class="font-semibold text-foreground text-sm">{server.nodeId || 'default'}</span>
+					<span class="font-semibold text-foreground text-sm">{server.nodeId || 'unassigned'}</span>
 					{#if nodes.find((n) => n.id === server.nodeId)?.isLocal}
 						<Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4">Local</Badge>
 					{/if}

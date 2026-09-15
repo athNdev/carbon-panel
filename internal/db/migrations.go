@@ -70,7 +70,8 @@ func seeds(s *Store) error {
 	for _, seed := range []func() error{
 		s.SeedSystemRoles,
 		s.SeedGlobalSettings,
-		s.SeedDefaultNode,
+		// NOTE: SeedDefaultNode intentionally removed — fresh installs start
+		// with zero nodes so no phantom "default" node exists in node settings.
 	} {
 		if err := seed(); err != nil {
 			return err
@@ -125,7 +126,8 @@ func migrations() []*gormigrate.Migration {
 		{
 			ID: "20260307_001_multinode_default_node",
 			Migrate: func(tx *gorm.DB) error {
-				// Backfill node_id on servers and modules if empty
+				// Historical backfill for databases created while the seeded
+				// "default" node existed. Fresh installs no longer seed it.
 				if err := tx.Model(&Server{}).Where("node_id IS NULL OR node_id = ''").Update("node_id", "default").Error; err != nil {
 					return err
 				}
