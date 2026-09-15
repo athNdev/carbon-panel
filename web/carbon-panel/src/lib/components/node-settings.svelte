@@ -49,6 +49,12 @@
 	let pingLatencies = $state<Record<string, { latency: number; status: NodeStatus; message?: string }>>({});
 	let scanning = $state(false);
 
+	// Detected-daemons dialog state (auto-detect results pending registration).
+	type DetectedDaemon = { host: string; latencyMs: number; source: string; alreadyRegistered: boolean; name: string; advertisedIp: string };
+	let showDetectedDialog = $state(false);
+	let detectedDaemons = $state<DetectedDaemon[]>([]);
+	let addingDaemonHost = $state<string | null>(null);
+
 	// Dialog state
 	let showAddDialog = $state(false);
 	let showEditDialog = $state(false);
@@ -100,6 +106,12 @@
 		}
 	}
 
+	// Normalize a candidate host for comparison against registered node hosts
+	// (unix socket paths and tcp addresses can both exist for one daemon).
+	function normalizeHost(host: string): string {
+		return host.trim().toLowerCase().replace(/\/+$/, '');
+	}
+
 	async function handleAutoDetect() {
 		scanning = true;
 		try {
@@ -108,21 +120,45 @@
 				throw new Error(`Scan endpoint returned ${res.status}`);
 			}
 			const data = await res.json();
-			const candidates: Array<{ host: string; reachable: boolean; latencyMs: number }> =
-				data.candidates || [];
+			const candidates: Array<{
+				host: string;
+				reachable: boolean;
+				latencyMs: number;
+				source?: string;
+			}> = data.candidates || [];
+
+			await loadNodes();
+
+			const registeredHosts = new Set(nodes.map((n) => n.host).map(normalizeHost));
 			const reachable = candidates.filter((c) => c.reachable);
+			// Prioritize the local socket (same-host daemon) first, then latency.
+			detectedDaemons = reachable.map((c) => ({
+				host: c.host,
+				latencyMs: c.latencyMs,
+				source: c.source || 'scan',
+				alreadyRegistered: registeredHosts.has(normalizeHost(c.host)),
+				name: suggestDaemonName(c.host, c.source || 'scan'),
+				advertisedIp: guessAdvertisedIp(c.host)
+			}));
+			// Drop already-registered ones unless nothing unregistered remains —
+			// then fall back to showing all reachable for visibility.
+			const newOnes = detectedDaemons.filter((d) => !d.alreadyRegistered);
+			if (newOnes.length > 0) {
+				detectedDaemons = newOnes;
+			}
 			if (reachable.length === 0) {
 				toast.info(
 					`Auto-detect scanned ${candidates.length} daemon endpoint(s) across local interfaces — none reachable. Add a node manually if its daemon needs TLS or a custom port.`
 				);
+			} else if (newOnes.length > 0) {
+				// Per your workflow: found daemons should offer a prompt to add.
+				showDetectedDialog = true;
 			} else {
-				const hosts = reachable.map((c) => c.host).join(', ');
 				toast.success(
-					`Auto-detect found ${reachable.length} reachable Docker daemon(s): ${hosts}. Register any missing one with “Add Docker Node”.`
+					`Auto-detect found ${reachable.length} daemon(s) — all already registered.`
 				);
 			}
-			// Re-probe already registered nodes via the existing health endpoint.
-			await loadNodes();
+			// Re-probe registered nodes via the existing health endpoint.
 			for (const node of nodes) {
 				try {
 					await rpcClient.node.pingNode({ id: node.id });
@@ -137,6 +173,55 @@
 			);
 		} finally {
 			scanning = false;
+		}
+	}
+
+	function suggestDaemonName(host: string, source: string): string {
+		const m = /tcp:\/\/([^:]+):/.exec(host);
+		if (m) {
+			return `node-${m[1]}`;
+		}
+		if (host.startsWith('unix://')) {
+			return source === 'local-socket' ? 'local-docker' : host.replace('unix://', '');
+		}
+		return `docker-${source}`;
+	}
+
+	function guessAdvertisedIp(host: string): string {
+		const m = /tcp:\/\/(\d+\.\d+\.\d+\.\d+):/.exec(host);
+		if (m) return m[1];
+		// Local unix socket daemon — the panel host's external IP isn't known
+		// client-side; leave empty and let the operator fill it in.
+		return '';
+	}
+
+	async function addDetectedDaemon(d: DetectedDaemon) {
+		addingDaemonHost = d.host;
+		try {
+			await rpcClient.node.createNode({
+				name: d.name.trim() || suggestDaemonName(d.host, d.source),
+				host: d.host,
+				advertisedIp: d.advertisedIp.trim(),
+				tlsEnabled: false,
+				tlsSkipVerify: false,
+				tlsCaCert: '',
+				tlsCert: '',
+				tlsKey: '',
+				maxMemoryMb: BigInt(0),
+				maxServers: 0,
+				enabled: true
+			});
+			d.alreadyRegistered = true;
+			toast.success(`Node "${d.name}" added from auto-detect (${d.host})`);
+			await loadNodes();
+			// Close the prompt once every found daemon has been registered or skipped.
+			if (detectedDaemons.every((x) => x.alreadyRegistered)) {
+				showDetectedDialog = false;
+			}
+		} catch (error: unknown) {
+			toast.error(`Failed to add node: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		} finally {
+			addingDaemonHost = null;
 		}
 	}
 
@@ -534,6 +619,85 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Detected Daemons Dialog (auto-detect results pending registration) -->
+<Dialog bind:open={showDetectedDialog}>
+	<DialogContent class="sm:max-w-xl">
+		<DialogHeader>
+			<DialogTitle>Docker daemons detected</DialogTitle>
+			<DialogDescription>
+				Auto-detect found reachable Docker daemons on this host's network. Register the ones
+				you want the placement engine to use — you can adjust names, IPs, and limits later.
+			</DialogDescription>
+		</DialogHeader>
+
+		<div class="space-y-3 py-2 max-h-[50vh] overflow-y-auto">
+			{#each detectedDaemons as d (d.host)}
+				<div class="rounded-lg border p-3 space-y-2">
+					<div class="flex items-center justify-between gap-2">
+						<div class="min-w-0">
+							<div class="flex items-center gap-2">
+								<CheckCircle2 class="h-4 w-4 text-green-500 shrink-0" />
+								<span class="truncate font-mono text-xs text-foreground" title={d.host}>{d.host}</span>
+							</div>
+							<p class="text-xs text-muted-foreground mt-0.5">
+								{#if d.latencyMs > 0}responded in {d.latencyMs}ms · {/if}{d.source}
+							</p>
+						</div>
+						<Button
+							size="sm"
+							onclick={() => addDetectedDaemon(d)}
+							disabled={d.alreadyRegistered || addingDaemonHost !== null}
+						>
+							{#if addingDaemonHost === d.host}
+								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								Adding...
+							{:else if d.alreadyRegistered}
+								Added
+							{:else}
+								<Plus class="mr-2 h-4 w-4" />
+								Add
+							{/if}
+						</Button>
+					</div>
+					{#if !d.alreadyRegistered}
+						<div class="grid grid-cols-2 gap-2">
+							<div class="space-y-1">
+								<Label class="text-xs" for="det-name-{d.host}">Node name</Label>
+								<Input
+									id="det-name-{d.host}"
+									class="h-8 text-xs"
+									bind:value={d.name}
+									disabled={addingDaemonHost !== null}
+								/>
+							</div>
+							<div class="space-y-1">
+								<Label class="text-xs" for="det-ip-{d.host}">Advertised IP</Label>
+								<Input
+									id="det-ip-{d.host}"
+									class="h-8 text-xs"
+									placeholder="e.g. 192.168.0.118"
+									bind:value={d.advertisedIp}
+									disabled={addingDaemonHost !== null}
+								/>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/each}
+		</div>
+
+		<DialogFooter>
+			<Button variant="outline" onclick={() => (showDetectedDialog = false)}>
+				{#if detectedDaemons.some((d) => !d.alreadyRegistered)}
+					Skip for now
+				{:else}
+					Close
+				{/if}
+			</Button>
+		</DialogFooter>
+	</DialogContent>
+</Dialog>
 
 <!-- Add Node Dialog -->
 <Dialog bind:open={showAddDialog}>
