@@ -11,6 +11,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
+	import { CarbonButton } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
 		Key,
@@ -376,11 +377,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 	<!-- Actions -->
 	<div class="flex justify-end gap-3">
-		<button
-			type="button"
+		<CarbonButton
+			kind="primary"
+			size="md"
+			class="justify-center gap-2 px-6"
 			onclick={saveKeys}
 			disabled={saving || loading}
-			class="h-10 px-6 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-sm font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 		>
 			{#if saving}
 				<Loader2 class="h-4 w-4 animate-spin" />
@@ -389,6 +391,6 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				<Save class="h-4 w-4" />
 				<span>Save API Keys</span>
 			{/if}
-		</button>
+		</CarbonButton>
 	</div>
 </div>

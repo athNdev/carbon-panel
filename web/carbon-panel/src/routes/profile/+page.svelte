@@ -18,7 +18,8 @@ one at https://mozilla.org/MPL/2.0/.
 		CarbonDataTable,
 		CarbonModal,
 		CarbonTextInput,
-		CarbonSelect
+		CarbonSelect,
+		CarbonInlineLoading
 	} from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -441,9 +442,10 @@ one at https://mozilla.org/MPL/2.0/.
 			>
 				{#if loadingTokens}
 					<tr>
-						<td colspan="5" class="py-12 text-center text-[#8d8d8d]">
-							<Loader2 class="mx-auto h-6 w-6 animate-spin text-[#0f62fe] mb-2" />
-							Loading API tokens...
+						<td colspan="5" class="py-12 text-center">
+							<div class="flex items-center justify-center">
+								<CarbonInlineLoading description="Loading API tokens..." />
+							</div>
 						</td>
 					</tr>
 				{:else if apiTokens.length === 0}
