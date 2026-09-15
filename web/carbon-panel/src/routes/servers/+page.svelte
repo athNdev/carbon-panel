@@ -21,7 +21,7 @@
 		ArrowRight
 	} from '@lucide/svelte';
 	import { type Server, ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
-	import { CarbonTag } from '$lib/components/carbon';
+	import { CarbonTag, CarbonButton } from '$lib/components/carbon';
 
 	let servers = $derived($serversStore);
 	let filteredServers = $state<Server[]>([]);
@@ -191,13 +191,10 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-2">
-			<a
-				href="/servers/new"
-				class="h-10 px-4 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-sm font-sans font-medium flex items-center gap-2 rounded-none transition-colors cursor-pointer select-none"
-			>
+			<CarbonButton kind="primary" size="md" href="/servers/new" class="justify-center gap-2">
 				<Plus class="h-4 w-4" />
 				<span>Create Server</span>
-			</a>
+			</CarbonButton>
 		</div>
 	</div>
 
@@ -285,29 +282,27 @@
 				<p class="mb-6 text-xs text-[#a8a8a8] max-w-md mx-auto font-sans">
 					Create your first Minecraft server instance to begin managing containers and game topology.
 				</p>
-				<a
-					href="/servers/new"
-					class="inline-flex h-10 px-4 bg-[#0f62fe] hover:bg-[#0353e9] text-white text-sm font-sans font-medium items-center gap-2 rounded-none transition-colors"
-				>
+				<CarbonButton kind="primary" size="md" href="/servers/new" class="inline-flex justify-center gap-2">
 					<Plus class="h-4 w-4" />
 					<span>Create Server</span>
-				</a>
+				</CarbonButton>
 			{:else}
 				<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center bg-[#161616] border border-[#393939] text-[#8d8d8d]">
 					<Search class="h-7 w-7" />
 				</div>
 				<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">No matching servers</h3>
 				<p class="text-xs text-[#a8a8a8]">Try adjusting your search criteria or status filter.</p>
-				<button
-					type="button"
+				<CarbonButton
+					kind="secondary"
+					size="sm"
+					class="mt-4 justify-center"
 					onclick={() => {
 						searchQuery = '';
 						statusFilter = 'all';
 					}}
-					class="mt-4 inline-flex h-8 px-3 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs font-sans items-center rounded-none transition-colors cursor-pointer"
 				>
 					Reset filters
-				</button>
+				</CarbonButton>
 			{/if}
 		</div>
 

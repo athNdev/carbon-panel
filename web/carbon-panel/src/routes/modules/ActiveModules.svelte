@@ -2,7 +2,8 @@
 	import {
 		CarbonButton,
 		CarbonDataTable,
-		CarbonTag
+		CarbonTag,
+		CarbonInlineLoading
 	} from '$lib/components/carbon';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
@@ -208,9 +209,10 @@
 	>
 		{#if loading && modules.length === 0}
 			<tr>
-				<td colspan="7" class="py-16 text-center text-[#8d8d8d]">
-					<Loader2 class="mx-auto h-6 w-6 animate-spin text-[#0f62fe] mb-2" />
-					Loading active modules...
+				<td colspan="7" class="py-16 text-center">
+					<div class="flex items-center justify-center">
+						<CarbonInlineLoading description="Loading active modules..." />
+					</div>
 				</td>
 			</tr>
 		{:else if modules.length === 0}
