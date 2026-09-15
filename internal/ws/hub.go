@@ -63,9 +63,22 @@ type Client struct {
 	user          *auth.AuthenticatedUser
 	authenticated bool
 
-	// Subscriptions: serverId -> log channel
-	subscriptions   map[string]chan *v1.LogEntry
+	// Subscriptions: serverId -> subscription (log channel + the containerID
+	// it was registered under in the log streamer)
+	subscriptions   map[string]*subscription
 	subscriptionsMu sync.RWMutex
+}
+
+// subscription tracks a client's log subscription for a server. The
+// containerID is captured at subscribe time so unsubscribe/cleanup can
+// always route through the LogStreamer with the exact key the channel was
+// registered under — even if the server row has since been deleted or the
+// container has changed. This avoids re-deriving the containerID from a
+// fresh DB lookup, which can fail (server deleted) and previously led to
+// closing an already-closed channel.
+type subscription struct {
+	ch          chan *v1.LogEntry
+	containerID string
 }
 
 // NewHub creates a new WebSocket hub
@@ -123,7 +136,7 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		hub:           h,
 		conn:          conn,
 		send:          make(chan []byte, 256),
-		subscriptions: make(map[string]chan *v1.LogEntry),
+		subscriptions: make(map[string]*subscription),
 	}
 
 	h.register <- client
@@ -322,7 +335,7 @@ func (c *Client) handleSubscribe(msg *v1.SubscribeMessage) {
 	if _, exists := c.subscriptions[msg.ServerId]; !exists {
 		// Subscribe to log streamer
 		ch := c.hub.logStreamer.Subscribe(server.ContainerID)
-		c.subscriptions[msg.ServerId] = ch
+		c.subscriptions[msg.ServerId] = &subscription{ch: ch, containerID: server.ContainerID}
 		go c.forwardLogs(msg.ServerId, ch)
 	}
 	c.subscriptionsMu.Unlock()
@@ -349,19 +362,16 @@ func (c *Client) handleUnsubscribe(msg *v1.UnsubscribeMessage) {
 		return
 	}
 
-	// Get server to find container ID
-	ctx := context.Background()
-	server, err := c.hub.store.GetServer(ctx, msg.ServerId)
-
-	// Always clean up the subscription
+	// Always clean up the subscription. Route through the LogStreamer using
+	// the containerID captured at subscribe time rather than re-resolving it
+	// via the DB: if the server has since been deleted, the LogStreamer has
+	// already closed this channel (via RemoveContainer), so closing it again
+	// here directly would panic. LogStreamer.Unsubscribe is a safe no-op in
+	// that case.
 	c.subscriptionsMu.Lock()
-	if ch, exists := c.subscriptions[msg.ServerId]; exists {
+	if sub, exists := c.subscriptions[msg.ServerId]; exists {
 		delete(c.subscriptions, msg.ServerId)
-		if err == nil && server.ContainerID != "" {
-			c.hub.logStreamer.Unsubscribe(server.ContainerID, ch)
-		} else {
-			close(ch) // Close the channel to stop the forwardLogs goroutine
-		}
+		c.hub.logStreamer.Unsubscribe(sub.containerID, sub.ch)
 	}
 	c.subscriptionsMu.Unlock()
 
@@ -440,14 +450,10 @@ func (c *Client) cleanup() {
 	c.subscriptionsMu.Lock()
 	defer c.subscriptionsMu.Unlock()
 
-	ctx := context.Background()
-	for serverId, ch := range c.subscriptions {
-		server, err := c.hub.store.GetServer(ctx, serverId)
-		if err == nil && server.ContainerID != "" {
-			c.hub.logStreamer.Unsubscribe(server.ContainerID, ch)
-		}
+	for _, sub := range c.subscriptions {
+		c.hub.logStreamer.Unsubscribe(sub.containerID, sub.ch)
 	}
-	c.subscriptions = make(map[string]chan *v1.LogEntry)
+	c.subscriptions = make(map[string]*subscription)
 }
 
 // sendMessage marshals and sends a server message
