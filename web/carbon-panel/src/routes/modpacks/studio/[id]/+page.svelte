@@ -12,7 +12,8 @@
 		CarbonSearch,
 		CarbonStructuredList,
 		CarbonAccordion,
-		CarbonAccordionItem
+		CarbonAccordionItem,
+		CarbonInlineLoading
 	} from '$lib/components/carbon';
 	import {
 		ArrowLeft,
@@ -776,9 +777,8 @@
 	</div>
 
 	{#if loading}
-		<div class="flex flex-col items-center justify-center py-24 text-[#8d8d8d]">
-			<Loader2 class="h-8 w-8 animate-spin text-[#0f62fe]" />
-			<p class="mt-3 text-xs">Loading studio workspace...</p>
+		<div class="flex items-center justify-center py-24">
+			<CarbonInlineLoading description="Loading studio workspace..." />
 		</div>
 	{:else if pack}
 		<!-- Studio Grid Layout -->
@@ -1152,9 +1152,8 @@
 						</div>
 
 						{#if loadingFiles}
-							<div class="py-16 text-center text-[#8d8d8d]">
-								<Loader2 class="mx-auto h-6 w-6 animate-spin text-[#0f62fe] mb-2" />
-								<span class="text-xs">Scanning override files...</span>
+							<div class="flex items-center justify-center py-16">
+								<CarbonInlineLoading description="Scanning override files..." />
 							</div>
 						{:else if packFiles.length === 0}
 							<div class="py-16 text-center text-[#8d8d8d] space-y-3">
@@ -1434,9 +1433,8 @@
 						{searchError}
 					</div>
 				{:else if searching}
-					<div class="py-16 text-center text-[#8d8d8d]">
-						<Loader2 class="mx-auto h-8 w-8 animate-spin text-[#0f62fe] mb-2" />
-						<p class="text-xs">Searching mods...</p>
+					<div class="flex items-center justify-center py-16">
+						<CarbonInlineLoading description="Searching mods..." />
 					</div>
 				{:else if searchResults.length === 0}
 					<div class="py-16 text-center text-[#8d8d8d] space-y-2">

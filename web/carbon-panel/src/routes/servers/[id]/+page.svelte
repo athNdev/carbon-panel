@@ -52,7 +52,7 @@
 	} from '$lib/proto/carbonpanel/v1/server_pb';
 	import { formatBytes } from '$lib/utils';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
-	import { CarbonTag, CarbonButton } from '$lib/components/carbon';
+	import { CarbonTag, CarbonButton, CarbonTabs } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
 	import ServerSettings from '$lib/components/server-settings.svelte';
@@ -546,17 +546,7 @@
 		<!-- Carbon Tabs for Sub-Views with bottom blue line indicator (Requirement 4) -->
 		<div class="flex min-h-0 flex-1 flex-col space-y-4">
 			<!-- Tab Bar -->
-			<div class="w-full border-b border-[#393939] bg-[#161616] overflow-x-auto flex items-center">
-				{#each subViewTabs as tab (tab.id)}
-					<button
-						type="button"
-						onclick={() => (activeTab = tab.id)}
-						class="h-10 px-5 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 cursor-pointer select-none whitespace-nowrap rounded-none {activeTab === tab.id ? 'border-[#0f62fe] text-[#f4f4f4] bg-[#262626] font-semibold' : 'border-transparent text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
-					>
-						<span>{tab.label}</span>
-					</button>
-				{/each}
-			</div>
+			<CarbonTabs tabs={subViewTabs} bind:selectedTab={activeTab} class="overflow-x-auto" />
 
 			<!-- Tab Content Areas -->
 			<div class="min-h-0 flex-1">

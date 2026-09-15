@@ -9,6 +9,7 @@
 	import { toast } from 'svelte-sonner';
 	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send, KeyRound, ChevronDown, ChevronRight, Wand2 } from '@lucide/svelte';
 	import { copyToClipboard } from '$lib/utils/clipboard';
+	import { CarbonInlineLoading } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import { ServerStatus } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { ConfigCategory, ConfigProperty } from '$lib/proto/carbonpanel/v1/config_pb';
@@ -535,10 +536,7 @@
 	<div class="my-0 flex-1 overflow-hidden p-0">
 		{#if loading}
 			<div class="flex items-center justify-center py-16">
-				<div class="space-y-3 text-center">
-					<div class="mx-auto h-8 w-8 border-2 border-[#0f62fe] border-t-transparent animate-spin"></div>
-					<div class="text-xs font-sans text-[#a8a8a8]">Loading server configuration...</div>
-				</div>
+				<CarbonInlineLoading description="Loading server configuration..." />
 			</div>
 		{:else if filteredCategories.length === 0}
 			<div class="flex flex-col items-center justify-center py-12 text-[#8d8d8d]">

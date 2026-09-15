@@ -8,7 +8,8 @@
 		CarbonSearch,
 		CarbonSelect,
 		CarbonModal,
-		CarbonTextInput
+		CarbonTextInput,
+		CarbonInlineLoading
 	} from '$lib/components/carbon';
 	import {
 		Package,
@@ -341,9 +342,8 @@
 
 	<!-- Projects Grid -->
 	{#if loading}
-		<div class="flex flex-col items-center justify-center py-24 text-[#8d8d8d]">
-			<Loader2 class="h-8 w-8 animate-spin text-[#0f62fe]" />
-			<p class="mt-3 text-xs">Loading modpack projects...</p>
+		<div class="flex items-center justify-center py-24">
+			<CarbonInlineLoading description="Loading modpack projects..." />
 		</div>
 	{:else if filteredPacks.length === 0}
 		<div class="border border-dashed border-[#393939] bg-[#262626] p-16 text-center space-y-4 rounded-none">
