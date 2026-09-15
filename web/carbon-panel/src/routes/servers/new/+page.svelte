@@ -40,7 +40,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import type { IndexedModpack, Version } from '$lib/proto/carbonpanel/v1/modpack_pb';
 	import type { Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { NodeStatus } from '$lib/proto/carbonpanel/v1/node_pb';
-	import { CarbonTag, CarbonButton, CarbonTile } from '$lib/components/carbon';
+	import { CarbonTag, CarbonButton, CarbonTile, CarbonInlineLoading } from '$lib/components/carbon';
 	import {
 		Dialog,
 		DialogContent,
@@ -568,9 +568,8 @@ one at https://mozilla.org/MPL/2.0/.
 							Minecraft Version
 						</label>
 						{#if loadingVersions}
-							<div class="flex items-center gap-2 p-3 text-xs text-[#8d8d8d] bg-[#161616] border border-[#393939]">
-								<Loader2 class="h-4 w-4 animate-spin text-[#0f62fe]" />
-								<span>Loading supported versions catalog...</span>
+							<div class="flex items-center gap-2 p-3 bg-[#161616] border border-[#393939]">
+								<CarbonInlineLoading description="Loading supported versions catalog..." />
 							</div>
 						{:else}
 							<div class="relative">
@@ -876,9 +875,8 @@ one at https://mozilla.org/MPL/2.0/.
 						{:else}
 							<div class="space-y-2">
 								{#if loadingNodes}
-									<div class="flex items-center justify-center p-6 text-xs text-[#8d8d8d] bg-[#161616] border border-[#393939]">
-										<Loader2 class="h-4 w-4 animate-spin text-[#0f62fe] mr-2" />
-										Scanning cluster topology...
+									<div class="flex items-center justify-center p-6 bg-[#161616] border border-[#393939]">
+										<CarbonInlineLoading description="Scanning cluster topology..." />
 									</div>
 								{:else if nodes.length === 0}
 									<div class="p-4 bg-[#161616] border border-[#393939] text-xs text-[#a8a8a8]">
