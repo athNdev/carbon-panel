@@ -22,6 +22,7 @@ type FreezerStore interface {
 	GetServer(ctx context.Context, id string) (*db.Server, error)
 	ListServers(ctx context.Context) ([]*db.Server, error)
 	UpdateServer(ctx context.Context, server *db.Server) error
+	UpdateServerStatus(ctx context.Context, id string, status db.ServerStatus) error
 }
 
 // HibernationManager manages cgroup freezer sleep/wake lifecycle for idle Minecraft servers
@@ -174,8 +175,7 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 		return fmt.Errorf("cgroup freeze failed for server %s: %w", serverID, err)
 	}
 
-	srv.Status = db.StatusPaused
-	if err := m.store.UpdateServer(ctx, srv); err != nil {
+	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusPaused); err != nil {
 		return fmt.Errorf("failed to update server status to paused: %w", err)
 	}
 
@@ -215,8 +215,7 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 		return fmt.Errorf("cgroup unfreeze failed for server %s: %w", serverID, err)
 	}
 
-	srv.Status = db.StatusRunning
-	if err := m.store.UpdateServer(ctx, srv); err != nil {
+	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusRunning); err != nil {
 		return fmt.Errorf("failed to update server status to running: %w", err)
 	}
 
