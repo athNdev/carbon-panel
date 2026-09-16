@@ -942,41 +942,98 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	return result, nil
 }
 
+// ContainerState is the consolidated, reconciler-relevant view of a container's
+// runtime state. It captures the mapped ServerStatus plus the exit code and OOM
+// flag that are only available from a full ContainerInspect, in a single Docker
+// round-trip. MINE-107's level-triggered reconciler uses this to converge DB
+// state with observed reality without inspecting twice.
+type ContainerState struct {
+	ContainerID string
+	Status      models.ServerStatus
+	Running     bool
+	// ExitCode is the container process's last exit code. Only meaningful when
+	// HasExited is true.
+	ExitCode int
+	// HasExited reports whether the container is not currently running, i.e.
+	// ExitCode reflects a completed process rather than a live one.
+	HasExited bool
+	// OOMKilled reports whether Docker recorded the last exit as an OOM kill.
+	OOMKilled bool
+}
+
+// mapContainerState translates a Docker container.State into the panel's
+// ServerStatus vocabulary. It is the single source of truth shared by
+// GetContainerStatus and ObserveContainer so the two can never drift apart.
+func mapContainerState(state *container.State) models.ServerStatus {
+	if state == nil {
+		return models.StatusError
+	}
+
+	switch state.Status {
+	case "running":
+		// Check health status if available
+		if state.Health != nil {
+			switch state.Health.Status {
+			case "healthy":
+				return models.StatusRunning
+			case "starting":
+				return models.StatusStarting
+			case "unhealthy":
+				// Server process isn't responding
+				return models.StatusUnhealthy
+			default:
+				// No health status or unknown, assume running
+				return models.StatusRunning
+			}
+		}
+		return models.StatusRunning
+	case "restarting":
+		return models.StatusStarting
+	case "exited", "dead":
+		return models.StatusStopped
+	case "created", "removing":
+		return models.StatusStopped
+	case "paused":
+		return models.StatusPaused
+	default:
+		return models.StatusError
+	}
+}
+
 func (c *Client) GetContainerStatus(ctx context.Context, containerID string) (models.ServerStatus, error) {
 	inspect, err := c.docker.ContainerInspect(ctx, containerID)
 	if err != nil {
 		return models.StatusError, err
 	}
 
-	switch inspect.State.Status {
-	case "running":
-		// Check health status if available
-		if inspect.State.Health != nil {
-			switch inspect.State.Health.Status {
-			case "healthy":
-				return models.StatusRunning, nil
-			case "starting":
-				return models.StatusStarting, nil
-			case "unhealthy":
-				// Server process isn't responding
-				return models.StatusUnhealthy, nil
-			default:
-				// No health status or unknown, assume running
-				return models.StatusRunning, nil
-			}
-		}
-		return models.StatusRunning, nil
-	case "restarting":
-		return models.StatusStarting, nil
-	case "exited", "dead":
-		return models.StatusStopped, nil
-	case "created", "removing":
-		return models.StatusStopped, nil
-	case "paused":
-		return models.StatusPaused, nil
-	default:
-		return models.StatusError, nil
+	return mapContainerState(inspect.State), nil
+}
+
+// ObserveContainer inspects a container once and returns its consolidated
+// runtime state. A container that does not exist is reported by the returned
+// error (errdefs.IsNotFound); callers expecting it to exist should treat that
+// as "container missing" rather than a transient failure.
+func (c *Client) ObserveContainer(ctx context.Context, containerID string) (*ContainerState, error) {
+	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return nil, err
 	}
+
+	st := &ContainerState{
+		ContainerID: inspect.ID,
+		Status:      mapContainerState(inspect.State),
+	}
+	if st.ContainerID == "" {
+		st.ContainerID = containerID
+	}
+	if inspect.State != nil {
+		st.Running = inspect.State.Running
+		st.HasExited = !inspect.State.Running
+		st.ExitCode = inspect.State.ExitCode
+		st.OOMKilled = inspect.State.OOMKilled
+	}
+
+	return st, nil
 }
 
 func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*ContainerStats, error) {

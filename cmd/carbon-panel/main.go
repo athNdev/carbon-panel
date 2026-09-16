@@ -19,6 +19,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/module"
 	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/internal/reconciler"
 	"github.com/athNdev/carbon-panel/internal/rpc"
 	"github.com/athNdev/carbon-panel/internal/scheduler"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -302,44 +303,39 @@ func main() {
 		}
 	}()
 
-	// Start container status monitor
-	stopMonitor := make(chan struct{})
-	go func() {
-		ticker := time.NewTicker(time.Duration(cfg.Docker.SyncInterval) * time.Second)
-		defer ticker.Stop()
+	// Start the level-triggered, self-healing reconciler (MINE-107). It replaces
+	// the legacy fixed-interval polling monitor: Docker lifecycle events from the
+	// multi-node watcher schedule per-server convergence passes (coalesced into a
+	// quiet window), backed by a periodic sweep so a dropped event cannot leave a
+	// server permanently divergent.
+	reconcileCtx, stopReconciler := context.WithCancel(context.Background())
 
-		for {
-			select {
-			case <-ticker.C:
-				// Update status for all servers with containers
-				ctx := context.Background()
-				servers, err := store.ListServers(ctx)
-				if err != nil {
-					continue
-				}
+	eventSupervisor, err := reconciler.NewSupervisorFromNodeStore(reconcileCtx, clientPool, store, log)
+	if err != nil {
+		log.Error("Failed to initialize Docker events supervisor; reconciler will run on sweep only: %v", err)
+	}
 
-				for _, server := range servers {
-					if server.ContainerID != "" {
-						status, err := dockerClient.GetContainerStatus(ctx, server.ContainerID)
-						if err == nil && server.Status != status {
-							oldStatus := server.Status
-							server.Status = status
-							if err := store.UpdateServer(ctx, server); err != nil {
-								log.Error("Failed to update server status: %v", err)
-							}
-							// Update proxy route if status changed and server has proxy configured
-							if server.ProxyHostname != "" && oldStatus != status {
-								if err := proxyManager.UpdateServerRoute(server); err != nil {
-									log.Error("Failed to update proxy route for %s: %v", server.Name, err)
-								}
-							}
-						}
-					}
-				}
-			case <-stopMonitor:
-				return
-			}
+	var reconcileEvents <-chan reconciler.ContainerEvent
+	if eventSupervisor != nil {
+		if err := eventSupervisor.Start(reconcileCtx); err != nil {
+			log.Error("Failed to start Docker events supervisor: %v", err)
 		}
+		reconcileEvents = eventSupervisor.Events()
+	}
+
+	reconcilerEngine := reconciler.New(
+		store,
+		reconciler.PoolResolver{Pool: clientPool},
+		proxyManager,
+		eventBus,
+		log,
+		reconciler.Config{},
+	)
+	reconcilerEngine.Start(reconcileCtx, reconcileEvents)
+	defer func() {
+		stopReconciler()
+		reconcilerEngine.Stop()
+		reconcilerEngine.Wait()
 	}()
 
 	// Setup HTTP server
@@ -366,6 +362,11 @@ func main() {
 
 	log.Info("Shutting down server...")
 	close(stopSessionCleanup)
+
+	// Halt reconciliation before we start stopping containers, so the reconciler
+	// cannot fight the deliberate shutdown sequence below.
+	reconcilerEngine.Stop()
+	stopReconciler()
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
