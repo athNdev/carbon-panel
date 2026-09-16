@@ -27,13 +27,32 @@ type ContainerLogStream struct {
 
 // LogStreamer manages log streaming for all containers
 type LogStreamer struct {
-	docker      *client.Client
-	streams     map[string]*ContainerLogStream // containerID -> stream
-	mu          sync.RWMutex
-	log         *Logger
-	maxEntries  int
+	docker     *client.Client
+	streams    map[string]*ContainerLogStream // containerID -> stream
+	mu         sync.RWMutex
+	log        *Logger
+	maxEntries int
+
 	subscribers map[string]map[chan *v1.LogEntry]bool // containerID -> set of subscriber channels
 	subMu       sync.RWMutex                          // mutex for subscribers
+
+	// containerAliases maps a container ID that subscribers were originally
+	// registered under to the ID their channels were later migrated to
+	// (MINE-108). Without it, an unsubscribe issued after a container
+	// recreation looks up the old key, finds nothing, and leaks the channel and
+	// its forwarder goroutine forever.
+	containerAliases map[string]string
+
+	// clientResolver, when set, resolves the Docker client that owns a
+	// container so log streaming can follow containers onto remote nodes.
+	clientResolver LogClientResolver
+}
+
+// LogClientResolver resolves the Docker SDK client responsible for a container.
+// It lets the streamer tail containers on non-local nodes (MINE-108). Returning
+// (nil, nil) means "unknown — fall back to the local client".
+type LogClientResolver interface {
+	ResolveLogClient(ctx context.Context, containerID string) (*client.Client, error)
 }
 
 // NewLogStreamer creates a new log streamer
@@ -42,12 +61,21 @@ func NewLogStreamer(dockerClient *client.Client, log *Logger, maxEntriesPerConta
 		maxEntriesPerContainer = 10000 // Default to 10k entries per container
 	}
 	return &LogStreamer{
-		docker:      dockerClient,
-		streams:     make(map[string]*ContainerLogStream),
-		log:         log,
-		maxEntries:  maxEntriesPerContainer,
-		subscribers: make(map[string]map[chan *v1.LogEntry]bool),
+		docker:           dockerClient,
+		streams:          make(map[string]*ContainerLogStream),
+		log:              log,
+		maxEntries:       maxEntriesPerContainer,
+		subscribers:      make(map[string]map[chan *v1.LogEntry]bool),
+		containerAliases: make(map[string]string),
 	}
+}
+
+// SetClientResolver installs a resolver that lets the streamer target containers
+// on remote nodes instead of always inspecting/tailing the local daemon.
+func (ls *LogStreamer) SetClientResolver(r LogClientResolver) {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	ls.clientResolver = r
 }
 
 // StartStreaming starts streaming logs for a container
@@ -106,6 +134,13 @@ func (ls *LogStreamer) RemoveContainer(containerID string) {
 		}
 		delete(ls.subscribers, containerID)
 	}
+	// Drop aliases that pointed at this now-removed container so the alias
+	// table cannot grow without bound over a long-lived process.
+	for old, target := range ls.containerAliases {
+		if target == containerID {
+			delete(ls.containerAliases, old)
+		}
+	}
 	ls.subMu.Unlock()
 }
 
@@ -119,6 +154,30 @@ func (ls *LogStreamer) CleanupContainer(containerID string) {
 	ls.RemoveContainer(containerID)
 }
 
+// clientForContainer returns the Docker client that owns containerID, using the
+// injected multi-node resolver when available and falling back to the local
+// client otherwise (e.g. when the resolver is not configured, or the container
+// is not one it can attribute to a node).
+func (ls *LogStreamer) clientForContainer(ctx context.Context, containerID string) *client.Client {
+	ls.mu.RLock()
+	resolver := ls.clientResolver
+	local := ls.docker
+	ls.mu.RUnlock()
+
+	if resolver != nil {
+		c, err := resolver.ResolveLogClient(ctx, containerID)
+		if err != nil {
+			if ls.log != nil {
+				ls.log.Warn("Failed to resolve log client for container %s, falling back to local: %v", containerID, err)
+			}
+		} else if c != nil {
+			return c
+		}
+	}
+
+	return local
+}
+
 // streamLogs sets up and starts streaming of logs from Docker in the background
 func (ls *LogStreamer) streamLogs(ctx context.Context, stream *ContainerLogStream) {
 	defer func() {
@@ -127,8 +186,14 @@ func (ls *LogStreamer) streamLogs(ctx context.Context, stream *ContainerLogStrea
 		stream.mu.Unlock()
 	}()
 
+	dock := ls.clientForContainer(ctx, stream.containerID)
+	if dock == nil {
+		ls.log.Error("No Docker client available to stream logs for container %s", stream.containerID)
+		return
+	}
+
 	// Check if container has TTY enabled
-	inspect, err := ls.docker.ContainerInspect(ctx, stream.containerID)
+	inspect, err := dock.ContainerInspect(ctx, stream.containerID)
 	if err != nil {
 		ls.log.Error("Failed to inspect container %s: %v", stream.containerID, err)
 		return
@@ -144,7 +209,7 @@ func (ls *LogStreamer) streamLogs(ctx context.Context, stream *ContainerLogStrea
 	}
 
 	// Start streaming
-	reader, err := ls.docker.ContainerLogs(ctx, stream.containerID, options)
+	reader, err := dock.ContainerLogs(ctx, stream.containerID, options)
 	if err != nil {
 		ls.log.Error("Failed to start log streaming for container %s: %v", stream.containerID, err)
 		return
@@ -393,35 +458,61 @@ func (ls *LogStreamer) Subscribe(containerID string) chan *v1.LogEntry {
 	return ch
 }
 
-// Unsubscribe removes a subscriber channel for a container
+// Unsubscribe removes a subscriber channel for a container.
+//
+// The containerID may be one the channel was originally registered under and
+// has since been migrated away from (see MigrateSubscribers); the alias chain
+// is followed so the channel is found and closed rather than silently leaked.
 func (ls *LogStreamer) Unsubscribe(containerID string, ch chan *v1.LogEntry) {
 	ls.subMu.Lock()
 	defer ls.subMu.Unlock()
 
-	if subs, ok := ls.subscribers[containerID]; ok {
+	target := ls.resolveContainerIDLocked(containerID)
+	if subs, ok := ls.subscribers[target]; ok {
 		delete(subs, ch)
 		close(ch)
 		if len(subs) == 0 {
-			delete(ls.subscribers, containerID)
+			delete(ls.subscribers, target)
 		}
 	}
 }
 
-// Move all subscribers from old container to new container
+// resolveContainerIDLocked follows the alias chain recorded by
+// MigrateSubscribers so an unsubscribe issued against a container's previous ID
+// still reaches the set its subscribers were moved to. The hop bound guards
+// against a malformed cycle. Callers must hold subMu.
+func (ls *LogStreamer) resolveContainerIDLocked(containerID string) string {
+	const maxHops = 16
+	for hops := 0; hops < maxHops; hops++ {
+		next, ok := ls.containerAliases[containerID]
+		if !ok || next == "" || next == containerID {
+			break
+		}
+		containerID = next
+	}
+	return containerID
+}
+
+// Move all subscribers from old container to new container, recording an alias
+// so a later Unsubscribe against oldContainerID still resolves correctly.
 func (ls *LogStreamer) MigrateSubscribers(oldContainerID, newContainerID string) {
 	ls.subMu.Lock()
 	defer ls.subMu.Unlock()
 
-	oldSubs, ok := ls.subscribers[oldContainerID]
-	if !ok || len(oldSubs) == 0 {
+	if oldContainerID == "" || newContainerID == "" || oldContainerID == newContainerID {
 		return
 	}
 
-	// Move subscribers to new container
-	if ls.subscribers[newContainerID] == nil {
+	// Record the alias first: the channel was registered under the old ID, so
+	// even if there is nothing to move right now, an unsubscribe against the
+	// old ID must still dereference to the new container's channel set.
+	ls.containerAliases[oldContainerID] = newContainerID
+
+	if ls.subscribers[newContainerID] == nil && len(ls.subscribers[oldContainerID]) > 0 {
 		ls.subscribers[newContainerID] = make(map[chan *v1.LogEntry]bool)
 	}
-	for ch := range oldSubs {
+
+	for ch := range ls.subscribers[oldContainerID] {
 		ls.subscribers[newContainerID][ch] = true
 	}
 	delete(ls.subscribers, oldContainerID)

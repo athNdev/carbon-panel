@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -312,7 +313,7 @@ func TestDebouncerKeepsKeysIndependent(t *testing.T) {
 
 func newTestReconciler(t *testing.T, store Store, cli Client, proxy ProxyRouter, bus EventEmitter) *Reconciler {
 	t.Helper()
-	return New(store, fakeResolver{cli: cli}, proxy, bus, nil, Config{})
+	return New(store, fakeResolver{cli: cli}, proxy, bus, nil, nil, Config{})
 }
 
 func TestReconcileStatusTransitionExternalStop(t *testing.T) {
@@ -431,7 +432,7 @@ func TestReconcileSkipsWhenNodeUnavailable(t *testing.T) {
 	store := newFakeStore(server)
 	bus := &fakeBus{}
 
-	r := New(store, fakeResolver{err: errors.New("node offline")}, &fakeProxy{}, bus, nil, Config{})
+	r := New(store, fakeResolver{err: errors.New("node offline")}, &fakeProxy{}, bus, nil, nil, Config{})
 	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
 		t.Fatalf("ReconcileServer: %v", err)
 	}
@@ -471,7 +472,7 @@ func TestStartConsumesEventsAndConverges(t *testing.T) {
 		state:   &docker.ContainerState{ContainerID: "c1", Status: db.StatusRunning},
 	}
 
-	r := New(store, fakeResolver{cli: cli}, &fakeProxy{}, &fakeBus{}, nil, Config{
+	r := New(store, fakeResolver{cli: cli}, &fakeProxy{}, &fakeBus{}, nil, nil, Config{
 		DebounceWindow: 10 * time.Millisecond,
 		SweepInterval:  time.Hour,
 	})
@@ -503,4 +504,169 @@ func indexOf(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+// --- MINE-108: log subscription migration + dynamic re-routing ---------------
+
+type migrationCall struct {
+	serverID string
+	oldID    string
+	newID    string
+}
+
+type fakeLogMigrator struct {
+	mu    sync.Mutex
+	calls []migrationCall
+}
+
+func (m *fakeLogMigrator) MigrateServerLogSubscriptions(serverID, oldContainerID, newContainerID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.calls = append(m.calls, migrationCall{serverID: serverID, oldID: oldContainerID, newID: newContainerID})
+}
+
+func (m *fakeLogMigrator) snapshot() []migrationCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]migrationCall, len(m.calls))
+	copy(out, m.calls)
+	return out
+}
+
+func summaryWithIP(id, ip string) *container.Summary {
+	return &container.Summary{
+		ID: id,
+		NetworkSettings: &container.NetworkSettingsSummary{
+			Networks: map[string]*network.EndpointSettings{
+				"carbon-panel-network": {IPAddress: ip},
+			},
+		},
+	}
+}
+
+func TestReconcileMigratesLogSubscriptionsOnAdoption(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "old-id", Status: db.StatusRunning}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		summary: summaryWithIP("new-id", "10.0.0.5"),
+		state:   &docker.ContainerState{ContainerID: "new-id", Status: db.StatusRunning},
+	}
+	migrator := &fakeLogMigrator{}
+
+	r := New(store, fakeResolver{cli: cli}, &fakeProxy{}, &fakeBus{}, migrator, nil, Config{})
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("ReconcileServer: %v", err)
+	}
+
+	calls := migrator.snapshot()
+	if len(calls) != 1 {
+		t.Fatalf("migration calls = %+v, want exactly 1", calls)
+	}
+	if calls[0].serverID != "s1" || calls[0].oldID != "old-id" || calls[0].newID != "new-id" {
+		t.Fatalf("migration call = %+v, want s1 old-id -> new-id", calls[0])
+	}
+}
+
+func TestReconcileMigratesLogSubscriptionsOnSelfHeal(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "gone", Status: db.StatusRunning}
+	store := newFakeStore(server)
+	cli := &fakeClient{resolveErr: fmt.Errorf("%w: s1", docker.ErrContainerNotResolved)}
+	migrator := &fakeLogMigrator{}
+
+	r := New(store, fakeResolver{cli: cli}, &fakeProxy{}, &fakeBus{}, migrator, nil, Config{})
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("ReconcileServer: %v", err)
+	}
+
+	calls := migrator.snapshot()
+	if len(calls) != 1 {
+		t.Fatalf("migration calls = %+v, want exactly 1", calls)
+	}
+	if calls[0].oldID != "gone" || calls[0].newID != "recreated-container" {
+		t.Fatalf("migration call = %+v, want gone -> recreated-container", calls[0])
+	}
+}
+
+func TestReconcileRefreshesRouteOnIPChange(t *testing.T) {
+	server := &db.Server{
+		ID: "s1", Name: "Survival", NodeID: "default",
+		ContainerID: "c1", Status: db.StatusRunning, ProxyHostname: "mc.example.com",
+	}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		summary: summaryWithIP("c1", "10.0.0.2"),
+		state:   &docker.ContainerState{ContainerID: "c1", Status: db.StatusRunning},
+	}
+	proxy := &fakeProxy{}
+
+	r := newTestReconciler(t, store, cli, proxy, &fakeBus{})
+
+	// First pass learns the backend and pushes the route once.
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	if proxy.count() != 1 {
+		t.Fatalf("route refreshes after first pass = %d, want 1", proxy.count())
+	}
+
+	// An unchanged backend must not churn the route.
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	if proxy.count() != 1 {
+		t.Fatalf("route refreshes after unchanged pass = %d, want 1", proxy.count())
+	}
+
+	// A re-allocated IP on the same container must re-point the route.
+	cli.summary = summaryWithIP("c1", "10.0.0.9")
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("third reconcile: %v", err)
+	}
+	if proxy.count() != 2 {
+		t.Fatalf("route refreshes after IP change = %d, want 2", proxy.count())
+	}
+
+	// No status writes: the server was running the whole time.
+	if len(store.statuses) != 0 {
+		t.Fatalf("status writes = %+v, want none", store.statuses)
+	}
+}
+
+func TestReconcileMigratesLogSubscriptionsWhenDBAlreadyUpdated(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "old-id", Status: db.StatusRunning}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		summary: summaryWithIP("old-id", "10.0.0.1"),
+		state:   &docker.ContainerState{ContainerID: "old-id", Status: db.StatusRunning},
+	}
+	migrator := &fakeLogMigrator{}
+
+	r := New(store, fakeResolver{cli: cli}, &fakeProxy{}, &fakeBus{}, migrator, nil, Config{})
+
+	// Prime the backend cache with the container the subscribers are registered
+	// against.
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("prime reconcile: %v", err)
+	}
+
+	// Simulate an RPC-initiated Force Recreate: it swaps the container and writes
+	// the new ID straight to the DB, so the reconciler never sees an adoption.
+	store.mu.Lock()
+	store.servers["s1"].ContainerID = "new-id"
+	store.mu.Unlock()
+	cli.summary = summaryWithIP("new-id", "10.0.0.2")
+	cli.state = &docker.ContainerState{ContainerID: "new-id", Status: db.StatusRunning}
+
+	migrator.mu.Lock()
+	migrator.calls = nil
+	migrator.mu.Unlock()
+
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("post-recreate reconcile: %v", err)
+	}
+
+	calls := migrator.snapshot()
+	if len(calls) != 1 || calls[0].oldID != "old-id" || calls[0].newID != "new-id" {
+		t.Fatalf("migration calls = %+v, want one old-id -> new-id", calls)
+	}
 }

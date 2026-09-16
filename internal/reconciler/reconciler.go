@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -96,6 +97,14 @@ type EventEmitter interface {
 	Emit(ctx context.Context, event events.Event)
 }
 
+// LogMigrator keeps a server's live console subscriptions attached to its
+// container across a recreation (MINE-108): it moves the log streamer's
+// subscriber registry and re-points the WebSocket hub's bookkeeping. It is
+// optional — a nil LogMigrator simply disables the migration.
+type LogMigrator interface {
+	MigrateServerLogSubscriptions(serverID, oldContainerID, newContainerID string)
+}
+
 // PoolResolver adapts a *docker.ClientPool to the ClientResolver interface used
 // by the Reconciler. Go method signatures are invariant, so the pool's concrete
 // (*docker.Client, error) cannot satisfy (Client, error) on its own.
@@ -129,18 +138,23 @@ type Config struct {
 
 // Reconciler converges desired DB state with observed Docker state.
 type Reconciler struct {
-	store   Store
-	clients ClientResolver
-	proxy   ProxyRouter
-	bus     EventEmitter
-	log     *logger.Logger
+	store       Store
+	clients     ClientResolver
+	proxy       ProxyRouter
+	bus         EventEmitter
+	logMigrator LogMigrator
+	log         *logger.Logger
 
 	cfg Config
 	deb *debouncer
 
 	work   chan string
 	queued map[string]bool
-	mu     sync.Mutex
+	// backends remembers the last container ID + IP pushed to the proxy per
+	// server, so route updates are driven by real backend moves rather than
+	// being issued on every pass.
+	backends map[string]backendRef
+	mu       sync.Mutex
 
 	ctx      context.Context
 	wg       sync.WaitGroup
@@ -150,8 +164,8 @@ type Reconciler struct {
 }
 
 // New constructs a Reconciler. It does not start any goroutines until Start is
-// called.
-func New(store Store, clients ClientResolver, proxy ProxyRouter, bus EventEmitter, log *logger.Logger, cfg Config) *Reconciler {
+// called. logMigrator may be nil, which disables console-subscription migration.
+func New(store Store, clients ClientResolver, proxy ProxyRouter, bus EventEmitter, logMigrator LogMigrator, log *logger.Logger, cfg Config) *Reconciler {
 	if cfg.DebounceWindow <= 0 {
 		cfg.DebounceWindow = DefaultDebounceWindow
 	}
@@ -163,16 +177,18 @@ func New(store Store, clients ClientResolver, proxy ProxyRouter, bus EventEmitte
 	}
 
 	return &Reconciler{
-		store:   store,
-		clients: clients,
-		proxy:   proxy,
-		bus:     bus,
-		log:     log,
-		cfg:     cfg,
-		deb:     newDebouncer(cfg.DebounceWindow),
-		work:    make(chan string, workQueueDepth),
-		queued:  make(map[string]bool),
-		stop:    make(chan struct{}),
+		store:       store,
+		clients:     clients,
+		proxy:       proxy,
+		bus:         bus,
+		logMigrator: logMigrator,
+		log:         log,
+		cfg:         cfg,
+		deb:         newDebouncer(cfg.DebounceWindow),
+		work:        make(chan string, workQueueDepth),
+		queued:      make(map[string]bool),
+		backends:    make(map[string]backendRef),
+		stop:        make(chan struct{}),
 	}
 }
 
@@ -357,9 +373,13 @@ type observedState struct {
 	// Exists is false when no container matching the server could be resolved.
 	Exists      bool
 	ContainerID string
-	Status      db.ServerStatus
-	ExitCode    int
-	OOMKilled   bool
+	// IP is the container's address on its attached network, when known. It is
+	// empty for a container resolved by name fallback on some daemons.
+	IP     string
+	Status db.ServerStatus
+	// ExitCode and OOMKilled describe how a stopped container's process ended.
+	ExitCode  int
+	OOMKilled bool
 }
 
 // observe resolves the server's container and inspects its runtime state. A
@@ -388,10 +408,34 @@ func (r *Reconciler) observe(ctx context.Context, cli Client, serverID string) (
 	return observedState{
 		Exists:      true,
 		ContainerID: st.ContainerID,
+		IP:          containerIP(summary),
 		Status:      st.Status,
 		ExitCode:    st.ExitCode,
 		OOMKilled:   st.OOMKilled,
 	}, nil
+}
+
+// containerIP picks a deterministic primary address for a container. With more
+// than one attached network a random pick would make the route-drift check flap,
+// so the network names are sorted and the first non-empty address is used.
+func containerIP(summary *container.Summary) string {
+	if summary == nil || summary.NetworkSettings == nil || len(summary.NetworkSettings.Networks) == 0 {
+		return ""
+	}
+
+	names := make([]string, 0, len(summary.NetworkSettings.Networks))
+	for name := range summary.NetworkSettings.Networks {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		ep := summary.NetworkSettings.Networks[name]
+		if ep != nil && ep.IPAddress != "" {
+			return ep.IPAddress
+		}
+	}
+	return ""
 }
 
 // ReconcileServer converges a single server's DB status with its container's
@@ -419,6 +463,9 @@ func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error
 	}
 
 	dec := decide(server.Status, obs, server.Detached, !r.cfg.DisableSelfHeal)
+
+	oldContainerID := server.ContainerID
+	oldBackend := r.backendFor(server.ID)
 
 	// Adopt a container whose ID drifted (or was never recorded) before acting,
 	// so the self-heal step below targets the container that actually exists.
@@ -451,6 +498,22 @@ func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error
 		}
 	}
 
+	// Re-point live console subscriptions when the backing container changed, so
+	// a WebSocket log console survives a Force Recreate uninterrupted and a
+	// later unsubscribe still finds its channel (MINE-108).
+	//
+	// The old ID comes from the previously observed backend rather than the DB:
+	// an RPC-initiated recreate updates the server row itself, so the adoption
+	// branch above sees no change — but the backend cache still remembers the
+	// container the subscribers were registered against.
+	migrateFrom := oldContainerID
+	if oldBackend.containerID != "" {
+		migrateFrom = oldBackend.containerID
+	}
+	if r.logMigrator != nil && migrateFrom != "" && server.ContainerID != "" && migrateFrom != server.ContainerID {
+		r.logMigrator.MigrateServerLogSubscriptions(server.ID, migrateFrom, server.ContainerID)
+	}
+
 	prev := server.Status
 	statusChanged := dec.status != "" && dec.status != prev
 	if statusChanged {
@@ -461,14 +524,48 @@ func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error
 		r.emitTransition(ctx, server, prev, dec.status, dec.reason)
 	}
 
+	// Detect backend drift independently of status: a container can be
+	// re-allocated a different IP (or be an entirely new container) while the DB
+	// status never changes, which previously left the proxy pinned to a dead
+	// address. Comparing ID+IP keeps route churn to real moves only.
+	backendMoved := false
+	if obs.Exists {
+		newBackend := backendRef{containerID: obs.ContainerID, ip: obs.IP}
+		if newBackend != oldBackend {
+			backendMoved = true
+			r.rememberBackend(server.ID, newBackend)
+		}
+	}
+
 	// Refresh the proxy route whenever the backend may have moved: a status
-	// transition changes whether the route should exist at all, and adopting or
-	// recreating a container means the container's IP has changed.
-	if statusChanged || adopted || selfHealed || dec.reconcileRoute {
+	// transition changes whether the route should exist at all, and adopting,
+	// recreating, or re-addressing a container all change the target backend.
+	if statusChanged || adopted || selfHealed || backendMoved || dec.reconcileRoute {
 		r.updateRoute(ctx, server)
 	}
 
 	return nil
+}
+
+// backendRef identifies the container a proxy route points at: the container ID
+// plus its primary IP. A change to either means the route may now be stale.
+type backendRef struct {
+	containerID string
+	ip          string
+}
+
+// backendFor returns the last backend the reconciler pushed to the proxy for a
+// server, or the zero value if it has not observed one yet.
+func (r *Reconciler) backendFor(serverID string) backendRef {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.backends[serverID]
+}
+
+func (r *Reconciler) rememberBackend(serverID string, ref backendRef) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.backends[serverID] = ref
 }
 
 // selfHealRecreate replaces a missing container for a server the DB still
