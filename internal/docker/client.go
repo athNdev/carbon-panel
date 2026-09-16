@@ -516,6 +516,14 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 			"carbon-panel.server.loader":  string(server.ModLoader),
 			"carbon-panel.server.version": server.MCVersion,
 			"carbon-panel.managed":        "true",
+			"carbon-panel.node.id":        server.NodeID,
+			"carbon-panel.schema-version": "2",
+			// Opt out of generic third-party auto-updaters/healers so they
+			// don't fight Carbon Panel's own container lifecycle management.
+			"com.centurylinklabs.watchtower.enable": "false",
+			"io.containrrr.watchtower.enable":       "false",
+			"autoheal":                              "false",
+			"willfarrell.autoheal":                  "false",
 		},
 	}
 
