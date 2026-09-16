@@ -96,6 +96,21 @@ func (s *Store) GetServer(ctx context.Context, id string) (*Server, error) {
 	return &server, nil
 }
 
+// GetServerByContainerID reverse-looks-up the Server that owns the given Docker container ID.
+// Used during identity-resolution recovery (MINE-103) to determine whether a re-discovered
+// container is already tracked by a different server record before adopting it.
+func (s *Store) GetServerByContainerID(ctx context.Context, containerID string) (*Server, error) {
+	var server Server
+	err := s.db.WithContext(ctx).First(&server, "container_id = ?", containerID).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("server not found")
+		}
+		return nil, err
+	}
+	return &server, nil
+}
+
 func (s *Store) ListServers(ctx context.Context) ([]*Server, error) {
 	var servers []*Server
 	err := s.db.WithContext(ctx).Order("created_at DESC").Find(&servers).Error
