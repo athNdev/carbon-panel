@@ -90,33 +90,14 @@ func main() {
 		log.Error("Failed to ensure Docker network: %v", err)
 	}
 
-	// Clean up orphaned containers on startup
-	log.Info("Checking for orphaned containers...")
-	servers, err := store.ListServers(ctx)
-	if err != nil {
-		log.Error("Failed to list servers for cleanup: %v", err)
-	}
-	modules, err := store.ListModules(ctx)
-	if err != nil {
-		log.Error("Failed to list modules for cleanup: %v", err)
-	}
-
-	// Build map of tracked container IDs
-	trackedIDs := make(map[string]bool)
-	for _, server := range servers {
-		if server.ContainerID != "" {
-			trackedIDs[server.ContainerID] = true
-		}
-	}
-	for _, module := range modules {
-		if module.ContainerID != "" {
-			trackedIDs[module.ContainerID] = true
-		}
-	}
-
-	// Clean up orphaned containers
-	if err := dockerClient.CleanupOrphanedContainers(ctx, trackedIDs, log); err != nil {
-		log.Error("Failed to cleanup orphaned containers: %v", err)
+	// Reconcile and clean up containers on startup. This is a two-phase, adopt-then-purge
+	// process: containers that match a live DB record (even with a drifted/empty ContainerID)
+	// are adopted (DB updated to match reality) and never touched further; only containers with
+	// no matching DB record at all are treated as genuine orphans and removed. If the DB can't
+	// be read, ReconcileAndCleanupContainers aborts before any deletion happens.
+	log.Info("Reconciling containers with database state...")
+	if err := docker.ReconcileAndCleanupContainers(ctx, store, dockerClient, log); err != nil {
+		log.Error("Failed to reconcile/cleanup containers: %v", err)
 	}
 
 	// Load proxy configuration from database
