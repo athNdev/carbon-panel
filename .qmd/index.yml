@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+# qmd project-local index config — carbon-panel Tier 0 retrieval (Workstream B).
+# Relative in-project paths only: project-local trust rules may gate absolute
+# paths on agents, so never use absolute paths here.
+collections:
+  carbon-panel:
+    path: ./
+    patterns:
+      - "memory/**/*.md"
+      - "docs/**/*.md"
+      - "docs/adr/**/*.md"
+      - "DESIGN.md"
+      - "README.md"
+      - "AGENTS.md"
+      - ".agents/skills/memory-ops/SKILL.md"
+    ignore:
+      - "node_modules/**"
+      - "web/**/build/**"
+      - "web/**/dist/**"
+      - "dist/**"
+      - ".git/**"
+    context: "carbon-panel persistent memory and design docs; product truth lives in memory/, decisions in docs/adr/"
