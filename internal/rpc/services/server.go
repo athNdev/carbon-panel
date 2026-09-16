@@ -1165,7 +1165,20 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 
 	dockerCli := s.getDockerClient(server.NodeID)
 
-	// If container doesn't exist, create it first
+	// If container doesn't exist (e.g. ContainerID lost/never persisted), try to recover an
+	// existing-but-untracked container before creating a duplicate (MINE-103).
+	if server.ContainerID == "" {
+		if resolved, resolveErr := dockerCli.ResolveContainer(ctx, server.ID); resolveErr == nil && resolved != nil {
+			s.log.Info("Recovered untracked container %s for server %s via label/name resolution", resolved.ID, server.ID)
+			server.ContainerID = resolved.ID
+			if err := s.store.UpdateServer(ctx, server); err != nil {
+				s.log.Error("Failed to update server with resolved container ID: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
+			}
+		}
+	}
+
+	// Still no container - create it
 	if server.ContainerID == "" {
 		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
 		if err != nil {
