@@ -124,6 +124,13 @@ func NewServer(
 		placementEngine = docker.NewPlacementEngine(store)
 	}
 
+	// Let the log streamer attribute a container to its node so it can tail
+	// containers on remote nodes rather than silently inspecting the local
+	// daemon (MINE-108).
+	if logStreamer != nil && store != nil && clientPool != nil {
+		logStreamer.SetClientResolver(docker.NewContainerLogClientResolver(store, clientPool))
+	}
+
 	s := &Server{
 		store:            store,
 		docker:           dockerCli,
@@ -502,4 +509,26 @@ func (s *Server) RecoveryKey() string {
 // Starts log streaming for a container
 func (s *Server) StartLogStreaming(containerID string) error {
 	return s.logStreamer.StartStreaming(containerID)
+}
+
+// MigrateServerLogSubscriptions re-points live console subscriptions for a
+// server from its old container to a new one (MINE-108).
+//
+// It is the reconciler's LogMigrator: the log streamer moves its subscriber
+// registry (recording an alias so a late unsubscribe still resolves), and the
+// WebSocket hub updates the container key each client will unsubscribe or clean
+// up with. This is what keeps a live console uninterrupted across a container
+// recreation and prevents the channel/goroutine leak that followed it.
+func (s *Server) MigrateServerLogSubscriptions(serverID, oldContainerID, newContainerID string) {
+	if serverID == "" || newContainerID == "" || oldContainerID == newContainerID {
+		return
+	}
+
+	if s.logStreamer != nil && oldContainerID != "" {
+		s.logStreamer.MigrateSubscribers(oldContainerID, newContainerID)
+	}
+
+	if s.wsHub != nil {
+		s.wsHub.MigrateServerContainer(serverID, newContainerID)
+	}
 }

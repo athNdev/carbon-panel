@@ -328,6 +328,10 @@ func main() {
 		reconciler.PoolResolver{Pool: clientPool},
 		proxyManager,
 		eventBus,
+		// The RPC server owns both the log streamer and the WebSocket hub, so it
+		// is the concrete LogMigrator that keeps console subscriptions attached
+		// across a container recreation (MINE-108).
+		rpcServer,
 		log,
 		reconciler.Config{},
 	)

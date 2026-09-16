@@ -124,6 +124,44 @@ func (h *Hub) Run() {
 	}
 }
 
+// MigrateServerContainer re-points every live subscription for serverID at the
+// container's new ID (MINE-108). Without this, a client that subscribed before
+// a container recreation keeps the old containerID, so a later unsubscribe or
+// disconnect cleanup asks the LogStreamer to close a channel under a key it no
+// longer knows about — leaking the channel and its forwarder goroutine.
+//
+// It is called by the reconciler once it has observed (or performed) a
+// recreation, and is a no-op for clients with no subscription for serverID.
+func (h *Hub) MigrateServerContainer(serverID, newContainerID string) {
+	if serverID == "" || newContainerID == "" {
+		return
+	}
+
+	h.clientsMu.RLock()
+	clients := make([]*Client, 0, len(h.clients))
+	for c := range h.clients {
+		clients = append(clients, c)
+	}
+	h.clientsMu.RUnlock()
+
+	for _, c := range clients {
+		c.migrateSubscription(serverID, newContainerID)
+	}
+}
+
+// migrateSubscription updates the container key recorded for serverID's
+// subscription. The LogStreamer has already moved the channel itself (or will
+// via its own alias), so only the bookkeeping used on unsubscribe/cleanup needs
+// to change.
+func (c *Client) migrateSubscription(serverID, newContainerID string) {
+	c.subscriptionsMu.Lock()
+	defer c.subscriptionsMu.Unlock()
+
+	if sub, ok := c.subscriptions[serverID]; ok {
+		sub.containerID = newContainerID
+	}
+}
+
 // ServeHTTP handles WebSocket upgrade requests
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)

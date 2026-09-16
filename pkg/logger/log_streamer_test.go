@@ -139,3 +139,71 @@ func TestLogStreamer_MigrateSubscribers(t *testing.T) {
 		t.Errorf("expected subscriber channel to be migrated to new container")
 	}
 }
+
+func TestLogStreamer_UnsubscribeAfterMigrationResolvesAlias(t *testing.T) {
+	log := New()
+	ls := NewLogStreamer(nil, log, 100)
+
+	const oldID, newID = "old-container", "new-container"
+	ch := ls.Subscribe(oldID)
+	ls.MigrateSubscribers(oldID, newID)
+
+	// A client that subscribed before the recreation still holds the old
+	// container ID. Unsubscribing must follow the alias, find the channel and
+	// close it rather than leaking it (MINE-108).
+	ls.Unsubscribe(oldID, ch)
+
+	select {
+	case _, open := <-ch:
+		if open {
+			t.Fatalf("channel should have been closed by Unsubscribe")
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Fatalf("timed out waiting for the migrated channel to close")
+	}
+
+	ls.subMu.RLock()
+	_, newExists := ls.subscribers[newID]
+	ls.subMu.RUnlock()
+	if newExists {
+		t.Errorf("expected the emptied subscriber set to be removed")
+	}
+}
+
+func TestLogStreamer_MigrationChainResolves(t *testing.T) {
+	log := New()
+	ls := NewLogStreamer(nil, log, 100)
+
+	const first, second, third = "c1", "c2", "c3"
+	ch := ls.Subscribe(first)
+	ls.MigrateSubscribers(first, second)
+	ls.MigrateSubscribers(second, third)
+
+	// Unsubscribing with the very first ID must still resolve through the chain.
+	ls.Unsubscribe(first, ch)
+
+	select {
+	case _, open := <-ch:
+		if open {
+			t.Fatalf("channel should have been closed through the alias chain")
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Fatalf("timed out waiting for the chained channel to close")
+	}
+}
+
+func TestLogStreamer_RemoveContainerDropsAliases(t *testing.T) {
+	log := New()
+	ls := NewLogStreamer(nil, log, 100)
+
+	const oldID, newID = "old-container", "new-container"
+	ls.MigrateSubscribers(oldID, newID)
+	ls.RemoveContainer(newID)
+
+	ls.subMu.RLock()
+	_, aliasExists := ls.containerAliases[oldID]
+	ls.subMu.RUnlock()
+	if aliasExists {
+		t.Errorf("expected aliases pointing at a removed container to be dropped")
+	}
+}
