@@ -20,6 +20,7 @@ import (
 	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -576,6 +577,117 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	}
 
 	return resp.ID, nil
+}
+
+// ErrContainerNotResolved is returned by Resolve* methods when a container cannot be
+// found by label or by the deterministic name convention. It signals "genuinely gone"
+// (as opposed to a transient Docker API error) so callers can safely fall through to
+// creating a new container.
+var ErrContainerNotResolved = fmt.Errorf("no matching docker container found")
+
+// ResolveContainer attempts to deterministically re-find the Docker container belonging
+// to the given server ID, independent of any (possibly empty or stale) stored container ID.
+//
+// Resolution order:
+//  1. ContainerList filtered by the carbon-panel.server.id label (includes stopped containers).
+//  2. Fallback: ContainerInspect on the canonical deterministic name "carbon-panel-server-<id>",
+//     in case the container exists but was created before labels were consistently applied,
+//     or the label was somehow stripped/lost.
+//
+// Returns ErrContainerNotResolved (wrapped) if neither strategy finds a container. Any other
+// error is a transient/unexpected Docker API failure and should NOT be treated as "not found".
+func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*container.Summary, error) {
+	if serverID == "" {
+		return nil, fmt.Errorf("resolve container: server id is empty")
+	}
+
+	// Strategy 1: label match
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", fmt.Sprintf("carbon-panel.server.id=%s", serverID))
+
+	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: filterArgs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("resolve container: label lookup failed: %w", err)
+	}
+	if len(containers) > 0 {
+		return &containers[0], nil
+	}
+
+	// Strategy 2: deterministic name fallback
+	name := fmt.Sprintf("carbon-panel-server-%s", serverID)
+	inspect, err := c.docker.ContainerInspect(ctx, name)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil, fmt.Errorf("%w: server %s", ErrContainerNotResolved, serverID)
+		}
+		return nil, fmt.Errorf("resolve container: name lookup failed: %w", err)
+	}
+
+	return inspectToSummary(inspect), nil
+}
+
+// ResolveModuleContainer is the module-scoped analogue of ResolveContainer. It re-finds the
+// Docker container belonging to a module ID via the carbon-panel.module.id label, falling back
+// to the deterministic name "carbon-panel-module-<id>".
+func (c *Client) ResolveModuleContainer(ctx context.Context, moduleID string) (*container.Summary, error) {
+	if moduleID == "" {
+		return nil, fmt.Errorf("resolve module container: module id is empty")
+	}
+
+	// Strategy 1: label match
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", fmt.Sprintf("carbon-panel.module.id=%s", moduleID))
+
+	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: filterArgs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("resolve module container: label lookup failed: %w", err)
+	}
+	if len(containers) > 0 {
+		return &containers[0], nil
+	}
+
+	// Strategy 2: deterministic name fallback
+	name := fmt.Sprintf("carbon-panel-module-%s", moduleID)
+	inspect, err := c.docker.ContainerInspect(ctx, name)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil, fmt.Errorf("%w: module %s", ErrContainerNotResolved, moduleID)
+		}
+		return nil, fmt.Errorf("resolve module container: name lookup failed: %w", err)
+	}
+
+	return inspectToSummary(inspect), nil
+}
+
+// inspectToSummary adapts a ContainerInspect result into the same container.Summary shape
+// returned by ContainerList, so callers of Resolve* don't need to handle two different types.
+func inspectToSummary(inspect container.InspectResponse) *container.Summary {
+	summary := &container.Summary{
+		ID:      inspect.ID,
+		Image:   inspect.Image,
+		Command: "",
+		Labels:  map[string]string{},
+	}
+	if inspect.Name != "" {
+		summary.Names = []string{inspect.Name}
+	}
+	if inspect.Config != nil {
+		summary.Image = inspect.Config.Image
+		if inspect.Config.Labels != nil {
+			summary.Labels = inspect.Config.Labels
+		}
+	}
+	if inspect.State != nil {
+		summary.State = container.ContainerState(inspect.State.Status)
+		summary.Status = inspect.State.Status
+	}
+	return summary
 }
 
 func (c *Client) StartContainer(ctx context.Context, containerID string) error {
