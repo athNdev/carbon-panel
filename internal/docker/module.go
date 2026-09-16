@@ -112,6 +112,14 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 			"carbon-panel.module.server_id":   module.ServerID,
 			"carbon-panel.module.template_id": module.TemplateID,
 			"carbon-panel.managed":            "true",
+			"carbon-panel.node.id":            module.NodeID,
+			"carbon-panel.schema-version":     "2",
+			// Opt out of generic third-party auto-updaters/healers so they
+			// don't fight Carbon Panel's own container lifecycle management.
+			"com.centurylinklabs.watchtower.enable": "false",
+			"io.containrrr.watchtower.enable":       "false",
+			"autoheal":                              "false",
+			"willfarrell.autoheal":                  "false",
 		},
 	}
 
