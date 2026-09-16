@@ -87,7 +87,18 @@ func (p *ClientPool) GetDefaultClient() *Client {
 }
 
 // GetClient retrieves the Docker client for the given nodeID.
-// If the node cannot be found or its client cannot be created, it gracefully falls back to the default client.
+// If the node cannot be found, the store is unavailable, or its client cannot be
+// created, it gracefully falls back to the default client (typically the local
+// Docker daemon), logging only a Warn. This fallback is convenient but dangerous
+// for multi-node correctness: if a remote node blips, callers can silently end up
+// operating against the LOCAL daemon instead of the intended remote node (e.g.
+// creating a "remote" container locally by mistake).
+//
+// Prefer GetClientStrict for any operation where acting on the wrong node would
+// be a correctness or safety problem (container create/start/stop/remove,
+// recreate, etc.). Only use GetClient where a best-effort fallback to local is
+// truly acceptable (e.g. read-only status checks where local UI needs to
+// degrade gracefully) and other code may already depend on this behavior.
 func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	if nodeID == "" || nodeID == p.defaultNodeID {
 		def := p.GetDefaultClient()
@@ -145,6 +156,10 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 }
 
 // GetClientStrict retrieves the Docker client for the given nodeID without fallback to default.
+// This is the recommended path for multi-node-sensitive operations: callers get an
+// explicit error instead of silently executing against the local Docker daemon
+// when the requested node is unavailable. See GetClient's doc comment for why the
+// fallback there is risky.
 func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 	if nodeID == "" || nodeID == p.defaultNodeID {
 		def := p.GetDefaultClient()

@@ -24,15 +24,20 @@ type ConfigService struct {
 	store  *storage.Store
 	config *config.Config
 	docker *docker.Client
+	pool   *docker.ClientPool
 	log    *logger.Logger
 }
 
 // Creates new config service
-func NewConfigService(store *storage.Store, cfg *config.Config, docker *docker.Client, log *logger.Logger) *ConfigService {
+func NewConfigService(store *storage.Store, cfg *config.Config, dockerCli *docker.Client, pool *docker.ClientPool, log *logger.Logger) *ConfigService {
+	if pool == nil && dockerCli != nil {
+		pool = docker.NewClientPool(store, dockerCli, log)
+	}
 	return &ConfigService{
 		store:  store,
 		config: cfg,
-		docker: docker,
+		docker: dockerCli,
+		pool:   pool,
 		log:    log,
 	}
 }
@@ -106,7 +111,7 @@ func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Req
 	}
 
 	// If server has a container, we need to recreate it to apply a new env
-	if server.ContainerID != "" && s.docker != nil {
+	if server.ContainerID != "" {
 		if err := s.recreateContainer(ctx, server, config); err != nil {
 			s.log.Error("Config saved but container recreation failed: %v", err)
 		}
@@ -268,17 +273,25 @@ func (s *ConfigService) SyncGlobalSettingsToServers(ctx context.Context, req *co
 }
 
 func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.Server, config *storage.ServerConfig) error {
+	if s.pool == nil {
+		return fmt.Errorf("docker client pool not configured")
+	}
+	dockerCli, err := s.pool.GetClientStrict(server.NodeID)
+	if err != nil {
+		return fmt.Errorf("failed to resolve docker client for node %s: %w", server.NodeID, err)
+	}
+
 	oldContainerID := server.ContainerID
 	wasRunning := false
 	if server.Status == storage.StatusRunning {
 		wasRunning = true
-		if _, err := s.docker.StopContainer(ctx, oldContainerID); err != nil {
+		if _, err := dockerCli.StopContainer(ctx, oldContainerID); err != nil {
 			return err
 		}
 		time.Sleep(2 * time.Second)
 	}
 
-	if err := s.docker.RemoveContainer(ctx, oldContainerID); err != nil {
+	if err := dockerCli.RemoveContainer(ctx, oldContainerID); err != nil {
 		return err
 	}
 
@@ -294,7 +307,7 @@ func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.S
 		}
 	}
 
-	newContainerID, err := s.docker.CreateContainer(ctx, server, config)
+	newContainerID, err := dockerCli.CreateContainer(ctx, server, config)
 	if err != nil {
 		return err
 	}
@@ -305,7 +318,7 @@ func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.S
 	}
 
 	if wasRunning {
-		if err := s.docker.StartContainer(ctx, newContainerID); err != nil {
+		if err := dockerCli.StartContainer(ctx, newContainerID); err != nil {
 			return err
 		}
 		server.Status = storage.StatusStarting

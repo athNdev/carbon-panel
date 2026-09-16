@@ -75,6 +75,7 @@ type lifecycleState struct {
 type Collector struct {
 	store  *storage.Store
 	docker *docker.Client
+	pool   *docker.ClientPool
 	sender *command.Sender
 	config *config.Config
 	log    *logger.Logger
@@ -95,15 +96,26 @@ type Collector struct {
 }
 
 // Creates a new metrics collector
-func NewCollector(store *storage.Store, docker *docker.Client, sender *command.Sender, cfg *config.Config, bus *events.Bus, log *logger.Logger, collectorCfg ...CollectorConfig) *Collector {
+func NewCollector(store *storage.Store, dockerCli *docker.Client, sender *command.Sender, cfg *config.Config, bus *events.Bus, log *logger.Logger, collectorCfg ...CollectorConfig) *Collector {
+	return NewCollectorWithPool(store, dockerCli, nil, sender, cfg, bus, log, collectorCfg...)
+}
+
+// NewCollectorWithPool creates a new metrics collector with a multi-node ClientPool.
+// If pool is nil and dockerCli is non-nil, a single-node pool wrapping dockerCli is created.
+func NewCollectorWithPool(store *storage.Store, dockerCli *docker.Client, pool *docker.ClientPool, sender *command.Sender, cfg *config.Config, bus *events.Bus, log *logger.Logger, collectorCfg ...CollectorConfig) *Collector {
 	cc := DefaultConfig()
 	if len(collectorCfg) > 0 {
 		cc = collectorCfg[0]
 	}
 
+	if pool == nil && dockerCli != nil {
+		pool = docker.NewClientPool(store, dockerCli, log)
+	}
+
 	return &Collector{
 		store:           store,
-		docker:          docker,
+		docker:          dockerCli,
+		pool:            pool,
 		sender:          sender,
 		config:          cfg,
 		bus:             bus,
@@ -112,6 +124,19 @@ func NewCollector(store *storage.Store, docker *docker.Client, sender *command.S
 		lifecycle:       make(map[string]lifecycleState),
 		collectorConfig: cc,
 	}
+}
+
+// resolveDocker returns the Docker client for the given nodeID, preferring a
+// strict node-specific client from the pool over the single default client so
+// metrics collection for a remote node's server is not silently gathered from
+// the local Docker daemon.
+func (c *Collector) resolveDocker(nodeID string) *docker.Client {
+	if c.pool != nil {
+		if cli, err := c.pool.GetClientStrict(nodeID); err == nil && cli != nil {
+			return cli
+		}
+	}
+	return c.docker
 }
 
 // Start background metrics collection
@@ -252,14 +277,16 @@ func (c *Collector) collectDockerStats() {
 			continue
 		}
 
+		dockerCli := c.resolveDocker(server.NodeID)
+
 		// Check if server is running
-		status, err := c.docker.GetContainerStatus(ctx, server.ContainerID)
+		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 		if err != nil || (status != storage.StatusRunning && status != storage.StatusUnhealthy) {
 			continue
 		}
 
 		// Get container stats
-		stats, err := c.docker.GetContainerStats(ctx, server.ContainerID)
+		stats, err := dockerCli.GetContainerStats(ctx, server.ContainerID)
 		if err != nil {
 			c.log.Debug("Metrics collector: failed to get stats for %s: %v", server.ID, err)
 			continue
@@ -290,7 +317,7 @@ func (c *Collector) collectRCONData() {
 		}
 
 		// Check if server is running
-		status, err := c.docker.GetContainerStatus(ctx, server.ContainerID)
+		status, err := c.resolveDocker(server.NodeID).GetContainerStatus(ctx, server.ContainerID)
 		if err != nil || status != storage.StatusRunning {
 			continue
 		}
@@ -446,8 +473,10 @@ func (c *Collector) collectSLPData() {
 			continue
 		}
 
+		dockerCli := c.resolveDocker(server.NodeID)
+
 		// Check if server is running
-		status, err := c.docker.GetContainerStatus(ctx, server.ContainerID)
+		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 		if err != nil || status != storage.StatusRunning {
 			// Mark SLP as unavailable for no op
 			c.updateMetrics(server.ID, func(m *ServerMetrics) {
@@ -458,8 +487,8 @@ func (c *Collector) collectSLPData() {
 
 		// Get container IP
 		var cli client.CommonAPIClient
-		if c.docker != nil {
-			cli = c.docker.GetDockerClient()
+		if dockerCli != nil {
+			cli = dockerCli.GetDockerClient()
 		}
 		containerIP, err := proxy.GetContainerIP(cli, server.ContainerID, c.config.Docker.NetworkName)
 		if err != nil {
@@ -549,7 +578,7 @@ func (c *Collector) detectLifecycleEvents() {
 			continue
 		}
 
-		status, err := c.docker.GetContainerStatus(ctx, server.ContainerID)
+		status, err := c.resolveDocker(server.NodeID).GetContainerStatus(ctx, server.ContainerID)
 		if err != nil {
 			c.clearLifecycle(server.ID)
 			continue
