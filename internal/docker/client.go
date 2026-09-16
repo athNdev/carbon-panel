@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -568,14 +569,107 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		}
 	}
 
-	resp, err := c.docker.ContainerCreate(
-		ctx, config, hostConfig, networkConfig, nil,
-		fmt.Sprintf("carbon-panel-server-%s", server.ID),
-	)
+	containerName := fmt.Sprintf("carbon-panel-server-%s", server.ID)
+
+	// Idempotent create (Wings pattern, MINE-104): before attempting creation, check whether
+	// a container already claims this server's identity (deterministic name / label). If it's
+	// alive, adopt it instead of creating a duplicate. If it's a stale leftover, remove it so
+	// the name is free for a fresh container.
+	if adoptedID, ok, err := c.preflightResolveForCreate(ctx, "server", server.ID, c.ResolveContainer); err != nil {
+		return "", err
+	} else if ok {
+		return adoptedID, nil
+	}
+
+	containerID, err := c.createContainerWithConflictRetry(ctx, config, hostConfig, networkConfig, containerName, func() (*container.Summary, error) {
+		return c.ResolveContainer(ctx, server.ID)
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create container: %w", err)
 	}
 
+	return containerID, nil
+}
+
+// isConflictError reports whether err represents a Docker API 409 Conflict, e.g. attempting to
+// create a container whose name is already in use. Prefers the containerd errdefs helper (same
+// convention already used for errdefs.IsNotFound elsewhere in this file) over string matching.
+func isConflictError(err error) bool {
+	return errdefs.IsConflict(err)
+}
+
+// preflightResolveForCreate checks, before attempting Docker container creation, whether a
+// container already exists for the given identity (server or module ID) via resolve.
+//
+//   - If nothing is found (ErrContainerNotResolved), returns ("", false, nil) so the caller
+//     proceeds to create normally.
+//   - If a container is found and looks alive (running/restarting/paused), it is adopted:
+//     returns (containerID, true, nil) so the caller returns that ID instead of creating a new one.
+//   - If a container is found but looks stale (created/exited/dead/removing/anything else), it is
+//     force-removed so its name is free, then returns ("", false, nil) so the caller proceeds to create.
+//   - Any transient resolve error (not ErrContainerNotResolved) is logged and treated as "nothing
+//     found" so a resolve hiccup never blocks container creation outright.
+func (c *Client) preflightResolveForCreate(ctx context.Context, kind, id string, resolve func(ctx context.Context, id string) (*container.Summary, error)) (adoptedID string, adopted bool, err error) {
+	existing, resolveErr := resolve(ctx, id)
+	if resolveErr != nil {
+		if errors.Is(resolveErr, ErrContainerNotResolved) {
+			return "", false, nil
+		}
+		c.log.Warn("Preflight resolve for %s %s failed, proceeding with creation attempt: %v", kind, id, resolveErr)
+		return "", false, nil
+	}
+
+	if isAliveContainerState(existing.State) {
+		c.log.Info("Adopting existing %s container %s (name=%v, state=%s) instead of creating a duplicate", kind, existing.ID, existing.Names, existing.State)
+		return existing.ID, true, nil
+	}
+
+	c.log.Warn("Found stale %s container %s (name=%v, state=%s), removing before creating a fresh one", kind, existing.ID, existing.Names, existing.State)
+	if rmErr := c.docker.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+		return "", false, fmt.Errorf("failed to remove stale %s container %s: %w", kind, existing.ID, rmErr)
+	}
+	return "", false, nil
+}
+
+// isAliveContainerState reports whether a container in this state should be adopted rather than
+// treated as a stale leftover to remove.
+func isAliveContainerState(state container.ContainerState) bool {
+	switch state {
+	case container.StateRunning, container.StateRestarting, container.StatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// createContainerWithConflictRetry calls ContainerCreate and, on a 409 name-conflict error
+// (belt-and-suspenders against a race between the preflight check and this call - e.g. another
+// process created the same deterministically-named container in between), re-resolves the
+// conflicting container via resolve, force-removes it if found, and retries creation exactly
+// once. If the retry also fails, the error is returned as-is.
+func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkConfig *network.NetworkingConfig, containerName string, resolve func() (*container.Summary, error)) (string, error) {
+	resp, err := c.docker.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, containerName)
+	if err == nil {
+		return resp.ID, nil
+	}
+	if !isConflictError(err) {
+		return "", err
+	}
+
+	c.log.Warn("Container name %q conflicted on create (%v), resolving and removing stale container before retrying once", containerName, err)
+
+	if existing, resolveErr := resolve(); resolveErr == nil {
+		if rmErr := c.docker.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+			return "", fmt.Errorf("container name %q already in use and stale container %s could not be removed: %w (original conflict: %v)", containerName, existing.ID, rmErr, err)
+		}
+	} else if !errors.Is(resolveErr, ErrContainerNotResolved) {
+		c.log.Warn("Failed to resolve conflicting container %q after 409: %v", containerName, resolveErr)
+	}
+
+	resp, retryErr := c.docker.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, containerName)
+	if retryErr != nil {
+		return "", retryErr
+	}
 	return resp.ID, nil
 }
 

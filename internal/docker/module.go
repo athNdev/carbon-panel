@@ -173,16 +173,25 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 		}
 	}
 
+	containerName := fmt.Sprintf("carbon-panel-module-%s", module.ID)
+
+	// Idempotent create (Wings pattern, MINE-104): adopt an already-alive module container with
+	// this identity instead of duplicating it, or clear away a stale leftover before creating.
+	if adoptedID, ok, err := c.preflightResolveForCreate(ctx, "module", module.ID, c.ResolveModuleContainer); err != nil {
+		return "", err
+	} else if ok {
+		return adoptedID, nil
+	}
+
 	// Create the container
-	resp, err := c.docker.ContainerCreate(
-		ctx, config, hostConfig, networkConfig, nil,
-		fmt.Sprintf("carbon-panel-module-%s", module.ID),
-	)
+	containerID, err := c.createContainerWithConflictRetry(ctx, config, hostConfig, networkConfig, containerName, func() (*container.Summary, error) {
+		return c.ResolveModuleContainer(ctx, module.ID)
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create module container: %w", err)
 	}
 
-	return resp.ID, nil
+	return containerID, nil
 }
 
 // buildModuleEnv builds environment variables for a module container
