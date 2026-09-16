@@ -11,7 +11,7 @@ import (
 func TestStore_UpdateServerContainerID(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	server := &Server{
 		ID:        "server-1",
@@ -60,7 +60,7 @@ func TestStore_UpdateServerContainerID(t *testing.T) {
 func TestStore_UpdateServerStatus(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	server := &Server{
 		ID:        "server-2",
@@ -108,7 +108,7 @@ func TestStore_UpdateServerStatus(t *testing.T) {
 func TestStore_UpdateServerFields(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	server := &Server{
 		ID:        "server-3",
@@ -153,7 +153,7 @@ func TestStore_UpdateServerFields(t *testing.T) {
 func TestStore_UpdateModuleContainerID(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	server := &Server{
 		ID:        "server-4",
