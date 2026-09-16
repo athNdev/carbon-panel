@@ -1,0 +1,21 @@
+# qmd project-local index config — carbon-panel Tier 0 retrieval (Workstream B).
+# Relative in-project paths only: project-local trust rules may gate absolute
+# paths on agents, so never use absolute paths here.
+collections:
+  carbon-panel:
+    path: ./
+    patterns:
+      - "memory/**/*.md"
+      - "docs/**/*.md"
+      - "docs/adr/**/*.md"
+      - "DESIGN.md"
+      - "README.md"
+      - "AGENTS.md"
+      - ".agents/skills/memory-ops/SKILL.md"
+    ignore:
+      - "node_modules/**"
+      - "web/**/build/**"
+      - "web/**/dist/**"
+      - "dist/**"
+      - ".git/**"
+    context: "carbon-panel persistent memory and design docs; product truth lives in memory/, decisions in docs/adr/"
