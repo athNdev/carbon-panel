@@ -1,0 +1,77 @@
+{
+  "description": "qmd bench fixture for carbon-panel Tier 0 why-recall (Workstream B)",
+  "version": 1,
+  "collection": "carbon-panel",
+  "queries": [
+    {
+      "id": "why-qmd",
+      "query": "Why did we choose qmd over mem0/Zep for persistent context?",
+      "type": "exact",
+      "expected_files": ["memory/decisions.md", "docs/context-layer.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "product-truth",
+      "query": "Where does product truth live in this repo?",
+      "type": "exact",
+      "expected_files": ["AGENTS.md", "memory/product-truth.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "session-budgets",
+      "query": "What are the per-session token/context budgets for agents?",
+      "type": "semantic",
+      "expected_files": ["memory/budgets.md", "AGENTS.md"],
+      "expected_in_top_k": 5
+    },
+    {
+      "id": "single-writer",
+      "query": "What is the single-writer rule for memory sync?",
+      "type": "exact",
+      "expected_files": ["docs/context-layer.md", "AGENTS.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "supersede",
+      "query": "Should I edit a past decision entry or supersede it?",
+      "type": "semantic",
+      "expected_files": ["memory/decisions.md", ".agents/skills/memory-ops/SKILL.md"],
+      "expected_in_top_k": 5
+    },
+    {
+      "id": "scratchpad",
+      "query": "Is scratchpad content durable or volatile?",
+      "type": "semantic",
+      "expected_files": ["memory/scratchpad.md", ".agents/skills/memory-ops/SKILL.md"],
+      "expected_in_top_k": 5
+    },
+    {
+      "id": "adr-location",
+      "query": "Where are architecture decision records stored?",
+      "type": "topical",
+      "expected_files": ["docs/context-layer.md", "AGENTS.md"],
+      "expected_in_top_k": 5
+    },
+    {
+      "id": "compaction",
+      "query": "How often does memory compaction run and what triggers it?",
+      "type": "semantic",
+      "expected_files": ["memory/decisions.md", "docs/context-layer.md"],
+      "expected_in_top_k": 5
+    },
+    {
+      "id": "persona-readonly",
+      "query": "What is the persona read-only rule for memory access?",
+      "type": "topical",
+      "expected_files": [".agents/skills/memory-ops/SKILL.md", "AGENTS.md"],
+      "expected_in_top_k": 5
+    },
+    {
+      "id": "plane-project",
+      "query": "Which Plane project tracks the persistent-context work?",
+      "type": "topical",
+      "expected_files": ["docs/context-layer.md", "memory/product-truth.md"],
+      "expected_in_top_k": 5
+    }
+  ]
+}

@@ -438,3 +438,7 @@ tmp/
 dev/bug-analysis/
 .direnv/
 result
+
+# carbon-panel Tier 0 (qmd) — index artifacts are local-only, sync via scripts/memory-sync.sh
+.qmd/index.sqlite
+.qmd/*.sqlite*
