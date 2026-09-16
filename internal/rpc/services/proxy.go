@@ -24,6 +24,7 @@ var _ carbonpanelv1connect.ProxyServiceHandler = (*ProxyService)(nil)
 type ProxyService struct {
 	store        *storage.Store
 	docker       *docker.Client
+	pool         *docker.ClientPool
 	proxyManager *proxy.Manager
 	config       *config.Config
 	log          *logger.Logger
@@ -31,10 +32,14 @@ type ProxyService struct {
 }
 
 // NewProxyService creates a new proxy service
-func NewProxyService(store *storage.Store, dockerClient *docker.Client, proxyManager *proxy.Manager, cfg *config.Config, logStreamer *logger.LogStreamer, log *logger.Logger) *ProxyService {
+func NewProxyService(store *storage.Store, dockerClient *docker.Client, pool *docker.ClientPool, proxyManager *proxy.Manager, cfg *config.Config, logStreamer *logger.LogStreamer, log *logger.Logger) *ProxyService {
+	if pool == nil && dockerClient != nil {
+		pool = docker.NewClientPool(store, dockerClient, log)
+	}
 	return &ProxyService{
 		store:        store,
 		docker:       dockerClient,
+		pool:         pool,
 		proxyManager: proxyManager,
 		config:       cfg,
 		log:          log,
@@ -525,14 +530,24 @@ func (s *ProxyService) UpdateServerRouting(ctx context.Context, req *connect.Req
 	server.ProxyListenerID = listenerID
 
 	// Handle container recreation if needed
-	if needsRecreation && server.ContainerID != "" && s.docker != nil {
+	if needsRecreation && server.ContainerID != "" {
+		if s.pool == nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("docker client pool not configured"))
+		}
+
+		dockerCli, err := s.pool.GetClientStrict(server.NodeID)
+		if err != nil {
+			s.log.Error("Failed to resolve docker client for node %s: %v", server.NodeID, err)
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to reach node %s for container recreation: %w", server.NodeID, err))
+		}
+
 		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
 		if err != nil {
 			s.log.Error("Failed to get server config: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration"))
 		}
 
-		result, err := s.docker.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to recreate container for proxy change: %v", err)
 			if result != nil && result.NewContainerID != "" {

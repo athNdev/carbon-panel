@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	rcon "github.com/athNdev/carbon-panel/internal/rcon"
 )
@@ -21,14 +22,28 @@ type Sender struct {
 	store  *storage.Store
 	config *config.Config
 	docker DockerExecutor
+	pool   *docker.ClientPool
 }
 
-func NewSender(store *storage.Store, cfg *config.Config, docker DockerExecutor) *Sender {
+func NewSender(store *storage.Store, cfg *config.Config, dockerExec DockerExecutor, pool *docker.ClientPool) *Sender {
 	return &Sender{
 		store:  store,
 		config: cfg,
-		docker: docker,
+		docker: dockerExec,
+		pool:   pool,
 	}
+}
+
+// resolveExecutor returns the DockerExecutor for the given nodeID, preferring a
+// strict node-specific client from the pool over the single default executor so
+// commands are not silently sent to the wrong (local) daemon for a remote node.
+func (s *Sender) resolveExecutor(nodeID string) DockerExecutor {
+	if s.pool != nil {
+		if cli, err := s.pool.GetClientStrict(nodeID); err == nil && cli != nil {
+			return cli
+		}
+	}
+	return s.docker
 }
 
 func (s *Sender) SendCommand(ctx context.Context, serverID string, command string) (string, error) {
@@ -41,9 +56,11 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 		return "", fmt.Errorf("server container not found")
 	}
 
+	executor := s.resolveExecutor(server.NodeID)
+
 	// old docker exec command
 	dockerExec := func(cause error) (string, error) {
-		output, err := s.docker.ExecCommand(ctx, server.ContainerID, command)
+		output, err := executor.ExecCommand(ctx, server.ContainerID, command)
 		if err != nil {
 			return "", fmt.Errorf("rcon path failed: %w; fallback exec failed: %v", cause, err)
 		}
@@ -91,7 +108,7 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 	}
 
 	var cli client.CommonAPIClient
-	if dc, ok := s.docker.(interface{ GetDockerClient() *client.Client }); ok {
+	if dc, ok := executor.(interface{ GetDockerClient() *client.Client }); ok {
 		cli = dc.GetDockerClient()
 	}
 	ip, err := proxy.GetContainerIP(cli, server.ContainerID, s.config.Docker.NetworkName)
