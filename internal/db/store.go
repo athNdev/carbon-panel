@@ -110,6 +110,29 @@ func (s *Store) UpdateServer(ctx context.Context, server *Server) error {
 	return s.SyncServerConfigWithServer(ctx, server)
 }
 
+// UpdateServerContainerID updates only the container_id column for a server,
+// avoiding the full-row clobber that UpdateServer's Save performs. This
+// prevents a stale in-memory *Server (e.g. held by a background reader) from
+// overwriting a ContainerID change made concurrently by another goroutine.
+func (s *Store) UpdateServerContainerID(ctx context.Context, id string, containerID string) error {
+	return s.db.WithContext(ctx).Model(&Server{}).Where("id = ?", id).Update("container_id", containerID).Error
+}
+
+// UpdateServerStatus updates only the status column for a server, avoiding
+// the full-row clobber that UpdateServer's Save performs.
+func (s *Store) UpdateServerStatus(ctx context.Context, id string, status ServerStatus) error {
+	return s.db.WithContext(ctx).Model(&Server{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// UpdateServerFields performs a targeted multi-column update for a server,
+// updating only the columns present in fields. This avoids the full-row
+// clobber that UpdateServer's Save performs, which is important when the
+// caller only has a partial view of the server (e.g. read earlier and
+// possibly stale by the time the write happens).
+func (s *Store) UpdateServerFields(ctx context.Context, id string, fields map[string]interface{}) error {
+	return s.db.WithContext(ctx).Model(&Server{}).Where("id = ?", id).Updates(fields).Error
+}
+
 func (s *Store) DeleteServer(ctx context.Context, id string) error {
 	// Delete with associations
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -1444,6 +1467,12 @@ func (s *Store) ListModulesByTemplate(ctx context.Context, templateID string) ([
 
 func (s *Store) UpdateModule(ctx context.Context, module *Module) error {
 	return s.db.WithContext(ctx).Save(module).Error
+}
+
+// UpdateModuleContainerID updates only the container_id column for a module,
+// avoiding the full-row clobber that UpdateModule's Save performs.
+func (s *Store) UpdateModuleContainerID(ctx context.Context, id string, containerID string) error {
+	return s.db.WithContext(ctx).Model(&Module{}).Where("id = ?", id).Update("container_id", containerID).Error
 }
 
 func (s *Store) DeleteModule(ctx context.Context, id string) error {

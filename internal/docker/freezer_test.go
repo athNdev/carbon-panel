@@ -92,6 +92,17 @@ func (s *mockFreezerStore) UpdateServer(ctx context.Context, server *db.Server) 
 	return nil
 }
 
+func (s *mockFreezerStore) UpdateServerStatus(ctx context.Context, id string, status db.ServerStatus) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	srv, ok := s.servers[id]
+	if !ok {
+		return fmt.Errorf("server not found")
+	}
+	srv.Status = status
+	return nil
+}
+
 func TestHibernationManager_HibernateAndWake(t *testing.T) {
 	ctx := context.Background()
 	freezer := newMockFreezer()
