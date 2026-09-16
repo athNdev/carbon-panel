@@ -20,6 +20,7 @@ import (
 type Engine struct {
 	store        *storage.Store
 	docker       *docker.Client
+	pool         *docker.ClientPool
 	sender       *command.Sender
 	backupDir    string
 	maxSnapshots int
@@ -34,6 +35,12 @@ type Config struct {
 
 // NewEngine creates a new SnapshotEngine
 func NewEngine(store *storage.Store, dockerClient *docker.Client, sender *command.Sender, log *logger.Logger, cfg ...Config) *Engine {
+	return NewEngineWithPool(store, dockerClient, nil, sender, log, cfg...)
+}
+
+// NewEngineWithPool creates a new SnapshotEngine with a multi-node ClientPool.
+// If pool is nil and dockerClient is non-nil, a single-node pool wrapping dockerClient is created.
+func NewEngineWithPool(store *storage.Store, dockerClient *docker.Client, pool *docker.ClientPool, sender *command.Sender, log *logger.Logger, cfg ...Config) *Engine {
 	backupDir := ""
 	maxSnapshots := 5
 	if len(cfg) > 0 {
@@ -45,15 +52,32 @@ func NewEngine(store *storage.Store, dockerClient *docker.Client, sender *comman
 	if log == nil {
 		log = logger.New()
 	}
+	if pool == nil && dockerClient != nil {
+		pool = docker.NewClientPool(store, dockerClient, log)
+	}
 
 	return &Engine{
 		store:        store,
 		docker:       dockerClient,
+		pool:         pool,
 		sender:       sender,
 		backupDir:    backupDir,
 		maxSnapshots: maxSnapshots,
 		log:          log,
 	}
+}
+
+// resolveDocker returns the Docker client for the given nodeID, preferring a
+// strict node-specific client from the pool over the single default client so
+// rollback operations for a remote node's server are not silently applied to
+// the local Docker daemon.
+func (e *Engine) resolveDocker(nodeID string) *docker.Client {
+	if e.pool != nil {
+		if cli, err := e.pool.GetClientStrict(nodeID); err == nil && cli != nil {
+			return cli
+		}
+	}
+	return e.docker
 }
 
 // CreatePreUpdateSnapshot creates an atomic volume snapshot before updating modpacks or configs
@@ -159,11 +183,12 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	}
 
 	wasRunning := server.Status == storage.StatusRunning || server.Status == storage.StatusStarting
+	dockerCli := e.resolveDocker(server.NodeID)
 
 	// Stop container if running
-	if wasRunning && e.docker != nil && server.ContainerID != "" {
+	if wasRunning && dockerCli != nil && server.ContainerID != "" {
 		e.log.Info("Stopping container %s before rollback...", server.ContainerID)
-		if _, err := e.docker.StopContainer(ctx, server.ContainerID); err != nil {
+		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
 			e.log.Warn("Failed to stop container %s gracefully before rollback: %v", server.ContainerID, err)
 		}
 	}
@@ -179,9 +204,9 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	e.log.Info("Restored %d files to %s from snapshot %s", extracted, server.DataPath, snapshot.ID)
 
 	// Restart container if it was running before rollback
-	if wasRunning && e.docker != nil && server.ContainerID != "" {
+	if wasRunning && dockerCli != nil && server.ContainerID != "" {
 		e.log.Info("Restarting container %s following snapshot rollback...", server.ContainerID)
-		if err := e.docker.StartContainer(ctx, server.ContainerID); err != nil {
+		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 			return fmt.Errorf("rollback succeeded but failed to restart container %s: %w", server.ContainerID, err)
 		}
 		server.Status = storage.StatusStarting

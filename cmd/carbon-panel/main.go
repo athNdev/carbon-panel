@@ -145,14 +145,22 @@ func main() {
 	}
 	defer proxyManager.Stop()
 
+	// Initialize Docker client pool for multi-node support (created early so
+	// downstream components like the command sender, metrics collector, and
+	// module manager can resolve per-node Docker clients rather than always
+	// targeting the local daemon).
+	clientPool := docker.NewClientPool(store, dockerClient, log)
+	clientPool.StartHealthChecker(30 * time.Second)
+	defer clientPool.StopHealthChecker()
+
 	// Initialize command sender
-	sender := command.NewSender(store, cfg, dockerClient)
+	sender := command.NewSender(store, cfg, dockerClient, clientPool)
 
 	// Initialize the central event bus
 	eventBus := events.NewBus(log)
 
 	// Initialize metrics collector
-	metricsCollector := metrics.NewCollector(store, dockerClient, sender, cfg, eventBus, log)
+	metricsCollector := metrics.NewCollectorWithPool(store, dockerClient, clientPool, sender, cfg, eventBus, log)
 
 	// Initialize task scheduler
 	taskScheduler := scheduler.NewScheduler(store, dockerClient, sender, cfg, metricsCollector, log, scheduler.Config{
@@ -171,7 +179,7 @@ func main() {
 	}
 
 	// Initialize module manager
-	moduleManager := module.NewManager(store, dockerClient, sender, cfg, proxyManager, log)
+	moduleManager := module.NewManagerWithPool(store, dockerClient, clientPool, sender, cfg, proxyManager, log)
 	if err := moduleManager.Start(); err != nil {
 		log.Error("Failed to start module manager: %v", err)
 	}
@@ -187,11 +195,7 @@ func main() {
 	}
 	defer metricsCollector.Stop()
 
-	// Initialize Docker client pool and placement engine for multi-node support
-	clientPool := docker.NewClientPool(store, dockerClient, log)
-	clientPool.StartHealthChecker(30 * time.Second)
-	defer clientPool.StopHealthChecker()
-
+	// Initialize placement engine for multi-node support
 	placementEngine := docker.NewPlacementEngine(store)
 
 	// Initialize RPC server with full configuration
