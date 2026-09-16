@@ -10,7 +10,7 @@ import (
 func TestStore_GetServerByContainerID(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	server := &Server{
 		ID:          "server-lookup-1",
