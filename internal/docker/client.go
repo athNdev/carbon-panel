@@ -789,6 +789,14 @@ func inspectToSummary(inspect container.InspectResponse) *container.Summary {
 		summary.State = container.ContainerState(inspect.State.Status)
 		summary.Status = inspect.State.Status
 	}
+	// Carry the per-network endpoint state across too. Callers that need a
+	// container's address (e.g. the reconciler's route-drift check) get the same
+	// view whether the container was found by label or by name fallback.
+	if inspect.NetworkSettings != nil {
+		summary.NetworkSettings = &container.NetworkSettingsSummary{
+			Networks: inspect.NetworkSettings.Networks,
+		}
+	}
 	return summary
 }
 
