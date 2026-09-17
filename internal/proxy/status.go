@@ -106,6 +106,35 @@ func serveStatusResponse(conn net.Conn, protocolVersion VarInt, motd string) err
 	return nil
 }
 
+// Hold-timeout disconnect messages: a hung-up client sees why instead of a
+// bare connection reset (MINE-123, lazymc-Kick parity).
+const (
+	holdTimeoutMessage = "Server is still waking up - please join again in a few seconds!"
+	wakeFailedMessage  = "Server could not wake up - please try again shortly!"
+)
+
+// sendLoginDisconnect writes a Login Disconnect packet (id 0x00 + JSON chat)
+// on a connection stuck in the login phase.
+func sendLoginDisconnect(conn net.Conn, message string) error {
+	body, err := json.Marshal(statusDescription{Text: message})
+	if err != nil {
+		return err
+	}
+
+	var pkt []byte
+	pkt = appendVarInt(pkt, 0x00) // packet id
+	pkt = appendVarInt(pkt, VarInt(len(body)))
+	pkt = append(pkt, body...)
+	out := appendVarInt(nil, VarInt(len(pkt)))
+	out = append(out, pkt...)
+
+	if err := conn.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return err
+	}
+	_, err = conn.Write(out)
+	return err
+}
+
 // appendVarInt encodes v and appends it to b.
 func appendVarInt(b []byte, v VarInt) []byte {
 	for {
