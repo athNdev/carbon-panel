@@ -402,7 +402,8 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 
 // downRouteBudget bounds the whole login-to-boot hold so a held client never
 // stares at a dead connection past the ~30s Java client timeout (MINE-121).
-const downRouteBudget = 25 * time.Second
+// A var (not const) so tests can shrink the hold without waiting it out.
+var downRouteBudget = 25 * time.Second
 
 // loadingMOTDWindow is how long after a boot attempt pings serve the loading
 // MOTD before falling back to the asleep one.
@@ -447,6 +448,7 @@ func (p *MinecraftProxy) handleDownRoute(clientConn net.Conn, handshake *Handsha
 		p.routesMutex.Lock()
 		delete(p.waking, hostname)
 		p.routesMutex.Unlock()
+		_ = sendLoginDisconnect(clientConn, wakeFailedMessage)
 		return false
 	}
 
@@ -480,7 +482,8 @@ func (p *MinecraftProxy) handleDownRoute(clientConn net.Conn, handshake *Handsha
 		}
 	}
 
-	p.logger.Info("Boot hold for host %s exceeded budget; hanging up (client retries, pings show loading MOTD)", hostname)
+	p.logger.Info("Boot hold for host %s exceeded budget; disconnecting with message (client retries, pings show loading MOTD)", hostname)
+	_ = sendLoginDisconnect(clientConn, holdTimeoutMessage)
 	return false
 }
 
