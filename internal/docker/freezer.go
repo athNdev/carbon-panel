@@ -36,6 +36,15 @@ type HibernationManager struct {
 	mu            sync.Mutex
 	ctx           context.Context
 	cancel        context.CancelFunc
+	// playerCount, when set, is the source of truth for online players
+	// (MINE-120). Server rows from the store always report PlayersOnline==0
+	// (gorm:"-"), so without a provider every server looks idle. Production
+	// wires this to the metrics collector.
+	playerCount func(serverID string) int
+	// inflight guards against concurrent hibernate/wake transitions for the
+	// same server (e.g. a wake racing the idle loop's hibernate).
+	inflight   map[string]struct{}
+	inflightMu sync.Mutex
 }
 
 // NewHibernationManager creates a new HibernationManager
@@ -45,7 +54,48 @@ func NewHibernationManager(freezer ContainerFreezer, store FreezerStore, log *lo
 		store:       store,
 		logger:      log,
 		idleTracker: make(map[string]time.Time),
+		inflight:    make(map[string]struct{}),
 	}
+}
+
+// SetPlayerCountProvider configures the online-player source of truth used
+// by CheckIdleServers instead of the (never persisted) row field (MINE-120).
+func (m *HibernationManager) SetPlayerCountProvider(provider func(serverID string) int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.playerCount = provider
+}
+
+// onlinePlayers returns the authoritative online-player count for a server.
+func (m *HibernationManager) onlinePlayers(srv *db.Server) int {
+	m.mu.Lock()
+	provider := m.playerCount
+	m.mu.Unlock()
+	if provider != nil {
+		return provider(srv.ID)
+	}
+	return srv.PlayersOnline
+}
+
+// tryBeginTransition single-flights hibernate/wake per server: returns false
+// (and logs) if a transition for serverID is already running.
+func (m *HibernationManager) tryBeginTransition(serverID, op string) bool {
+	m.inflightMu.Lock()
+	defer m.inflightMu.Unlock()
+	if _, busy := m.inflight[serverID]; busy {
+		if m.logger != nil {
+			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
+		}
+		return false
+	}
+	m.inflight[serverID] = struct{}{}
+	return true
+}
+
+func (m *HibernationManager) endTransition(serverID string) {
+	m.inflightMu.Lock()
+	defer m.inflightMu.Unlock()
+	delete(m.inflight, serverID)
 }
 
 // RegisterWakeCallback registers a callback fired when a server is woken
@@ -117,8 +167,9 @@ func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
 			continue
 		}
 
-		// Only hibernate if no players are online
-		if srv.PlayersOnline > 0 {
+		// Only hibernate if no players are online (authoritative count,
+		// not the never-persisted row field — see SetPlayerCountProvider).
+		if m.onlinePlayers(srv) > 0 {
 			m.trackerMu.Lock()
 			delete(m.idleTracker, srv.ID)
 			m.trackerMu.Unlock()
@@ -158,6 +209,11 @@ func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
 
 // HibernateServer freezes a server container using cgroup freezer and updates status
 func (m *HibernationManager) HibernateServer(ctx context.Context, serverID string) error {
+	if !m.tryBeginTransition(serverID, "hibernate") {
+		return fmt.Errorf("hibernate already in flight for server %s", serverID)
+	}
+	defer m.endTransition(serverID)
+
 	srv, err := m.store.GetServer(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("server %s not found: %w", serverID, err)
@@ -192,6 +248,11 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 
 // WakeServer unfreezes a server container using cgroup freezer and restores running status
 func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) error {
+	if !m.tryBeginTransition(serverID, "wake") {
+		return fmt.Errorf("wake already in flight for server %s", serverID)
+	}
+	defer m.endTransition(serverID)
+
 	srv, err := m.store.GetServer(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("server %s not found: %w", serverID, err)

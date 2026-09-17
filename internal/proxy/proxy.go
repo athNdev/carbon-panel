@@ -31,10 +31,16 @@ type Route struct {
 // WakeHandler defines a callback for waking/unfreezing a hibernated server container
 type WakeHandler func(ctx context.Context, serverID string) error
 
+// ActivityHandler defines a callback fired when a client shows real login
+// intent (handshake NextState=2) for a server. Status pings are excluded so
+// scanners and server-list refreshes can never hold a server awake (MINE-120).
+type ActivityHandler func(serverID string)
+
 // Config holds proxy configuration
 type Config struct {
-	ListenAddr    string // Address to listen on (e.g., ":25565" or ":8080")
-	Logger        *logger.Logger
-	ProxyProtocol bool // Whether PROXY protocol v2 support is enabled on this listener
-	WakeHandler   WakeHandler // Callback to unpause hibernated container upon player connect (MINE-18)
+	ListenAddr      string // Address to listen on (e.g., ":25565" or ":8080")
+	Logger          *logger.Logger
+	ProxyProtocol   bool            // Whether PROXY protocol v2 support is enabled on this listener
+	WakeHandler     WakeHandler     // Callback to unpause hibernated container upon player connect (MINE-18)
+	ActivityHandler ActivityHandler // Callback to reset idle tracking upon login intent (MINE-120)
 }

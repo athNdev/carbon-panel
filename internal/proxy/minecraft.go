@@ -14,17 +14,18 @@ import (
 
 // MinecraftProxy handles Minecraft protocol proxying with handshake parsing for hostname-based routing
 type MinecraftProxy struct {
-	listener      net.Listener
-	routes        map[string]*Route
-	routesMutex   sync.RWMutex
-	logger        *logger.Logger
-	listenAddr    string
-	proxyProtocol bool
-	wakeHandler   WakeHandler
-	running       bool
-	runningMutex  sync.RWMutex
-	ctx           context.Context
-	cancel        context.CancelFunc
+	listener        net.Listener
+	routes          map[string]*Route
+	routesMutex     sync.RWMutex
+	logger          *logger.Logger
+	listenAddr      string
+	proxyProtocol   bool
+	wakeHandler     WakeHandler
+	activityHandler ActivityHandler
+	running         bool
+	runningMutex    sync.RWMutex
+	ctx             context.Context
+	cancel          context.CancelFunc
 }
 
 // NewMinecraftProxy creates a new Minecraft proxy instance
@@ -35,13 +36,14 @@ func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 		log = logger.New()
 	}
 	return &MinecraftProxy{
-		routes:        make(map[string]*Route),
-		logger:        log,
-		listenAddr:    cfg.ListenAddr,
-		proxyProtocol: cfg.ProxyProtocol,
-		wakeHandler:   cfg.WakeHandler,
-		ctx:           ctx,
-		cancel:        cancel,
+		routes:          make(map[string]*Route),
+		logger:          log,
+		listenAddr:      cfg.ListenAddr,
+		proxyProtocol:   cfg.ProxyProtocol,
+		wakeHandler:     cfg.WakeHandler,
+		activityHandler: cfg.ActivityHandler,
+		ctx:             ctx,
+		cancel:          cancel,
 	}
 }
 
@@ -50,6 +52,13 @@ func (p *MinecraftProxy) SetWakeHandler(h WakeHandler) {
 	p.routesMutex.Lock()
 	defer p.routesMutex.Unlock()
 	p.wakeHandler = h
+}
+
+// SetActivityHandler configures the login-intent activity callback (MINE-120)
+func (p *MinecraftProxy) SetActivityHandler(h ActivityHandler) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+	p.activityHandler = h
 }
 
 // SetRouteHibernated enables or disables hibernation state for a route
@@ -230,6 +239,13 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 		}
 		p.routesMutex.RUnlock()
 		return
+	}
+
+	// Login intent resets idle tracking (MINE-120). Status pings are
+	// deliberately excluded: server-list refreshes and scanners must neither
+	// wake hibernated servers (MINE-118) nor keep running ones from sleeping.
+	if handshake.NextState == 2 && p.activityHandler != nil {
+		p.activityHandler(route.ServerID)
 	}
 
 	// Wake hibernated server container only on real login intent (MINE-118).
