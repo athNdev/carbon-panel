@@ -97,7 +97,7 @@ func TestMinecraftProxy_HibernatedStatusPingDoesNotWake(t *testing.T) {
 	// route must stay hibernated (MINE-118).
 	backendListener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	defer backendListener.Close()
+	defer func() { _ = backendListener.Close() }()
 
 	backendPort := backendListener.Addr().(*net.TCPAddr).Port
 
@@ -107,7 +107,7 @@ func TestMinecraftProxy_HibernatedStatusPingDoesNotWake(t *testing.T) {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		backendAccepted.Store(true)
 	}()
 
@@ -121,7 +121,7 @@ func TestMinecraftProxy_HibernatedStatusPingDoesNotWake(t *testing.T) {
 	})
 	err = proxy.Start()
 	require.NoError(t, err)
-	defer proxy.Stop()
+	defer func() { _ = proxy.Stop() }()
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -131,7 +131,7 @@ func TestMinecraftProxy_HibernatedStatusPingDoesNotWake(t *testing.T) {
 	proxyAddr := proxy.listener.Addr().String()
 	clientConn, err := net.DialTimeout("tcp", proxyAddr, 2*time.Second)
 	require.NoError(t, err)
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	err = WriteHandshakePacket(clientConn, &HandshakePacket{
 		ProtocolVersion: 763, // 1.20.1
