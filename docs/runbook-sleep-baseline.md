@@ -47,3 +47,22 @@ the loading MOTD meanwhile).
   never heals it; `stopped` still means "operator-stopped, no route".
 - Slow/modded boots past ~25s need Tier-B limbo hold (MINE-123); Tier A
   covers vanilla/Paper.
+
+## Anti-flap (MINE-122)
+
+- **Restart policy is `on-failure:5`, not `unless-stopped`.** Docker
+  resurrects every clean exit (code 0) under `unless-stopped` — operator
+  stops, RCON stops, itzg autostop, deep-sleep stops all came back as
+  stop→boot→stop loops. Now Docker restarts only real crashes (≤5 tries);
+  intentional states belong to the panel: the reconciler self-heals
+  *missing* containers and reports exited ones. Override per server via
+  DockerOverrides if you truly need different semantics.
+- **Legacy itzg timers are gated by native pause.** If
+  `PAUSE_WHEN_EMPTY_SECONDS > 0`, the panel forces
+  `ENABLE_AUTOPAUSE=false` + `ENABLE_AUTOSTOP=false` in the built container
+  env even when explicitly enabled — one layer must own idleness. To use the
+  legacy itzg layer instead, set pause-when-empty to `0` first.
+- **Asleep is stable, not dead.** `paused` (freezer) and `deepsleep`
+  (stopped) never trigger restart/heal: the reconciler treats `deepsleep`
+  as terminal-by-design, and the metrics collector skips non-running
+  containers instead of marking them failed.
