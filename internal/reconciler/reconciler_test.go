@@ -197,6 +197,7 @@ func TestDecide(t *testing.T) {
 		stopping  = db.StatusStopping
 		errStatus = db.StatusError
 		paused    = db.StatusPaused
+		deepsleep = db.StatusDeepSleep
 	)
 
 	existsRunning := observedState{Exists: true, ContainerID: "c1", Status: running}
@@ -235,6 +236,10 @@ func TestDecide(t *testing.T) {
 		{"exited clean while stopping converges to stopped", stopping, existsExitedClean, false, true, stopped, actNone, ""},
 		{"restarting is left to settle", running, existsRestarting, false, true, "", actNone, ""},
 		{"paused is preserved", running, existsPaused, false, true, paused, actNone, ""},
+		{"deepsleep + missing container is stable", deepsleep, existsDeleted, false, true, "", actNone, ""},
+		{"deepsleep + exited container is stable", deepsleep, existsExitedClean, false, true, "", actNone, ""},
+		{"deepsleep + crashed container never heals", deepsleep, existsCrash, false, true, "", actNone, ""},
+		{"deepsleep + running container is a boot in flight", deepsleep, existsRunning, false, true, "", actNone, ""},
 	}
 
 	for _, tt := range tests {

@@ -14,18 +14,22 @@ import (
 
 // MinecraftProxy handles Minecraft protocol proxying with handshake parsing for hostname-based routing
 type MinecraftProxy struct {
-	listener        net.Listener
-	routes          map[string]*Route
-	routesMutex     sync.RWMutex
-	logger          *logger.Logger
-	listenAddr      string
-	proxyProtocol   bool
-	wakeHandler     WakeHandler
-	activityHandler ActivityHandler
-	running         bool
-	runningMutex    sync.RWMutex
-	ctx             context.Context
-	cancel          context.CancelFunc
+	listener         net.Listener
+	routes           map[string]*Route
+	routesMutex      sync.RWMutex
+	logger           *logger.Logger
+	listenAddr       string
+	proxyProtocol    bool
+	wakeHandler      WakeHandler
+	activityHandler  ActivityHandler
+	sleepWakeHandler WakeHandler
+	// waking tracks hostnames with a recent boot attempt so pings during
+	// boot serve the loading MOTD instead of the asleep one (MINE-121).
+	waking       map[string]time.Time
+	running      bool
+	runningMutex sync.RWMutex
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 // NewMinecraftProxy creates a new Minecraft proxy instance
@@ -36,14 +40,16 @@ func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 		log = logger.New()
 	}
 	return &MinecraftProxy{
-		routes:          make(map[string]*Route),
-		logger:          log,
-		listenAddr:      cfg.ListenAddr,
-		proxyProtocol:   cfg.ProxyProtocol,
-		wakeHandler:     cfg.WakeHandler,
-		activityHandler: cfg.ActivityHandler,
-		ctx:             ctx,
-		cancel:          cancel,
+		routes:           make(map[string]*Route),
+		logger:           log,
+		listenAddr:       cfg.ListenAddr,
+		proxyProtocol:    cfg.ProxyProtocol,
+		wakeHandler:      cfg.WakeHandler,
+		activityHandler:  cfg.ActivityHandler,
+		sleepWakeHandler: cfg.SleepWakeHandler,
+		waking:           make(map[string]time.Time),
+		ctx:              ctx,
+		cancel:           cancel,
 	}
 }
 
@@ -59,6 +65,29 @@ func (p *MinecraftProxy) SetActivityHandler(h ActivityHandler) {
 	p.routesMutex.Lock()
 	defer p.routesMutex.Unlock()
 	p.activityHandler = h
+}
+
+// SetSleepWakeHandler configures the deep-sleep boot callback (MINE-121)
+func (p *MinecraftProxy) SetSleepWakeHandler(h WakeHandler) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+	p.sleepWakeHandler = h
+}
+
+// SetRouteDown marks a route's backend as deeply asleep (or back). Clearing
+// the flag also clears any recorded boot attempt for the hostname.
+func (p *MinecraftProxy) SetRouteDown(hostname string, down bool) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+
+	hostname = strings.ToLower(strings.Split(hostname, ":")[0])
+	if route, exists := p.routes[hostname]; exists {
+		route.Down = down
+		if !down {
+			delete(p.waking, hostname)
+		}
+		p.logger.Info("Set route down: hostname=%s down=%v", hostname, down)
+	}
 }
 
 // SetRouteHibernated enables or disables hibernation state for a route
@@ -278,6 +307,22 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 		p.routesMutex.Unlock()
 	}
 
+	// Deeply-asleep backends (MINE-121): pings get a cached MOTD and hang
+	// up; logins boot the container and are held here until the SLP health
+	// gate passes, then fall through to the normal relay below.
+	if route.Down {
+		if !p.handleDownRoute(clientConn, handshake, hostname, route) {
+			return
+		}
+		// Boot + health gate passed: re-read the refreshed route (the sleep
+		// manager re-resolved the backend IP after start) and relay.
+		p.routesMutex.RLock()
+		if r, ok := p.routes[hostname]; ok {
+			route = r
+		}
+		p.routesMutex.RUnlock()
+	}
+
 	// Connect to backend (with quick retries to allow socket bind right after unfreeze)
 	backendAddr := net.JoinHostPort(route.BackendHost, fmt.Sprintf("%d", route.BackendPort))
 	var backendConn net.Conn
@@ -353,6 +398,90 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 	}()
 
 	wg.Wait()
+}
+
+// downRouteBudget bounds the whole login-to-boot hold so a held client never
+// stares at a dead connection past the ~30s Java client timeout (MINE-121).
+const downRouteBudget = 25 * time.Second
+
+// loadingMOTDWindow is how long after a boot attempt pings serve the loading
+// MOTD before falling back to the asleep one.
+const loadingMOTDWindow = 90 * time.Second
+
+// handleDownRoute serves or boots a deeply-asleep backend (MINE-121).
+// Status pings receive a cached MOTD (asleep vs loading) and hang up without
+// touching Docker. Logins trigger a boot via SleepWakeHandler and are held
+// until the SLP health gate passes. Returns true when the caller may relay.
+func (p *MinecraftProxy) handleDownRoute(clientConn net.Conn, handshake *HandshakePacket, hostname string, route *Route) bool {
+	if handshake.NextState != 2 {
+		p.routesMutex.RLock()
+		since, booting := p.waking[hostname]
+		p.routesMutex.RUnlock()
+
+		motd := asleepMOTD
+		if booting && time.Since(since) < loadingMOTDWindow {
+			motd = loadingMOTD
+		}
+		if err := serveStatusResponse(clientConn, handshake.ProtocolVersion, motd); err != nil {
+			p.logger.Debug("Failed to serve down-route MOTD for host %s: %v", hostname, err)
+		}
+		return false
+	}
+
+	if p.sleepWakeHandler == nil {
+		p.logger.Debug("Login for down route %s with no sleep wake handler; hanging up", hostname)
+		return false
+	}
+
+	deadline := time.Now().Add(downRouteBudget)
+	wakeCtx, wakeCancel := context.WithTimeout(p.ctx, downRouteBudget)
+	defer wakeCancel()
+
+	p.routesMutex.Lock()
+	p.waking[hostname] = time.Now()
+	p.routesMutex.Unlock()
+
+	p.logger.Info("Login intent for deeply-asleep server %s (host %s), booting...", route.ServerID, hostname)
+	if err := p.sleepWakeHandler(wakeCtx, route.ServerID); err != nil {
+		p.logger.Error("Failed to boot deeply-asleep server %s: %v", route.ServerID, err)
+		p.routesMutex.Lock()
+		delete(p.waking, hostname)
+		p.routesMutex.Unlock()
+		return false
+	}
+
+	// Hold the client until the refreshed backend answers SLP (JVM-level
+	// readiness, not just TCP-open). Concurrent joiners share the single
+	// boot: the sleep manager's wake is idempotent.
+	for time.Now().Before(deadline) {
+		p.routesMutex.RLock()
+		r, ok := p.routes[hostname]
+		var host string
+		var port int
+		var down bool
+		if ok {
+			host, port, down = r.BackendHost, r.BackendPort, r.Down
+		}
+		p.routesMutex.RUnlock()
+
+		if !ok {
+			p.logger.Debug("Down route %s vanished during boot hold; hanging up", hostname)
+			return false
+		}
+		if !down && host != "" {
+			if err := slpHealthCheck(host, port, handshake.ProtocolVersion, 3*time.Second); err == nil {
+				return true
+			}
+		}
+		select {
+		case <-p.ctx.Done():
+			return false
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+
+	p.logger.Info("Boot hold for host %s exceeded budget; hanging up (client retries, pings show loading MOTD)", hostname)
+	return false
 }
 
 // GetRoutes returns a copy of all current routes

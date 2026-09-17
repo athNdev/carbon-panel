@@ -696,6 +696,12 @@ type decision struct {
 // purpose (e.g. `/stop` in-game) and silently restarting it would fight the
 // operator and risk a crash loop.
 func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool) decision {
+	if desired == db.StatusDeepSleep {
+		// Deeply-asleep servers are owned by the DeepSleepManager: an exited
+		// or missing container IS the expected state, and a running container
+		// is a boot in flight. Never heal, recreate, or reflap (MINE-121).
+		return decision{}
+	}
 	if !obs.Exists {
 		if desired == db.StatusRunning {
 			// The catastrophic-loss case this epic targets: Watchtower,
