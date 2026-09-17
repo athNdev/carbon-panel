@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"sync/atomic"
@@ -12,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var errWakeFailedTest = errors.New("no container for test")
 
 // startDownRouteProxy starts a proxy with a single down (deeply-asleep) route.
 // The backend listener is returned unaccepted: any dial to it proves the
@@ -287,4 +290,73 @@ func TestDownRoute_LoginBootsAndRelays(t *testing.T) {
 		t.Fatal("Timed out waiting for relayed bytes after boot")
 	}
 	assert.True(t, wakeCalled.Load(), "Sleep wake handler must fire on login to down route")
+}
+
+// readLoginDisconnect consumes a Login Disconnect packet and returns the chat text.
+func readLoginDisconnect(t *testing.T, conn net.Conn) string {
+	t.Helper()
+
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(5*time.Second)))
+	length, err := ReadVarInt(conn)
+	require.NoError(t, err)
+	require.Greater(t, int(length), 1)
+	data := make([]byte, length)
+	_, err = io.ReadFull(conn, data)
+	require.NoError(t, err)
+	require.Equal(t, byte(0x00), data[0])
+
+	rest := data[1:]
+	_, n := decodeVarIntlen(rest)
+	rest = rest[n:]
+
+	var desc statusDescription
+	require.NoError(t, json.Unmarshal(rest, &desc))
+	return desc.Text
+}
+
+func startDownRouteWithHandler(t *testing.T, handler WakeHandler) *MinecraftProxy {
+	t.Helper()
+
+	proxy := NewMinecraftProxy(&Config{
+		ListenAddr:       "127.0.0.1:0",
+		SleepWakeHandler: handler,
+	})
+	require.NoError(t, proxy.Start())
+	t.Cleanup(func() { _ = proxy.Stop() })
+	time.Sleep(50 * time.Millisecond)
+
+	// Backend is never dialed on these paths (route stays down), so a
+	// discard address is fine.
+	proxy.AddRoute("srv-down", "down.test.local", "127.0.0.1", 1)
+	proxy.SetRouteDown("down.test.local", true)
+	return proxy
+}
+
+func TestDownRoute_LoginHoldTimeoutSendsDisconnect(t *testing.T) {
+	// Boot never completes: the held client must get a waking-up message
+	// instead of a bare hangup (MINE-123).
+	oldBudget := downRouteBudget
+	downRouteBudget = 400 * time.Millisecond
+	t.Cleanup(func() { downRouteBudget = oldBudget })
+
+	proxy := startDownRouteWithHandler(t, func(ctx context.Context, serverID string) error {
+		return nil // boot "in flight" forever; route stays down
+	})
+
+	conn := dialDownRoute(t, proxy, 2)
+	defer func() { _ = conn.Close() }()
+
+	assert.Contains(t, readLoginDisconnect(t, conn), "still waking up")
+}
+
+func TestDownRoute_LoginWakeFailureSendsDisconnect(t *testing.T) {
+	// Boot fails outright: the client must get a wake-failed message.
+	proxy := startDownRouteWithHandler(t, func(ctx context.Context, serverID string) error {
+		return errWakeFailedTest
+	})
+
+	conn := dialDownRoute(t, proxy, 2)
+	defer func() { _ = conn.Close() }()
+
+	assert.Contains(t, readLoginDisconnect(t, conn), "could not wake up")
 }
