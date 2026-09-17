@@ -203,22 +203,6 @@ minecraft:
     rconCmdsOnDisconnect: ""
     rconCmdsLastDisconnect: ""
 
-    # Auto-Pause
-    enableAutopause: false
-    autopauseTimeoutEst: 3600
-    autopauseTimeoutInit: 600
-    autopauseTimeoutKn: 120
-    autopausePeriod: 10
-    autopauseKnockInterface: "eth0"
-    debugAutopause: false
-
-    # Auto-Stop
-    enableAutostop: false
-    autostopTimeoutEst: 3600
-    autostopTimeoutInit: 1800
-    autostopPeriod: 10
-    debugAutostop: false
-
     # Forge Configuration
     forgeVersion: ""
     forgeInstaller: ""

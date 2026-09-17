@@ -172,6 +172,10 @@ func dbServerToProto(server *storage.Server) *v1.Server {
 		AutoStart:       server.AutoStart,
 		Detached:        server.Detached,
 		TpsCommand:      server.TPSCommand,
+		AutoHibernate:   server.AutoHibernate,
+		IdleTimeoutMinutes: int32(server.IdleTimeoutMinutes),
+		AutoDeepSleep:   server.AutoDeepSleep,
+		DeepSleepTimeoutMinutes: int32(server.DeepSleepTimeoutMinutes),
 		MemoryUsage:     int64(server.MemoryUsage),
 		CpuPercent:      server.CPUPercent,
 		DiskUsage:       server.DiskUsage,
@@ -636,6 +640,8 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		AutoStart:       msg.AutoStart,
 		Detached:        msg.Detached,
 		TPSCommand:      minecraft.GetTPSCommand(modLoader),
+		AutoHibernate:   msg.AutoHibernate,
+		AutoDeepSleep:   msg.AutoDeepSleep,
 		AdditionalPorts: additionalPorts,
 		DockerOverrides: msg.DockerOverrides,
 	}
@@ -931,6 +937,24 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	}
 	if msg.TpsCommand != nil {
 		server.TPSCommand = *msg.TpsCommand
+	}
+	if msg.AutoHibernate != nil {
+		server.AutoHibernate = *msg.AutoHibernate
+	}
+	if msg.IdleTimeoutMinutes != nil {
+		if int(*msg.IdleTimeoutMinutes) < 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid idle timeout %d", *msg.IdleTimeoutMinutes))
+		}
+		server.IdleTimeoutMinutes = int(*msg.IdleTimeoutMinutes)
+	}
+	if msg.AutoDeepSleep != nil {
+		server.AutoDeepSleep = *msg.AutoDeepSleep
+	}
+	if msg.DeepSleepTimeoutMinutes != nil {
+		if int(*msg.DeepSleepTimeoutMinutes) < 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deep sleep timeout %d", *msg.DeepSleepTimeoutMinutes))
+		}
+		server.DeepSleepTimeoutMinutes = int(*msg.DeepSleepTimeoutMinutes)
 	}
 
 	// Handle additional ports update

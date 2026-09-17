@@ -70,11 +70,12 @@ plug in (hold there instead of hang up).
   intentional states belong to the panel: the reconciler self-heals
   *missing* containers and reports exited ones. Override per server via
   DockerOverrides if you truly need different semantics.
-- **Legacy itzg timers are gated by native pause.** If
-  `PAUSE_WHEN_EMPTY_SECONDS > 0`, the panel forces
-  `ENABLE_AUTOPAUSE=false` + `ENABLE_AUTOSTOP=false` in the built container
-  env even when explicitly enabled — one layer must own idleness. To use the
-  legacy itzg layer instead, set pause-when-empty to `0` first.
+- **Legacy itzg autopause/autostop is removed, not gated.** The
+  `ENABLE_AUTOPAUSE/AUTOSTOP` family of ServerConfig fields, their
+  Auto-Pause/Auto-Stop UI categories, and the example YAML block are gone:
+  one layer owns idleness now (native pause + panel sleep). Containers
+  created before the removal keep stale env vars until recreated, which is
+  harmless (the image flags default off).
 - **Asleep is stable, not dead.** `paused` (freezer) and `deepsleep`
   (stopped) never trigger restart/heal: the reconciler treats `deepsleep`
   as terminal-by-design, and the metrics collector skips non-running

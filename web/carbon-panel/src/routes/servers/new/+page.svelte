@@ -92,6 +92,8 @@
 			autoStart: false,
 			detached: false,
 			startImmediately: false,
+			autoHibernate: false,
+			autoDeepSleep: false,
 			proxyHostname: '',
 			proxyListenerId: '',
 			useBaseUrl: false,
@@ -966,21 +968,47 @@
 								</div>
 							</label>
 
-							<!-- Auto Start -->
-							<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none {formData.detached ? 'opacity-50 cursor-not-allowed' : ''}">
-								<input
-									type="checkbox"
-									bind:checked={formData.autoStart}
-									disabled={formData.detached}
-									class="h-4 w-4 rounded-none accent-[#0f62fe]"
-								/>
-								<div>
-									<span class="text-xs font-medium text-[#f4f4f4] block">Auto Start</span>
-									<span class="text-[11px] text-[#8d8d8d] block font-sans">Start when host daemon starts</span>
-								</div>
-							</label>
-						</div>
+						<!-- Auto Start -->
+						<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none {formData.detached ? 'opacity-50 cursor-not-allowed' : ''}">
+							<input
+								type="checkbox"
+								bind:checked={formData.autoStart}
+								disabled={formData.detached}
+								class="h-4 w-4 rounded-none accent-[#0f62fe]"
+							/>
+							<div>
+								<span class="text-xs font-medium text-[#f4f4f4] block">Auto Start</span>
+								<span class="text-[11px] text-[#8d8d8d] block font-sans">Start when host daemon starts</span>
+							</div>
+						</label>
+
+						<!-- Freeze on Idle -->
+						<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none">
+							<input
+								type="checkbox"
+								bind:checked={formData.autoHibernate}
+								class="h-4 w-4 rounded-none accent-[#0f62fe]"
+							/>
+							<div>
+								<span class="text-xs font-medium text-[#f4f4f4] block">Freeze on Idle</span>
+								<span class="text-[11px] text-[#8d8d8d] block font-sans">Pause container when empty</span>
+							</div>
+						</label>
+
+						<!-- Deep Sleep on Idle -->
+						<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none">
+							<input
+								type="checkbox"
+								bind:checked={formData.autoDeepSleep}
+								class="h-4 w-4 rounded-none accent-[#0f62fe]"
+							/>
+							<div>
+								<span class="text-xs font-medium text-[#f4f4f4] block">Deep Sleep on Idle</span>
+								<span class="text-[11px] text-[#8d8d8d] block font-sans">Stop container when empty</span>
+							</div>
+						</label>
 					</div>
+				</div>
 
 					<!-- Docker Overrides -->
 					<div class="pt-2 border-t border-[#393939]">
