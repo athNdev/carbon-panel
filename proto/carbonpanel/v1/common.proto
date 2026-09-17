@@ -76,6 +76,11 @@ message Server {
   bool auto_start = 18;
   bool detached = 19;
   string tps_command = 20;
+  // Sleep lifecycle (panel-managed; native pause + freezer hibernate + stop-to-zero deep sleep)
+  bool auto_hibernate = 41;
+  int32 idle_timeout_minutes = 42;
+  bool auto_deep_sleep = 43;
+  int32 deep_sleep_timeout_minutes = 44;
 
   // Runtime stats
   int64 memory_usage = 21;

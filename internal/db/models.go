@@ -164,7 +164,7 @@ type ServerConfig struct {
 	Icon                           *string `json:"icon" env:"ICON" default:"" desc:"URL or file path for server icon" input:"text" label:"Server Icon"`
 	OverrideIcon                   *bool   `json:"overrideIcon" env:"OVERRIDE_ICON" default:"false" desc:"Override existing server icon" input:"checkbox" label:"Override Icon"`
 	MaxPlayers                     *int    `json:"maxPlayers" env:"MAX_PLAYERS" default:"20" desc:"Maximum number of players" input:"number" label:"Max Players" system:"true"`
-	MaxWorldSize                   *int    `json:"maxWorldSize" env:"MAX_WORLD_SIZE" default:"0" desc:"Maximum world size in blocks (radius)" input:"number" label:"Max World Size"`
+	MaxWorldSize                   *int    `json:"maxWorldSize" env:"MAX_WORLD_SIZE" default:"29999984" desc:"Maximum world size in blocks (radius)" input:"number" label:"Max World Size"`
 	AllowNether                    *bool   `json:"allowNether" env:"ALLOW_NETHER" default:"true" desc:"Allow players to travel to the Nether" input:"checkbox" label:"Allow Nether"`
 	AnnouncePlayerAchievements     *bool   `json:"announcePlayerAchievements" env:"ANNOUNCE_PLAYER_ACHIEVEMENTS" default:"true" desc:"Announce player achievements" input:"checkbox" label:"Announce Player Achievements"`
 	EnableCommandBlock             *bool   `json:"enableCommandBlock" env:"ENABLE_COMMAND_BLOCK" default:"false" desc:"Enable command blocks" input:"checkbox" label:"Enable Command Blocks"`
@@ -176,8 +176,8 @@ type ServerConfig struct {
 	SpawnAnimals                   *bool   `json:"spawnAnimals" env:"SPAWN_ANIMALS" default:"true" desc:"Allow animals to spawn" input:"checkbox" label:"Spawn Animals"`
 	SpawnMonsters                  *bool   `json:"spawnMonsters" env:"SPAWN_MONSTERS" default:"true" desc:"Allow monsters to spawn" input:"checkbox" label:"Spawn Monsters"`
 	SpawnNPCs                      *bool   `json:"spawnNpcs" env:"SPAWN_NPCS" default:"true" desc:"Allow villagers to spawn" input:"checkbox" label:"Spawn NPCs"`
-	SpawnProtection                *int    `json:"spawnProtection" env:"SPAWN_PROTECTION" default:"0" desc:"Area that non-ops cannot edit (0 to disable)" input:"number" label:"Spawn Protection"`
-	ViewDistance                   *int    `json:"viewDistance" env:"VIEW_DISTANCE" default:"0" desc:"Server-side viewing distance in chunks" input:"number" label:"View Distance"`
+	SpawnProtection                *int    `json:"spawnProtection" env:"SPAWN_PROTECTION" default:"16" desc:"Area that non-ops cannot edit (0 to disable)" input:"number" label:"Spawn Protection"`
+	ViewDistance                   *int    `json:"viewDistance" env:"VIEW_DISTANCE" default:"10" desc:"Server-side viewing distance in chunks" input:"number" label:"View Distance"`
 	Seed                           *string `json:"seed" env:"SEED" default:"" desc:"World generation seed" input:"text" label:"World Seed"`
 	Mode                           *string `json:"mode" env:"MODE" default:"survival" desc:"Game mode (creative,survival,adventure,spectator)" input:"select" label:"Game Mode"`
 	PVP                            *bool   `json:"pvp" env:"PVP" default:"true" desc:"Enable player-vs-player mode" input:"checkbox" label:"Enable PVP"`
@@ -189,16 +189,16 @@ type ServerConfig struct {
 	ServerName                     *string `json:"serverName" env:"SERVER_NAME" default:"" desc:"The server name" input:"text" label:"Server Name"`
 	ServerPort                     *int    `json:"serverPort" env:"SERVER_PORT" default:"25565" desc:"Server port (only change if using host networking)" input:"number" label:"Server Port" system:"true"`
 	PlayerIdleTimeout              *int    `json:"playerIdleTimeout" env:"PLAYER_IDLE_TIMEOUT" default:"0" desc:"Player idle timeout" input:"number" label:"Player Idle Timeout"`
-	SyncChunkWrites                *bool   `json:"syncChunkWrites" env:"SYNC_CHUNK_WRITES" default:"false" desc:"Sync chunk writes" input:"checkbox" label:"Sync Chunk Writes"`
+	SyncChunkWrites                *bool   `json:"syncChunkWrites" env:"SYNC_CHUNK_WRITES" default:"true" desc:"Sync chunk writes" input:"checkbox" label:"Sync Chunk Writes"`
 	EnableStatus                   *bool   `json:"enableStatus" env:"ENABLE_STATUS" default:"true" desc:"Enable server status" input:"checkbox" label:"Enable Status"`
-	EntityBroadcastRangePercentage *int    `json:"entityBroadcastRangePercentage" env:"ENTITY_BROADCAST_RANGE_PERCENTAGE" default:"0" desc:"Entity broadcast range percentage" input:"number" label:"Entity Broadcast Range Percentage"`
-	FunctionPermissionLevel        *int    `json:"functionPermissionLevel" env:"FUNCTION_PERMISSION_LEVEL" default:"0" desc:"Function permission level" input:"number" label:"Function Permission Level"`
-	NetworkCompressionThreshold    *int    `json:"networkCompressionThreshold" env:"NETWORK_COMPRESSION_THRESHOLD" default:"0" desc:"Network compression threshold" input:"number" label:"Network Compression Threshold"`
-	OpPermissionLevel              *int    `json:"opPermissionLevel" env:"OP_PERMISSION_LEVEL" default:"0" desc:"OP permission level" input:"number" label:"OP Permission Level"`
+	EntityBroadcastRangePercentage *int    `json:"entityBroadcastRangePercentage" env:"ENTITY_BROADCAST_RANGE_PERCENTAGE" default:"100" desc:"Entity broadcast range percentage" input:"number" label:"Entity Broadcast Range Percentage"`
+	FunctionPermissionLevel        *int    `json:"functionPermissionLevel" env:"FUNCTION_PERMISSION_LEVEL" default:"2" desc:"Function permission level" input:"number" label:"Function Permission Level"`
+	NetworkCompressionThreshold    *int    `json:"networkCompressionThreshold" env:"NETWORK_COMPRESSION_THRESHOLD" default:"256" desc:"Network compression threshold" input:"number" label:"Network Compression Threshold"`
+	OpPermissionLevel              *int    `json:"opPermissionLevel" env:"OP_PERMISSION_LEVEL" default:"4" desc:"OP permission level" input:"number" label:"OP Permission Level"`
 	PreventProxyConnections        *bool   `json:"preventProxyConnections" env:"PREVENT_PROXY_CONNECTIONS" default:"false" desc:"Prevent proxy connections" input:"checkbox" label:"Prevent Proxy Connections"`
 	UseNativeTransport             *bool   `json:"useNativeTransport" env:"USE_NATIVE_TRANSPORT" default:"true" desc:"Use native transport" input:"checkbox" label:"Use Native Transport"`
-	SimulationDistance             *int    `json:"simulationDistance" env:"SIMULATION_DISTANCE" default:"0" desc:"Simulation distance" input:"number" label:"Simulation Distance"`
-	EnableQuery                    *bool   `json:"enableQuery" env:"ENABLE_QUERY" default:"true" desc:"Enable GameSpy query protocol" input:"checkbox" label:"Enable Query"`
+	SimulationDistance             *int    `json:"simulationDistance" env:"SIMULATION_DISTANCE" default:"10" desc:"Simulation distance" input:"number" label:"Simulation Distance"`
+	EnableQuery                    *bool   `json:"enableQuery" env:"ENABLE_QUERY" default:"false" desc:"Enable GameSpy query protocol" input:"checkbox" label:"Enable Query"`
 	QueryPort                      *int    `json:"queryPort" env:"QUERY_PORT" default:"25565" desc:"UDP port for GameSpy query" input:"number" label:"Query Port"`
 	ServerPropertiesEscapeUnicode  *bool   `json:"serverPropertiesEscapeUnicode" env:"SERVER_PROPERTIES_ESCAPE_UNICODE" default:"false" desc:"Escape unicode in server.properties (-1.20 compatibility)" input:"checkbox" label:"Escape Unicode in Server Properties"`
 	AcceptsTransfers               *bool   `json:"acceptsTransfers" env:"ACCEPTS_TRANSFERS" default:"false" desc:"Allow player transfers between servers" input:"checkbox" label:"Accepts Transfers"`
@@ -264,22 +264,6 @@ type ServerConfig struct {
 	RCONCmdsFirstConnect   *string `json:"rconCmdsFirstConnect" env:"RCON_CMDS_FIRST_CONNECT" default:"" desc:"RCON commands to execute on first client connect" input:"text" label:"RCON Commands on First Connect"`
 	RCONCmdsOnDisconnect   *string `json:"rconCmdsOnDisconnect" env:"RCON_CMDS_ON_DISCONNECT" default:"" desc:"RCON commands to execute on client disconnect" input:"text" label:"RCON Commands on Disconnect"`
 	RCONCmdsLastDisconnect *string `json:"rconCmdsLastDisconnect" env:"RCON_CMDS_LAST_DISCONNECT" default:"" desc:"RCON commands to execute on last client disconnect" input:"text" label:"RCON Commands on Last Disconnect"`
-
-	// Auto-Pause
-	EnableAutopause         *bool   `json:"enableAutopause" env:"ENABLE_AUTOPAUSE" default:"false" desc:"Enable autopause functionality" input:"checkbox" label:"Enable Auto-Pause"`
-	AutopauseTimeoutEst     *int    `json:"autopauseTimeoutEst" env:"AUTOPAUSE_TIMEOUT_EST" default:"3600" desc:"Time between last disconnect and pausing (seconds)" input:"number" label:"Auto-Pause Timeout (Established)"`
-	AutopauseTimeoutInit    *int    `json:"autopauseTimeoutInit" env:"AUTOPAUSE_TIMEOUT_INIT" default:"600" desc:"Time between server start and pausing if no client connects (seconds)" input:"number" label:"Auto-Pause Timeout (Initial)"`
-	AutopauseTimeoutKn      *int    `json:"autopauseTimeoutKn" env:"AUTOPAUSE_TIMEOUT_KN" default:"120" desc:"Time between port knock and pausing if no client connects (seconds)" input:"number" label:"Auto-Pause Timeout (Knock)"`
-	AutopausePeriod         *int    `json:"autopausePeriod" env:"AUTOPAUSE_PERIOD" default:"10" desc:"Period of the autopause state machine (seconds)" input:"number" label:"Auto-Pause Period"`
-	AutopauseKnockInterface *string `json:"autopauseKnockInterface" env:"AUTOPAUSE_KNOCK_INTERFACE" default:"eth0" desc:"Network interface for knockd daemon" input:"text" label:"Auto-Pause Knock Interface"`
-	DebugAutopause          *bool   `json:"debugAutopause" env:"DEBUG_AUTOPAUSE" default:"false" desc:"Enable autopause debugging output" input:"checkbox" label:"Debug Auto-Pause"`
-
-	// Auto-Stop
-	EnableAutostop      *bool `json:"enableAutostop" env:"ENABLE_AUTOSTOP" default:"false" desc:"Enable autostop functionality" input:"checkbox" label:"Enable Auto-Stop"`
-	AutostopTimeoutEst  *int  `json:"autostopTimeoutEst" env:"AUTOSTOP_TIMEOUT_EST" default:"3600" desc:"Time between last disconnect and stopping (seconds)" input:"number" label:"Auto-Stop Timeout (Established)"`
-	AutostopTimeoutInit *int  `json:"autostopTimeoutInit" env:"AUTOSTOP_TIMEOUT_INIT" default:"1800" desc:"Time between server start and stopping if no client connects (seconds)" input:"number" label:"Auto-Stop Timeout (Initial)"`
-	AutostopPeriod      *int  `json:"autostopPeriod" env:"AUTOSTOP_PERIOD" default:"10" desc:"Period of the autostop state machine (seconds)" input:"number" label:"Auto-Stop Period"`
-	DebugAutostop       *bool `json:"debugAutostop" env:"DEBUG_AUTOSTOP" default:"false" desc:"Enable autostop debugging output" input:"checkbox" label:"Debug Auto-Stop"`
 
 	// Forge Configuration
 	ForgeVersion      *string `json:"forgeVersion" env:"FORGE_VERSION" default:"" desc:"Specific Forge version to install" input:"text" label:"Forge Version"`
