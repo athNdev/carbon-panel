@@ -1382,30 +1382,6 @@ func buildEnvFromConfig(config *models.ServerConfig) []string {
 		}
 	}
 
-	// MINE-122 anti-flap: native pause owns idleness when engaged. The itzg
-	// autopause/autostop timers fight the panel sleep lifecycle (knockd wakes
-	// on any traffic and autostop exits get resurrected), so force them off
-	// whenever PAUSE_WHEN_EMPTY_SECONDS is set. Operators who explicitly
-	// want the legacy layer must set pause-when-empty to 0 first.
-	pauseWhenEmpty := 0
-	for _, e := range env {
-		if v, ok := strings.CutPrefix(e, "PAUSE_WHEN_EMPTY_SECONDS="); ok {
-			if n, err := strconv.Atoi(v); err == nil {
-				pauseWhenEmpty = n
-			}
-		}
-	}
-	if pauseWhenEmpty > 0 {
-		for i, e := range env {
-			if strings.HasPrefix(e, "ENABLE_AUTOPAUSE=") {
-				env[i] = "ENABLE_AUTOPAUSE=false"
-			}
-			if strings.HasPrefix(e, "ENABLE_AUTOSTOP=") {
-				env[i] = "ENABLE_AUTOSTOP=false"
-			}
-		}
-	}
-
 	return env
 }
 

@@ -435,8 +435,6 @@ func buildConfigCategories(config any) ([]*v1.ConfigCategory, error) {
 		{Name: "Management Server", Properties: []*v1.ConfigProperty{}},
 		{Name: "Ops/Admins", Properties: []*v1.ConfigProperty{}},
 		{Name: "Whitelist", Properties: []*v1.ConfigProperty{}},
-		{Name: "Auto-Pause", Properties: []*v1.ConfigProperty{}},
-		{Name: "Auto-Stop", Properties: []*v1.ConfigProperty{}},
 		{Name: "CurseForge", Properties: []*v1.ConfigProperty{}},
 		{Name: "Modrinth", Properties: []*v1.ConfigProperty{}},
 	}
@@ -605,28 +603,19 @@ func getCategoryIndex(key string) int {
 		"existingWhitelistFile", "enforceWhitelist":
 		return 8
 
-	// Auto-Pause (9)
-	case "enableAutopause", "autopauseTimeoutEst", "autopauseTimeoutInit", "autopauseTimeoutKn",
-		"autopausePeriod", "autopauseKnockInterface", "debugAutopause":
+	// CurseForge (9)
+	case "cfApiKey", "cfApiKeyFile", "cfPageUrl", "cfSlug", "cfFileId", "cfModpackZip", "cfFilenameMatcher",
+		"cfExcludeIncludeFile", "cfExcludeMods", "cfForceIncludeFiles", "cfForceSynchronize",
+		"cfSetLevelFrom", "cfParallelDownloads", "cfOverridesSkipExisting", "cfForceReinstallModloader":
 		return 9
 
-	// Auto-Stop (10)
-	case "enableAutostop", "autostopTimeoutEst", "autostopTimeoutInit", "autostopPeriod", "debugAutostop":
-		return 10
-
-	// CurseForge (11)
-	case "cfApiKey", "cfApiKeyFile", "cfPageUrl", "cfSlug", "cfFileId", "cfModpackZip", "cfFilenameMatcher",
-		"cfExcludeIncludeFile", "cfExcludeMods", "cfForceIncludeMods", "cfForceSynchronize",
-		"cfSetLevelFrom", "cfParallelDownloads", "cfOverridesSkipExisting", "cfForceReinstallModloader":
-		return 11
-
-	// Modrinth (12)
+	// Modrinth (10)
 	case "modrinthModpack", "modrinthModpackVersionType", "modrinthVersion", "modrinthLoader",
 		"modrinthIgnoreMissingFiles", "modrinthExcludeFiles", "modrinthForceIncludeFiles",
 		"modrinthForceSynchronize", "modrinthDefaultExcludeIncludes", "modrinthOverridesExclusions",
 		"modrinthProjects", "modrinthDownloadDependencies", "modrinthProjectsDefaultVersionType",
 		"versionFromModrinthProjects", "modrinthToken", "modrinthUserAgent", "packwizUrl":
-		return 12
+		return 10
 
 	default:
 		return -1 // Unknown
