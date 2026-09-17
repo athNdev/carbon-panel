@@ -24,6 +24,7 @@ type Manager struct {
 	dockerClient     client.CommonAPIClient
 	ownsDockerClient bool
 	wakeHandler      WakeHandler
+	activityHandler  ActivityHandler
 	valkeySync       *ValkeySyncManager
 }
 
@@ -82,6 +83,19 @@ func (m *Manager) SetWakeHandler(h WakeHandler) {
 	}
 }
 
+// SetActivityHandler configures the login-intent activity callback across
+// proxies (MINE-120). Stored so proxies created later also receive it.
+func (m *Manager) SetActivityHandler(h ActivityHandler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.activityHandler = h
+	for _, p := range m.proxies {
+		if mcProxy, ok := p.(*MinecraftProxy); ok {
+			mcProxy.SetActivityHandler(h)
+		}
+	}
+}
+
 // Start initializes and starts the proxy if enabled
 func (m *Manager) Start() error {
 	m.mu.Lock()
@@ -111,10 +125,11 @@ func (m *Manager) Start() error {
 
 		listenAddr := fmt.Sprintf(":%d", listener.Port)
 		proxy := NewMinecraftProxy(&Config{
-			ListenAddr:    listenAddr,
-			Logger:        m.logger,
-			ProxyProtocol: listener.ProxyProtocol,
-			WakeHandler:   m.wakeHandler,
+			ListenAddr:      listenAddr,
+			Logger:          m.logger,
+			ProxyProtocol:   listener.ProxyProtocol,
+			WakeHandler:     m.wakeHandler,
+			ActivityHandler: m.activityHandler,
 		})
 
 		m.proxies[listener.Port] = proxy
@@ -425,9 +440,11 @@ func (m *Manager) AddListener(listener *db.ProxyListener) error {
 	// Create new proxy instance
 	listenAddr := fmt.Sprintf(":%d", listener.Port)
 	proxy := NewMinecraftProxy(&Config{
-		ListenAddr:    listenAddr,
-		Logger:        m.logger,
-		ProxyProtocol: listener.ProxyProtocol,
+		ListenAddr:      listenAddr,
+		Logger:          m.logger,
+		ProxyProtocol:   listener.ProxyProtocol,
+		WakeHandler:     m.wakeHandler,
+		ActivityHandler: m.activityHandler,
 	})
 
 	// Start the proxy
