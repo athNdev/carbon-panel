@@ -46,7 +46,20 @@ the loading MOTD meanwhile).
   → proxy SLP gate → relay. The reconciler treats `deepsleep` as stable and
   never heals it; `stopped` still means "operator-stopped, no route".
 - Slow/modded boots past ~25s need Tier-B limbo hold (MINE-123); Tier A
-  covers vanilla/Paper.
+  covers vanilla/Paper. On hold timeout the client gets a Login Disconnect
+  message ("still waking up, join again") instead of a bare hangup.
+
+## Tier-B limbo: deferred, with trigger criteria (MINE-123)
+
+A Velocity+Limbo sidecar (LimboAutoServer pattern) would hold logins past
+the ~30s client timeout for slow boots, but costs an always-on JVM (~300MB
+shared), forwarding-secret trust changes on every backend
+(`online-mode=false` behind the proxy), and a new container type to operate.
+Deferred: no measured slow-boot need in this fleet, and Tier A (25s hold +
+loading MOTD + messaged retry) covers vanilla/Paper boots. Revisit when
+p95 cold boots exceed ~20s for two consecutive releases or a modded fleet
+lands — the proxy's `SleepWakeHandler` seam is where a limbo backend would
+plug in (hold there instead of hang up).
 
 ## Anti-flap (MINE-122)
 
