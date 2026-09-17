@@ -26,3 +26,24 @@ freeze as a crashed tick and force-kills the server (exit 1) — surfacing as
   pause against each other — native pause is the primary, freeze is CPU garnish.
 
 Background: `docs/research/minecraft-sleep-deep-sleep.md`.
+
+## Deep sleep (MINE-121, opt-in per server)
+
+Zero RAM/CPU idle: the container is fully stopped, the proxy retains the
+route and serves a cached MOTD (`Server is asleep - join to wake it up!`,
+`Server is waking up - join to connect!` while booting). Status pings never
+boot; a real join boots the container (single-flight, concurrent joiners
+share one boot), holds the client up to ~25s, and relays once the SLP health
+gate passes. Past the budget the client is hung up and retries (pings show
+the loading MOTD meanwhile).
+
+- Opt in: `auto_deep_sleep=true`, `deep_sleep_timeout_minutes` (default 30).
+  Like `auto_hibernate`, these are operator/DB-set (no UI toggle yet).
+- Sleep is graceful: RCON `save-all` → RCON `stop` → wait for JVM exit
+  (`session.lock` released) → docker-stop backstop. Status becomes
+  `deepsleep` only after the container exits.
+- Wake: container start → Docker running → status `running` → route refresh
+  → proxy SLP gate → relay. The reconciler treats `deepsleep` as stable and
+  never heals it; `stopped` still means "operator-stopped, no route".
+- Slow/modded boots past ~25s need Tier-B limbo hold (MINE-123); Tier A
+  covers vanilla/Paper.

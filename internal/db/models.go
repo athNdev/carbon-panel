@@ -17,6 +17,9 @@ const (
 	StatusUnhealthy ServerStatus = "unhealthy"
 	StatusCreating  ServerStatus = "creating" // Container is being created/image pulled
 	StatusPaused    ServerStatus = "paused"   // Container hibernated via cgroup freezer
+
+	// StatusDeepSleep: container stopped via deep sleep; proxy retains route, wakes on login (MINE-121).
+	StatusDeepSleep ServerStatus = "deepsleep"
 )
 
 type ModLoader string
@@ -95,6 +98,11 @@ type Server struct {
 	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when Carbon Panel starts (default: false)
 	AutoHibernate   bool                 `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`                 // Sleep/wake container on idle via cgroup freezer (MINE-18)
 	IdleTimeoutMinutes int               `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"`       // Minutes idle before auto-hibernating
+
+	// Deep sleep: stop container on idle (zero RAM), boot on login via proxy (MINE-121).
+	AutoDeepSleep           bool `json:"auto_deep_sleep" gorm:"default:false;column:auto_deep_sleep"`
+	DeepSleepTimeoutMinutes int  `json:"deep_sleep_timeout_minutes" gorm:"default:30;column:deep_sleep_timeout_minutes"` // Minutes idle before deep sleep
+
 	TPSCommand      string               `json:"tps_command" gorm:"column:tps_command"`                                     // The TPS command for this server (empty if not supported)
 	AdditionalPorts []*v1.AdditionalPort `json:"additional_ports" gorm:"column:additional_ports;serializer:json"`           // Additional port configurations
 	DockerOverrides *v1.DockerOverrides  `json:"docker_overrides" gorm:"column:docker_overrides;type:text;serializer:json"` // Docker container overrides

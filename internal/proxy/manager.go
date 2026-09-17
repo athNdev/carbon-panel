@@ -25,6 +25,7 @@ type Manager struct {
 	ownsDockerClient bool
 	wakeHandler      WakeHandler
 	activityHandler  ActivityHandler
+	sleepWakeHandler WakeHandler
 	valkeySync       *ValkeySyncManager
 }
 
@@ -96,6 +97,19 @@ func (m *Manager) SetActivityHandler(h ActivityHandler) {
 	}
 }
 
+// SetSleepWakeHandler configures the deep-sleep boot callback across proxies
+// (MINE-121). Stored so proxies created later also receive it.
+func (m *Manager) SetSleepWakeHandler(h WakeHandler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sleepWakeHandler = h
+	for _, p := range m.proxies {
+		if mcProxy, ok := p.(*MinecraftProxy); ok {
+			mcProxy.SetSleepWakeHandler(h)
+		}
+	}
+}
+
 // Start initializes and starts the proxy if enabled
 func (m *Manager) Start() error {
 	m.mu.Lock()
@@ -125,11 +139,12 @@ func (m *Manager) Start() error {
 
 		listenAddr := fmt.Sprintf(":%d", listener.Port)
 		proxy := NewMinecraftProxy(&Config{
-			ListenAddr:      listenAddr,
-			Logger:          m.logger,
-			ProxyProtocol:   listener.ProxyProtocol,
-			WakeHandler:     m.wakeHandler,
-			ActivityHandler: m.activityHandler,
+			ListenAddr:       listenAddr,
+			Logger:           m.logger,
+			ProxyProtocol:    listener.ProxyProtocol,
+			WakeHandler:      m.wakeHandler,
+			ActivityHandler:  m.activityHandler,
+			SleepWakeHandler: m.sleepWakeHandler,
 		})
 
 		m.proxies[listener.Port] = proxy
@@ -149,8 +164,8 @@ func (m *Manager) Start() error {
 	}
 
 	for _, server := range servers {
-		// Add routes for servers with proxy hostname that are either running, paused, or have a container
-		if server.ProxyHostname != "" && server.ProxyListenerID != "" && (server.ContainerID != "" || server.Status == db.StatusRunning || server.Status == db.StatusPaused || server.NodeID != "") {
+		// Add routes for servers with proxy hostname that are either running, paused, deeply asleep, or have a container
+		if server.ProxyHostname != "" && server.ProxyListenerID != "" && (server.ContainerID != "" || server.Status == db.StatusRunning || server.Status == db.StatusPaused || server.Status == db.StatusDeepSleep || server.NodeID != "") {
 			// Find which listener this server uses
 			listener, ok := listenerMap[server.ProxyListenerID]
 			if !ok || !listener.Enabled {
@@ -167,6 +182,12 @@ func (m *Manager) Start() error {
 
 			backendHost, backendPort, err := m.resolveBackend(server)
 			if err != nil {
+				// A deeply-asleep backend has no address (stopped container,
+				// no IP) — retain a down route for MOTD + wake-on-login.
+				if server.Status == db.StatusDeepSleep {
+					m.ensureDownRoute(server, server.ProxyHostname, proxy)
+					continue
+				}
 				m.logger.Error("Failed to resolve backend for server %s: %v", server.Name, err)
 				continue
 			}
@@ -179,6 +200,9 @@ func (m *Manager) Start() error {
 			)
 			if server.Status == db.StatusPaused {
 				proxy.SetRouteHibernated(server.ProxyHostname, true)
+			}
+			if server.Status == db.StatusDeepSleep {
+				proxy.SetRouteDown(server.ProxyHostname, true)
 			}
 			m.logger.Info("Added proxy route for server %s: %s -> %s:%d on listener port %d (paused=%v)",
 				server.Name, server.ProxyHostname, backendHost, backendPort, listener.Port, server.Status == db.StatusPaused)
@@ -254,10 +278,16 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 
 	hostname := m.generateHostname(server)
 
-	// Add or update route for servers that are starting, running, or hibernated (paused) with proxy hostname
-	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting || server.Status == db.StatusPaused) && server.ProxyHostname != "" {
+	// Add or update route for servers that are starting, running, hibernated (paused), or deeply asleep with proxy hostname
+	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting || server.Status == db.StatusPaused || server.Status == db.StatusDeepSleep) && server.ProxyHostname != "" {
 		backendHost, backendPort, err := m.resolveBackend(server)
 		if err != nil {
+			// A deeply-asleep backend has no address (stopped container,
+			// no IP) — retain a down route for MOTD + wake-on-login.
+			if server.Status == db.StatusDeepSleep {
+				m.ensureDownRoute(server, hostname, proxy)
+				return nil
+			}
 			m.logger.Error("Failed to resolve backend for %s: %v", server.Name, err)
 			return err
 		}
@@ -273,6 +303,11 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 		} else {
 			proxy.SetRouteHibernated(hostname, false)
 		}
+		if server.Status == db.StatusDeepSleep {
+			proxy.SetRouteDown(hostname, true)
+		} else {
+			proxy.SetRouteDown(hostname, false)
+		}
 		if m.valkeySync != nil {
 			_ = m.valkeySync.BroadcastRouteAdd(context.Background(), server.ID, hostname, backendHost, backendPort, listener.Port)
 		}
@@ -286,6 +321,19 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 	}
 
 	return nil
+}
+
+// ensureDownRoute retains a route for a deeply-asleep server whose backend
+// has no resolvable address (stopped container, no IP). Down routes never
+// dial: pings get a cached MOTD and logins boot first (MINE-121).
+func (m *Manager) ensureDownRoute(server *db.Server, hostname string, proxy Proxier) {
+	routes := proxy.GetRoutes()
+	if _, exists := routes[hostname]; !exists {
+		proxy.AddRoute(server.ID, hostname, "", 0)
+	}
+	proxy.SetRouteHibernated(hostname, false)
+	proxy.SetRouteDown(hostname, true)
+	m.logger.Info("Retained down route for deeply-asleep server %s (%s)", server.Name, hostname)
 }
 
 // resolveBackend determines the backend host and port for a server.
@@ -440,11 +488,12 @@ func (m *Manager) AddListener(listener *db.ProxyListener) error {
 	// Create new proxy instance
 	listenAddr := fmt.Sprintf(":%d", listener.Port)
 	proxy := NewMinecraftProxy(&Config{
-		ListenAddr:      listenAddr,
-		Logger:          m.logger,
-		ProxyProtocol:   listener.ProxyProtocol,
-		WakeHandler:     m.wakeHandler,
-		ActivityHandler: m.activityHandler,
+		ListenAddr:       listenAddr,
+		Logger:           m.logger,
+		ProxyProtocol:    listener.ProxyProtocol,
+		WakeHandler:      m.wakeHandler,
+		ActivityHandler:  m.activityHandler,
+		SleepWakeHandler: m.sleepWakeHandler,
 	})
 
 	// Start the proxy

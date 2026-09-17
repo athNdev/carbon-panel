@@ -179,13 +179,40 @@ func main() {
 	proxyManager.SetWakeHandler(func(wakeCtx context.Context, serverID string) error {
 		return hibernationMgr.WakeServer(wakeCtx, serverID)
 	})
-	proxyManager.SetActivityHandler(func(serverID string) {
-		hibernationMgr.RecordActivity(serverID)
-	})
+	// Activity (login intent resets both idle trackers) is registered below
+	// with the deep-sleep manager so one handler covers both lifecycles.
 	hibernateCtx, hibernateCancel := context.WithCancel(ctx)
 	defer hibernateCancel()
 	hibernationMgr.Start(hibernateCtx, 30*time.Second)
 	defer hibernationMgr.Stop()
+
+	// MINE-121: deep sleep — full container stop on idle (zero RAM/CPU),
+	// boot on login intent via the proxy. Only acts on servers with
+	// AutoDeepSleep enabled. The proxy serves cached MOTDs for down routes,
+	// holds joining clients through boot, and relays once the SLP health
+	// gate passes; the reconciler treats deepsleep as stable (see decide).
+	deepSleepMgr := docker.NewDeepSleepManager(dockerClient, store, sender, func(serverID string) {
+		if srv, err := store.GetServer(ctx, serverID); err == nil {
+			_ = proxyManager.UpdateServerRoute(srv)
+		}
+	}, log)
+	deepSleepMgr.SetPlayerCountProvider(func(serverID string) int {
+		if m := metricsCollector.GetMetrics(serverID); m != nil {
+			return m.PlayersOnline
+		}
+		return 0
+	})
+	proxyManager.SetSleepWakeHandler(func(wakeCtx context.Context, serverID string) error {
+		return deepSleepMgr.WakeServer(wakeCtx, serverID)
+	})
+	proxyManager.SetActivityHandler(func(serverID string) {
+		hibernationMgr.RecordActivity(serverID)
+		deepSleepMgr.RecordActivity(serverID)
+	})
+	deepSleepCtx, deepSleepCancel := context.WithCancel(ctx)
+	defer deepSleepCancel()
+	deepSleepMgr.Start(deepSleepCtx, 60*time.Second)
+	defer deepSleepMgr.Stop()
 
 	// Initialize task scheduler
 	taskScheduler := scheduler.NewScheduler(store, dockerClient, sender, cfg, metricsCollector, log, scheduler.Config{
