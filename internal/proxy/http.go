@@ -199,6 +199,17 @@ func (p *HTTPProxy) SetRouteHibernated(hostname string, hibernated bool) {
 	}
 }
 
+// SetRouteDown sets the deep-sleep state for a route (MINE-121)
+func (p *HTTPProxy) SetRouteDown(hostname string, down bool) {
+	p.routesMutex.Lock()
+	defer p.routesMutex.Unlock()
+
+	hostname = strings.ToLower(strings.Split(hostname, ":")[0])
+	if route, exists := p.routes[hostname]; exists {
+		route.Down = down
+	}
+}
+
 // GetRoutes returns a copy of all current routes
 func (p *HTTPProxy) GetRoutes() map[string]*Route {
 	p.routesMutex.RLock()
