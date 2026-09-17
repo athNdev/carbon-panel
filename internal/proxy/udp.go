@@ -137,6 +137,9 @@ func (p *UDPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 // SetRouteHibernated is a no-op for UDPProxy
 func (p *UDPProxy) SetRouteHibernated(hostname string, hibernated bool) {}
 
+// SetRouteDown is a no-op for UDPProxy (deep sleep is a Minecraft-protocol feature, MINE-121)
+func (p *UDPProxy) SetRouteDown(hostname string, down bool) {}
+
 // GetRoutes returns the current route (UDP only has one)
 func (p *UDPProxy) GetRoutes() map[string]*Route {
 	p.mu.RLock()

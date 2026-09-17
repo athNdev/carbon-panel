@@ -70,6 +70,9 @@ func (p *TCPProxy) UpdateRoute(hostname, backendHost string, backendPort int) {
 // SetRouteHibernated is a no-op for TCPProxy
 func (p *TCPProxy) SetRouteHibernated(hostname string, hibernated bool) {}
 
+// SetRouteDown is a no-op for TCPProxy (deep sleep is a Minecraft-protocol feature, MINE-121)
+func (p *TCPProxy) SetRouteDown(hostname string, down bool) {}
+
 // GetRoutes returns the current route (TCP only has one)
 func (p *TCPProxy) GetRoutes() map[string]*Route {
 	p.runningMutex.RLock()

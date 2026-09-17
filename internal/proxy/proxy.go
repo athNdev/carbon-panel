@@ -14,6 +14,7 @@ type Proxier interface {
 	RemoveRoute(hostname string)
 	UpdateRoute(hostname, backendHost string, backendPort int)
 	SetRouteHibernated(hostname string, hibernated bool)
+	SetRouteDown(hostname string, down bool)
 	GetRoutes() map[string]*Route
 	IsRunning() bool
 }
@@ -26,6 +27,11 @@ type Route struct {
 	BackendPort int
 	Active      bool
 	Hibernated  bool
+	// Down marks a deeply-asleep backend (container stopped, zero RAM).
+	// Down routes never dial: pings get a cached MOTD, logins trigger a
+	// boot via SleepWakeHandler and are held until the SLP health gate
+	// passes (MINE-121).
+	Down bool
 }
 
 // WakeHandler defines a callback for waking/unfreezing a hibernated server container
@@ -38,9 +44,10 @@ type ActivityHandler func(serverID string)
 
 // Config holds proxy configuration
 type Config struct {
-	ListenAddr      string // Address to listen on (e.g., ":25565" or ":8080")
-	Logger          *logger.Logger
-	ProxyProtocol   bool            // Whether PROXY protocol v2 support is enabled on this listener
-	WakeHandler     WakeHandler     // Callback to unpause hibernated container upon player connect (MINE-18)
-	ActivityHandler ActivityHandler // Callback to reset idle tracking upon login intent (MINE-120)
+	ListenAddr       string // Address to listen on (e.g., ":25565" or ":8080")
+	Logger           *logger.Logger
+	ProxyProtocol    bool            // Whether PROXY protocol v2 support is enabled on this listener
+	WakeHandler      WakeHandler     // Callback to unpause hibernated container upon player connect (MINE-18)
+	ActivityHandler  ActivityHandler // Callback to reset idle tracking upon login intent (MINE-120)
+	SleepWakeHandler WakeHandler     // Callback to boot a deeply-asleep container upon login intent (MINE-121)
 }
