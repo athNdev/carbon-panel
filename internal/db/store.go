@@ -266,18 +266,22 @@ func (s *Store) CreateDefaultServerConfig(serverID string) *ServerConfig {
 	}
 
 	config := &ServerConfig{
-		ID:           serverID + "-config",
-		ServerID:     serverID,
-		EULA:         stringPtr("TRUE"),
-		EnableRCON:   boolPtr(true),
-		RCONPassword: stringPtr(rconPassword),
-		RCONPort:     intPtr(25575),
-		Version:      stringPtr("LATEST"),
-		Type:         stringPtr("VANILLA"),
+		ID:              serverID + "-config",
+		ServerID:        serverID,
+		EULA:            stringPtr("TRUE"),
+		EnableRCON:      boolPtr(true),
+		RCONPassword:    stringPtr(rconPassword),
+		RCONPort:        intPtr(25575),
+		Version:         stringPtr("LATEST"),
+		Type:            stringPtr("VANILLA"),
 		Difficulty:      stringPtr("easy"),
 		Mode:            stringPtr("survival"),
 		MaxPlayers:      intPtr(20),
 		SyncChunkWrites: boolPtr(false),
+		// MINE-119 sleep baseline: native pause-when-empty (1.21.2+, vanilla
+		// default 60) stops ticking idle servers for ~0 CPU with instant wake.
+		// Overridable per-server or via global settings (copied below); 0 disables.
+		PauseWhenEmptySeconds: intPtr(60),
 	}
 
 	// Don't try to get global settings if we're creating the global settings themselves
