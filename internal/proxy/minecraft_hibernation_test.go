@@ -151,3 +151,60 @@ func TestMinecraftProxy_HibernatedStatusPingDoesNotWake(t *testing.T) {
 	require.Contains(t, routes, "sleep.test.local")
 	assert.True(t, routes["sleep.test.local"].Hibernated, "Route must stay hibernated after status ping")
 }
+
+func TestMinecraftProxy_LoginIntentResetsIdle(t *testing.T) {
+	// Only real login intent (NextState=2) may fire the ActivityHandler;
+	// status pings must not reset idle timing, or scanners would hold
+	// servers awake forever (MINE-120).
+	backendListener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = backendListener.Close() }()
+
+	backendPort := backendListener.Addr().(*net.TCPAddr).Port
+	go func() {
+		for {
+			conn, err := backendListener.Accept()
+			if err != nil {
+				return
+			}
+			_ = conn.Close()
+		}
+	}()
+
+	var activityCount atomic.Int32
+	proxy := NewMinecraftProxy(&Config{
+		ListenAddr: "127.0.0.1:0",
+		ActivityHandler: func(serverID string) {
+			if serverID == "srv-sleep" {
+				activityCount.Add(1)
+			}
+		},
+	})
+	err = proxy.Start()
+	require.NoError(t, err)
+	defer func() { _ = proxy.Stop() }()
+
+	time.Sleep(50 * time.Millisecond)
+	proxy.AddRoute("srv-sleep", "sleep.test.local", "127.0.0.1", backendPort)
+
+	proxyAddr := proxy.listener.Addr().String()
+	dialAndHandshake := func(nextState VarInt) {
+		conn, err := net.DialTimeout("tcp", proxyAddr, 2*time.Second)
+		require.NoError(t, err)
+		defer func() { _ = conn.Close() }()
+		require.NoError(t, WriteHandshakePacket(conn, &HandshakePacket{
+			ProtocolVersion: 763,
+			ServerAddress:   "sleep.test.local",
+			ServerPort:      25565,
+			NextState:       nextState,
+		}))
+	}
+
+	dialAndHandshake(1) // Status ping
+	time.Sleep(200 * time.Millisecond)
+	assert.Equal(t, int32(0), activityCount.Load(), "Status ping must NOT fire ActivityHandler")
+
+	dialAndHandshake(2) // Login intent
+	time.Sleep(200 * time.Millisecond)
+	assert.Equal(t, int32(1), activityCount.Load(), "Login intent must fire ActivityHandler once")
+}
