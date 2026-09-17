@@ -200,7 +200,7 @@ type ServerConfig struct {
 	HideOnlinePlayers              *bool   `json:"hideOnlinePlayers" env:"HIDE_ONLINE_PLAYERS" default:"false" desc:"Hide online players from the server list" input:"checkbox" label:"Hide Online Players"`
 	LogIPs                         *bool   `json:"logIps" env:"LOG_IPS" default:"true" desc:"Log connecting player IPs" input:"checkbox" label:"Log Player IPs"`
 	MaxChainedNeighborUpdates      *int    `json:"maxChainedNeighborUpdates" env:"MAX_CHAINED_NEIGHBOR_UPDATES" default:"1000000" desc:"Maximum chained neighbor updates" input:"number" label:"Max Chained Neighbor Updates"`
-	PauseWhenEmptySeconds          *int    `json:"pauseWhenEmptySeconds" env:"PAUSE_WHEN_EMPTY_SECONDS" default:"0" desc:"Pause when server empty (seconds)" input:"number" label:"Pause When Empty"`
+	PauseWhenEmptySeconds          *int    `json:"pauseWhenEmptySeconds" env:"PAUSE_WHEN_EMPTY_SECONDS" default:"60" desc:"Pause ticking when server empty N seconds (0 disables, MINE-119 sleep baseline)" input:"number" label:"Pause When Empty"`
 	RateLimit                      *int    `json:"rateLimit" env:"RATE_LIMIT" default:"0" desc:"Rate limit in packets per second" input:"number" label:"Rate Limit"`
 	RegionFileCompression          *string `json:"regionFileCompression" env:"REGION_FILE_COMPRESSION" default:"deflate" desc:"Compression type for region files" input:"text" label:"Region File Compression"`
 	ResourcePackID                 *string `json:"resourcePackId" env:"RESOURCE_PACK_ID" default:"" desc:"Custom resource pack ID" input:"text" label:"Resource Pack ID"`
