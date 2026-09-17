@@ -127,7 +127,7 @@ func slpHealthCheck(host string, port int, protocolVersion VarInt, timeout time.
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	deadline := time.Now().Add(timeout)
 	if err := conn.SetDeadline(deadline); err != nil {
