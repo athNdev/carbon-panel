@@ -232,9 +232,21 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
-	// Wake hibernated server container if paused (MINE-18)
-	if route.Hibernated && p.wakeHandler != nil {
-		p.logger.Info("Target server %s for host %s is hibernated, waking via cgroup freezer...", route.ServerID, hostname)
+	// Wake hibernated server container only on real login intent (MINE-118).
+	// Status pings (NextState=1: server-list refreshes, scanners, bots) must
+	// never wake or dial a hibernated backend — waking on any handshake is
+	// the pause/knock wake loop from the DiscoPanel report. A pinged
+	// hibernated route simply closes; the client sees the server as
+	// unreachable, same as mc-router with an empty asleep MOTD.
+	if route.Hibernated {
+		if handshake.NextState != 2 {
+			p.logger.Debug("Ignoring status ping for hibernated server %s (host %s): staying asleep", route.ServerID, hostname)
+			return
+		}
+		if p.wakeHandler == nil {
+			return
+		}
+		p.logger.Info("Login intent for hibernated server %s (host %s), waking via cgroup freezer...", route.ServerID, hostname)
 		wakeCtx, wakeCancel := context.WithTimeout(p.ctx, 5*time.Second)
 		if err := p.wakeHandler(wakeCtx, route.ServerID); err != nil {
 			wakeCancel()
