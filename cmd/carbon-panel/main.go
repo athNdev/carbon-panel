@@ -163,6 +163,30 @@ func main() {
 	// Initialize metrics collector
 	metricsCollector := metrics.NewCollectorWithPool(store, dockerClient, clientPool, sender, cfg, eventBus, log)
 
+	// MINE-120: hibernation lifecycle — idle freeze plus proxy-gated
+	// wake/activity. Only acts on servers with AutoHibernate enabled; the
+	// player count comes from the metrics collector (the DB row field is
+	// never persisted), and login intent via the proxy resets idle timing
+	// while status pings never do. Remote-node containers fail safe: pause
+	// via the local daemon errors before any status change.
+	hibernationMgr := docker.NewHibernationManager(dockerClient, store, log)
+	hibernationMgr.SetPlayerCountProvider(func(serverID string) int {
+		if m := metricsCollector.GetMetrics(serverID); m != nil {
+			return m.PlayersOnline
+		}
+		return 0
+	})
+	proxyManager.SetWakeHandler(func(wakeCtx context.Context, serverID string) error {
+		return hibernationMgr.WakeServer(wakeCtx, serverID)
+	})
+	proxyManager.SetActivityHandler(func(serverID string) {
+		hibernationMgr.RecordActivity(serverID)
+	})
+	hibernateCtx, hibernateCancel := context.WithCancel(ctx)
+	defer hibernateCancel()
+	hibernationMgr.Start(hibernateCtx, 30*time.Second)
+	defer hibernationMgr.Stop()
+
 	// Initialize task scheduler
 	taskScheduler := scheduler.NewScheduler(store, dockerClient, sender, cfg, metricsCollector, log, scheduler.Config{
 		CheckInterval: time.Duration(cfg.Docker.SyncInterval) * time.Second, // Use same interval as container status monitor

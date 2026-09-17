@@ -17,6 +17,9 @@ type mockFreezer struct {
 	paused       map[string]bool
 	pauseCalls   []string
 	unpauseCalls []string
+	// pauseGate, when non-nil, blocks PauseContainer until closed —
+	// lets tests hold a transition open to prove single-flighting.
+	pauseGate chan struct{}
 }
 
 func newMockFreezer() *mockFreezer {
@@ -26,6 +29,13 @@ func newMockFreezer() *mockFreezer {
 }
 
 func (m *mockFreezer) PauseContainer(ctx context.Context, containerID string) error {
+	if gate := m.pauseGate; gate != nil {
+		select {
+		case <-gate:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.paused[containerID] = true
@@ -198,4 +208,95 @@ func TestHibernationManager_CheckIdleServers(t *testing.T) {
 
 	activeSrv, _ := store.GetServer(ctx, "srv-active")
 	assert.Equal(t, db.StatusRunning, activeSrv.Status)
+}
+
+func TestHibernationManager_PlayerCountProvider(t *testing.T) {
+	// Store rows never persist PlayersOnline (gorm:"-"), so without a
+	// provider every server looks idle. The provider is authoritative:
+	// a server the provider reports players for must not hibernate (MINE-120).
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	store := newMockFreezerStore()
+
+	store.servers["srv-busy"] = &db.Server{
+		ID:                 "srv-busy",
+		Name:               "Busy Server",
+		ContainerID:        "cnt-busy",
+		Status:             db.StatusRunning,
+		AutoHibernate:      true,
+		IdleTimeoutMinutes: 1,
+		PlayersOnline:      0, // what the store row always reports
+	}
+
+	mgr := NewHibernationManager(freezer, store, nil)
+	mgr.SetPlayerCountProvider(func(serverID string) int {
+		if serverID == "srv-busy" {
+			return 3 // metrics collector sees players
+		}
+		return 0
+	})
+
+	require.NoError(t, mgr.CheckIdleServers(ctx))
+	mgr.trackerMu.Lock()
+	mgr.idleTracker["srv-busy"] = time.Now().Add(-2 * time.Minute)
+	mgr.trackerMu.Unlock()
+
+	require.NoError(t, mgr.CheckIdleServers(ctx))
+	assert.NotContains(t, freezer.pauseCalls, "cnt-busy")
+
+	srv, err := store.GetServer(ctx, "srv-busy")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusRunning, srv.Status)
+}
+
+func TestHibernationManager_SingleFlight(t *testing.T) {
+	// A hibernate racing an in-flight hibernate for the same server must be
+	// rejected instead of double-pausing; the container freezes exactly once
+	// (MINE-120). The gate holds the first transition open so the race is
+	// deterministic.
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	freezer.pauseGate = make(chan struct{})
+	store := newMockFreezerStore()
+
+	store.servers["srv-race"] = &db.Server{
+		ID:            "srv-race",
+		Name:          "Racy Server",
+		ContainerID:   "cnt-race",
+		Status:        db.StatusRunning,
+		AutoHibernate: true,
+	}
+
+	mgr := NewHibernationManager(freezer, store, nil)
+
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- mgr.HibernateServer(ctx, "srv-race")
+	}()
+
+	// Wait until the first transition holds the in-flight slot.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		mgr.inflightMu.Lock()
+		_, busy := mgr.inflight["srv-race"]
+		mgr.inflightMu.Unlock()
+		if busy {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for first hibernate to go in-flight")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	err := mgr.HibernateServer(ctx, "srv-race")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already in flight")
+
+	close(freezer.pauseGate)
+	require.NoError(t, <-firstDone)
+
+	freezer.mu.Lock()
+	defer freezer.mu.Unlock()
+	assert.Len(t, freezer.pauseCalls, 1, "container must be paused exactly once")
 }
