@@ -68,6 +68,10 @@
 			detached: server.detached,
 			autoStart: server.autoStart,
 			tpsCommand: server.tpsCommand || '',
+			autoHibernate: server.autoHibernate,
+			idleTimeoutMinutes: server.idleTimeoutMinutes,
+			autoDeepSleep: server.autoDeepSleep,
+			deepSleepTimeoutMinutes: server.deepSleepTimeoutMinutes,
 			modpackId: '', // Not used in this context
 			modpackVersionId: '', // Not used in this context
 			additionalPorts: server.additionalPorts || [],
@@ -87,6 +91,10 @@
 			formData.detached !== server.detached ||
 			formData.autoStart !== server.autoStart ||
 			formData.tpsCommand !== (server.tpsCommand || '') ||
+			formData.autoHibernate !== server.autoHibernate ||
+			formData.idleTimeoutMinutes !== server.idleTimeoutMinutes ||
+			formData.autoDeepSleep !== server.autoDeepSleep ||
+			formData.deepSleepTimeoutMinutes !== server.deepSleepTimeoutMinutes ||
 			safeToString(formData.additionalPorts) !== safeToString(server.additionalPorts || []) ||
 			safeToString($state.snapshot(formData.dockerOverrides)) !==
 				safeToString(server.dockerOverrides)
@@ -118,6 +126,10 @@
 				detached: server.detached,
 				autoStart: server.autoStart,
 				tpsCommand: server.tpsCommand || '',
+				autoHibernate: server.autoHibernate,
+				idleTimeoutMinutes: server.idleTimeoutMinutes,
+				autoDeepSleep: server.autoDeepSleep,
+				deepSleepTimeoutMinutes: server.deepSleepTimeoutMinutes,
 				modpackId: '', // Not used in this context
 				modpackVersionId: '', // Not used in this context
 				additionalPorts: server.additionalPorts || [],
@@ -240,6 +252,19 @@
 			input.value = '1';
 			formData.maxPlayers = 1;
 		}
+	}
+
+	function handleNonNegativeIntInput(field: 'idleTimeoutMinutes' | 'deepSleepTimeoutMinutes') {
+		return (e: Event) => {
+			const input = e.currentTarget as HTMLInputElement;
+			const value = Number(input.value);
+
+			// Prevent negative values (0 keeps the manager default)
+			if (value < 0 || !Number.isFinite(value)) {
+				input.value = '0';
+				formData[field] = 0;
+			}
+		};
 	}
 
 	async function handleSave() {
@@ -475,6 +500,80 @@
 						formData.autoStart = checked;
 					}}
 				/>
+			</div>
+
+			<div class="space-y-4 pt-2">
+				<h4 class="text-sm font-semibold">Sleep & Deep Sleep</h4>
+				<p class="text-xs text-muted-foreground">
+					Idle servers sip resources instead of burning them. Freeze keeps the server in
+					memory (~0 CPU, instant wake); deep sleep stops it entirely (zero RAM, boots
+					on join). Wakes trigger on player joins only — server-list pings never wake.
+				</p>
+
+				<div class="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+					<div class="space-y-0.5">
+						<Label for="auto_hibernate" class="cursor-pointer text-sm font-medium"
+							>Freeze on Idle</Label
+						>
+						<p class="text-xs text-muted-foreground">
+							Pause the container after N idle minutes (wakes on player join)
+						</p>
+					</div>
+					<Switch
+						id="auto_hibernate"
+						checked={formData.autoHibernate}
+						onCheckedChange={(checked) => (formData.autoHibernate = checked)}
+					/>
+				</div>
+
+				{#if formData.autoHibernate}
+					<div class="space-y-2">
+						<Label for="idle_timeout_minutes" class="text-sm font-medium"
+							>Idle minutes before freeze</Label
+						>
+						<Input
+							id="idle_timeout_minutes"
+							type="number"
+							bind:value={formData.idleTimeoutMinutes}
+							oninput={handleNonNegativeIntInput('idleTimeoutMinutes')}
+							min="0"
+							class="h-10 w-32"
+						/>
+					</div>
+				{/if}
+
+				<div class="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+					<div class="space-y-0.5">
+						<Label for="auto_deep_sleep" class="cursor-pointer text-sm font-medium"
+							>Deep Sleep on Idle</Label
+						>
+						<p class="text-xs text-muted-foreground">
+							Stop the container after N idle minutes (zero RAM; boots on join, held
+							up to ~25s)
+						</p>
+					</div>
+					<Switch
+						id="auto_deep_sleep"
+						checked={formData.autoDeepSleep}
+						onCheckedChange={(checked) => (formData.autoDeepSleep = checked)}
+					/>
+				</div>
+
+				{#if formData.autoDeepSleep}
+					<div class="space-y-2">
+						<Label for="deep_sleep_timeout_minutes" class="text-sm font-medium"
+							>Idle minutes before deep sleep</Label
+						>
+						<Input
+							id="deep_sleep_timeout_minutes"
+							type="number"
+							bind:value={formData.deepSleepTimeoutMinutes}
+							oninput={handleNonNegativeIntInput('deepSleepTimeoutMinutes')}
+							min="0"
+							class="h-10 w-32"
+						/>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

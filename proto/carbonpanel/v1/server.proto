@@ -128,6 +128,8 @@ message CreateServerRequest {
   DockerOverrides docker_overrides = 18;
   string node_id = 19;
   string placement_strategy = 20;
+  bool auto_hibernate = 21;
+  bool auto_deep_sleep = 22;
 }
 
 // Created server instance
@@ -153,6 +155,10 @@ message UpdateServerRequest {
   string modpack_version_id = 14;
   repeated AdditionalPort additional_ports = 15;
   DockerOverrides docker_overrides = 16;
+  optional bool auto_hibernate = 17;
+  optional int32 idle_timeout_minutes = 18;
+  optional bool auto_deep_sleep = 19;
+  optional int32 deep_sleep_timeout_minutes = 20;
 }
 
 // Updated server instance
