@@ -58,11 +58,14 @@
 
 <div
 	bind:this={container}
+	role="tablist"
 	class="relative flex items-center border-b border-[#393939] bg-[#161616] font-sans {className}"
 >
 	{#each tabs as tab}
 		<button
 			type="button"
+			role="tab"
+			aria-selected={selectedTab === tab.id}
 			data-tab
 			onclick={() => handleTabClick(tab.id)}
 			class="h-10 px-4 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 border-transparent cursor-pointer select-none {selectedTab === tab.id ? 'text-[#f4f4f4] bg-[#262626] font-semibold' : 'text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
@@ -77,7 +80,7 @@
 	{/each}
 	{#if indicatorWidth > 0}
 		<div
-			class="absolute bottom-[-1px] h-0.5 bg-[#0f62fe] transition-[transform,width] duration-[var(--motion-fast)] ease-[var(--ease-in-out-standard)]"
+			class="pointer-events-none absolute bottom-[-1px] h-0.5 bg-[#0f62fe] transition-[transform,width] duration-[var(--motion-fast)] ease-[var(--ease-in-out-standard)]"
 			style="width: {indicatorWidth}px; transform: translateX({indicatorLeft}px)"
 		></div>
 	{/if}
