@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package minecraft
 
 import (
@@ -5,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -271,7 +281,54 @@ func GetJavaVersion(mcVersion string) (string, error) {
 	return javaVersion, nil
 }
 
+// parseMinecraftReleaseVersion parses release versions like "1.21.4", "1.20", or "26.3"
+// returning (major, minor, patch, ok).
+func parseMinecraftReleaseVersion(v string) (int, int, int, bool) {
+	parts := strings.Split(v, ".")
+	if len(parts) < 2 || len(parts) > 3 {
+		return 0, 0, 0, false
+	}
+	major, err := strconv.Atoi(parts[0])
+	if err != nil || major <= 0 {
+		return 0, 0, 0, false
+	}
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil || minor < 0 {
+		return 0, 0, 0, false
+	}
+	patch := 0
+	if len(parts) == 3 {
+		patch, err = strconv.Atoi(parts[2])
+		if err != nil || patch < 0 {
+			return 0, 0, 0, false
+		}
+	}
+	return major, minor, patch, true
+}
+
 func FindMostRecentMinecraftVersion(versions []string) string {
+	bestVersion := ""
+	bestMajor := -1
+	bestMinor := -1
+	bestPatch := -1
+
+	for _, v := range versions {
+		if major, minor, patch, ok := parseMinecraftReleaseVersion(v); ok {
+			if major > bestMajor ||
+				(major == bestMajor && minor > bestMinor) ||
+				(major == bestMajor && minor == bestMinor && patch > bestPatch) {
+				bestMajor = major
+				bestMinor = minor
+				bestPatch = patch
+				bestVersion = v
+			}
+		}
+	}
+
+	if bestVersion != "" {
+		return bestVersion
+	}
+
 	for i := len(versions) - 1; i >= 0; i-- {
 		hasLetter := false
 		for _, ch := range versions[i] {
