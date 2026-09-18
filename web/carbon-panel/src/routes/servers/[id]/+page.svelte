@@ -290,7 +290,12 @@
 
 			<!-- Sharp Action Buttons -->
 			<div class="flex items-center gap-2">
-				{#if server.status === ServerStatus.STOPPED || !server.containerId}
+				{#if server.status === ServerStatus.CREATING}
+					<div class="h-10 px-4 bg-[#262626] border border-[#393939] text-[#f4f4f4] text-sm font-sans flex items-center gap-2 rounded-none select-none">
+						<Loader2 class="h-4 w-4 animate-spin text-[#0f62fe]" />
+						<span>Creating Server...</span>
+					</div>
+				{:else if server.status === ServerStatus.STOPPED || !server.containerId}
 					<button
 						type="button"
 						onclick={() => handleServerAction('start')}
@@ -546,7 +551,12 @@
 		<!-- Carbon Tabs for Sub-Views with bottom blue line indicator (Requirement 4) -->
 		<div class="flex min-h-0 flex-1 flex-col space-y-4">
 			<!-- Tab Bar -->
-			<CarbonTabs tabs={subViewTabs} bind:selectedTab={activeTab} class="overflow-x-auto" />
+			<CarbonTabs
+				tabs={subViewTabs}
+				bind:selectedTab={activeTab}
+				onselect={(tab) => (activeTab = tab)}
+				class="overflow-x-auto"
+			/>
 
 			<!-- Tab Content Areas -->
 			<div class="min-h-0 flex-1">

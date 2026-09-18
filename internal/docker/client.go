@@ -550,8 +550,6 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// crashes surface as error instead of spinning forever. Operators
 		// can still override via DockerOverrides (see ApplyOverrides below).
 		RestartPolicy: container.RestartPolicy{Name: "on-failure", MaximumRetryCount: 5},
-		CapDrop:       []string{"ALL"},
-		SecurityOpt:   []string{"no-new-privileges:true"},
 		Resources: container.Resources{
 			Memory:     containerLimitBytes,
 			MemorySwap: containerLimitBytes,
