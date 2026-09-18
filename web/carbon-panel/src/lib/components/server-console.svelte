@@ -51,6 +51,8 @@
 	let wsConnectionState = $derived(wsClient.state.connectionState);
 	let cleanupHandlers: (() => void)[] = [];
 	let previousServerId = server.id;
+	let previousContainerId = server.containerId;
+	let previousStatus = server.status;
 
 	onDestroy(() => {
 		untrack(() => cleanupWebSocket());
@@ -66,9 +68,14 @@
 
 	$effect(() => {
 		const currentServerId = server.id;
+		const currentContainerId = server.containerId;
+		const currentStatus = server.status;
+
 		if (currentServerId !== previousServerId) {
 			const oldServerId = previousServerId;
 			previousServerId = currentServerId;
+			previousContainerId = currentContainerId;
+			previousStatus = currentStatus;
 
 			untrack(() => {
 				wsClient.unsubscribe(oldServerId);
@@ -77,8 +84,27 @@
 
 				if (active) {
 					wsClient.subscribe(currentServerId, tailLines);
+					fetchLogs();
 				}
 			});
+		} else if (
+			(currentContainerId !== previousContainerId || currentStatus !== previousStatus) &&
+			active
+		) {
+			const hadNoContainer = !previousContainerId && !!currentContainerId;
+			const transitionedToActive =
+				previousStatus === ServerStatus.CREATING &&
+				(currentStatus === ServerStatus.STARTING || currentStatus === ServerStatus.RUNNING);
+
+			previousContainerId = currentContainerId;
+			previousStatus = currentStatus;
+
+			if (hadNoContainer || transitionedToActive) {
+				untrack(() => {
+					wsClient.subscribe(currentServerId, tailLines);
+					fetchLogs();
+				});
+			}
 		}
 	});
 
@@ -113,6 +139,7 @@
 
 		cleanupHandlers = [unsubLogs, unsubLogEntry, unsubCommandResult];
 		wsClient.subscribe(server.id, tailLines);
+		fetchLogs();
 	}
 
 	function cleanupWebSocket() {
@@ -377,13 +404,17 @@
 				<div class="font-mono text-xs leading-relaxed text-[#f4f4f4]">
 					{#if logEntries.length === 0}
 						<div class="py-12 text-center text-[#6f6f6f] font-mono text-xs">
-							No logs available. {[
+							{#if server.status === ServerStatus.CREATING}
+								Server container is being initialized and configured...
+							{:else if [
 								ServerStatus.RUNNING,
 								ServerStatus.STARTING,
 								ServerStatus.UNHEALTHY
-							].includes(server.status)
-								? 'Try refreshing or emitting server events.'
-								: 'Start server to view live container telemetry.'}
+							].includes(server.status)}
+								No logs available. Try refreshing or waiting for container output.
+							{:else}
+								No logs available. Start server to view live container telemetry.
+							{/if}
 						</div>
 					{:else}
 						{#each logEntries as entry, i (i)}
@@ -406,7 +437,11 @@
 			<span class="font-mono text-sm text-[#0f62fe] font-bold select-none">$</span>
 			<input
 				type="text"
-				placeholder={server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY
+				placeholder={server.status === ServerStatus.CREATING
+					? 'Server is creating...'
+					: server.status === ServerStatus.STARTING
+					? 'Server is starting...'
+					: server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY
 					? 'Enter Minecraft server command (e.g. op, whitelist, stop)...'
 					: 'Server must be active to execute commands'}
 				bind:value={command}
