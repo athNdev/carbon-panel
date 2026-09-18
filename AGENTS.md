@@ -40,3 +40,26 @@ Every agent session MUST do session-start and session-end. Total start budget: <
 - No secrets, PII, or tokens ever in `memory/` or skills. No exceptions.
 - Per-project isolation: this context is carbon-panel only; never import other projects' memory.
 - Personas/reviewers are read-only: no memory writes, no Plane edits.
+
+---
+
+## Cluster-Wide Standing Rules (Mandatory Across All Agents)
+
+All agents operating in this repository must strictly comply with the cluster standing rules defined in `/home/prox/agent_setup/AGENTS.md`:
+
+1. **Cross-Node Collision Avoidance (`agentplane`)**: Run `agentplane check <path>` before touching files/resources; claim long-running tasks and release them when done.
+2. **Pre-Task Consultation**: Query `agent-context` (`qmd query "<topic>"` or `qmd search "<term>"`) before performing cluster, infrastructure, or service operations.
+3. **Post-Action State Updates (MANDATORY COMPLETION GATE)**:
+   Any task modifying cluster configuration, infrastructure, services, tooling, skills, provider configs, or architecture MUST update `agent-context`:
+   - Document changes in `/home/prox/context-corpus/` (`runbooks/`, `decisions/`, `sessions/`).
+   - Sync and reindex: `/home/prox/agent_setup/context/context-sync.sh`
+   - Verify health: `/home/prox/agent_setup/context/context-healthcheck.sh`
+   - No task modifying system state is complete without completing this step.
+4. **Subagent Delegation via `t3-lb`**: Use `t3lb` (`t3lb spawn`, `t3lb wait`, `t3lb nodes`) to distribute heavy or parallel workloads across cluster nodes.
+5. **Forgejo System of Record**: Regular git pushes to local Forgejo (port 2222) and run `localrepo snapshot` before ending sessions.
+6. **Default Token-Saving Communication: Caveman Mode**:
+   All agents operate in Caveman Mode (~65–75% token reduction):
+   - Terse, fragment-based, zero conversational filler, no pleasantries.
+   - Code blocks, commands, paths, diffs, and errors remain 100% exact and uncompressed.
+   - Immediate tool execution without narrative announcements.
+   - Switch to full sentences only for safety warnings, destructive actions (`rm -rf`, `DROP TABLE`), or when user requests "normal mode".
