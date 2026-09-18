@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -448,6 +449,7 @@ func (s *Server) createFrontendHandler(fs http.FileSystem) http.HandlerFunc {
 		if err == nil {
 			defer file.Close()
 			stat, _ := file.Stat()
+			setFrontendCacheHeaders(w, path)
 			http.ServeContent(w, r, path, stat.ModTime(), file)
 			return
 		}
@@ -462,7 +464,21 @@ func (s *Server) createFrontendHandler(fs http.FileSystem) http.HandlerFunc {
 
 		stat, _ := indexFile.Stat()
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeContent(w, r, "/index.html", stat.ModTime(), indexFile)
+	}
+}
+
+// setFrontendCacheHeaders prevents browsers from running a stale bundle
+// after a panel upgrade: hashed SvelteKit assets are immutable, HTML entry
+// points must always revalidate.
+func setFrontendCacheHeaders(w http.ResponseWriter, path string) {
+	if strings.HasPrefix(path, "/_app/immutable/") {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		return
+	}
+	if strings.HasSuffix(path, ".html") {
+		w.Header().Set("Cache-Control", "no-cache")
 	}
 }
 
