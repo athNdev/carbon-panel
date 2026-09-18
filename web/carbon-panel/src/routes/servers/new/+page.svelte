@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { rpcClient } from '$lib/api/rpc-client';
@@ -176,6 +177,18 @@
 		}
 
 		loadFavoriteModpacks();
+
+		const modpackParam = page.url.searchParams.get('modpack');
+		if (modpackParam) {
+			try {
+				const packRes = await rpcClient.modpack.getModpack({ id: modpackParam });
+				if (packRes.modpack) {
+					await selectModpack(packRes.modpack);
+				}
+			} catch (err) {
+				console.error('Failed to pre-select modpack from URL:', err);
+			}
+		}
 	});
 
 	async function loadFavoriteModpacks() {
@@ -199,6 +212,9 @@
 				modLoader: ''
 			});
 			modpackVersions = data.versions || [];
+			if (modpackVersions.length > 0 && !selectedVersionId) {
+				selectedVersionId = modpackVersions[0].id;
+			}
 		} catch (error) {
 			console.error('Failed to load modpack versions:', error);
 			modpackVersions = [];
