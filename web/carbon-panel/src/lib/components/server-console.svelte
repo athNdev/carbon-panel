@@ -183,6 +183,7 @@
 
 		if (wsClient.isReady) {
 			wsClient.sendCommand(server.id, currentCommand);
+			loading = false;
 		} else {
 			await sendCommandViaRpc(currentCommand);
 		}
