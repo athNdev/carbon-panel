@@ -20,6 +20,7 @@ import (
 func setupTaskTestService(t *testing.T) (*TaskService, *storage.Server) {
 	t.Helper()
 	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
 	log := logger.New()
 
 	sched := scheduler.NewScheduler(store, nil, nil, nil, nil, log)

@@ -283,18 +283,19 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 
 	// Validate schedule type and cron expression (SCH-7)
 	scheduleType := protoScheduleTypeToDB(msg.Schedule)
-	if scheduleType == storage.ScheduleTypeCron {
+	switch scheduleType {
+	case storage.ScheduleTypeCron:
 		if msg.CronExpr == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("cron_expr is required for cron-scheduled tasks"))
 		}
 		if err := s.scheduler.ValidateCronExpr(msg.CronExpr); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cron expression: %v", err))
 		}
-	} else if scheduleType == storage.ScheduleTypeInterval {
+	case storage.ScheduleTypeInterval:
 		if msg.IntervalSecs <= 0 {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("interval_secs must be greater than 0"))
 		}
-	} else if scheduleType == storage.ScheduleTypeOnce {
+	case storage.ScheduleTypeOnce:
 		if msg.RunAt == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("run_at is required for once-scheduled tasks"))
 		}
@@ -361,7 +362,7 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create task"))
 	}
 
-	s.log.Info("Created scheduled task: %s for server %s", task.Name, task.ServerID)
+	s.log.Info("Created scheduled task: %s (schedule: %s)", task.Name, task.Schedule)
 
 	return connect.NewResponse(&v1.CreateTaskResponse{
 		Task: dbTaskToProto(task),
@@ -398,14 +399,15 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *connect.Request[v1.Up
 	}
 
 	// Validate schedule-specific rules (SCH-7)
-	if task.Schedule == storage.ScheduleTypeCron {
+	switch task.Schedule {
+	case storage.ScheduleTypeCron:
 		if task.CronExpr == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("cron_expr is required for cron-scheduled tasks"))
 		}
 		if err := s.scheduler.ValidateCronExpr(task.CronExpr); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cron expression: %v", err))
 		}
-	} else if task.Schedule == storage.ScheduleTypeInterval {
+	case storage.ScheduleTypeInterval:
 		if task.IntervalSecs <= 0 {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("interval_secs must be greater than 0"))
 		}
