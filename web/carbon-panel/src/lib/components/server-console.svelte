@@ -209,6 +209,11 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function sendCommand() {
 		if (!command.trim() || loading) return;
+		// Defense-in-depth (MINE-129): the input/button are disabled unless
+		// RUNNING/UNHEALTHY, but guard here too so no path (Enter, click,
+		// programmatic call) can dispatch a command to an inactive server.
+		if (server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY)
+			return;
 
 		const currentCommand = command.trim();
 		command = '';
@@ -216,6 +221,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 		if (wsClient.isReady) {
 			wsClient.sendCommand(server.id, currentCommand);
+			loading = false;
 		} else {
 			await sendCommandViaRpc(currentCommand);
 		}
