@@ -67,8 +67,9 @@
 			role="tab"
 			aria-selected={selectedTab === tab.id}
 			data-tab
+			data-testid="tab-{tab.id}"
 			onclick={() => handleTabClick(tab.id)}
-			class="h-10 px-4 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 border-transparent cursor-pointer select-none {selectedTab === tab.id ? 'text-[#f4f4f4] bg-[#262626] font-semibold' : 'text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+			class="relative z-10 h-10 px-4 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 border-transparent cursor-pointer select-none {selectedTab === tab.id ? 'text-[#f4f4f4] bg-[#262626] font-semibold' : 'text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
 		>
 			<span>{tab.label}</span>
 			{#if tab.badge !== undefined}

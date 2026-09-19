@@ -50,7 +50,7 @@
 		RestartServerRequestSchema,
 		RecreateServerRequestSchema
 	} from '$lib/proto/carbonpanel/v1/server_pb';
-	import { formatBytes } from '$lib/utils';
+	import { formatBytes, enumToString } from '$lib/utils';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
 	import { CarbonTag, CarbonButton, CarbonTabs } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
@@ -481,7 +481,7 @@
 					<div class="flex items-center justify-between">
 						<span class="text-[#8d8d8d]">Loader:</span>
 						<CarbonTag type="teal" size="sm">
-							{ModLoader[server.modLoader].toLowerCase()}
+							{enumToString(ModLoader, server.modLoader) || 'vanilla'}
 						</CarbonTag>
 					</div>
 					{#if server.javaVersion}
