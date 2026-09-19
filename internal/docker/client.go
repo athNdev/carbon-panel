@@ -52,6 +52,17 @@ const (
 	RCONPortOffset = 10
 )
 
+// DefaultRestartPolicy is the Docker restart policy applied to every
+// Carbon Panel container. "on-failure:5" lets the daemon re-attempt
+// crashed containers up to 5 times while honouring an explicit
+// operator /stop (exit 0) — desired-state authority stays with the
+// panel's reconciler which self-heals missing containers.
+// Pinned by TestDefaultRestartPolicy — change deliberately.
+var DefaultRestartPolicy = container.RestartPolicy{
+	Name:              "on-failure",
+	MaximumRetryCount: 5,
+}
+
 type ContainerStats struct {
 	CPUPercent  float64 `json:"cpu_percent"`
 	MemoryUsage float64 `json:"memory_usage"` // in MB
