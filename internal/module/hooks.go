@@ -226,41 +226,25 @@ func (m *Manager) evaluateCondition(condition string, server *storage.Server, mo
 	return m.compareValues(actualValue, operator, expectedValue)
 }
 
-// Compares two values using the specified operator
-// TODO: Move all of these hacky comparators to a pkg where they belond...
+// Compares two values using the specified operator.
+// Typed helpers live in compare.go; kept in-package (not a shared pkg) since
+// this is the single caller and the string fallback needs m.logger.
 func (m *Manager) compareValues(actual, operator, expected string) bool {
 	// Try numeric comparison first
-	actualNum, actualErr := strconv.ParseFloat(actual, 64)
-	expectedNum, expectedErr := strconv.ParseFloat(expected, 64)
-
-	if actualErr == nil && expectedErr == nil {
-		// Both are numeric
-		switch operator {
-		case "==":
-			return actualNum == expectedNum
-		case "!=":
-			return actualNum != expectedNum
-		case "<":
-			return actualNum < expectedNum
-		case ">":
-			return actualNum > expectedNum
-		case "<=":
-			return actualNum <= expectedNum
-		case ">=":
-			return actualNum >= expectedNum
+	if actualNum, actualErr := strconv.ParseFloat(actual, 64); actualErr == nil {
+		if expectedNum, expectedErr := strconv.ParseFloat(expected, 64); expectedErr == nil {
+			if result, ok := compareNumeric(actualNum, expectedNum, operator); ok {
+				return result
+			}
 		}
 	}
 
-	// String comparison
+	// String comparison (case-insensitive for == / != only)
 	actual = strings.ToLower(actual)
 	expected = strings.ToLower(expected)
-	switch operator {
-	case "==":
-		return actual == expected
-	case "!=":
-		return actual != expected
-	default:
-		m.logger.Warn("Operator %s not supported for string comparison", operator)
-		return false
+	if result, ok := compareStrings(actual, expected, operator); ok {
+		return result
 	}
+	m.logger.Warn("Operator %s not supported for string comparison", operator)
+	return false
 }

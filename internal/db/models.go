@@ -230,7 +230,10 @@ type ServerConfig struct {
 	ResourcePackSHA1    *string `json:"resourcePackSha1" env:"RESOURCE_PACK_SHA1" default:"" desc:"Checksum for custom resource pack" input:"text" label:"Resource Pack SHA1"`
 	ResourcePackEnforce *bool   `json:"resourcePackEnforce" env:"RESOURCE_PACK_ENFORCE" default:"false" desc:"Enforce resource pack on clients" input:"checkbox" label:"Enforce Resource Pack"`
 
-	// Management Server (TODO: We should be the management server...)
+	// Management Server passthrough for the itzg mc-server-runner management
+	// interface (CORS/TLS/auth env). NOTE (MINE-127 triage): wontfix as a
+	// removal — dropping these fields breaks compat with existing server
+	// configs; panel acting as the management server itself is out of scope.
 	ManagementServerAllowedOrigins      *string `json:"managementServerAllowedOrigins" env:"MANAGEMENT_SERVER_ALLOWED_ORIGINS" default:"" desc:"Allowed CORS origins for management server" input:"text" label:"Management Server Allowed Origins"`
 	ManagementServerEnabled             *bool   `json:"managementServerEnabled" env:"MANAGEMENT_SERVER_ENABLED" default:"false" desc:"Enable management server interface" input:"checkbox" label:"Enable Management Server"`
 	ManagementServerHost                *string `json:"managementServerHost" env:"MANAGEMENT_SERVER_HOST" default:"0.0.0.0" desc:"Host address for management server" input:"text" label:"Management Server Host"`

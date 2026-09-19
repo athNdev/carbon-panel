@@ -169,30 +169,15 @@ func sign(body []byte, secret string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// Builds a flat map of variables available to payload templates
-// TODO: Use the alias package!!!
+// Builds a flat map of variables available to payload templates.
+// NOTE (MINE-127 triage): the alias package is intentionally not used here.
+// Webhook templates render from the decoupled Payload/ServerPayload DTO, while
+// alias.Substitute reflects over storage models (Server/ServerConfig/Module)
+// and emits {{dotted}} keys. Switching would couple webhooks to the DB schema
+// and rename existing flat keys (server_name, ...), breaking saved templates.
 func templateData(p *Payload) map[string]any {
-	titles := map[string]string{
-		"test":           "Webhook Test",
-		"server_start":   "Server Started",
-		"server_stop":    "Server Stopped",
-		"server_restart": "Server Restarted",
-	}
-	colors := map[string]int{
-		"test":           0x5865F2,
-		"server_start":   0x57F287,
-		"server_stop":    0xED4245,
-		"server_restart": 0xFEE75C,
-	}
-
-	title := titles[p.Event]
-	if title == "" {
-		title = p.Event
-	}
-	color := colors[p.Event]
-	if color == 0 {
-		color = 0x5865F2
-	}
+	title := webhookEventTitle(p.Event)
+	color := webhookEventColor(p.Event)
 
 	data := map[string]any{
 		"event":     p.Event,
@@ -224,6 +209,36 @@ func templateData(p *Payload) map[string]any {
 		data[k] = v
 	}
 	return data
+}
+
+// Typed helpers for Discord-style embed metadata (defaults keep unknown
+// events renderable instead of failing template execution).
+func webhookEventTitle(event string) string {
+	switch event {
+	case "test":
+		return "Webhook Test"
+	case "server_start":
+		return "Server Started"
+	case "server_stop":
+		return "Server Stopped"
+	case "server_restart":
+		return "Server Restarted"
+	default:
+		return event
+	}
+}
+
+func webhookEventColor(event string) int {
+	switch event {
+	case "server_start":
+		return 0x57F287
+	case "server_stop":
+		return 0xED4245
+	case "server_restart":
+		return 0xFEE75C
+	default:
+		return 0x5865F2
+	}
 }
 
 func renderTemplate(tmplStr string, p *Payload) ([]byte, error) {
