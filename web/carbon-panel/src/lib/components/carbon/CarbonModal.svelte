@@ -48,27 +48,131 @@
 		full: 'max-w-[95vw] w-[95vw] h-[90vh]'
 	};
 
+	let modalElement = $state<HTMLDivElement | null>(null);
+	let previousActiveElement: HTMLElement | null = null;
+	const titleId = `carbon-modal-title-${Math.random().toString(36).slice(2, 9)}`;
+	const descId = `carbon-modal-desc-${Math.random().toString(36).slice(2, 9)}`;
+
 	function handleClose() {
 		open = false;
 		onclose?.();
 	}
+
+	function handleBackdropClick(event: MouseEvent) {
+		if (event.target === event.currentTarget) {
+			handleClose();
+		}
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (!open) return;
+
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			handleClose();
+			return;
+		}
+
+		if (event.key === 'Tab' && modalElement) {
+			const focusableSelectors = [
+				'a[href]',
+				'button:not([disabled])',
+				'input:not([disabled])',
+				'select:not([disabled])',
+				'textarea:not([disabled])',
+				'[tabindex]:not([tabindex="-1"])'
+			].join(', ');
+
+			const focusable = Array.from(modalElement.querySelectorAll<HTMLElement>(focusableSelectors))
+				.filter(el => el.offsetParent !== null || el.offsetWidth > 0 || el.offsetHeight > 0);
+
+			if (focusable.length === 0) {
+				event.preventDefault();
+				return;
+			}
+
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+
+			if (event.shiftKey) {
+				if (document.activeElement === first || !modalElement.contains(document.activeElement)) {
+					last.focus();
+					event.preventDefault();
+				}
+			} else {
+				if (document.activeElement === last || !modalElement.contains(document.activeElement)) {
+					first.focus();
+					event.preventDefault();
+				}
+			}
+		}
+	}
+
+	$effect(() => {
+		if (open) {
+			if (typeof document !== 'undefined') {
+				previousActiveElement = document.activeElement as HTMLElement | null;
+				// Focus the modal or its first actionable element on open
+				setTimeout(() => {
+					if (!modalElement) return;
+					const focusableSelectors = [
+						'input:not([disabled])',
+						'button:not([disabled])',
+						'select:not([disabled])',
+						'textarea:not([disabled])',
+						'a[href]',
+						'[tabindex]:not([tabindex="-1"])'
+					].join(', ');
+					const firstFocusable = modalElement.querySelector<HTMLElement>(focusableSelectors);
+					if (firstFocusable) {
+						firstFocusable.focus();
+					} else {
+						modalElement.focus();
+					}
+				}, 50);
+			}
+		} else {
+			if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+				previousActiveElement.focus();
+				previousActiveElement = null;
+			}
+		}
+	});
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none rounded-none" transition:fade={{ duration: 150, easing: cubicOut }}>
-		<div class="w-full {sizeClasses[size]} bg-[#161616] border border-[#393939] shadow-2xl flex flex-col max-h-[90vh] rounded-none" in:scale={{ start: 0.97, opacity: 0, duration: 200, easing: cubicOut }} out:scale={{ start: 0.97, opacity: 0, duration: 150, easing: cubicIn }}>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs select-none rounded-none"
+		transition:fade={{ duration: 150, easing: cubicOut }}
+		onclick={handleBackdropClick}
+	>
+		<div
+			bind:this={modalElement}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby={title ? titleId : undefined}
+			aria-describedby={description ? descId : undefined}
+			tabindex="-1"
+			class="w-full {sizeClasses[size]} bg-[#161616] border border-[#393939] shadow-2xl flex flex-col max-h-[90vh] rounded-none outline-none focus:outline-none"
+			in:scale={{ start: 0.97, opacity: 0, duration: 200, easing: cubicOut }}
+			out:scale={{ start: 0.97, opacity: 0, duration: 150, easing: cubicIn }}
+		>
 			<!-- Header -->
 			<div class="p-6 border-b border-[#393939] flex items-start justify-between bg-[#262626] rounded-none">
 				<div>
 					{#if description}
-						<span class="font-sans text-xs font-normal text-[#c6c6c6]">{description}</span>
+						<span id={descId} class="font-sans text-xs font-normal text-[#c6c6c6]">{description}</span>
 					{/if}
-					<h3 class="font-sans text-xl font-semibold text-[#f4f4f4] mt-1">{title}</h3>
+					<h3 id={titleId} class="font-sans text-xl font-semibold text-[#f4f4f4] mt-1">{title}</h3>
 				</div>
 				<button
 					type="button"
 					onclick={handleClose}
-					class="text-[#c6c6c6] hover:text-white hover:bg-[#353535] p-2 transition-colors cursor-pointer rounded-none"
+					class="text-[#c6c6c6] hover:text-white hover:bg-[#353535] p-2 transition-colors cursor-pointer rounded-none focus:outline-none focus:ring-1 focus:ring-[#0f62fe]"
 					aria-label="Close modal"
 				>
 					<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">

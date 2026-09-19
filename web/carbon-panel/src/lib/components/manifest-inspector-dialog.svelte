@@ -239,10 +239,10 @@
 					<table class="w-full text-left text-xs">
 						<thead class="bg-muted/50 border-b sticky top-0">
 							<tr>
-								<th class="p-2">Mod Name</th>
-								<th class="p-2">Environment</th>
-								<th class="p-2">Role</th>
-								<th class="p-2 text-right">Action</th>
+								<th scope="col" class="p-2">Mod Name</th>
+								<th scope="col" class="p-2">Environment</th>
+								<th scope="col" class="p-2">Role</th>
+								<th scope="col" class="p-2 text-right">Action</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y">

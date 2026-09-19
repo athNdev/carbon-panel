@@ -261,9 +261,9 @@
 			<table class="w-full border-collapse text-left font-sans text-sm">
 				<thead class="border-b border-[#525252] bg-[#393939] text-[#f4f4f4]">
 					<tr>
-						<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Method</th>
-						<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Path</th>
-						<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Description</th>
+						<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Method</th>
+						<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Path</th>
+						<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Description</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">

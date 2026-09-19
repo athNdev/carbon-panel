@@ -190,13 +190,13 @@
 
 	{#snippet activeHeader()}
 		<tr>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Module / Server</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Status</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Memory</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">CPU</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Auto-Start</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Module / Server</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Status</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Memory</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">CPU</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Auto-Start</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
 		</tr>
 	{/snippet}
 
