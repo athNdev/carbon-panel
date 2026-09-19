@@ -429,8 +429,16 @@
 							Server healthy and processing ticks
 						{:else if server.status === ServerStatus.STOPPED}
 							Container offline
+						{:else if server.status === ServerStatus.CREATING}
+							Provisioning container & checking image
+						{:else if server.status === ServerStatus.STARTING}
+							Starting server (modpack downloads may take several minutes)
+						{:else if server.status === ServerStatus.RESTARTING}
+							Restarting server container
+						{:else if server.status === ServerStatus.STOPPING}
+							Gracefully shutting down
 						{:else}
-							Daemon status: {server.status}
+							Daemon status: {getStatusDisplayName(server.status)}
 						{/if}
 					</p>
 				</div>
@@ -509,13 +517,17 @@
 						<div class="flex items-center justify-between text-xs font-mono">
 							<span class="text-[#8d8d8d]">RAM</span>
 							<span class="text-[#f4f4f4]">
-								{server.memoryUsage ? (Number(server.memoryUsage) / 1024).toFixed(1) : '0'} / {(server.memory / 1024).toFixed(1)} GB
+								{#if server.status === ServerStatus.CREATING}
+									Allocated: {(server.memory / 1024).toFixed(1)} GB
+								{:else}
+									{server.memoryUsage ? (Number(server.memoryUsage) / 1024).toFixed(1) : '0'} / {(server.memory / 1024).toFixed(1)} GB
+								{/if}
 							</span>
 						</div>
 						<div class="w-full h-1.5 bg-[#161616] border border-[#393939] rounded-none mt-1">
 							<div
 								class="h-full bg-[#0f62fe] rounded-none transition-all"
-								style="width: {Math.min(server.memoryUsage ? (Number(server.memoryUsage) / server.memory) * 100 : 0, 100)}%"
+								style="width: {server.status === ServerStatus.CREATING ? '100' : Math.min(server.memoryUsage ? (Number(server.memoryUsage) / server.memory) * 100 : 0, 100)}%"
 							></div>
 						</div>
 					</div>
@@ -547,6 +559,39 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Startup & Creation Progress Banner (MINE-125 / MINE-128) -->
+		{#if server.status === ServerStatus.STARTING}
+			<div class="bg-[#161616] border-l-4 border-l-[#0f62fe] border border-[#393939] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+				<div class="flex items-center gap-3">
+					<Loader2 class="h-5 w-5 animate-spin text-[#0f62fe] shrink-0" />
+					<div>
+						<p class="text-sm font-semibold text-[#f4f4f4]">Server is starting up</p>
+						<p class="text-xs text-[#a8a8a8] mt-0.5">
+							First-boot modpack downloads (manifests, loader installers, mod jars) can take 2–5 minutes. Monitor real-time logs in the Console tab.
+						</p>
+					</div>
+				</div>
+				<button
+					type="button"
+					onclick={() => (activeTab = 'console')}
+					class="shrink-0 h-8 px-3 bg-[#262626] hover:bg-[#353535] border border-[#393939] text-xs font-mono text-[#78a9ff] flex items-center gap-1.5 transition-colors cursor-pointer"
+				>
+					<Terminal class="h-3.5 w-3.5" />
+					<span>Open Console</span>
+				</button>
+			</div>
+		{:else if server.status === ServerStatus.CREATING}
+			<div class="bg-[#161616] border-l-4 border-l-[#0f62fe] border border-[#393939] p-4 flex items-center gap-3">
+				<Loader2 class="h-5 w-5 animate-spin text-[#0f62fe] shrink-0" />
+				<div>
+					<p class="text-sm font-semibold text-[#f4f4f4]">Creating server environment</p>
+					<p class="text-xs text-[#a8a8a8] mt-0.5">
+						Checking Docker image and allocating filesystem storage...
+					</p>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Carbon Tabs for Sub-Views with bottom blue line indicator (Requirement 4) -->
 		<div class="flex min-h-0 flex-1 flex-col space-y-4">
