@@ -30,14 +30,14 @@ func setupTestStore(t *testing.T) *storage.Store {
 
 func TestSnapshot_CreateAndList(t *testing.T) {
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	log := logger.New()
 
 	serverDir, err := os.MkdirTemp("", "server-snap-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(serverDir)
+	defer func() { _ = os.RemoveAll(serverDir) }()
 
 	// Create test server files
 	require.NoError(t, os.MkdirAll(filepath.Join(serverDir, "mods"), 0755))
@@ -75,14 +75,14 @@ func TestSnapshot_CreateAndList(t *testing.T) {
 
 func TestSnapshot_Rollback(t *testing.T) {
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	log := logger.New()
 
 	serverDir, err := os.MkdirTemp("", "server-rollback-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(serverDir)
+	defer func() { _ = os.RemoveAll(serverDir) }()
 
 	// Initial clean state
 	require.NoError(t, os.MkdirAll(filepath.Join(serverDir, "config"), 0755))
@@ -126,14 +126,12 @@ func TestSnapshot_Rollback(t *testing.T) {
 
 func TestSnapshot_Rollback_RunningContainerRequiresStop(t *testing.T) {
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	log := logger.New()
 
-	serverDir, err := os.MkdirTemp("", "server-running-rollback-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(serverDir)
+	serverDir := t.TempDir()
 
 	// Clean file
 	testFile := filepath.Join(serverDir, "server.properties")
@@ -175,14 +173,12 @@ func TestSnapshot_Rollback_RunningContainerRequiresStop(t *testing.T) {
 
 func TestSnapshot_Pruning(t *testing.T) {
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	ctx := context.Background()
 	log := logger.New()
 
-	serverDir, err := os.MkdirTemp("", "server-pruning-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(serverDir)
+	serverDir := t.TempDir()
 
 	require.NoError(t, os.WriteFile(filepath.Join(serverDir, "data.txt"), []byte("hello"), 0644))
 
