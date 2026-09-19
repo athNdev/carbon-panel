@@ -198,6 +198,11 @@
 
 	async function sendCommand() {
 		if (!command.trim() || loading) return;
+		// Defense-in-depth (MINE-129 follow-up): input + Send button are
+		// disabled unless RUNNING/UNHEALTHY, but Enter-key / programmatic
+		// calls bypass `disabled` — mirror the UI condition here.
+		if (server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY)
+			return;
 
 		const currentCommand = command.trim();
 		command = '';
