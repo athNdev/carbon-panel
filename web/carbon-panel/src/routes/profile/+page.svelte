@@ -521,6 +521,7 @@
 						onclick={copyToken}
 						class="absolute top-2 right-2 p-1.5 bg-[#262626] hover:bg-[#353535] text-[#f4f4f4] border border-[#393939] cursor-pointer rounded-none transition-colors"
 						title="Copy Token"
+						aria-label="Copy Token"
 					>
 						{#if copied}
 							<Check class="h-4 w-4 text-[#6fdc8c]" />

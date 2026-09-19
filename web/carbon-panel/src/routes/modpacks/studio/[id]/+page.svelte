@@ -1214,6 +1214,7 @@
 														onclick={() => togglePin(mod)}
 														class="p-1 text-[#8d8d8d] hover:text-white transition-colors cursor-pointer rounded-none"
 														title={mod.pinned ? 'Version pinned' : 'Click to pin version'}
+														aria-label={mod.pinned ? `Unpin version for ${mod.name}` : `Pin version for ${mod.name}`}
 													>
 														{#if mod.pinned}
 															<Pin class="h-3.5 w-3.5 text-[#0f62fe]" />

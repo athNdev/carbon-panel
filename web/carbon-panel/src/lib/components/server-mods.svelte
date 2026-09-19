@@ -343,7 +343,8 @@
 								type="button"
 								onclick={cancelCurrentUpload}
 								class="text-[#ff8389] hover:text-white p-0.5"
-								title="Cancel"
+								title="Cancel upload"
+								aria-label="Cancel upload"
 							>
 								<X class="h-3.5 w-3.5" />
 							</button>
