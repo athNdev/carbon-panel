@@ -164,7 +164,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 		PortBindings: portBindings,
 		Mounts:       mounts,
 		RestartPolicy: container.RestartPolicy{
-			Name: "unless-stopped",
+			Name: DefaultRestartPolicy,
 		},
 		Resources: container.Resources{
 			Memory:     memory * 1024 * 1024,
