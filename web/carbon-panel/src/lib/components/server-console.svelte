@@ -182,6 +182,11 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function sendCommand() {
 		if (!command.trim() || loading) return;
+		// Defense-in-depth (MINE-129): the input/button are disabled unless
+		// RUNNING/UNHEALTHY, but guard here too so no path (Enter, click,
+		// programmatic call) can dispatch a command to an inactive server.
+		if (server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY)
+			return;
 
 		const currentCommand = command.trim();
 		command = '';
@@ -428,7 +433,7 @@ one at https://mozilla.org/MPL/2.0/.
 			<button
 				type="button"
 				onclick={sendCommand}
-				disabled={server.status === ServerStatus.STOPPED || !command.trim()}
+				disabled={(server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY) || !command.trim() || loading}
 				class="h-9 px-4 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-xs font-mono flex items-center gap-1.5 rounded-none transition-colors cursor-pointer disabled:opacity-40 disabled:bg-[#393939]"
 			>
 				<Send class="h-3.5 w-3.5" />
