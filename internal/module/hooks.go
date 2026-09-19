@@ -226,9 +226,12 @@ func (m *Manager) evaluateCondition(condition string, server *storage.Server, mo
 	return m.compareValues(actualValue, operator, expectedValue)
 }
 
-// Compares two values using the specified operator
-// TODO: Move all of these hacky comparators to a pkg where they belond...
-func (m *Manager) compareValues(actual, operator, expected string) bool {
+// compareConditionValues is the pure, unit-testable core of condition
+// comparison (MINE-127): numeric when both sides parse, case-insensitive
+// string equality otherwise. It reports whether the operator is supported
+// for the operand types; callers own logging. Kept in-package because the
+// only caller is Manager.evaluateCondition — no pkg home earned yet.
+func compareConditionValues(actual, operator, expected string) (result bool, supported bool) {
 	// Try numeric comparison first
 	actualNum, actualErr := strconv.ParseFloat(actual, 64)
 	expectedNum, expectedErr := strconv.ParseFloat(expected, 64)
@@ -237,17 +240,19 @@ func (m *Manager) compareValues(actual, operator, expected string) bool {
 		// Both are numeric
 		switch operator {
 		case "==":
-			return actualNum == expectedNum
+			return actualNum == expectedNum, true
 		case "!=":
-			return actualNum != expectedNum
+			return actualNum != expectedNum, true
 		case "<":
-			return actualNum < expectedNum
+			return actualNum < expectedNum, true
 		case ">":
-			return actualNum > expectedNum
+			return actualNum > expectedNum, true
 		case "<=":
-			return actualNum <= expectedNum
+			return actualNum <= expectedNum, true
 		case ">=":
-			return actualNum >= expectedNum
+			return actualNum >= expectedNum, true
+		default:
+			return false, false
 		}
 	}
 
@@ -256,11 +261,19 @@ func (m *Manager) compareValues(actual, operator, expected string) bool {
 	expected = strings.ToLower(expected)
 	switch operator {
 	case "==":
-		return actual == expected
+		return actual == expected, true
 	case "!=":
-		return actual != expected
+		return actual != expected, true
 	default:
-		m.logger.Warn("Operator %s not supported for string comparison", operator)
-		return false
+		return false, false
 	}
+}
+
+// Compares two values using the specified operator
+func (m *Manager) compareValues(actual, operator, expected string) bool {
+	result, supported := compareConditionValues(actual, operator, expected)
+	if !supported {
+		m.logger.Warn("Operator %s not supported for these operands", operator)
+	}
+	return result
 }
