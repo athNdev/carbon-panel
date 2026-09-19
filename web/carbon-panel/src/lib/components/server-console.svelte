@@ -344,6 +344,7 @@ one at https://mozilla.org/MPL/2.0/.
 								type="button"
 								onclick={fetchLogs}
 								disabled={loading}
+								aria-label="Refresh logs"
 								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 							>
 								{#if loading}
@@ -364,6 +365,7 @@ one at https://mozilla.org/MPL/2.0/.
 								type="button"
 								onclick={uploadToMCLogs}
 								disabled={uploading}
+								aria-label="Upload logs to mclo.gs"
 								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 							>
 								{#if uploading}
@@ -384,6 +386,7 @@ one at https://mozilla.org/MPL/2.0/.
 								type="button"
 								onclick={downloadLogs}
 								disabled={logEntries.length === 0}
+								aria-label="Download raw log"
 								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer disabled:opacity-40"
 							>
 								<Download class="h-3.5 w-3.5" />
@@ -400,6 +403,7 @@ one at https://mozilla.org/MPL/2.0/.
 								type="button"
 								onclick={clearLogs}
 								disabled={logEntries.length === 0}
+								aria-label="Clear log buffer"
 								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-[#ff8389] hover:bg-[#353535] rounded-none transition-colors cursor-pointer disabled:opacity-40"
 							>
 								<Trash2 class="h-3.5 w-3.5" />

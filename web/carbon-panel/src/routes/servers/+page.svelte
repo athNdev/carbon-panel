@@ -266,6 +266,7 @@ one at https://mozilla.org/MPL/2.0/.
 					type="button"
 					onclick={() => (viewMode = 'table')}
 					title="Table View"
+					aria-label="Table View"
 					class="h-8 w-8 flex items-center justify-center transition-colors cursor-pointer rounded-none {viewMode === 'table' ? 'bg-[#393939] text-[#f4f4f4]' : 'text-[#8d8d8d] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
 				>
 					<TableIcon class="h-4 w-4" />
@@ -274,6 +275,7 @@ one at https://mozilla.org/MPL/2.0/.
 					type="button"
 					onclick={() => (viewMode = 'tiles')}
 					title="Tile View"
+					aria-label="Tile View"
 					class="h-8 w-8 flex items-center justify-center transition-colors cursor-pointer rounded-none {viewMode === 'tiles' ? 'bg-[#393939] text-[#f4f4f4]' : 'text-[#8d8d8d] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
 				>
 					<LayoutGrid class="h-4 w-4" />
@@ -425,6 +427,7 @@ one at https://mozilla.org/MPL/2.0/.
 									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
 										<button
 											title="Start"
+											aria-label={`Start server ${server.name}`}
 											disabled={loading}
 											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#6fdc8c] hover:bg-[#198038]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
 											onclick={(e) => handleServerAction('start', server, e)}
@@ -436,6 +439,7 @@ one at https://mozilla.org/MPL/2.0/.
 									{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING}
 										<button
 											title="Stop"
+											aria-label={`Stop server ${server.name}`}
 											disabled={loading}
 											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
 											onclick={(e) => handleServerAction('stop', server, e)}
@@ -447,6 +451,7 @@ one at https://mozilla.org/MPL/2.0/.
 									{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
 										<button
 											title="Restart"
+											aria-label={`Restart server ${server.name}`}
 											disabled={loading}
 											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#f1c21b] hover:bg-[#f1c21b]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
 											onclick={(e) => handleServerAction('restart', server, e)}
@@ -457,6 +462,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 									<button
 										title="Recreate"
+										aria-label={`Recreate server ${server.name}`}
 										disabled={loading}
 										class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#c6c6c6] hover:bg-[#353535] transition-colors disabled:opacity-40 cursor-pointer rounded-none"
 										onclick={(e) => handleServerAction('recreate', server, e)}
@@ -466,6 +472,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 									<button
 										title="Delete"
+										aria-label={`Delete server ${server.name}`}
 										disabled={loading}
 										class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
 										onclick={(e) => deleteServer(server, e)}
@@ -476,6 +483,7 @@ one at https://mozilla.org/MPL/2.0/.
 									<a
 										href={resolve(`/servers/${server.id}`)}
 										title="View Details"
+										aria-label={`View details for ${server.name}`}
 										class="h-8 w-8 flex items-center justify-center text-[#78a9ff] hover:bg-[#0f62fe]/20 transition-colors cursor-pointer rounded-none"
 									>
 										<ArrowRight class="h-3.5 w-3.5" />
@@ -518,6 +526,7 @@ one at https://mozilla.org/MPL/2.0/.
 								{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
 									<button
 										title="Start"
+										aria-label={`Start server ${server.name}`}
 										disabled={loading}
 										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#6fdc8c] hover:bg-[#198038]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
 										onclick={(e) => handleServerAction('start', server, e)}
@@ -528,6 +537,7 @@ one at https://mozilla.org/MPL/2.0/.
 								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING}
 									<button
 										title="Stop"
+										aria-label={`Stop server ${server.name}`}
 										disabled={loading}
 										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
 										onclick={(e) => handleServerAction('stop', server, e)}
@@ -538,6 +548,7 @@ one at https://mozilla.org/MPL/2.0/.
 								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
 									<button
 										title="Restart"
+										aria-label={`Restart server ${server.name}`}
 										disabled={loading}
 										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#f1c21b] hover:bg-[#f1c21b]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
 										onclick={(e) => handleServerAction('restart', server, e)}
@@ -547,6 +558,7 @@ one at https://mozilla.org/MPL/2.0/.
 								{/if}
 								<button
 									title="Recreate"
+									aria-label={`Recreate server ${server.name}`}
 									disabled={loading}
 									class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#c6c6c6] hover:bg-[#353535] transition-colors disabled:opacity-50 cursor-pointer rounded-none"
 									onclick={(e) => handleServerAction('recreate', server, e)}
@@ -555,6 +567,7 @@ one at https://mozilla.org/MPL/2.0/.
 								</button>
 								<button
 									title="Delete"
+									aria-label={`Delete server ${server.name}`}
 									disabled={loading}
 									class="flex h-7 w-7 items-center justify-center text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
 									onclick={(e) => deleteServer(server, e)}

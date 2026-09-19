@@ -381,6 +381,7 @@ one at https://mozilla.org/MPL/2.0/.
 								type="button"
 								{...props}
 								disabled={actionLoading}
+								aria-label="More server actions"
 								class="h-10 w-10 flex items-center justify-center bg-[#262626] hover:bg-[#353535] border border-[#393939] text-[#c6c6c6] hover:text-white transition-colors cursor-pointer rounded-none"
 							>
 								<MoreVertical class="h-4 w-4" />
