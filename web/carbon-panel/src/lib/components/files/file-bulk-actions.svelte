@@ -50,6 +50,7 @@
 				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 				onclick={onDownload}
 				title="Download selected"
+				aria-label="Download selected"
 			>
 				<Download class="h-3.5 w-3.5" />
 			</button>
@@ -58,6 +59,7 @@
 				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 				onclick={onMove}
 				title="Move selected"
+				aria-label="Move selected"
 			>
 				<FolderInput class="h-3.5 w-3.5" />
 			</button>
@@ -66,6 +68,7 @@
 				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 				onclick={onCompress}
 				title="Compress selected"
+				aria-label="Compress selected"
 			>
 				<Archive class="h-3.5 w-3.5" />
 			</button>
@@ -75,6 +78,7 @@
 					class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none cursor-pointer"
 					onclick={onExtract}
 					title="Extract archive"
+					aria-label="Extract archive"
 				>
 					<Package class="h-3.5 w-3.5" />
 				</button>
@@ -84,6 +88,7 @@
 				class="h-7 w-7 flex items-center justify-center text-[#ff8389] hover:bg-[#da1e28]/20 rounded-none cursor-pointer"
 				onclick={onDelete}
 				title="Delete selected"
+				aria-label="Delete selected"
 			>
 				<Trash2 class="h-3.5 w-3.5" />
 			</button>
