@@ -22,6 +22,7 @@
 			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
 			onclick={onNewFile}
 			title="New File"
+			aria-label="New File"
 		>
 			<FilePlus class="h-3.5 w-3.5" />
 			<span class="hidden sm:inline">New File</span>
@@ -31,6 +32,7 @@
 			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
 			onclick={onNewFolder}
 			title="New Folder"
+			aria-label="New Folder"
 		>
 			<FolderPlus class="h-3.5 w-3.5" />
 			<span class="hidden sm:inline">New Folder</span>
@@ -40,6 +42,7 @@
 			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
 			onclick={onUpload}
 			title="Upload Files"
+			aria-label="Upload Files"
 		>
 			<Upload class="h-3.5 w-3.5" />
 			<span class="hidden sm:inline">Upload</span>
@@ -58,6 +61,8 @@
 				/>
 				<button
 					type="button"
+					title="Close search"
+					aria-label="Close search"
 					class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 					onclick={() => {
 						showSearch = false;
@@ -73,6 +78,7 @@
 				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 				onclick={() => (showSearch = true)}
 				title="Filter / Search"
+				aria-label="Filter / Search"
 			>
 				<Search class="h-3.5 w-3.5" />
 			</button>
@@ -82,6 +88,7 @@
 			class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
 			onclick={onRefresh}
 			title="Refresh tree"
+			aria-label="Refresh tree"
 		>
 			<RefreshCw class="h-3.5 w-3.5" />
 		</button>

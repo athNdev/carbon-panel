@@ -609,6 +609,7 @@
 								onclick={cancelCurrentUpload}
 								class="text-[#da1e28] hover:text-white cursor-pointer"
 								title="Cancel upload"
+								aria-label="Cancel upload"
 							>
 								<X class="h-4 w-4" />
 							</button>
@@ -661,6 +662,7 @@
 							onclick={() => toggleFavorite(modpack)}
 							class="p-2 text-[#8d8d8d] hover:text-[#da1e28] transition-colors cursor-pointer rounded-none"
 							title={modpack.isFavorited ? 'Remove favorite' : 'Add favorite'}
+							aria-label={modpack.isFavorited ? `Remove ${modpack.name} from favorites` : `Add ${modpack.name} to favorites`}
 						>
 							<Heart class={`h-4 w-4 ${modpack.isFavorited ? 'fill-[#da1e28] text-[#da1e28]' : ''}`} />
 						</button>
