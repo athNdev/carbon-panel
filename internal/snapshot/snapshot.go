@@ -185,11 +185,14 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	wasRunning := server.Status == storage.StatusRunning || server.Status == storage.StatusStarting
 	dockerCli := e.resolveDocker(server.NodeID)
 
-	// Stop container if running
-	if wasRunning && dockerCli != nil && server.ContainerID != "" {
+	// Stop container if running - abort rollback if container fails to stop to avoid data corruption (DEP-2)
+	if wasRunning && server.ContainerID != "" {
+		if dockerCli == nil {
+			return fmt.Errorf("cannot safely rollback: container %s is running but docker client is unavailable", server.ContainerID)
+		}
 		e.log.Info("Stopping container %s before rollback...", server.ContainerID)
 		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
-			e.log.Warn("Failed to stop container %s gracefully before rollback: %v", server.ContainerID, err)
+			return fmt.Errorf("cannot safely rollback: failed to stop running container %s: %w", server.ContainerID, err)
 		}
 	}
 

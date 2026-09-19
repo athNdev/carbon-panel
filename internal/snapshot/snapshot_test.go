@@ -124,6 +124,55 @@ func TestSnapshot_Rollback(t *testing.T) {
 	assert.Equal(t, `{"version": "v1.0.0"}`, string(restoredContent))
 }
 
+func TestSnapshot_Rollback_RunningContainerRequiresStop(t *testing.T) {
+	store := setupTestStore(t)
+	defer store.Close()
+
+	ctx := context.Background()
+	log := logger.New()
+
+	serverDir, err := os.MkdirTemp("", "server-running-rollback-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(serverDir)
+
+	// Clean file
+	testFile := filepath.Join(serverDir, "server.properties")
+	require.NoError(t, os.WriteFile(testFile, []byte("port=25565\n"), 0644))
+
+	server := &storage.Server{
+		ID:       uuid.New().String(),
+		Name:     "running-rollback-server",
+		DataPath: serverDir,
+		Status:   storage.StatusStopped,
+	}
+	require.NoError(t, store.CreateServer(ctx, server))
+
+	engine := NewEngine(store, nil, nil, log, Config{
+		BackupDir:    "",
+		MaxSnapshots: 5,
+	})
+
+	snap, err := engine.CreatePreUpdateSnapshot(ctx, server, "baseline")
+	require.NoError(t, err)
+
+	// Now simulate server is running with a container ID, but no docker client is available to stop it
+	server.Status = storage.StatusRunning
+	server.ContainerID = "container-xyz-123"
+
+	// Overwrite file with modifications
+	require.NoError(t, os.WriteFile(testFile, []byte("port=25577\nmodified=true\n"), 0644))
+
+	// Attempt rollback: must fail because container cannot be stopped safely (DEP-2)
+	err = engine.Rollback(ctx, server, snap.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot safely rollback: container container-xyz-123 is running but docker client is unavailable")
+
+	// Verify file was NOT overwritten by rollback extraction
+	content, err := os.ReadFile(testFile)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "modified=true")
+}
+
 func TestSnapshot_Pruning(t *testing.T) {
 	store := setupTestStore(t)
 	defer store.Close()

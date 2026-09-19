@@ -281,11 +281,22 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("name is required"))
 	}
 
-	// Validate cron expression if using cron schedule
+	// Validate schedule type and cron expression (SCH-7)
 	scheduleType := protoScheduleTypeToDB(msg.Schedule)
-	if scheduleType == storage.ScheduleTypeCron && msg.CronExpr != "" {
+	if scheduleType == storage.ScheduleTypeCron {
+		if msg.CronExpr == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("cron_expr is required for cron-scheduled tasks"))
+		}
 		if err := s.scheduler.ValidateCronExpr(msg.CronExpr); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cron expression: %v", err))
+		}
+	} else if scheduleType == storage.ScheduleTypeInterval {
+		if msg.IntervalSecs <= 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("interval_secs must be greater than 0"))
+		}
+	} else if scheduleType == storage.ScheduleTypeOnce {
+		if msg.RunAt == nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("run_at is required for once-scheduled tasks"))
 		}
 	}
 
@@ -339,8 +350,8 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 
 	// Calculate next run
 	nextRun, err := s.scheduler.CalculateNextRun(task)
-	if err != nil {
-		s.log.Debug("Could not calculate next run: %v", err)
+	if err != nil && task.Schedule != storage.ScheduleTypeEvent {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid schedule configuration: %w", err))
 	}
 	task.NextRun = nextRun
 
@@ -380,17 +391,26 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *connect.Request[v1.Up
 		task.Schedule = protoScheduleTypeToDB(*msg.Schedule)
 	}
 	if msg.CronExpr != nil {
-		// Validate cron expression
-		if task.Schedule == storage.ScheduleTypeCron && *msg.CronExpr != "" {
-			if err := s.scheduler.ValidateCronExpr(*msg.CronExpr); err != nil {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cron expression: %v", err))
-			}
-		}
 		task.CronExpr = *msg.CronExpr
 	}
 	if msg.IntervalSecs != nil {
 		task.IntervalSecs = int(*msg.IntervalSecs)
 	}
+
+	// Validate schedule-specific rules (SCH-7)
+	if task.Schedule == storage.ScheduleTypeCron {
+		if task.CronExpr == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("cron_expr is required for cron-scheduled tasks"))
+		}
+		if err := s.scheduler.ValidateCronExpr(task.CronExpr); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cron expression: %v", err))
+		}
+	} else if task.Schedule == storage.ScheduleTypeInterval {
+		if task.IntervalSecs <= 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("interval_secs must be greater than 0"))
+		}
+	}
+
 	if msg.RunAt != nil {
 		runAt := msg.RunAt.AsTime()
 		task.RunAt = &runAt
@@ -433,7 +453,10 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *connect.Request[v1.Up
 	}
 
 	// Recalculate next run
-	nextRun, _ := s.scheduler.CalculateNextRun(task)
+	nextRun, err := s.scheduler.CalculateNextRun(task)
+	if err != nil && task.Schedule != storage.ScheduleTypeEvent {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid schedule configuration: %w", err))
+	}
 	task.NextRun = nextRun
 
 	// Save changes
