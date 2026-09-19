@@ -117,12 +117,12 @@
 
 	{#snippet templateHeader()}
 		<tr>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template Name</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Type</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Category</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Docker Image</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Description</th>
-			<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template Name</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Type</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Category</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Docker Image</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Description</th>
+			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
 		</tr>
 	{/snippet}
 
