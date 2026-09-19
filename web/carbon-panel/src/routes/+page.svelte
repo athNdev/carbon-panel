@@ -470,11 +470,11 @@
 							<table class="w-full border-collapse text-left font-sans text-sm">
 								<thead class="bg-[#393939] text-[#f4f4f4] border-b border-[#525252]">
 									<tr>
-										<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Server</th>
-										<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Status</th>
-										<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Version</th>
-										<th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Metrics</th>
-										<th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Actions</th>
+										<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Server</th>
+										<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Status</th>
+										<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Version</th>
+										<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Metrics</th>
+										<th scope="col" class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[#f4f4f4]">Actions</th>
 									</tr>
 								</thead>
 								<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4] motion-stagger">

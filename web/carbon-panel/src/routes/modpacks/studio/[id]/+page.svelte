@@ -1143,7 +1143,7 @@
 								<table class="w-full text-left text-xs border-collapse">
 									<thead class="bg-[#393939] text-[#f4f4f4] border-b border-[#525252] uppercase font-semibold tracking-wider">
 										<tr>
-											<th class="py-2.5 px-3 w-8">
+											<th scope="col" class="py-2.5 px-3 w-8">
 												<input
 													type="checkbox"
 													class="rounded-none border-[#8d8d8d] bg-[#262626] cursor-pointer"
@@ -1154,13 +1154,13 @@
 													}}
 												/>
 											</th>
-											<th class="py-2.5 px-3">Mod Name</th>
-											<th class="py-2.5 px-3">File Name</th>
-											<th class="py-2.5 px-3">Platform</th>
-											<th class="py-2.5 px-3">Side</th>
-											<th class="py-2.5 px-3">Pin</th>
-											<th class="py-2.5 px-3">Status</th>
-											<th class="py-2.5 px-3 text-right">Actions</th>
+											<th scope="col" class="py-2.5 px-3">Mod Name</th>
+											<th scope="col" class="py-2.5 px-3">File Name</th>
+											<th scope="col" class="py-2.5 px-3">Platform</th>
+											<th scope="col" class="py-2.5 px-3">Side</th>
+											<th scope="col" class="py-2.5 px-3">Pin</th>
+											<th scope="col" class="py-2.5 px-3">Status</th>
+											<th scope="col" class="py-2.5 px-3 text-right">Actions</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
@@ -1286,10 +1286,10 @@
 								<table class="w-full text-left text-xs border-collapse">
 									<thead class="bg-[#393939] text-[#f4f4f4] border-b border-[#525252] uppercase font-semibold">
 										<tr>
-											<th class="py-2.5 px-4">File Path</th>
-											<th class="py-2.5 px-4">Category</th>
-											<th class="py-2.5 px-4">Size</th>
-											<th class="py-2.5 px-4 text-right">Actions</th>
+											<th scope="col" class="py-2.5 px-4">File Path</th>
+											<th scope="col" class="py-2.5 px-4">Category</th>
+											<th scope="col" class="py-2.5 px-4">Size</th>
+											<th scope="col" class="py-2.5 px-4 text-right">Actions</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">

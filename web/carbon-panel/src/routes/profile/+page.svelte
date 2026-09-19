@@ -413,11 +413,11 @@
 
 		{#snippet tokenHeader()}
 			<tr>
-				<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Name</th>
-				<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Created</th>
-				<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Expires</th>
-				<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Last Used</th>
-				<th class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right w-20">Action</th>
+				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Name</th>
+				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Created</th>
+				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Expires</th>
+				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Last Used</th>
+				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right w-20">Action</th>
 			</tr>
 		{/snippet}
 

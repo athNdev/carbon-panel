@@ -315,13 +315,13 @@
 				<!-- Sharp Header Row #393939 -->
 				<thead class="bg-[#393939] text-[#f4f4f4] border-b border-[#525252] text-xs uppercase font-medium tracking-wider select-none">
 					<tr>
-						<th class="px-4 py-3 w-28">Status</th>
-						<th class="px-4 py-3">Server Instance</th>
-						<th class="px-4 py-3">Engine & Loader</th>
-						<th class="px-4 py-3">Host / Port</th>
-						<th class="px-4 py-3">Memory</th>
-						<th class="px-4 py-3">Players & TPS</th>
-						<th class="px-4 py-3 text-right">Actions</th>
+						<th scope="col" class="px-4 py-3 w-28">Status</th>
+						<th scope="col" class="px-4 py-3">Server Instance</th>
+						<th scope="col" class="px-4 py-3">Engine & Loader</th>
+						<th scope="col" class="px-4 py-3">Host / Port</th>
+						<th scope="col" class="px-4 py-3">Memory</th>
+						<th scope="col" class="px-4 py-3">Players & TPS</th>
+						<th scope="col" class="px-4 py-3 text-right">Actions</th>
 					</tr>
 				</thead>
 
