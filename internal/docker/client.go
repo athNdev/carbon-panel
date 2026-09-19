@@ -316,8 +316,10 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 		hostConfig.Resources.CpusetCpus = overrides.GetCpusetCpus()
 	}
 	if overrides.GetMemoryLimit() > 0 {
-		hostConfig.Resources.Memory = overrides.GetMemoryLimit() * 1024 * 1024
-		hostConfig.Resources.MemorySwap = overrides.GetMemoryLimit() * 1024 * 1024
+		memBytes := overrides.GetMemoryLimit() * 1024 * 1024
+		hostConfig.Resources.Memory = memBytes
+		// MINE-128: Maintain 0-swap (MemorySwap == Memory) to prevent JVM GC latency collapse
+		hostConfig.Resources.MemorySwap = memBytes
 	}
 
 	// Apply additional labels
@@ -408,9 +410,16 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		imageName = getDockerImage(server.ModLoader, server.MCVersion)
 	}
 
-	// Try pulling latest
-	if err := c.pullImage(ctx, imageName); err != nil {
-		return "", fmt.Errorf("failed to pull image: %w", err)
+	// Ensure image is available locally before creating container (MINE-125).
+	// If the image is already present on the Docker daemon, skip remote registry check
+	// to avoid blocking / stalling during 'Creating' state on network latency or Docker Hub rate limits.
+	if _, _, err := c.docker.ImageInspectWithRaw(ctx, imageName); err != nil {
+		c.log.Info("Image %s not present locally, pulling...", imageName)
+		if pullErr := c.pullImage(ctx, imageName); pullErr != nil {
+			return "", fmt.Errorf("failed to pull image %s: %w", imageName, pullErr)
+		}
+	} else {
+		c.log.Debug("Image %s exists locally, skipping pull", imageName)
 	}
 
 	// Build environment variables
@@ -551,6 +560,12 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// can still override via DockerOverrides (see ApplyOverrides below).
 		RestartPolicy: container.RestartPolicy{Name: "on-failure", MaximumRetryCount: 5},
 		Resources: container.Resources{
+			// MINE-128: 0-swap policy (MemorySwap == Memory).
+			// Minecraft game servers suffer severe GC freeze and watchdog tick stalls
+			// if JVM heap pages swap out to disk. Disabling swap enforces deterministic
+			// memory limits and host stability while preventing failures on hosts without
+			// swap limit cgroups. Off-heap headroom is safely guaranteed by EnsureMemoryHeadroom /
+			// CalculateMemoryAllocation.
 			Memory:     containerLimitBytes,
 			MemorySwap: containerLimitBytes,
 			PidsLimit:  &pidsLimit,
