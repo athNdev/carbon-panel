@@ -50,6 +50,14 @@ const (
 
 	// Offset added to game port for RCON host binding
 	RCONPortOffset = 10
+
+	// DefaultRestartPolicy is the Docker restart policy applied to every
+	// Carbon Panel container (MINE-122 anti-flap). unless-stopped lets the
+	// daemon re-attempt a crashed container while honouring an explicit
+	// operator /stop; the reconciler treats restarting containers as
+	// settling (reconciler.go) instead of flapping status. Pinned by
+	// TestDefaultRestartPolicy — change deliberately, not accidentally.
+	DefaultRestartPolicy = container.RestartPolicyMode("unless-stopped")
 )
 
 type ContainerStats struct {
@@ -542,7 +550,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		Mounts: []mount.Mount{
 			{Type: mount.TypeBind, Source: dataPath, Target: "/data", BindOptions: &mount.BindOptions{CreateMountpoint: true}},
 		},
-		RestartPolicy: container.RestartPolicy{Name: "unless-stopped"},
+		RestartPolicy: container.RestartPolicy{Name: DefaultRestartPolicy},
 		CapDrop:       []string{"ALL"},
 		SecurityOpt:   []string{"no-new-privileges:true"},
 		Resources: container.Resources{
