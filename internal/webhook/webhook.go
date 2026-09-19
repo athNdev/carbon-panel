@@ -170,7 +170,10 @@ func sign(body []byte, secret string) string {
 }
 
 // Builds a flat map of variables available to payload templates
-// TODO: Use the alias package!!!
+// MINE-127 wontfix: the internal/alias package resolves {{server.*}} /
+// {{modules.*}} placeholders in condition/command strings — it has no
+// notion of Discord embed titles/colors, so there is nothing to reuse here.
+// This static event-metadata map is the correct home for that data.
 func templateData(p *Payload) map[string]any {
 	titles := map[string]string{
 		"test":           "Webhook Test",
