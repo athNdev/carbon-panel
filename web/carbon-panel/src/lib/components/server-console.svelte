@@ -194,6 +194,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 		if (wsClient.isReady) {
 			wsClient.sendCommand(server.id, currentCommand);
+			loading = false;
 		} else {
 			await sendCommandViaRpc(currentCommand);
 		}
