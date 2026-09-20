@@ -44,11 +44,31 @@
 	let command = $state('');
 	let loading = $state(false);
 	let autoScroll = $state(true);
+	// Assertive error announcer (MINE-135): mirrors error toasts into a
+	// role=alert node. The log stream itself is role=log (polite) so
+	// per-line output stays quiet for screen readers.
+	let alertMessage = $state('');
+	function reportError(message: string) {
+		toast.error(message);
+		alertMessage = message;
+	}
 	let scrollAreaRef = $state<HTMLDivElement | null>(null);
 	let tailLines = $state(500);
 	const MAX_LOG_ENTRIES = 5000;
 
 	let wsConnectionState = $derived(wsClient.state.connectionState);
+	let previousConnectionState = $state('disconnected');
+	$effect(() => {
+		const s = wsConnectionState;
+		if (
+			(previousConnectionState === 'connected' ||
+				previousConnectionState === 'authenticated') &&
+			s === 'disconnected'
+		) {
+			alertMessage = 'Console connection lost. Attempting to reconnect.';
+		}
+		previousConnectionState = s;
+	});
 	let cleanupHandlers: (() => void)[] = [];
 	let previousServerId = server.id;
 	let previousContainerId = server.containerId;
@@ -132,7 +152,7 @@
 				if (result.success) {
 					toast.success('Command executed');
 				} else {
-					toast.error(result.error || 'Failed to execute command');
+					reportError(result.error || 'Failed to execute command');
 				}
 			}
 		});
@@ -175,7 +195,7 @@
 			const response = await rpcClient.server.getServerLogs(request);
 			logEntries = response.logs;
 		} catch (error) {
-			toast.error(
+			reportError(
 				'Failed to fetch logs: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
 		} finally {
@@ -190,7 +210,7 @@
 			logEntries = [];
 			toast.success('Logs cleared');
 		} catch (error) {
-			toast.error(
+			reportError(
 				'Failed to clear logs: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
 		}
@@ -227,10 +247,10 @@
 				toast.success('Command executed');
 				await fetchLogs();
 			} else {
-				toast.error(response.error || 'Failed to execute command');
+				reportError(response.error || 'Failed to execute command');
 			}
 		} catch (error) {
-			toast.error(
+			reportError(
 				'Failed to execute command: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
 		} finally {
@@ -251,10 +271,10 @@
 				window.open(response.url, '_blank');
 				toast.success('Logs uploaded to mclo.gs');
 			} else {
-				toast.error('Failed to upload logs');
+				reportError('Failed to upload logs');
 			}
 		} catch (error) {
-			toast.error(
+			reportError(
 				'Failed to upload to mclo.gs: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
 		} finally {
@@ -405,8 +425,14 @@
 				</div>
 			</div>
 
-			<!-- Terminal Output Stream -->
+			<!-- Assertive error announcements (MINE-135); visually hidden -->
+			<div class="sr-only" role="alert">{alertMessage}</div>
+
+			<!-- Terminal Output Stream: role=log is implicitly aria-live=polite -->
 			<div
+				role="log"
+				aria-live="polite"
+				aria-label="Server console output"
 				class="custom-scrollbar min-h-0 flex-1 overflow-x-auto overflow-y-auto bg-[#161616] p-4 selection:bg-[#0f62fe] selection:text-white"
 				bind:this={scrollAreaRef}
 				onscroll={handleScroll}
