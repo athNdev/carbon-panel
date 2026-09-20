@@ -41,7 +41,8 @@ one at https://mozilla.org/MPL/2.0/.
 		Files,
 		ListTodo,
 		Radio,
-		History
+		History,
+		Users
 	} from '@lucide/svelte';
 	import {
 		DropdownMenu,
@@ -73,6 +74,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import ServerRouting from '$lib/components/server-routing.svelte';
 	import ServerTasks from '$lib/components/server-tasks.svelte';
 	import ServerActivity from '$lib/components/server-activity.svelte';
+	import ServerPlayers from '$lib/components/server-players.svelte';
 	import ServerModules from '$lib/components/server/ServerModules.svelte';
 
 	let server = $state<Server | null>(null);
@@ -256,6 +258,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{ id: 'modules', label: 'Modules', icon: Boxes },
 		{ id: 'files', label: 'Files', icon: Files },
 		{ id: 'tasks', label: 'Tasks', icon: ListTodo },
+		{ id: 'players', label: 'Players', icon: Users },
 		{ id: 'activity', label: 'Activity', icon: History },
 		{ id: 'routing', label: 'Routing', icon: Radio }
 	];
@@ -642,6 +645,8 @@ one at https://mozilla.org/MPL/2.0/.
 					<div class="h-full overflow-y-auto">
 						<ServerTasks {server} active={activeTab === 'tasks'} />
 					</div>
+				{:else if activeTab === 'players'}
+					<ServerPlayers {server} active={activeTab === 'players'} />
 				{:else if activeTab === 'activity'}
 					<ServerActivity {server} active={activeTab === 'activity'} />
 				{:else if activeTab === 'routing'}
