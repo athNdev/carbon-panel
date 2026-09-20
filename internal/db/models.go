@@ -624,6 +624,22 @@ type ServerSubuser struct {
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
+// ServerBlueprint is an importable server flavor seed (MINE-143, egg
+// equivalent): loader + version + image + default env for one-click create.
+type ServerBlueprint struct {
+	ID          string    `json:"id" gorm:"primaryKey"`
+	Name        string    `json:"name" gorm:"not null;uniqueIndex"`
+	Description string    `json:"description"`
+	ModLoader   ModLoader `json:"mod_loader" gorm:"not null"`
+	MCVersion   string    `json:"mc_version" gorm:"not null;column:mc_version"`
+	DockerImage string    `json:"docker_image" gorm:"column:docker_image"` // override; empty = auto
+	DefaultEnv  string    `json:"default_env" gorm:"type:text;column:default_env"`
+	Builtin     bool      `json:"builtin" gorm:"default:false"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
 // ExecutionStatus defines the status of a task execution
 type ExecutionStatus string
 

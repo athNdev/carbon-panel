@@ -30,6 +30,7 @@ func allModels() []any {
 		&TaskExecution{},
 		&ActivityLog{},
 		&ServerSubuser{},
+		&ServerBlueprint{},
 		&ModuleTemplate{},
 		&Module{},
 		&SystemSetting{},
