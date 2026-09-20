@@ -194,6 +194,10 @@ func dbTaskToProto(task *storage.ScheduledTask) *v1.ScheduledTask {
 		RequireOnline: task.RequireOnline,
 		FailureNotify: task.FailureNotify,
 		EventTriggers: task.EventTriggers,
+		ParentTaskId:  task.ParentTaskID,
+		StepOrder:     int32(task.StepOrder),
+		TimeOffsetSecs: int32(task.TimeOffsetSecs),
+		ContinueOnFailure: task.ContinueOnFailure,
 		CreatedAt:     timestamppb.New(task.CreatedAt),
 		UpdatedAt:     timestamppb.New(task.UpdatedAt),
 	}
@@ -334,6 +338,10 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 		RetryDelay:    int(msg.RetryDelay),
 		RequireOnline: msg.RequireOnline,
 		EventTriggers: eventTriggers,
+		ParentTaskID:  msg.ParentTaskId,
+		StepOrder:     int(msg.StepOrder),
+		TimeOffsetSecs: int(msg.TimeOffsetSecs),
+		ContinueOnFailure: msg.ContinueOnFailure,
 	}
 
 	// Set defaults
@@ -348,6 +356,11 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 	if msg.RunAt != nil {
 		runAt := msg.RunAt.AsTime()
 		task.RunAt = &runAt
+	}
+
+	// Validate chain wiring
+	if err := validateTaskChain(s.store, ctx, task); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	// Calculate next run
@@ -441,6 +454,24 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *connect.Request[v1.Up
 	}
 	if len(msg.EventTriggers) > 0 {
 		task.EventTriggers = msg.EventTriggers
+	}
+	if msg.ClearParentTaskId {
+		task.ParentTaskID = nil
+	}
+	if msg.ParentTaskId != nil {
+		task.ParentTaskID = msg.ParentTaskId
+	}
+	if msg.StepOrder != nil {
+		task.StepOrder = int(*msg.StepOrder)
+	}
+	if msg.TimeOffsetSecs != nil {
+		task.TimeOffsetSecs = int(*msg.TimeOffsetSecs)
+	}
+	if msg.ContinueOnFailure != nil {
+		task.ContinueOnFailure = *msg.ContinueOnFailure
+	}
+	if err := validateTaskChain(s.store, ctx, task); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	// Validate event-triggered tasks
@@ -611,6 +642,24 @@ func (s *TaskService) CancelExecution(ctx context.Context, req *connect.Request[
 }
 
 // validateWebhookConfig parses a webhook task config JSON and validates required fields.
+// validateTaskChain checks chain wiring: parent exists, same server, no self-parent (MINE-142).
+func validateTaskChain(store *storage.Store, ctx context.Context, task *storage.ScheduledTask) error {
+	if task.ParentTaskID == nil || *task.ParentTaskID == "" {
+		return nil
+	}
+	if *task.ParentTaskID == task.ID {
+		return fmt.Errorf("task cannot be its own parent")
+	}
+	parent, err := store.GetScheduledTask(ctx, *task.ParentTaskID)
+	if err != nil {
+		return fmt.Errorf("parent task not found: %w", err)
+	}
+	if parent.ServerID != task.ServerID {
+		return fmt.Errorf("parent task belongs to a different server")
+	}
+	return nil
+}
+
 func validateWebhookConfig(cfg string) error {
 	if cfg == "" {
 		return fmt.Errorf("webhook config is required")
