@@ -74,18 +74,30 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: 'go.mod'
           cache: true
 
+      # Fail only on findings with a published fix ("Fixed in: <ver>").
+      # Findings with "Fixed in: N/A" (e.g. Moby daemon-side GO-2026-4887/
+      # GO-2026-4883 via docker/docker client error paths) have no available
+      # remediation; they are reported but non-blocking until MINE-134
+      # (moby/moby/client migration) removes the module entirely.
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+          out=$(govulncheck ./... 2>&1) || true
+          echo "$out"
+          fixable=$(echo "$out" | grep "Fixed in:" | grep -v "N/A" || true)
+          if [ -n "$fixable" ]; then
+            echo "::error::govulncheck found vulnerabilities with available fixes:"
+            echo "$fixable"
+            exit 1
+          fi
 
   lint-proto:
     name: Proto Lint
