@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -27,6 +28,10 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
+
+// ErrTaskAlreadyRunning is returned when a manual trigger races an
+// in-flight execution of the same task (MINE-146, surfaced as 409).
+var ErrTaskAlreadyRunning = errors.New("task is already running")
 
 // Scheduler manages scheduled tasks for all servers
 type Scheduler struct {
@@ -295,6 +300,10 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 		return nil, err
 	}
 
+	// Conflicting execution guard (MINE-146): never run the same task twice.
+	if s.IsTaskRunning(taskID) {
+		return nil, ErrTaskAlreadyRunning
+	}
 	execution, err := s.executeTask(task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 	return execution, err
 }
