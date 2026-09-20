@@ -7,8 +7,10 @@ import (
 
 	"connectrpc.com/connect"
 
+	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -23,11 +25,12 @@ type BackupService struct {
 	store  *storage.Store
 	docker *docker.Client
 	pool   *docker.ClientPool
+	s3cfg  appconfig.S3Config
 	log    *logger.Logger
 }
 
-func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *docker.ClientPool, log *logger.Logger) *BackupService {
-	return &BackupService{store: store, docker: dockerCli, pool: pool, log: log}
+func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *docker.ClientPool, s3cfg appconfig.S3Config, log *logger.Logger) *BackupService {
+	return &BackupService{store: store, docker: dockerCli, pool: pool, s3cfg: s3cfg, log: log}
 }
 
 func (s *BackupService) dockerFor(nodeID string) *docker.Client {
@@ -109,6 +112,30 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		}
 	}
 
+	// S3 round-trip (MINE-138 slice 2): fetch the archive when only the
+	// remote copy remains (e.g. DeleteLocalCopy was enabled).
+	archivePath := rec.Path
+	if _, err := os.Stat(archivePath); err != nil {
+		if rec.RemoteKey == "" || !s3uploader.Enabled(s.s3cfg) {
+			done("failed")
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("backup archive not found locally and no remote copy"))
+		}
+		up, err := s3uploader.NewUploader(s.s3cfg)
+		if err != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("s3 unavailable: %w", err))
+		}
+		tmp := archivePath
+		if tmp == "" {
+			tmp = rec.Name
+		}
+		if err := up.Download(ctx, rec.RemoteKey, tmp); err != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("s3 download failed: %w", err))
+		}
+		archivePath = tmp
+	}
+
 	dockerCli := s.dockerFor(server.NodeID)
 	wasRunning := false
 	if server.ContainerID != "" && dockerCli != nil {
@@ -121,7 +148,7 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		}
 	}
 
-	if _, err := files.ExtractArchive(ctx, rec.Path, server.DataPath, nil); err != nil {
+	if _, err := files.ExtractArchive(ctx, archivePath, server.DataPath, nil); err != nil {
 		done("failed")
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to extract backup: %w", err))
 	}
