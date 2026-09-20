@@ -235,6 +235,9 @@ func (s *Server) setupHandler() {
 	// Scheduled/staged config rollout for instances (staged diffs applied on restart or cron)
 	mux.Handle("/api/v1/staged-config/", handlers.NewStagedConfigHandler(s.store, s.log, s.authManager, s.enforcer))
 
+	// Prometheus OpenMetrics snapshots (MINE-144)
+	mux.Handle("/api/v2/metrics/", handlers.NewMetricsHandler(s.store, s.metricsCollector, s.authManager, s.enforcer, s.log))
+
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
 
