@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 
+	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/command"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -57,6 +58,9 @@ type Scheduler struct {
 	// Stats
 	lastCheck time.Time
 	nextCheck time.Time
+
+	// Audit-trail retention (MINE-141): last activity-log prune run.
+	lastActivityPrune time.Time
 
 	// Snapshot engine for pre-update snapshots and rollback (MINE-23)
 	snapshotEngine *snapshot.Engine
@@ -228,6 +232,18 @@ func (s *Scheduler) checkAndRunDueTasks() {
 	s.mu.Unlock()
 
 	ctx := context.Background()
+
+	// Audit-trail retention (MINE-141): prune daily, keep 90 days / min 1000 rows.
+	if time.Since(s.lastActivityPrune) > 24*time.Hour {
+		if n, err := activity.Prune(s.store.DB().WithContext(ctx), time.Now().AddDate(0, 0, -90), 1000); err != nil {
+			s.log.Error("Failed to prune activity logs: %v", err)
+		} else {
+			if n > 0 {
+				s.log.Info("Pruned %d activity log rows", n)
+			}
+			s.lastActivityPrune = time.Now()
+		}
+	}
 
 	// Apply staged config rollouts whose cron schedule has fired (MINE staged rollout MVP).
 	s.applyDueStagedConfigs(ctx)
