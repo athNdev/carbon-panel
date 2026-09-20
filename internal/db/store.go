@@ -1114,6 +1114,15 @@ func (s *Store) ListAllScheduledTasks(ctx context.Context) ([]*ScheduledTask, er
 	return tasks, err
 }
 
+// ListChildTasks returns enabled chain steps of a parent in step order (MINE-142).
+func (s *Store) ListChildTasks(ctx context.Context, parentID string) ([]*ScheduledTask, error) {
+	var tasks []*ScheduledTask
+	err := s.db.WithContext(ctx).
+		Where("parent_task_id = ? AND status = ?", parentID, TaskStatusEnabled).
+		Order("step_order ASC, created_at ASC").Find(&tasks).Error
+	return tasks, err
+}
+
 func (s *Store) ListDueScheduledTasks(ctx context.Context, before time.Time) ([]*ScheduledTask, error) {
 	var tasks []*ScheduledTask
 	err := s.db.WithContext(ctx).
