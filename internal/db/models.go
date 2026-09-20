@@ -605,6 +605,17 @@ type ActivityLog struct {
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
 }
 
+// ServerSubuser grants a non-admin user scoped permissions on one server
+// (MINE-139). Permissions holds "resource.action" strings, e.g.
+// "servers.start". Grants never exceed what the panel offers; admins bypass.
+type ServerSubuser struct {
+	ServerID    string `json:"server_id" gorm:"primaryKey;column:server_id"`
+	UserID      string `json:"user_id" gorm:"primaryKey;column:user_id"`
+	Permissions string `json:"permissions" gorm:"type:text"` // JSON array of "resource.action"
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+}
+
 // ExecutionStatus defines the status of a task execution
 type ExecutionStatus string
 
