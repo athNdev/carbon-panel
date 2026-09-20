@@ -834,6 +834,7 @@ type ModpackUpdateTaskConfig struct {
 	StageConfigUpdates       bool   `json:"stage_config_updates"`
 	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`        // Create volume snapshot before applying updates (MINE-23)
 	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"`    // Automatically rollback snapshot if restart/update fails
+	BootGateTimeoutSecs      int    `json:"boot_gate_timeout_secs"`      // SLP boot verification after restart; 0 disables (MINE-145)
 	AuthToken                string `json:"auth_token"`
 }
 
@@ -1001,7 +1002,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			}
 		}
 
-		if shouldRestartNow {
+			if shouldRestartNow {
 			countdown := cfg.GracefulCountdownSeconds
 			if countdown <= 0 && cfg.GracefulRestart {
 				countdown = 10
@@ -1017,6 +1018,9 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 					}
 					return fmt.Sprintf("%s\nModpack synced, but graceful restart failed: %v", updateSummary, err), err
 				}
+				if bootErr := s.verifyBootAfterUpdate(ctx, server, task, cfg, createdSnapshot); bootErr != nil {
+					return fmt.Sprintf("%s\n%s", updateSummary, restartOut), bootErr
+				}
 				return fmt.Sprintf("%s\n%s", updateSummary, restartOut), nil
 			}
 
@@ -1028,6 +1032,9 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 					_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
 				}
 				return fmt.Sprintf("%s\nModpack synced, but server restart failed: %v", updateSummary, err), err
+			}
+			if bootErr := s.verifyBootAfterUpdate(ctx, server, task, cfg, createdSnapshot); bootErr != nil {
+				return fmt.Sprintf("%s\n%s", updateSummary, restartOut), bootErr
 			}
 			return fmt.Sprintf("%s\n%s", updateSummary, restartOut), nil
 		} else {
