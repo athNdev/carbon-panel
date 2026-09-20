@@ -41,6 +41,12 @@ func (s *Store) SetBackupStatus(ctx context.Context, id, status string) error {
 		Where("id = ?", id).Update("status", status).Error
 }
 
+// SetBackupRemoteKey records the S3 object key.
+func (s *Store) SetBackupRemoteKey(ctx context.Context, id, key string) error {
+	return s.db.WithContext(ctx).Model(&BackupRecord{}).
+		Where("id = ?", id).Update("remote_key", key).Error
+}
+
 // DeleteBackupRecord removes a backup row.
 func (s *Store) DeleteBackupRecord(ctx context.Context, id string) error {
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(&BackupRecord{}).Error

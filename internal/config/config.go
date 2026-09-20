@@ -79,10 +79,26 @@ type DockerConfig struct {
 }
 
 type StorageConfig struct {
-	DataDir       string `mapstructure:"data_dir" json:"data_dir"`
-	BackupDir     string `mapstructure:"backup_dir" json:"backup_dir"`
-	TempDir       string `mapstructure:"temp_dir" json:"temp_dir"`
-	MaxUploadSize int64  `mapstructure:"max_upload_size" json:"max_upload_size"`
+	DataDir       string   `mapstructure:"data_dir" json:"data_dir"`
+	BackupDir     string   `mapstructure:"backup_dir" json:"backup_dir"`
+	TempDir       string   `mapstructure:"temp_dir" json:"temp_dir"`
+	MaxUploadSize int64    `mapstructure:"max_upload_size" json:"max_upload_size"`
+	S3            S3Config `mapstructure:"s3" json:"s3"`
+}
+
+// S3Config enables S3-compatible offsite backup upload (MINE-138).
+// Credentials should come from env (S3_ACCESS_KEY / S3_SECRET_KEY override)
+// rather than the config file.
+type S3Config struct {
+	Enabled         bool   `mapstructure:"enabled" json:"enabled"`
+	Endpoint        string `mapstructure:"endpoint" json:"endpoint"`
+	Region          string `mapstructure:"region" json:"region"`
+	Bucket          string `mapstructure:"bucket" json:"bucket"`
+	Prefix          string `mapstructure:"prefix" json:"prefix"`
+	AccessKey       string `mapstructure:"access_key" json:"access_key"`
+	SecretKey       string `mapstructure:"secret_key" json:"secret_key"`
+	ForcePathStyle  bool   `mapstructure:"force_path_style" json:"force_path_style"`
+	DeleteLocalCopy bool   `mapstructure:"delete_local_copy" json:"delete_local_copy"`
 }
 
 type ProxyConfig struct {
