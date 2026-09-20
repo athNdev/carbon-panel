@@ -28,6 +28,7 @@ func allModels() []any {
 		&RegistrationInvite{},
 		&ScheduledTask{},
 		&TaskExecution{},
+		&ActivityLog{},
 		&ModuleTemplate{},
 		&Module{},
 		&SystemSetting{},

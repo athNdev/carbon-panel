@@ -590,6 +590,21 @@ type ScheduledTask struct {
 	Server *Server `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
 }
 
+// ActivityLog is an append-only audit trail (MINE-141) for mutating ops:
+// auth, power, file, backup, subuser and schedule actions.
+type ActivityLog struct {
+	ID         string `json:"id" gorm:"primaryKey"`
+	ActorID    string `json:"actor_id" gorm:"index;column:actor_id"`
+	ActorName  string `json:"actor_name" gorm:"column:actor_name"`
+	IP         string `json:"ip"`
+	Event      string `json:"event" gorm:"not null;index"`
+	SubjectTyp string `json:"subject_type" gorm:"index;column:subject_type"` // e.g. "server", "user"
+	SubjectID  string `json:"subject_id" gorm:"index;column:subject_id"`
+	Properties string `json:"properties" gorm:"type:text"` // JSON details
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
+}
+
 // ExecutionStatus defines the status of a task execution
 type ExecutionStatus string
 
