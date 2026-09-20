@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Server flavor blueprints (MINE-143, egg equivalent)
+service BlueprintService {
+  // List all blueprints, builtins first
+  rpc ListBlueprints(ListBlueprintsRequest) returns (ListBlueprintsResponse);
+  // Get one blueprint
+  rpc GetBlueprint(GetBlueprintRequest) returns (GetBlueprintResponse);
+}
+
+// One blueprint
+message ServerBlueprint {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string mod_loader = 4;
+  string mc_version = 5;
+  string docker_image = 6;
+  string default_env = 7;
+  bool builtin = 8;
+}
+
+// List request (no filters yet)
+message ListBlueprintsRequest {
+}
+
+// List response
+message ListBlueprintsResponse {
+  repeated ServerBlueprint blueprints = 1;
+}
+
+// Get request
+message GetBlueprintRequest {
+  string id = 1;
+}
+
+// Get response
+message GetBlueprintResponse {
+  ServerBlueprint blueprint = 1;
+}
