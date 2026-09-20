@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// On-demand backup management (MINE-138)
+service BackupService {
+  // List backup records for a server
+  rpc ListBackups(ListBackupsRequest) returns (ListBackupsResponse);
+  // Delete a backup archive + record (refused when locked)
+  rpc DeleteBackup(DeleteBackupRequest) returns (DeleteBackupResponse);
+  // Restore a backup: stops server, replaces data, restarts
+  rpc RestoreBackup(RestoreBackupRequest) returns (RestoreBackupResponse);
+  // Toggle the sticky lock flag
+  rpc SetBackupLocked(SetBackupLockedRequest) returns (SetBackupLockedResponse);
+}
+
+// One backup record
+message BackupRecord {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  int64 size_bytes = 4;
+  string sha256 = 5;
+  bool locked = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// List request
+message ListBackupsRequest {
+  string server_id = 1;
+  int32 limit = 2;
+}
+
+// List response
+message ListBackupsResponse {
+  repeated BackupRecord backups = 1;
+}
+
+// Delete request
+message DeleteBackupRequest {
+  string id = 1;
+}
+
+// Delete response
+message DeleteBackupResponse {
+  bool success = 1;
+}
+
+// Restore request
+message RestoreBackupRequest {
+  string id = 1;
+}
+
+// Restore response
+message RestoreBackupResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Lock request
+message SetBackupLockedRequest {
+  string id = 1;
+  bool locked = 2;
+}
+
+// Lock response
+message SetBackupLockedResponse {
+  BackupRecord backup = 1;
+}
