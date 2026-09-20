@@ -27,6 +27,7 @@ const (
 	ResourceUploads         = "uploads"
 	ResourceNodes           = "nodes"
 	ResourceActivity        = "activity"
+	ResourceSubusers        = "subusers"
 )
 
 // Action constants
@@ -78,7 +79,7 @@ var AllResources = []string{
 	ResourceFiles, ResourceTasks, ResourceProxy,
 	ResourceUsers, ResourceRoles, ResourceSettings,
 	ResourceSupport, ResourceUploads, ResourceNodes,
-	ResourceActivity,
+	ResourceActivity, ResourceSubusers,
 }
 
 // ResourceScopeSource maps each scopeable resource to the resource that
@@ -97,6 +98,7 @@ var ResourceScopeSource = map[string]string{
 	ResourceTasks:           ResourceTasks,
 	ResourceNodes:           ResourceNodes,
 	ResourceActivity:        ResourceServers,
+	ResourceSubusers:        ResourceServers,
 }
 
 // ResourceActionsFromProcedures derives which actions are valid for each
