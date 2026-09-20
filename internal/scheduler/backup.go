@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/files"
 )
@@ -88,6 +89,16 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	}
 	if err := verifyZipArchive(destPath); err != nil {
 		return "", fmt.Errorf("backup archive failed verification: %w", err)
+	}
+
+	// Track the archive in the database (MINE-138). A missing record must
+	// never fail the backup itself.
+	if recErr := s.store.CreateBackupRecord(ctx, &storage.BackupRecord{
+		ID: uuid.New().String(), ServerID: server.ID,
+		Name: filepath.Base(destPath), Path: destPath,
+		SizeBytes: size, SHA256: sum, Status: "complete",
+	}); recErr != nil {
+		s.log.Error("Backup: failed to record backup %s: %v", destPath, recErr)
 	}
 
 	pruned, pruneErr := pruneBackups(destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
