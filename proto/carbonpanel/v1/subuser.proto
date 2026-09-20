@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Per-server subuser grants (MINE-139)
+service SubuserService {
+  // List grants on a server
+  rpc ListSubusers(ListSubusersRequest) returns (ListSubusersResponse);
+  // Grant or replace permissions
+  rpc SetSubuser(SetSubuserRequest) returns (SetSubuserResponse);
+  // Revoke a grant
+  rpc RemoveSubuser(RemoveSubuserRequest) returns (RemoveSubuserResponse);
+}
+
+// One grant
+message SubuserGrant {
+  string server_id = 1;
+  string user_id = 2;
+  string username = 3;
+  repeated string permissions = 4;
+}
+
+// List grants request
+message ListSubusersRequest {
+  string server_id = 1;
+}
+
+// List grants response
+message ListSubusersResponse {
+  repeated SubuserGrant grants = 1;
+}
+
+// Set grant request
+message SetSubuserRequest {
+  string server_id = 1;
+  string user_id = 2;
+  repeated string permissions = 3;
+}
+
+// Set grant response
+message SetSubuserResponse {
+  SubuserGrant grant = 1;
+}
+
+// Remove grant request
+message RemoveSubuserRequest {
+  string server_id = 1;
+  string user_id = 2;
+}
+
+// Remove grant response
+message RemoveSubuserResponse {
+  bool success = 1;
+}

@@ -260,6 +260,7 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	supportService := services.NewSupportService(s.store, s.docker, s.config, s.log)
 	taskService := services.NewTaskService(s.store, s.scheduler, s.log)
 	activityService := services.NewActivityService(s.store, s.log)
+	subuserService := services.NewSubuserService(s.store, s.log)
 	userService := services.NewUserService(s.store, s.authManager, s.log)
 	roleService := services.NewRoleService(s.store, s.enforcer, s.log)
 	moduleService := services.NewModuleService(s.store, s.docker, s.moduleManager, s.proxyManager, s.authManager, s.config, s.logStreamer, s.log)
@@ -301,6 +302,9 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 
 	activityPath, activityHandler := carbonpanelv1connect.NewActivityServiceHandler(activityService, opts...)
 	mux.Handle(activityPath, activityHandler)
+
+	subuserPath, subuserHandler := carbonpanelv1connect.NewSubuserServiceHandler(subuserService, opts...)
+	mux.Handle(subuserPath, subuserHandler)
 
 	userPath, userHandler := carbonpanelv1connect.NewUserServiceHandler(userService, opts...)
 	mux.Handle(userPath, userHandler)
@@ -386,6 +390,21 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 			if err != nil {
 				s.log.Error("RBAC enforcement error: %v", err)
 				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+			if !allowed {
+				// Subuser grant fallback (MINE-139): a per-server grant can
+				// allow server-scoped procedures the caller's roles deny.
+				// Grants never apply to management procedures (SubuserService
+				// itself) — only admins manage grants via role "*" match.
+				if perm.Resource != rbac.ResourceSubusers && perm.ObjectIDField == "server_id" && s.store != nil {
+					want := perm.Resource + "." + perm.Action
+					for _, p := range s.store.SubuserPermissions(ctx, objectID, user.ID) {
+						if p == want {
+							allowed = true
+							break
+						}
+					}
+				}
 			}
 			if !allowed {
 				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("insufficient permissions for %s/%s", perm.Resource, perm.Action))
