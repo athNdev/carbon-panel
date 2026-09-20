@@ -12,9 +12,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  GO_VERSION: '1.25.0'
-
 jobs:
   test-backend:
     name: Backend Test Suite
@@ -24,10 +21,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Set up Go ${{ env.GO_VERSION }}
+      - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Ensure embedded web build directory exists
@@ -48,10 +45,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go ${{ env.GO_VERSION }}
+      - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Ensure embedded web build directory exists
@@ -70,6 +67,37 @@ jobs:
         with:
           version: v2.13.2
           only-new-issues: true
+
+  govulncheck:
+    name: Govulncheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # Fail only on findings with a published fix ("Fixed in: <ver>").
+      # Findings with "Fixed in: N/A" (e.g. Moby daemon-side GO-2026-4887/
+      # GO-2026-4883 via docker/docker client error paths) have no available
+      # remediation; they are reported but non-blocking until MINE-134
+      # (moby/moby/client migration) removes the module entirely.
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          out=$(govulncheck ./... 2>&1) || true
+          echo "$out"
+          fixable=$(echo "$out" | grep "Fixed in:" | grep -v "N/A" || true)
+          if [ -n "$fixable" ]; then
+            echo "::error::govulncheck found vulnerabilities with available fixes:"
+            echo "$fixable"
+            exit 1
+          fi
 
   lint-proto:
     name: Proto Lint
@@ -103,7 +131,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version: '1.4.2'
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
