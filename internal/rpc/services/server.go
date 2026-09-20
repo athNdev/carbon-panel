@@ -1595,6 +1595,25 @@ func (s *ServerService) SendCommand(ctx context.Context, req *connect.Request[v1
 	}), nil
 }
 
+// ListServerPlayers returns the live online roster from the metrics
+// collector (RCON `list` / SLP sample), empty when offline (MINE-140).
+func (s *ServerService) ListServerPlayers(ctx context.Context, req *connect.Request[v1.ListServerPlayersRequest]) (*connect.Response[v1.ListServerPlayersResponse], error) {
+	if _, err := s.store.GetServer(ctx, req.Msg.ServerId); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
+	}
+	players := []string{}
+	online := 0
+	if s.metricsCollector != nil {
+		if m := s.metricsCollector.GetMetrics(req.Msg.ServerId); m != nil {
+			players = append(players, m.PlayerSample...)
+			online = m.PlayersOnline
+		}
+	}
+	return connect.NewResponse(&v1.ListServerPlayersResponse{
+		Players: players, OnlineCount: int32(online),
+	}), nil
+}
+
 // Reads the server's latest.log and uploads it to mclo.gs
 func (s *ServerService) UploadToMCLogs(ctx context.Context, req *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error) {
 	server, err := s.store.GetServer(ctx, req.Msg.Id)

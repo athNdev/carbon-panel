@@ -39,6 +39,8 @@ service ServerService {
   rpc UploadToMCLogs(UploadToMCLogsRequest) returns (UploadToMCLogsResponse);
   // Migrate server instance to a target Docker node
   rpc MigrateServer(MigrateServerRequest) returns (MigrateServerResponse);
+  // Live online players from metrics collector (RCON/SLP)
+  rpc ListServerPlayers(ListServerPlayersRequest) returns (ListServerPlayersResponse);
 }
 
 // Server list options
@@ -253,5 +255,16 @@ message MigrateServerResponse {
   string target_node_id = 4;
   int64 duration_ms = 5;
   Server server = 6;
+}
+
+// Live player list request
+message ListServerPlayersRequest {
+  string server_id = 1;
+}
+
+// Live player list response
+message ListServerPlayersResponse {
+  repeated string players = 1;
+  int32 online_count = 2;
 }
 
