@@ -82,6 +82,7 @@ func (e *Enforcer) SeedDefaultPolicies(anonymousEnabled bool) error {
 			{"user", ResourceFiles, ActionRead, "*"},
 			{"user", ResourceTasks, ActionRead, "*"},
 			{"user", ResourceProxy, ActionRead, "*"},
+			{"user", ResourceActivity, ActionRead, "*"},
 		},
 		"anonymous": {
 			{"anonymous", ResourceServers, ActionRead, "*"},
@@ -93,6 +94,7 @@ func (e *Enforcer) SeedDefaultPolicies(anonymousEnabled bool) error {
 			{"anonymous", ResourceFiles, ActionRead, "*"},
 			{"anonymous", ResourceTasks, ActionRead, "*"},
 			{"anonymous", ResourceProxy, ActionRead, "*"},
+			{"anonymous", ResourceActivity, ActionRead, "*"},
 		},
 	}
 
