@@ -99,10 +99,30 @@ jobs:
             exit 1
           fi
 
+  # Race detector over concurrency-heavy packages (MINE-146).
+  test-race:
+    name: Go Race Detector
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Ensure embedded web build directory exists
+        run: mkdir -p web/carbon-panel/build && touch web/carbon-panel/build/.gitkeep
+
+      - name: Run race detector
+        run: go test -race -count=1 ./internal/reconciler/ ./internal/scheduler/ ./internal/docker/ ./internal/activity/ ./internal/metrics/
+
   lint-proto:
     name: Proto Lint
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -522,6 +523,9 @@ func (s *TaskService) ToggleTask(ctx context.Context, req *connect.Request[v1.To
 func (s *TaskService) TriggerTask(ctx context.Context, req *connect.Request[v1.TriggerTaskRequest]) (*connect.Response[v1.TriggerTaskResponse], error) {
 	execution, err := s.scheduler.TriggerTask(ctx, req.Msg.Id)
 	if err != nil {
+		if errors.Is(err, scheduler.ErrTaskAlreadyRunning) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("task is already running"))
+		}
 		s.log.Error("Failed to trigger task: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to trigger task: %v", err))
 	}
