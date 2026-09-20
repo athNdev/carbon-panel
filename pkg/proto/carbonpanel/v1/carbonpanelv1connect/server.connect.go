@@ -77,6 +77,9 @@ const (
 	// ServerServiceMigrateServerProcedure is the fully-qualified name of the ServerService's
 	// MigrateServer RPC.
 	ServerServiceMigrateServerProcedure = "/carbonpanel.v1.ServerService/MigrateServer"
+	// ServerServiceListServerPlayersProcedure is the fully-qualified name of the ServerService's
+	// ListServerPlayers RPC.
+	ServerServiceListServerPlayersProcedure = "/carbonpanel.v1.ServerService/ListServerPlayers"
 )
 
 // ServerServiceClient is a client for the carbonpanel.v1.ServerService service.
@@ -111,6 +114,8 @@ type ServerServiceClient interface {
 	UploadToMCLogs(context.Context, *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error)
 	// Migrate server instance to a target Docker node
 	MigrateServer(context.Context, *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error)
+	// Live online players from metrics collector (RCON/SLP)
+	ListServerPlayers(context.Context, *connect.Request[v1.ListServerPlayersRequest]) (*connect.Response[v1.ListServerPlayersResponse], error)
 }
 
 // NewServerServiceClient constructs a client for the carbonpanel.v1.ServerService service. By
@@ -214,6 +219,12 @@ func NewServerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(serverServiceMethods.ByName("MigrateServer")),
 			connect.WithClientOptions(opts...),
 		),
+		listServerPlayers: connect.NewClient[v1.ListServerPlayersRequest, v1.ListServerPlayersResponse](
+			httpClient,
+			baseURL+ServerServiceListServerPlayersProcedure,
+			connect.WithSchema(serverServiceMethods.ByName("ListServerPlayers")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -234,6 +245,7 @@ type serverServiceClient struct {
 	sendCommand          *connect.Client[v1.SendCommandRequest, v1.SendCommandResponse]
 	uploadToMCLogs       *connect.Client[v1.UploadToMCLogsRequest, v1.UploadToMCLogsResponse]
 	migrateServer        *connect.Client[v1.MigrateServerRequest, v1.MigrateServerResponse]
+	listServerPlayers    *connect.Client[v1.ListServerPlayersRequest, v1.ListServerPlayersResponse]
 }
 
 // ListServers calls carbonpanel.v1.ServerService.ListServers.
@@ -311,6 +323,11 @@ func (c *serverServiceClient) MigrateServer(ctx context.Context, req *connect.Re
 	return c.migrateServer.CallUnary(ctx, req)
 }
 
+// ListServerPlayers calls carbonpanel.v1.ServerService.ListServerPlayers.
+func (c *serverServiceClient) ListServerPlayers(ctx context.Context, req *connect.Request[v1.ListServerPlayersRequest]) (*connect.Response[v1.ListServerPlayersResponse], error) {
+	return c.listServerPlayers.CallUnary(ctx, req)
+}
+
 // ServerServiceHandler is an implementation of the carbonpanel.v1.ServerService service.
 type ServerServiceHandler interface {
 	// Get all servers with optional stats
@@ -343,6 +360,8 @@ type ServerServiceHandler interface {
 	UploadToMCLogs(context.Context, *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error)
 	// Migrate server instance to a target Docker node
 	MigrateServer(context.Context, *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error)
+	// Live online players from metrics collector (RCON/SLP)
+	ListServerPlayers(context.Context, *connect.Request[v1.ListServerPlayersRequest]) (*connect.Response[v1.ListServerPlayersResponse], error)
 }
 
 // NewServerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -442,6 +461,12 @@ func NewServerServiceHandler(svc ServerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(serverServiceMethods.ByName("MigrateServer")),
 		connect.WithHandlerOptions(opts...),
 	)
+	serverServiceListServerPlayersHandler := connect.NewUnaryHandler(
+		ServerServiceListServerPlayersProcedure,
+		svc.ListServerPlayers,
+		connect.WithSchema(serverServiceMethods.ByName("ListServerPlayers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/carbonpanel.v1.ServerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ServerServiceListServersProcedure:
@@ -474,6 +499,8 @@ func NewServerServiceHandler(svc ServerServiceHandler, opts ...connect.HandlerOp
 			serverServiceUploadToMCLogsHandler.ServeHTTP(w, r)
 		case ServerServiceMigrateServerProcedure:
 			serverServiceMigrateServerHandler.ServeHTTP(w, r)
+		case ServerServiceListServerPlayersProcedure:
+			serverServiceListServerPlayersHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -541,4 +568,8 @@ func (UnimplementedServerServiceHandler) UploadToMCLogs(context.Context, *connec
 
 func (UnimplementedServerServiceHandler) MigrateServer(context.Context, *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("carbonpanel.v1.ServerService.MigrateServer is not implemented"))
+}
+
+func (UnimplementedServerServiceHandler) ListServerPlayers(context.Context, *connect.Request[v1.ListServerPlayersRequest]) (*connect.Response[v1.ListServerPlayersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("carbonpanel.v1.ServerService.ListServerPlayers is not implemented"))
 }
