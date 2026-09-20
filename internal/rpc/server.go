@@ -261,6 +261,7 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	taskService := services.NewTaskService(s.store, s.scheduler, s.log)
 	activityService := services.NewActivityService(s.store, s.log)
 	subuserService := services.NewSubuserService(s.store, s.log)
+	blueprintService := services.NewBlueprintService(s.store, s.log)
 	userService := services.NewUserService(s.store, s.authManager, s.log)
 	roleService := services.NewRoleService(s.store, s.enforcer, s.log)
 	moduleService := services.NewModuleService(s.store, s.docker, s.moduleManager, s.proxyManager, s.authManager, s.config, s.logStreamer, s.log)
@@ -305,6 +306,9 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 
 	subuserPath, subuserHandler := carbonpanelv1connect.NewSubuserServiceHandler(subuserService, opts...)
 	mux.Handle(subuserPath, subuserHandler)
+
+	blueprintPath, blueprintHandler := carbonpanelv1connect.NewBlueprintServiceHandler(blueprintService, opts...)
+	mux.Handle(blueprintPath, blueprintHandler)
 
 	userPath, userHandler := carbonpanelv1connect.NewUserServiceHandler(userService, opts...)
 	mux.Handle(userPath, userHandler)

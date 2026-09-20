@@ -14,6 +14,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/command"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/blueprint"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
@@ -228,6 +229,11 @@ func main() {
 	// Initialize builtin module templates
 	if err := module.InitBuiltinTemplates(store); err != nil {
 		log.Error("Failed to initialize builtin module templates: %v", err)
+	}
+
+	// Initialize builtin server blueprints (MINE-143)
+	if err := blueprint.InitBuiltinBlueprints(store); err != nil {
+		log.Error("Failed to initialize builtin server blueprints: %v", err)
 	}
 
 	// Initialize module manager
