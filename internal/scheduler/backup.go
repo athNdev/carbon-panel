@@ -1,9 +1,13 @@
 package scheduler
 
 import (
+	"archive/zip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -74,10 +78,22 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		size = info.Size()
 	}
 
+	// Integrity proof (MINE-146): checksum sidecar + CRC verification.
+	sum, sumErr := sha256File(destPath)
+	if sumErr != nil {
+		return "", fmt.Errorf("failed to checksum backup archive: %w", sumErr)
+	}
+	if err := os.WriteFile(destPath+".sha256", []byte(sum+"  "+filepath.Base(destPath)+"\n"), 0644); err != nil {
+		return "", fmt.Errorf("failed to write backup checksum: %w", err)
+	}
+	if err := verifyZipArchive(destPath); err != nil {
+		return "", fmt.Errorf("backup archive failed verification: %w", err)
+	}
+
 	pruned, pruneErr := pruneBackups(destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
 
-	output := fmt.Sprintf("backup created: %s (%d files, %s, took %s)",
-		filepath.Base(destPath), count, formatBytes(size), time.Since(start).Round(time.Millisecond))
+	output := fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)",
+		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond))
 	if len(missing) > 0 {
 		output += fmt.Sprintf("; skipped missing paths: %s", strings.Join(missing, ", "))
 	}
@@ -170,6 +186,7 @@ func (s *Scheduler) pauseWorldSaves(ctx context.Context, server *storage.Server)
 // Removes old backups matching prefix in dir, keeping at most maxBackups (0 = unlimited) and dropping any older than retentionDays.
 // Age-based expiry never reduces the backup count below minBackups (at minimum the most recent backup is always kept),
 // while maxBackups is a hard cap that takes precedence over minBackups.
+// Files ending in .locked.zip are sticky: never pruned (MINE-146).
 // Returns the number of backups removed.
 func pruneBackups(dir, prefix string, retentionDays, minBackups, maxBackups int) (int, error) {
 	if retentionDays <= 0 && maxBackups <= 0 {
@@ -189,6 +206,9 @@ func pruneBackups(dir, prefix string, retentionDays, minBackups, maxBackups int)
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasPrefix(entry.Name(), prefix) || !strings.HasSuffix(entry.Name(), ".zip") {
 			continue
+		}
+		if strings.HasSuffix(entry.Name(), ".locked.zip") {
+			continue // sticky backup: exempt from pruning
 		}
 		info, err := entry.Info()
 		if err != nil {
@@ -233,8 +253,49 @@ func pruneBackups(dir, prefix string, retentionDays, minBackups, maxBackups int)
 	return pruned, firstErr
 }
 
-func formatBytes(size int64) string {
-	const unit = 1024
+// sha256File returns the hex SHA256 of a file.
+func sha256File(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		_ = f.Close()
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// verifyZipArchive opens the archive and fully reads every entry so stored
+// CRCs are validated (MINE-146 integrity proof).
+func verifyZipArchive(path string) error {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = r.Close() }()
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return fmt.Errorf("entry %s: %w", f.Name, err)
+		}
+		_, copyErr := io.Copy(io.Discard, rc)
+		closeErr := rc.Close()
+		if copyErr != nil {
+			return fmt.Errorf("entry %s: %w", f.Name, copyErr)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("entry %s: %w", f.Name, closeErr)
+		}
+	}
+	return nil
+}
+
+func formatBytes(size int64) string {	const unit = 1024
 	if size < unit {
 		return fmt.Sprintf("%d B", size)
 	}
