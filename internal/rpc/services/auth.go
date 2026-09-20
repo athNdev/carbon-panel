@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/rbac"
@@ -75,6 +76,14 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		}
 		s.log.Error("Login failed: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("login failed"))
+	}
+
+	// Audit trail (MINE-141): never break login on audit failure.
+	if aerr := activity.Log(s.store.DB(), activity.Entry{
+		ActorID: user.ID, ActorName: user.Username, IP: req.Peer().Addr,
+		Event: activity.EventAuthLogin, SubjectTyp: "user", SubjectID: user.ID,
+	}); aerr != nil {
+		s.log.Error("Audit log failed for login: %v", aerr)
 	}
 
 	return connect.NewResponse(&v1.LoginResponse{
