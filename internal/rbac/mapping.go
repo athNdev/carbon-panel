@@ -178,6 +178,11 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	// ── ActivityService ─────────────────────────────────────────────
 	"/carbonpanel.v1.ActivityService/ListActivityLogs": {Resource: ResourceActivity, Action: ActionRead, ObjectIDField: "server_id"},
 
+	// ── SubuserService ──────────────────────────────────────────────
+	"/carbonpanel.v1.SubuserService/ListSubusers":  {Resource: ResourceSubusers, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.SubuserService/SetSubuser":    {Resource: ResourceSubusers, Action: ActionCreate, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.SubuserService/RemoveSubuser": {Resource: ResourceSubusers, Action: ActionDelete, ObjectIDField: "server_id"},
+
 	// â”€â”€ UserService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.UserService/ListUsers":  {Resource: ResourceUsers, Action: ActionRead},
 	"/carbonpanel.v1.UserService/GetUser":    {Resource: ResourceUsers, Action: ActionRead},
