@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.4.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.1
 	github.com/aws/smithy-go v1.28.1
-	github.com/casbin/casbin/v3 v3.8.1
+	github.com/casbin/casbin/v3 v3.11.0
 	github.com/casbin/gorm-adapter/v3 v3.41.0
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/docker/docker v28.5.2+incompatible
