@@ -53,6 +53,7 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.ServerService/SendCommand":          {Resource: ResourceServers, Action: ActionCommand, ObjectIDField: "id"},
 	"/carbonpanel.v1.ServerService/UploadToMCLogs":       {Resource: ResourceServers, Action: ActionRead, ObjectIDField: "id"},
 	"/carbonpanel.v1.ServerService/MigrateServer":        {Resource: ResourceServers, Action: ActionUpdate, ObjectIDField: "id"},
+	"/carbonpanel.v1.ServerService/ListServerPlayers":  {Resource: ResourceServers, Action: ActionRead, ObjectIDField: "server_id"},
 
 	// â”€â”€ AuthService (admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.AuthService/GetAuthConfig":      {Resource: ResourceSettings, Action: ActionRead},
