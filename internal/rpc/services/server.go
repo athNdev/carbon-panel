@@ -27,6 +27,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/command"
 	"github.com/athNdev/carbon-panel/internal/config"
@@ -83,6 +84,21 @@ func (s *ServerService) SetClientPool(pool *docker.ClientPool) {
 // SetPlacementEngine sets the placement engine on the service
 func (s *ServerService) SetPlacementEngine(engine *docker.PlacementEngine) {
 	s.placementEngine = engine
+}
+
+// auditPower records a server power event in the audit trail (MINE-141).
+// Audit failures are logged, never returned.
+func (s *ServerService) auditPower(ctx context.Context, ip, event, serverID string) {
+	actorID, actorName := "", ""
+	if u := auth.GetUserFromContext(ctx); u != nil {
+		actorID, actorName = u.ID, u.Username
+	}
+	if err := activity.Log(s.store.DB(), activity.Entry{
+		ActorID: actorID, ActorName: actorName, IP: ip,
+		Event: event, SubjectTyp: "server", SubjectID: serverID,
+	}); err != nil {
+		s.log.Error("Audit log failed for %s: %v", event, err)
+	}
 }
 
 // NewServerService creates a new server service
@@ -1302,6 +1318,9 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		})
 	}
 
+	// Audit trail (MINE-141): never break the op on audit failure.
+	s.auditPower(ctx, req.Peer().Addr, activity.EventServerStart, server.ID)
+
 	return connect.NewResponse(&v1.StartServerResponse{
 		Status: "starting",
 	}), nil
@@ -1360,6 +1379,9 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 			ServerID: server.ID,
 		})
 	}
+
+	// Audit trail (MINE-141): never break the op on audit failure.
+	s.auditPower(ctx, req.Peer().Addr, activity.EventServerStop, server.ID)
 
 	status := "stopping"
 	if !found {
