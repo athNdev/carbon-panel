@@ -651,6 +651,7 @@ type BackupRecord struct {
 	SHA256    string `json:"sha256"`
 	Locked    bool   `json:"locked" gorm:"default:false"`
 	Status    string `json:"status" gorm:"default:complete"` // complete, restoring, failed
+	RemoteKey string `json:"remote_key" gorm:"column:remote_key"` // S3 object key when offloaded (MINE-138)
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -21,7 +22,7 @@ func TestBackupService_ListDeleteLock(t *testing.T) {
 	defer func() { _ = store.Close() }()
 	ctx := context.Background()
 	log := logger.New()
-	svc := NewBackupService(store, nil, nil, log)
+	svc := NewBackupService(store, nil, nil, appconfig.S3Config{}, log)
 
 	dir := t.TempDir()
 	archive := filepath.Join(dir, "srv_20200101-000000.zip")
