@@ -243,6 +243,12 @@ func (s *Scheduler) checkAndRunDueTasks() {
 			}
 			s.lastActivityPrune = time.Now()
 		}
+		// Metrics retention (MINE-144): evict snapshots stale over 2h.
+		if s.metrics != nil {
+			if n := s.metrics.PruneStale(2 * time.Hour); n > 0 {
+				s.log.Info("Pruned %d stale metric snapshots", n)
+			}
+		}
 	}
 
 	// Apply staged config rollouts whose cron schedule has fired (MINE staged rollout MVP).

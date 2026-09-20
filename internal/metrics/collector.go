@@ -201,6 +201,21 @@ func (c *Collector) GetAllMetrics() map[string]*ServerMetrics {
 	return result
 }
 
+// PruneStale evicts entries not updated within maxAge (MINE-144 retention).
+// Returns evicted count.
+func (c *Collector) PruneStale(maxAge time.Duration) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for id, m := range c.metrics {
+		if m == nil || time.Since(m.LastUpdated) > maxAge {
+			delete(c.metrics, id)
+			n++
+		}
+	}
+	return n
+}
+
 // Collects Docker container stats periodically
 func (c *Collector) collectDockerStatsLoop() {
 	defer c.wg.Done()
