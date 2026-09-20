@@ -111,6 +111,12 @@ message ScheduledTask {
 
   // Events that trigger this task. Only used when schedule == SCHEDULE_TYPE_EVENT.
   repeated TriggeredEventType event_triggers = 22;
+
+  // Chain settings (MINE-142)
+  optional string parent_task_id = 23;
+  int32 step_order = 24;
+  int32 time_offset_secs = 25;
+  bool continue_on_failure = 26;
 }
 
 // Task execution record
@@ -214,6 +220,12 @@ message CreateTaskRequest {
 
   // Event triggers (only used when schedule == SCHEDULE_TYPE_EVENT)
   repeated TriggeredEventType event_triggers = 15;
+
+  // Chain settings (MINE-142)
+  optional string parent_task_id = 16;
+  int32 step_order = 17;
+  int32 time_offset_secs = 18;
+  bool continue_on_failure = 19;
 }
 
 // Newly created task
@@ -247,6 +259,13 @@ message UpdateTaskRequest {
   // Event triggers (only used when schedule == SCHEDULE_TYPE_EVENT)
   repeated TriggeredEventType event_triggers = 15;
   bool clear_event_triggers = 16;  // If true, clear event_triggers before applying new ones
+
+  // Chain settings (MINE-142)
+  optional string parent_task_id = 17;
+  bool clear_parent_task_id = 18;  // If true, detach from chain
+  optional int32 step_order = 19;
+  optional int32 time_offset_secs = 20;
+  optional bool continue_on_failure = 21;
 }
 
 // Updated task details

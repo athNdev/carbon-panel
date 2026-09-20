@@ -341,6 +341,13 @@ func (s *Scheduler) executeTaskForEvent(task *storage.ScheduledTask, eventType v
 // executeTask runs a single task. eventTrigger names the event that drove an
 // event-triggered run (empty for scheduled/manual runs).
 func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any) (*storage.TaskExecution, error) {
+	return s.executeTaskAtDepth(task, trigger, eventType, eventData, 0)
+}
+
+// maxChainDepth caps reaction-chain nesting (MINE-142).
+const maxChainDepth = 4
+
+func (s *Scheduler) executeTaskAtDepth(task *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) (*storage.TaskExecution, error) {
 	ctx := context.Background()
 
 	// Check if server exists
@@ -369,6 +376,12 @@ func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eve
 		now := time.Now()
 		execution.EndedAt = &now
 		s.store.CreateTaskExecution(ctx, execution)
+
+		// Skipped steps still fan out to children (each child applies its
+		// own online gate), so chains degrade to per-step skip records.
+		if depth < maxChainDepth {
+			s.runChildChain(task, trigger, eventType, eventData, depth)
+		}
 
 		// Update next run time if not already updated at dispatch
 		if trigger != "scheduled" {
@@ -463,12 +476,41 @@ func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eve
 
 	s.store.UpdateTaskExecution(ctx, execution)
 
+	// Reaction chain (MINE-142): run enabled children in step order when the
+	// parent succeeded, or when it failed but allows continuation. A child
+	// failure aborts the rest of the chain unless that child allowed it.
+	// Each child runs through the normal path, so RequireOnline and retries
+	// apply per step.
+	if depth < maxChainDepth && (execErr == nil || task.ContinueOnFailure) {
+		s.runChildChain(task, trigger, eventType, eventData, depth)
+	}
+
 	// Update next run time if not already updated at dispatch
 	if trigger != "scheduled" {
 		s.updateNextRun(task)
 	}
 
 	return execution, execErr
+}
+
+// runChildChain executes a task's children sequentially.
+func (s *Scheduler) runChildChain(parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) {
+	children, err := s.store.ListChildTasks(context.Background(), parent.ID)
+	if err != nil {
+		s.log.Error("Task %s: failed to list child tasks: %v", parent.Name, err)
+		return
+	}
+	for _, child := range children {
+		if child.TimeOffsetSecs > 0 {
+			s.log.Info("Task %s: waiting %ds before child step %s", parent.Name, child.TimeOffsetSecs, child.Name)
+			time.Sleep(time.Duration(child.TimeOffsetSecs) * time.Second)
+		}
+		_, childErr := s.executeTaskAtDepth(child, trigger, eventType, eventData, depth+1)
+		if childErr != nil && !child.ContinueOnFailure {
+			s.log.Warn("Task %s: chain aborted at step %s: %v", parent.Name, child.Name, childErr)
+			return
+		}
+	}
 }
 
 // runTaskType dispatches a single execution attempt to the type-specific executor

@@ -584,6 +584,14 @@ type ScheduledTask struct {
 	RequireOnline bool `json:"require_online" gorm:"default:true"`  // Only run if server is online
 	FailureNotify bool `json:"failure_notify" gorm:"default:false"` // Notify on failure (future feature)
 
+	// Chain settings (MINE-142): tasks with the same ParentTaskID run in
+	// StepOrder after the parent completes. A parent failure aborts the
+	// chain unless the failed task has ContinueOnFailure.
+	ParentTaskID      *string `json:"parent_task_id" gorm:"index;column:parent_task_id"`
+	StepOrder         int     `json:"step_order" gorm:"default:0;column:step_order"`
+	TimeOffsetSecs    int     `json:"time_offset_secs" gorm:"default:0;column:time_offset_secs"`
+	ContinueOnFailure bool    `json:"continue_on_failure" gorm:"default:false;column:continue_on_failure"`
+
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 

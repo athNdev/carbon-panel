@@ -296,8 +296,13 @@ type ScheduledTask struct {
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Events that trigger this task. Only used when schedule == SCHEDULE_TYPE_EVENT.
 	EventTriggers []TriggeredEventType `protobuf:"varint,22,rep,packed,name=event_triggers,json=eventTriggers,proto3,enum=carbonpanel.v1.TriggeredEventType" json:"event_triggers,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Chain settings (MINE-142)
+	ParentTaskId      *string `protobuf:"bytes,23,opt,name=parent_task_id,json=parentTaskId,proto3,oneof" json:"parent_task_id,omitempty"`
+	StepOrder         int32   `protobuf:"varint,24,opt,name=step_order,json=stepOrder,proto3" json:"step_order,omitempty"`
+	TimeOffsetSecs    int32   `protobuf:"varint,25,opt,name=time_offset_secs,json=timeOffsetSecs,proto3" json:"time_offset_secs,omitempty"`
+	ContinueOnFailure bool    `protobuf:"varint,26,opt,name=continue_on_failure,json=continueOnFailure,proto3" json:"continue_on_failure,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ScheduledTask) Reset() {
@@ -482,6 +487,34 @@ func (x *ScheduledTask) GetEventTriggers() []TriggeredEventType {
 		return x.EventTriggers
 	}
 	return nil
+}
+
+func (x *ScheduledTask) GetParentTaskId() string {
+	if x != nil && x.ParentTaskId != nil {
+		return *x.ParentTaskId
+	}
+	return ""
+}
+
+func (x *ScheduledTask) GetStepOrder() int32 {
+	if x != nil {
+		return x.StepOrder
+	}
+	return 0
+}
+
+func (x *ScheduledTask) GetTimeOffsetSecs() int32 {
+	if x != nil {
+		return x.TimeOffsetSecs
+	}
+	return 0
+}
+
+func (x *ScheduledTask) GetContinueOnFailure() bool {
+	if x != nil {
+		return x.ContinueOnFailure
+	}
+	return false
 }
 
 // Task execution record
@@ -1164,8 +1197,13 @@ type CreateTaskRequest struct {
 	RequireOnline bool  `protobuf:"varint,14,opt,name=require_online,json=requireOnline,proto3" json:"require_online,omitempty"`
 	// Event triggers (only used when schedule == SCHEDULE_TYPE_EVENT)
 	EventTriggers []TriggeredEventType `protobuf:"varint,15,rep,packed,name=event_triggers,json=eventTriggers,proto3,enum=carbonpanel.v1.TriggeredEventType" json:"event_triggers,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Chain settings (MINE-142)
+	ParentTaskId      *string `protobuf:"bytes,16,opt,name=parent_task_id,json=parentTaskId,proto3,oneof" json:"parent_task_id,omitempty"`
+	StepOrder         int32   `protobuf:"varint,17,opt,name=step_order,json=stepOrder,proto3" json:"step_order,omitempty"`
+	TimeOffsetSecs    int32   `protobuf:"varint,18,opt,name=time_offset_secs,json=timeOffsetSecs,proto3" json:"time_offset_secs,omitempty"`
+	ContinueOnFailure bool    `protobuf:"varint,19,opt,name=continue_on_failure,json=continueOnFailure,proto3" json:"continue_on_failure,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateTaskRequest) Reset() {
@@ -1303,6 +1341,34 @@ func (x *CreateTaskRequest) GetEventTriggers() []TriggeredEventType {
 	return nil
 }
 
+func (x *CreateTaskRequest) GetParentTaskId() string {
+	if x != nil && x.ParentTaskId != nil {
+		return *x.ParentTaskId
+	}
+	return ""
+}
+
+func (x *CreateTaskRequest) GetStepOrder() int32 {
+	if x != nil {
+		return x.StepOrder
+	}
+	return 0
+}
+
+func (x *CreateTaskRequest) GetTimeOffsetSecs() int32 {
+	if x != nil {
+		return x.TimeOffsetSecs
+	}
+	return 0
+}
+
+func (x *CreateTaskRequest) GetContinueOnFailure() bool {
+	if x != nil {
+		return x.ContinueOnFailure
+	}
+	return false
+}
+
 // Newly created task
 type CreateTaskResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1371,8 +1437,14 @@ type UpdateTaskRequest struct {
 	// Event triggers (only used when schedule == SCHEDULE_TYPE_EVENT)
 	EventTriggers      []TriggeredEventType `protobuf:"varint,15,rep,packed,name=event_triggers,json=eventTriggers,proto3,enum=carbonpanel.v1.TriggeredEventType" json:"event_triggers,omitempty"`
 	ClearEventTriggers bool                 `protobuf:"varint,16,opt,name=clear_event_triggers,json=clearEventTriggers,proto3" json:"clear_event_triggers,omitempty"` // If true, clear event_triggers before applying new ones
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Chain settings (MINE-142)
+	ParentTaskId      *string `protobuf:"bytes,17,opt,name=parent_task_id,json=parentTaskId,proto3,oneof" json:"parent_task_id,omitempty"`
+	ClearParentTaskId bool    `protobuf:"varint,18,opt,name=clear_parent_task_id,json=clearParentTaskId,proto3" json:"clear_parent_task_id,omitempty"` // If true, detach from chain
+	StepOrder         *int32  `protobuf:"varint,19,opt,name=step_order,json=stepOrder,proto3,oneof" json:"step_order,omitempty"`
+	TimeOffsetSecs    *int32  `protobuf:"varint,20,opt,name=time_offset_secs,json=timeOffsetSecs,proto3,oneof" json:"time_offset_secs,omitempty"`
+	ContinueOnFailure *bool   `protobuf:"varint,21,opt,name=continue_on_failure,json=continueOnFailure,proto3,oneof" json:"continue_on_failure,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateTaskRequest) Reset() {
@@ -1513,6 +1585,41 @@ func (x *UpdateTaskRequest) GetEventTriggers() []TriggeredEventType {
 func (x *UpdateTaskRequest) GetClearEventTriggers() bool {
 	if x != nil {
 		return x.ClearEventTriggers
+	}
+	return false
+}
+
+func (x *UpdateTaskRequest) GetParentTaskId() string {
+	if x != nil && x.ParentTaskId != nil {
+		return *x.ParentTaskId
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetClearParentTaskId() bool {
+	if x != nil {
+		return x.ClearParentTaskId
+	}
+	return false
+}
+
+func (x *UpdateTaskRequest) GetStepOrder() int32 {
+	if x != nil && x.StepOrder != nil {
+		return *x.StepOrder
+	}
+	return 0
+}
+
+func (x *UpdateTaskRequest) GetTimeOffsetSecs() int32 {
+	if x != nil && x.TimeOffsetSecs != nil {
+		return *x.TimeOffsetSecs
+	}
+	return 0
+}
+
+func (x *UpdateTaskRequest) GetContinueOnFailure() bool {
+	if x != nil && x.ContinueOnFailure != nil {
+		return *x.ContinueOnFailure
 	}
 	return false
 }
@@ -2326,7 +2433,7 @@ var File_carbonpanel_v1_task_proto protoreflect.FileDescriptor
 
 const file_carbonpanel_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x19carbonpanel/v1/task.proto\x12\x0ecarbonpanel.v1\x1a\x1acarbonpanel/v1/event.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x99\a\n" +
+	"\x19carbonpanel/v1/task.proto\x12\x0ecarbonpanel.v1\x1a\x1acarbonpanel/v1/event.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd0\b\n" +
 	"\rScheduledTask\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -2354,7 +2461,13 @@ const file_carbonpanel_v1_task_proto_rawDesc = "" +
 	"created_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12I\n" +
-	"\x0eevent_triggers\x18\x16 \x03(\x0e2\".carbonpanel.v1.TriggeredEventTypeR\reventTriggers\"\x81\x03\n" +
+	"\x0eevent_triggers\x18\x16 \x03(\x0e2\".carbonpanel.v1.TriggeredEventTypeR\reventTriggers\x12)\n" +
+	"\x0eparent_task_id\x18\x17 \x01(\tH\x00R\fparentTaskId\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"step_order\x18\x18 \x01(\x05R\tstepOrder\x12(\n" +
+	"\x10time_offset_secs\x18\x19 \x01(\x05R\x0etimeOffsetSecs\x12.\n" +
+	"\x13continue_on_failure\x18\x1a \x01(\bR\x11continueOnFailureB\x11\n" +
+	"\x0f_parent_task_id\"\x81\x03\n" +
 	"\rTaskExecution\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x1b\n" +
@@ -2412,7 +2525,7 @@ const file_carbonpanel_v1_task_proto_rawDesc = "" +
 	"\x0eGetTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"D\n" +
 	"\x0fGetTaskResponse\x121\n" +
-	"\x04task\x18\x01 \x01(\v2\x1d.carbonpanel.v1.ScheduledTaskR\x04task\"\xce\x04\n" +
+	"\x04task\x18\x01 \x01(\v2\x1d.carbonpanel.v1.ScheduledTaskR\x04task\"\x85\x06\n" +
 	"\x11CreateTaskRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -2431,9 +2544,15 @@ const file_carbonpanel_v1_task_proto_rawDesc = "" +
 	"\vretry_delay\x18\r \x01(\x05R\n" +
 	"retryDelay\x12%\n" +
 	"\x0erequire_online\x18\x0e \x01(\bR\rrequireOnline\x12I\n" +
-	"\x0eevent_triggers\x18\x0f \x03(\x0e2\".carbonpanel.v1.TriggeredEventTypeR\reventTriggers\"G\n" +
+	"\x0eevent_triggers\x18\x0f \x03(\x0e2\".carbonpanel.v1.TriggeredEventTypeR\reventTriggers\x12)\n" +
+	"\x0eparent_task_id\x18\x10 \x01(\tH\x00R\fparentTaskId\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"step_order\x18\x11 \x01(\x05R\tstepOrder\x12(\n" +
+	"\x10time_offset_secs\x18\x12 \x01(\x05R\x0etimeOffsetSecs\x12.\n" +
+	"\x13continue_on_failure\x18\x13 \x01(\bR\x11continueOnFailureB\x11\n" +
+	"\x0f_parent_task_id\"G\n" +
 	"\x12CreateTaskResponse\x121\n" +
-	"\x04task\x18\x01 \x01(\v2\x1d.carbonpanel.v1.ScheduledTaskR\x04task\"\xea\x06\n" +
+	"\x04task\x18\x01 \x01(\v2\x1d.carbonpanel.v1.ScheduledTaskR\x04task\"\x9d\t\n" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
@@ -2454,7 +2573,13 @@ const file_carbonpanel_v1_task_proto_rawDesc = "" +
 	"retryDelay\x88\x01\x01\x12*\n" +
 	"\x0erequire_online\x18\x0e \x01(\bH\fR\rrequireOnline\x88\x01\x01\x12I\n" +
 	"\x0eevent_triggers\x18\x0f \x03(\x0e2\".carbonpanel.v1.TriggeredEventTypeR\reventTriggers\x120\n" +
-	"\x14clear_event_triggers\x18\x10 \x01(\bR\x12clearEventTriggersB\a\n" +
+	"\x14clear_event_triggers\x18\x10 \x01(\bR\x12clearEventTriggers\x12)\n" +
+	"\x0eparent_task_id\x18\x11 \x01(\tH\rR\fparentTaskId\x88\x01\x01\x12/\n" +
+	"\x14clear_parent_task_id\x18\x12 \x01(\bR\x11clearParentTaskId\x12\"\n" +
+	"\n" +
+	"step_order\x18\x13 \x01(\x05H\x0eR\tstepOrder\x88\x01\x01\x12-\n" +
+	"\x10time_offset_secs\x18\x14 \x01(\x05H\x0fR\x0etimeOffsetSecs\x88\x01\x01\x123\n" +
+	"\x13continue_on_failure\x18\x15 \x01(\bH\x10R\x11continueOnFailure\x88\x01\x01B\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
@@ -2470,7 +2595,11 @@ const file_carbonpanel_v1_task_proto_rawDesc = "" +
 	"\b_timeoutB\x0e\n" +
 	"\f_retry_countB\x0e\n" +
 	"\f_retry_delayB\x11\n" +
-	"\x0f_require_online\"G\n" +
+	"\x0f_require_onlineB\x11\n" +
+	"\x0f_parent_task_idB\r\n" +
+	"\v_step_orderB\x13\n" +
+	"\x11_time_offset_secsB\x16\n" +
+	"\x14_continue_on_failure\"G\n" +
 	"\x12UpdateTaskResponse\x121\n" +
 	"\x04task\x18\x01 \x01(\v2\x1d.carbonpanel.v1.ScheduledTaskR\x04task\"#\n" +
 	"\x11DeleteTaskRequest\x12\x0e\n" +
@@ -2692,6 +2821,8 @@ func file_carbonpanel_v1_task_proto_init() {
 		return
 	}
 	file_carbonpanel_v1_event_proto_init()
+	file_carbonpanel_v1_task_proto_msgTypes[0].OneofWrappers = []any{}
+	file_carbonpanel_v1_task_proto_msgTypes[11].OneofWrappers = []any{}
 	file_carbonpanel_v1_task_proto_msgTypes[13].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
