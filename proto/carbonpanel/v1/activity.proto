@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Append-only audit trail (MINE-141)
+service ActivityService {
+  // List audit records, newest first
+  rpc ListActivityLogs(ListActivityLogsRequest) returns (ListActivityLogsResponse);
+}
+
+// One audit record
+message ActivityLogEntry {
+  string id = 1;
+  string actor_id = 2;
+  string actor_name = 3;
+  string ip = 4;
+  string event = 5;
+  string subject_type = 6;
+  string subject_id = 7;
+  string properties = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+// List request with optional filters
+message ListActivityLogsRequest {
+  string server_id = 1;
+  string actor = 2;
+  google.protobuf.Timestamp since = 3;
+  int32 limit = 4;
+}
+
+// Newest-first audit records
+message ListActivityLogsResponse {
+  repeated ActivityLogEntry entries = 1;
+}
