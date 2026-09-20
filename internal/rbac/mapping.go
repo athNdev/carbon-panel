@@ -187,6 +187,12 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.BlueprintService/ListBlueprints": {Resource: ResourceServers, Action: ActionRead},
 	"/carbonpanel.v1.BlueprintService/GetBlueprint":   {Resource: ResourceServers, Action: ActionRead},
 
+	// ── BackupService ───────────────────────────────────────────────
+	"/carbonpanel.v1.BackupService/ListBackups":   {Resource: ResourceBackups, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.BackupService/DeleteBackup": {Resource: ResourceBackups, Action: ActionDelete},
+	"/carbonpanel.v1.BackupService/RestoreBackup": {Resource: ResourceBackups, Action: ActionUpdate},
+	"/carbonpanel.v1.BackupService/SetBackupLocked": {Resource: ResourceBackups, Action: ActionUpdate},
+
 	// â”€â”€ UserService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.UserService/ListUsers":  {Resource: ResourceUsers, Action: ActionRead},
 	"/carbonpanel.v1.UserService/GetUser":    {Resource: ResourceUsers, Action: ActionRead},

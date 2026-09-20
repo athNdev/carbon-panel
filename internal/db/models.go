@@ -640,6 +640,21 @@ type ServerBlueprint struct {
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
+// BackupRecord tracks an on-disk backup archive (MINE-138). The archive
+// itself lives under the backup dir; this row carries integrity + lock state.
+type BackupRecord struct {
+	ID        string `json:"id" gorm:"primaryKey"`
+	ServerID  string `json:"server_id" gorm:"not null;index;column:server_id"`
+	Name      string `json:"name" gorm:"not null"`
+	Path      string `json:"path" gorm:"not null"`
+	SizeBytes int64  `json:"size_bytes" gorm:"column:size_bytes"`
+	SHA256    string `json:"sha256"`
+	Locked    bool   `json:"locked" gorm:"default:false"`
+	Status    string `json:"status" gorm:"default:complete"` // complete, restoring, failed
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
+}
+
 // ExecutionStatus defines the status of a task execution
 type ExecutionStatus string
 

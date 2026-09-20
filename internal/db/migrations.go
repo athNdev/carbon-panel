@@ -31,6 +31,7 @@ func allModels() []any {
 		&ActivityLog{},
 		&ServerSubuser{},
 		&ServerBlueprint{},
+		&BackupRecord{},
 		&ModuleTemplate{},
 		&Module{},
 		&SystemSetting{},
