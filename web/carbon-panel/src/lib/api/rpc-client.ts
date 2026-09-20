@@ -15,7 +15,8 @@ let loggingOut = false;
 
 // SERVICES
 import { AuthService } from '$lib/proto/carbonpanel/v1/auth_pb';
-import { ActivityService } from '$lib/proto/carbonpanel/v1/activity_pb';import { ConfigService } from '$lib/proto/carbonpanel/v1/config_pb';
+import { ActivityService } from '$lib/proto/carbonpanel/v1/activity_pb';
+import { BackupService } from '$lib/proto/carbonpanel/v1/backup_pb';import { ConfigService } from '$lib/proto/carbonpanel/v1/config_pb';
 import { FileService } from '$lib/proto/carbonpanel/v1/file_pb';
 import { MinecraftService } from '$lib/proto/carbonpanel/v1/minecraft_pb';
 import { ModService } from '$lib/proto/carbonpanel/v1/mod_pb';
@@ -94,6 +95,7 @@ const transport = createConnectTransport({
 // Clients for each service
 export class RpcClient {
 	public readonly activity: Client<typeof ActivityService>;
+	public readonly backup: Client<typeof BackupService>;
 	public readonly auth: Client<typeof AuthService>;
 	public readonly config: Client<typeof ConfigService>;
 	public readonly file: Client<typeof FileService>;
@@ -112,6 +114,7 @@ export class RpcClient {
 
 	constructor() {
 		this.activity = createClient(ActivityService, transport);
+		this.backup = createClient(BackupService, transport);
 		this.auth = createClient(AuthService, transport);
 		this.config = createClient(ConfigService, transport);
 		this.file = createClient(FileService, transport);

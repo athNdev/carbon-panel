@@ -14,9 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/pkg/files"
+	"github.com/google/uuid"
 )
 
 // BackupTaskConfig represents configuration for backup tasks
@@ -93,18 +94,31 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 
 	// Track the archive in the database (MINE-138). A missing record must
 	// never fail the backup itself.
-	if recErr := s.store.CreateBackupRecord(ctx, &storage.BackupRecord{
+	rec := &storage.BackupRecord{
 		ID: uuid.New().String(), ServerID: server.ID,
 		Name: filepath.Base(destPath), Path: destPath,
 		SizeBytes: size, SHA256: sum, Status: "complete",
-	}); recErr != nil {
+	}
+	if recErr := s.store.CreateBackupRecord(ctx, rec); recErr != nil {
 		s.log.Error("Backup: failed to record backup %s: %v", destPath, recErr)
+	}
+
+	// Offsite upload (MINE-138 slice 2). Upload failures are reported in
+	// the output but never fail the local backup.
+	remoteNote := ""
+	if s3uploader.Enabled(s.appConfig.Storage.S3) {
+		if key, uerr := s.uploadBackupToS3(ctx, server, rec, destPath); uerr != nil {
+			remoteNote = fmt.Sprintf("; S3 upload failed: %v", uerr)
+			s.log.Error("Backup %s: %v", destPath, uerr)
+		} else {
+			remoteNote = fmt.Sprintf("; uploaded to S3 (%s)", key)
+		}
 	}
 
 	pruned, pruneErr := pruneBackups(destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
 
-	output := fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)",
-		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond))
+	output := fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)%s",
+		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), remoteNote)
 	if len(missing) > 0 {
 		output += fmt.Sprintf("; skipped missing paths: %s", strings.Join(missing, ", "))
 	}
@@ -264,6 +278,30 @@ func pruneBackups(dir, prefix string, retentionDays, minBackups, maxBackups int)
 	return pruned, firstErr
 }
 
+// uploadBackupToS3 offloads a finished archive and records the object key.
+// With DeleteLocalCopy it removes the local files after a verified upload.
+func (s *Scheduler) uploadBackupToS3(ctx context.Context, server *storage.Server, rec *storage.BackupRecord, destPath string) (string, error) {
+	cfg := s.appConfig.Storage.S3
+	up, err := s3uploader.NewUploader(cfg)
+	if err != nil {
+		return "", err
+	}
+	key, err := up.Upload(ctx, server.ID, destPath)
+	if err != nil {
+		return "", err
+	}
+	rec.RemoteKey = key
+	if err := s.store.SetBackupRemoteKey(ctx, rec.ID, key); err != nil {
+		s.log.Error("Backup: failed to record S3 key for %s: %v", destPath, err)
+	}
+	if cfg.DeleteLocalCopy {
+		_ = os.Remove(destPath)
+		_ = os.Remove(destPath + ".sha256")
+		rec.Path = ""
+	}
+	return key, nil
+}
+
 // sha256File returns the hex SHA256 of a file.
 func sha256File(path string) (string, error) {
 	f, err := os.Open(path)
@@ -306,7 +344,8 @@ func verifyZipArchive(path string) error {
 	return nil
 }
 
-func formatBytes(size int64) string {	const unit = 1024
+func formatBytes(size int64) string {
+	const unit = 1024
 	if size < unit {
 		return fmt.Sprintf("%d B", size)
 	}
