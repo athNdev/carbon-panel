@@ -17,7 +17,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/glebarez/sqlite v1.11.0
-	github.com/go-gormigrate/gormigrate/v2 v2.1.5
+	github.com/go-gormigrate/gormigrate/v2 v2.1.7
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/gnostic v0.7.1
 	github.com/google/uuid v1.6.0
@@ -32,7 +32,7 @@ require (
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/gorm v1.31.1
+	gorm.io/gorm v1.31.2
 )
 
 require (
