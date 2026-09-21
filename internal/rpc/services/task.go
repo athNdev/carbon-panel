@@ -572,10 +572,7 @@ func (s *TaskService) TriggerTask(ctx context.Context, req *connect.Request[v1.T
 
 // ListTaskExecutions gets execution history for a task
 func (s *TaskService) ListTaskExecutions(ctx context.Context, req *connect.Request[v1.ListTaskExecutionsRequest]) (*connect.Response[v1.ListTaskExecutionsResponse], error) {
-	limit := int(req.Msg.Limit)
-	if limit == 0 {
-		limit = 50 // Default limit
-	}
+	limit := clampLimit(int(req.Msg.Limit))
 
 	executions, err := s.store.ListTaskExecutions(ctx, req.Msg.TaskId, limit)
 	if err != nil {
@@ -595,10 +592,7 @@ func (s *TaskService) ListTaskExecutions(ctx context.Context, req *connect.Reque
 
 // ListServerExecutions gets execution history for a server
 func (s *TaskService) ListServerExecutions(ctx context.Context, req *connect.Request[v1.ListServerExecutionsRequest]) (*connect.Response[v1.ListServerExecutionsResponse], error) {
-	limit := int(req.Msg.Limit)
-	if limit == 0 {
-		limit = 50 // Default limit
-	}
+	limit := clampLimit(int(req.Msg.Limit))
 
 	executions, err := s.store.ListServerTaskExecutions(ctx, req.Msg.ServerId, limit)
 	if err != nil {
