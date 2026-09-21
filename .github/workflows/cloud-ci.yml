@@ -1,0 +1,99 @@
+# Carbon Cloud CI — additive to the existing workflows; never modifies them.
+# Covers cloud/ Go code plus the cloud-console frontend. Must stay green on
+# the integration tree (no Docker, no Postgres, no network-dependent tests).
+
+name: Cloud CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cloud/**'
+      - '.github/workflows/cloud-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'cloud/**'
+      - '.github/workflows/cloud-ci.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Cloud Backend (fmt, build, vet, test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # NOTE: `gofmt ./cloud/...` does not work (gofmt takes files, not
+      # packages), so the file list is built with find.
+      - name: gofmt (cloud)
+        run: |
+          unformatted=$(find cloud -name '*.go' | xargs gofmt -l)
+          if [ -n "$unformatted" ]; then
+            echo "::error::unformatted Go files under cloud/:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go build (cloud)
+        run: go build ./cloud/...
+
+      - name: go vet (cloud)
+        run: go vet ./cloud/...
+
+      - name: go test (cloud)
+        run: go test ./cloud/...
+
+      # The OSS product must keep building alongside cloud/.
+      - name: go build (whole module)
+        run: go build ./...
+
+  frontend:
+    name: Cloud Console (install, check, test, build)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: cloud/web/cloud-console
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.2'
+
+      - name: Cache Bun install
+        uses: actions/cache@5a3ec84eff6685455b73a441140a6993eef40705 # v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-cloud-console-${{ hashFiles('cloud/web/cloud-console/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-cloud-console-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: SvelteKit Type & Component Diagnostics
+        run: bun run check
+
+      - name: Unit Tests
+        run: bun run test
+
+      - name: Production Vite Build
+        run: bun run build

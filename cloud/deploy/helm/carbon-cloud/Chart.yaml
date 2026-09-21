@@ -1,0 +1,12 @@
+apiVersion: v2
+name: carbon-cloud
+description: Carbon Cloud control plane (controld) and node agent (noded)
+type: application
+version: 0.1.0
+appVersion: dev
+maintainers:
+  - name: carbon-panel
+keywords:
+  - minecraft
+  - orchestration
+kubeVersion: ">= 1.26.0"
