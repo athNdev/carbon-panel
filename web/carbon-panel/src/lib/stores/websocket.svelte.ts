@@ -57,10 +57,17 @@ class WebSocketClient {
 	// Active subscriptions (serverId -> true)
 	private subscriptions = new Map<string, boolean>();
 
-	connect(): void {
+	connect(isRetry = false): void {
 		if (!browser) return;
 		if (this.socket?.readyState === WebSocket.OPEN) return;
 		if (this.state.connectionState === 'connecting') return;
+
+		// A fresh, user-initiated connect resets the backoff budget so a manual
+		// retry (or a page interaction) is not permanently blocked by the five
+		// attempts consumed during an earlier outage.
+		if (!isRetry) {
+			this.reconnectAttempts = 0;
+		}
 
 		this.state.connectionState = 'connecting';
 		this.state.error = null;
@@ -100,6 +107,11 @@ class WebSocketClient {
 			this.socket.onerror = (error) => {
 				console.error('[WS] Error:', error);
 				this.state.error = 'WebSocket connection error';
+				// Some failures surface as onerror without a following onclose;
+				// close explicitly so the reconnect path always runs.
+				if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
+					this.socket.close();
+				}
 			};
 
 			this.socket.onmessage = (event) => {
@@ -160,6 +172,10 @@ class WebSocketClient {
 	private scheduleReconnect(): void {
 		if (this.reconnectAttempts >= this.maxReconnectAttempts) {
 			console.log('[WS] Max reconnect attempts reached');
+			// Surface an explicit terminal state instead of leaving the previous
+			// state (e.g. 'connected') in place, which made the console look alive
+			// while no socket existed.
+			this.state.connectionState = 'disconnected';
 			this.state.error = 'Unable to connect. Please refresh the page.';
 			return;
 		}
@@ -169,7 +185,7 @@ class WebSocketClient {
 
 		console.log(`[WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 		this.reconnectTimer = setTimeout(() => {
-			this.connect();
+			this.connect(true);
 		}, delay);
 	}
 
