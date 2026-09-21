@@ -3,7 +3,7 @@ module github.com/athNdev/carbon-panel
 go 1.25.13
 
 require (
-	connectrpc.com/connect v1.19.1
+	connectrpc.com/connect v1.21.0
 	connectrpc.com/grpcreflect v1.3.0
 	github.com/arkady-emelyanov/go-shellparse v1.0.3
 	github.com/aws/aws-sdk-go-v2 v1.47.0
