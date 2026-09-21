@@ -53,7 +53,7 @@ services:
     volumes:
       - ./config/configuration.yml:/config/configuration.yml:ro
       - ./config/users_database.yml:/config/users_database.yml:ro
-      - ./config/tls.crt:/config/tls.crt:ro # THE INCLUDED CERT IS SELF SIGNED
+      - ./config/tls.crt:/config/tls.crt:ro # self-signed; run ./gen-dev-tls.sh first (the key is not committed)
       - ./config/tls.key:/config/tls.key:ro
     ports:
       - "9091:9091"

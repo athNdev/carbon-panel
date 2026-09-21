@@ -102,10 +102,16 @@ export function detectManifestFormat(data: any): ModpackFormat {
 	}
 	// Fallback detection
 	if (Array.isArray(data.files)) {
-		if (data.files.length > 0 && (data.files[0].projectID !== undefined || data.files[0].projectId !== undefined)) {
+		if (
+			data.files.length > 0 &&
+			(data.files[0].projectID !== undefined || data.files[0].projectId !== undefined)
+		) {
 			return 'curseforge';
 		}
-		if (data.files.length > 0 && (data.files[0].hashes !== undefined || data.files[0].env !== undefined)) {
+		if (
+			data.files.length > 0 &&
+			(data.files[0].hashes !== undefined || data.files[0].env !== undefined)
+		) {
 			return 'modrinth';
 		}
 	}
@@ -124,7 +130,12 @@ export function inspectModrinthManifest(data: any): ManifestInspectionResult {
 
 	let modLoader = 'vanilla';
 	for (const [key, val] of Object.entries(deps)) {
-		if (key.includes('fabric') || key.includes('forge') || key.includes('neoforge') || key.includes('quilt')) {
+		if (
+			key.includes('fabric') ||
+			key.includes('forge') ||
+			key.includes('neoforge') ||
+			key.includes('quilt')
+		) {
 			modLoader = `${key} (${val})`;
 			break;
 		}
@@ -163,7 +174,8 @@ export function inspectModrinthManifest(data: any): ManifestInspectionResult {
 			path: filePath,
 			env: resolvedEnv,
 			required: clientEnv === 'required' || serverEnv === 'required',
-			downloadUrl: Array.isArray(file.downloads) && file.downloads.length > 0 ? file.downloads[0] : undefined,
+			downloadUrl:
+				Array.isArray(file.downloads) && file.downloads.length > 0 ? file.downloads[0] : undefined,
 			hashes: file.hashes,
 			fileSize: file.fileSize
 		});
@@ -276,7 +288,9 @@ export function inspectManifest(input: string | object): ManifestInspectionResul
 		return inspectCurseForgeManifest(data);
 	}
 
-	throw new Error('Unsupported manifest format. Expected Modrinth modrinth.index.json or CurseForge manifest.json.');
+	throw new Error(
+		'Unsupported manifest format. Expected Modrinth modrinth.index.json or CurseForge manifest.json.'
+	);
 }
 
 /**

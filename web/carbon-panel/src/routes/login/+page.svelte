@@ -7,11 +7,7 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { silentCallOptions } from '$lib/api/rpc-client';
 	import { ValidateInviteRequestSchema } from '$lib/proto/carbonpanel/v1/auth_pb';
-	import {
-		CarbonButton,
-		CarbonTextInput,
-		CarbonTabs
-	} from '$lib/components/carbon';
+	import { CarbonButton, CarbonTextInput, CarbonTabs } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import { Loader2, AlertCircle, TicketCheck, KeyRound, Shield } from '@lucide/svelte';
 
@@ -206,29 +202,31 @@
 	<title>Carbon Panel - Login</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center bg-[#161616] p-4 font-sans text-[#f4f4f4] rounded-none">
-	<div class="w-full max-w-md bg-[#262626] border border-[#393939] p-8 rounded-none shadow-2xl motion-scale-in">
+<div
+	class="flex min-h-screen items-center justify-center rounded-none bg-[#161616] p-4 font-sans text-[#f4f4f4]"
+>
+	<div
+		class="motion-scale-in w-full max-w-md rounded-none border border-[#393939] bg-[#262626] p-8 shadow-2xl"
+	>
 		<!-- Header -->
 		<div class="mb-8 text-center">
-			<div class="flex items-center justify-center gap-3 mb-2">
+			<div class="mb-2 flex items-center justify-center gap-3">
 				<img src="/g1_24x24.png" alt="Carbon Panel Logo" class="h-8 w-8 rounded-none" />
 				<h1 class="text-2xl font-semibold tracking-wide text-white">Carbon Panel</h1>
 			</div>
 			{#if authStatus.firstUserSetup}
-				<p class="text-xs text-[#c6c6c6]">
-					Welcome! Create your initial administrator account.
-				</p>
+				<p class="text-xs text-[#c6c6c6]">Welcome! Create your initial administrator account.</p>
 			{:else}
-				<p class="text-xs text-[#a8a8a8]">
-					Sign in to manage your Minecraft servers
-				</p>
+				<p class="text-xs text-[#a8a8a8]">Sign in to manage your Minecraft servers</p>
 			{/if}
 		</div>
 
 		{#if error}
 			{#key error}
-				<div class="mb-6 p-4 bg-[#da1e28]/10 border-l-4 border-[#da1e28] text-xs text-[#ff8389] flex items-start gap-2.5 rounded-none motion-rise-in">
-					<AlertCircle class="h-4 w-4 shrink-0 mt-0.5" />
+				<div
+					class="motion-rise-in mb-6 flex items-start gap-2.5 rounded-none border-l-4 border-[#da1e28] bg-[#da1e28]/10 p-4 text-xs text-[#ff8389]"
+				>
+					<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
 					<span>{error}</span>
 				</div>
 			{/key}
@@ -268,9 +266,13 @@
 					disabled={loading}
 				/>
 
-				<div class="p-3.5 bg-[#161616] border-l-4 border-[#0f62fe] text-xs text-[#c6c6c6] rounded-none">
+				<div
+					class="rounded-none border-l-4 border-[#0f62fe] bg-[#161616] p-3.5 text-xs text-[#c6c6c6]"
+				>
 					{#if oidcEnabled}
-						A local admin account is required for initial setup, even with SSO enabled. This ensures you always have a fallback login to manage the system if your identity provider becomes unavailable.
+						A local admin account is required for initial setup, even with SSO enabled. This ensures
+						you always have a fallback login to manage the system if your identity provider becomes
+						unavailable.
 					{:else}
 						This account will have full administrator permissions and access to the control panel.
 					{/if}
@@ -287,15 +289,11 @@
 			</form>
 		{:else}
 			{#if (authStatus.allowRegistration || inviteValid) && localAuthEnabled}
-				<CarbonTabs
-					tabs={authTabs}
-					bind:selectedTab={mode}
-					class="mb-6"
-				/>
+				<CarbonTabs tabs={authTabs} bind:selectedTab={mode} class="mb-6" />
 			{/if}
 
 			{#if mode === 'login'}
-				<div class="space-y-4 motion-fade-in">
+				<div class="motion-fade-in space-y-4">
 					{#if localAuthEnabled}
 						<form onsubmit={handleSubmit} class="space-y-4">
 							<CarbonTextInput
@@ -313,7 +311,11 @@
 								required
 								disabled={loading}
 							/>
-							<CarbonButton type="submit" class="w-full justify-center rounded-none" disabled={loading}>
+							<CarbonButton
+								type="submit"
+								class="w-full justify-center rounded-none"
+								disabled={loading}
+							>
 								{#if loading}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 									Signing in...
@@ -330,7 +332,9 @@
 								<div class="absolute inset-0 flex items-center">
 									<div class="w-full border-t border-[#393939]"></div>
 								</div>
-								<span class="relative bg-[#262626] px-3 text-xs uppercase tracking-wider text-[#8d8d8d]">
+								<span
+									class="relative bg-[#262626] px-3 text-xs tracking-wider text-[#8d8d8d] uppercase"
+								>
 									Or
 								</span>
 							</div>
@@ -348,9 +352,11 @@
 				</div>
 			{:else}
 				<!-- Registration Form -->
-				<form onsubmit={handleSubmit} class="space-y-4 motion-fade-in">
+				<form onsubmit={handleSubmit} class="motion-fade-in space-y-4">
 					{#if inviteValid && inviteDescription}
-						<div class="p-3 bg-[#198038]/15 border-l-4 border-[#198038] text-xs text-[#6fdc8c] flex items-center gap-2 rounded-none">
+						<div
+							class="flex items-center gap-2 rounded-none border-l-4 border-[#198038] bg-[#198038]/15 p-3 text-xs text-[#6fdc8c]"
+						>
 							<TicketCheck class="h-4 w-4 shrink-0" />
 							<span>{inviteDescription}</span>
 						</div>
@@ -409,10 +415,13 @@
 
 		<!-- Recovery Drawer / Options -->
 		{#if showRecovery}
-			<div class="mt-6 pt-6 border-t border-[#393939] space-y-4">
-				<div class="p-3.5 bg-[#da1e28]/10 border-l-4 border-[#da1e28] text-xs text-[#ff8389] rounded-none">
-					<div class="font-semibold mb-1">Warning: Destructive Reset</div>
-					This will reset panel authentication and delete all users, sessions, and invites. Server files and data are preserved.
+			<div class="mt-6 space-y-4 border-t border-[#393939] pt-6">
+				<div
+					class="rounded-none border-l-4 border-[#da1e28] bg-[#da1e28]/10 p-3.5 text-xs text-[#ff8389]"
+				>
+					<div class="mb-1 font-semibold">Warning: Destructive Reset</div>
+					This will reset panel authentication and delete all users, sessions, and invites. Server files
+					and data are preserved.
 				</div>
 				<CarbonTextInput
 					type="password"
@@ -449,10 +458,10 @@
 				</div>
 			</div>
 		{:else if !authStatus.firstUserSetup}
-			<div class="mt-6 pt-4 border-t border-[#393939] text-center">
+			<div class="mt-6 border-t border-[#393939] pt-4 text-center">
 				<button
 					type="button"
-					class="inline-flex items-center gap-1.5 text-xs text-[#8d8d8d] hover:text-[#f4f4f4] transition-colors cursor-pointer rounded-none"
+					class="inline-flex cursor-pointer items-center gap-1.5 rounded-none text-xs text-[#8d8d8d] transition-colors hover:text-[#f4f4f4]"
 					onclick={() => (showRecovery = true)}
 				>
 					<KeyRound class="h-3.5 w-3.5" />
@@ -466,11 +475,15 @@
 				<div class="absolute inset-0 flex items-center">
 					<div class="w-full border-t border-[#393939]"></div>
 				</div>
-				<span class="relative bg-[#262626] px-3 text-xs uppercase tracking-wider text-[#8d8d8d]">
+				<span class="relative bg-[#262626] px-3 text-xs tracking-wider text-[#8d8d8d] uppercase">
 					Or
 				</span>
 			</div>
-			<CarbonButton kind="ghost" class="w-full justify-center rounded-none" onclick={() => goto(resolve('/'))}>
+			<CarbonButton
+				kind="ghost"
+				class="w-full justify-center rounded-none"
+				onclick={() => goto(resolve('/'))}
+			>
 				Continue as Guest
 			</CarbonButton>
 		{/if}

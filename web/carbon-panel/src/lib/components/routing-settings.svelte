@@ -255,7 +255,7 @@
 
 <div class="space-y-6">
 	<!-- Global Proxy Configuration -->
-	<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+	<div class="space-y-4 rounded-none border border-[#393939] bg-[#262626] p-5 shadow-none">
 		<div class="flex items-center justify-between border-b border-[#393939] pb-4">
 			<div class="flex items-center gap-3">
 				<Network class="h-5 w-5 text-[#0f62fe]" />
@@ -279,7 +279,7 @@
 					bind:value={baseURL}
 					placeholder="minecraft.example.com"
 					disabled={saving || !proxyEnabled}
-					class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
+					class="h-10 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f]"
 				/>
 				<p class="text-xs text-[#8d8d8d]">
 					Optional base domain that will be appended to server hostnames (e.g., "survival" becomes
@@ -292,7 +292,7 @@
 					type="button"
 					onclick={saveProxyConfig}
 					disabled={saving}
-					class="h-10 px-6 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-sm font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-6 font-sans text-sm font-medium text-white transition-colors hover:bg-[#0353e9] disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{#if saving}
 						<Loader2 class="h-4 w-4 animate-spin" />
@@ -307,7 +307,9 @@
 	</div>
 
 	{#if loading}
-		<div class="border border-[#393939] bg-[#262626] p-12 rounded-none flex items-center justify-center">
+		<div
+			class="flex items-center justify-center rounded-none border border-[#393939] bg-[#262626] p-12"
+		>
 			<CarbonInlineLoading description="Loading proxy configuration..." />
 		</div>
 	{:else if !proxyEnabled}
@@ -320,13 +322,15 @@
 		</Alert>
 	{:else}
 		<!-- Proxy Listeners -->
-		<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+		<div class="space-y-4 rounded-none border border-[#393939] bg-[#262626] p-5 shadow-none">
 			<div class="flex items-center justify-between border-b border-[#393939] pb-4">
 				<div>
 					<h3 class="font-sans text-base font-normal text-[#f4f4f4]">Proxy Listeners</h3>
 					<p class="text-xs text-[#a8a8a8]">Configure individual proxy listening ports</p>
 				</div>
-				<span class="inline-flex items-center gap-1 rounded-none border border-[#525252] bg-[#161616] px-2 py-0.5 text-xs font-mono text-[#c6c6c6]">
+				<span
+					class="inline-flex items-center gap-1 rounded-none border border-[#525252] bg-[#161616] px-2 py-0.5 font-mono text-xs text-[#c6c6c6]"
+				>
 					<Server class="h-3 w-3 text-[#78a9ff]" />
 					{listenersWithCount.length}
 					{listenersWithCount.length === 1 ? 'Listener' : 'Listeners'}
@@ -348,11 +352,20 @@
 											<div class="grid grid-cols-2 gap-3">
 												<div class="space-y-2">
 													<Label class="text-xs text-[#c6c6c6]">Name</Label>
-													<Input bind:value={editingListener.name} placeholder="Listener name" class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]" />
+													<Input
+														bind:value={editingListener.name}
+														placeholder="Listener name"
+														class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]"
+													/>
 												</div>
 												<div class="space-y-2">
 													<Label class="text-xs text-[#c6c6c6]">Port</Label>
-													<Input type="number" value={listener.port} disabled class="rounded-none border border-[#393939] bg-[#161616] text-[#8d8d8d]" />
+													<Input
+														type="number"
+														value={listener.port}
+														disabled
+														class="rounded-none border border-[#393939] bg-[#161616] text-[#8d8d8d]"
+													/>
 												</div>
 											</div>
 											<div class="space-y-2">
@@ -387,14 +400,14 @@
 												<div class="flex gap-2">
 													<button
 														type="button"
-														class="h-8 px-3 inline-flex items-center rounded-none border border-[#393939] bg-[#353535] text-xs text-[#f4f4f4] hover:bg-[#393939] cursor-pointer"
+														class="inline-flex h-8 cursor-pointer items-center rounded-none border border-[#393939] bg-[#353535] px-3 text-xs text-[#f4f4f4] hover:bg-[#393939]"
 														onclick={() => (editingListener = null)}
 													>
 														Cancel
 													</button>
 													<button
 														type="button"
-														class="h-8 px-4 inline-flex items-center rounded-none bg-[#0f62fe] text-white hover:bg-[#0353e9] text-xs font-medium cursor-pointer"
+														class="inline-flex h-8 cursor-pointer items-center rounded-none bg-[#0f62fe] px-4 text-xs font-medium text-white hover:bg-[#0353e9]"
 														onclick={() => updateListener(editingListener!)}
 													>
 														Save
@@ -408,16 +421,24 @@
 											<div class="space-y-2">
 												<div class="flex items-center gap-3">
 													<StatusIcon class="h-4 w-4 {getStatusColor(status)}" />
-													<span class="font-normal text-sm text-[#f4f4f4]">{listener.name}</span>
-													<span class="rounded-none border border-[#525252] bg-[#161616] px-1.5 py-0.5 text-xs font-mono text-[#c6c6c6]">:{listener.port}</span>
+													<span class="text-sm font-normal text-[#f4f4f4]">{listener.name}</span>
+													<span
+														class="rounded-none border border-[#525252] bg-[#161616] px-1.5 py-0.5 font-mono text-xs text-[#c6c6c6]"
+														>:{listener.port}</span
+													>
 													{#if listener.isDefault}
-														<span class="inline-flex items-center gap-1 rounded-none border border-[#0f62fe] bg-[#0043ce]/20 px-1.5 py-0.5 text-xs font-mono text-[#78a9ff]">
+														<span
+															class="inline-flex items-center gap-1 rounded-none border border-[#0f62fe] bg-[#0043ce]/20 px-1.5 py-0.5 font-mono text-xs text-[#78a9ff]"
+														>
 															<Star class="h-3 w-3" />
 															Default
 														</span>
 													{/if}
 													{#if !listener.enabled}
-														<span class="rounded-none border border-[#525252] bg-transparent px-1.5 py-0.5 text-xs font-mono text-[#8d8d8d]">Disabled</span>
+														<span
+															class="rounded-none border border-[#525252] bg-transparent px-1.5 py-0.5 font-mono text-xs text-[#8d8d8d]"
+															>Disabled</span
+														>
 													{/if}
 												</div>
 
@@ -431,9 +452,7 @@
 														{lwc.serverCount === 1 ? 'server' : 'servers'} using this listener
 													</p>
 												{:else}
-													<p class="text-xs text-[#8d8d8d]">
-														No servers using this listener
-													</p>
+													<p class="text-xs text-[#8d8d8d]">No servers using this listener</p>
 												{/if}
 											</div>
 
@@ -441,7 +460,7 @@
 												{#if !listener.isDefault}
 													<button
 														type="button"
-														class="h-8 w-8 rounded-none inline-flex items-center justify-center hover:bg-[#353535] text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer transition-colors"
+														class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-none text-[#8d8d8d] transition-colors hover:bg-[#353535] hover:text-[#f4f4f4]"
 														onclick={() => setDefaultListener(listener)}
 														title="Set as default"
 													>
@@ -450,7 +469,7 @@
 												{/if}
 												<button
 													type="button"
-													class="h-8 w-8 rounded-none inline-flex items-center justify-center hover:bg-[#353535] text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer transition-colors"
+													class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-none text-[#8d8d8d] transition-colors hover:bg-[#353535] hover:text-[#f4f4f4]"
 													onclick={() => (editingListener = { ...listener })}
 												>
 													<Edit class="h-4 w-4" />
@@ -458,7 +477,7 @@
 												{#if listenersWithCount.length > 1 && lwc.serverCount === 0}
 													<button
 														type="button"
-														class="h-8 w-8 rounded-none inline-flex items-center justify-center hover:bg-[#da1e28]/20 text-[#8d8d8d] hover:text-[#ff8389] cursor-pointer transition-colors"
+														class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-none text-[#8d8d8d] transition-colors hover:bg-[#da1e28]/20 hover:text-[#ff8389]"
 														onclick={() => deleteListener(lwc)}
 													>
 														<Trash2 class="h-4 w-4" />
@@ -480,7 +499,11 @@
 						<div class="grid grid-cols-2 gap-3">
 							<div class="space-y-2">
 								<Label class="text-xs text-[#c6c6c6]">Name</Label>
-								<Input bind:value={newListener.name} placeholder="e.g., Secondary, Development" class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]" />
+								<Input
+									bind:value={newListener.name}
+									placeholder="e.g., Secondary, Development"
+									class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4]"
+								/>
 							</div>
 							<div class="space-y-2">
 								<Label class="text-xs text-[#c6c6c6]">Port</Label>
@@ -488,7 +511,9 @@
 									type="number"
 									bind:value={newListener.port}
 									oninput={(e) => validatePort(Number(e.currentTarget.value))}
-									class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {portError ? 'border-[#da1e28]' : ''}"
+									class="rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {portError
+										? 'border-[#da1e28]'
+										: ''}"
 								/>
 								{#if portError}
 									<p class="text-xs text-[#ff8389]">{portError}</p>
@@ -526,7 +551,7 @@
 								type="button"
 								onclick={createListener}
 								disabled={!newListener.name || !!portError}
-								class="h-10 px-4 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-xs font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+								class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-4 font-sans text-xs font-medium text-white transition-colors hover:bg-[#0353e9] disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								<Plus class="h-4 w-4" />
 								<span>Add Listener</span>
@@ -539,14 +564,16 @@
 
 		<!-- Active Routes -->
 		{#if activeRoutes.length > 0}
-			<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+			<div class="space-y-4 rounded-none border border-[#393939] bg-[#262626] p-5 shadow-none">
 				<div class="border-b border-[#393939] pb-4">
 					<h3 class="font-sans text-base font-normal text-[#f4f4f4]">Active Routes</h3>
 					<p class="text-xs text-[#a8a8a8]">Servers currently using proxy routing</p>
 				</div>
 				<div class="space-y-2">
 					{#each activeRoutes as route (route.serverId)}
-						<div class="flex items-center justify-between rounded-none border border-[#393939] bg-[#1e1e1e] p-3">
+						<div
+							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#1e1e1e] p-3"
+						>
 							<div class="flex items-center gap-3">
 								<Activity class="h-4 w-4 {route.active ? 'text-[#42be65]' : 'text-[#8d8d8d]'}" />
 								<div>
@@ -556,7 +583,11 @@
 									</p>
 								</div>
 							</div>
-							<span class="rounded-none border px-2 py-0.5 text-xs font-mono {route.active ? 'border-[#24a148] bg-[#24a148]/20 text-[#42be65]' : 'border-[#525252] bg-transparent text-[#8d8d8d]'}">
+							<span
+								class="rounded-none border px-2 py-0.5 font-mono text-xs {route.active
+									? 'border-[#24a148] bg-[#24a148]/20 text-[#42be65]'
+									: 'border-[#525252] bg-transparent text-[#8d8d8d]'}"
+							>
 								{route.active ? 'Active' : 'Inactive'}
 							</span>
 						</div>

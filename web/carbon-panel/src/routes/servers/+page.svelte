@@ -171,21 +171,27 @@
 	}
 </script>
 
-<div class="h-full flex-1 space-y-6 bg-[#161616] p-6 text-[#f4f4f4] font-sans">
+<div class="h-full flex-1 space-y-6 bg-[#161616] p-6 font-sans text-[#f4f4f4]">
 	<!-- Carbon Page Header -->
-	<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#393939] gap-4">
+	<div
+		class="flex flex-col justify-between gap-4 border-b border-[#393939] pb-4 sm:flex-row sm:items-center"
+	>
 		<div class="flex items-center gap-4">
-			<div class="flex h-12 w-12 shrink-0 items-center justify-center bg-[#262626] border border-[#393939] text-[#0f62fe]">
+			<div
+				class="flex h-12 w-12 shrink-0 items-center justify-center border border-[#393939] bg-[#262626] text-[#0f62fe]"
+			>
 				<ServerIcon class="h-6 w-6" />
 			</div>
 			<div>
 				<div class="flex items-center gap-2.5">
 					<h1 class="text-2xl font-light tracking-tight text-[#f4f4f4]">Servers</h1>
-					<span class="px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 text-xs font-mono">
+					<span
+						class="border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-2 py-0.5 font-mono text-xs text-[#78a9ff]"
+					>
 						MANAGEMENT
 					</span>
 				</div>
-				<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
+				<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
 					Manage, inspect, and deploy your Minecraft server instances
 				</p>
 			</div>
@@ -199,42 +205,53 @@
 	</div>
 
 	<!-- Carbon Action Bar: Search, Filters, View Toggles -->
-	<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#262626] border border-[#393939] p-3">
+	<div
+		class="flex flex-col items-stretch justify-between gap-3 border border-[#393939] bg-[#262626] p-3 sm:flex-row sm:items-center"
+	>
 		<!-- Search Input (Carbon Style) -->
-		<div class="relative flex-1 max-w-lg">
+		<div class="relative max-w-lg flex-1">
 			<div class="relative flex items-center">
-				<Search class="absolute left-3 h-4 w-4 text-[#8d8d8d] pointer-events-none" />
+				<Search class="pointer-events-none absolute left-3 h-4 w-4 text-[#8d8d8d]" />
 				<input
 					type="search"
 					placeholder="Search by name, description, version, loader, or port..."
 					bind:value={searchQuery}
-					class="w-full h-9 pl-9 pr-3 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:outline-none text-xs font-sans text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none transition-all"
+					class="h-9 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] pr-3 pl-9 font-sans text-xs text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:outline-none"
 				/>
 			</div>
 		</div>
 
 		<!-- Status Filter Tags and View Toggles -->
-		<div class="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+		<div class="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
 			<!-- Filter Tags -->
-			<div class="flex items-center gap-1 border-r border-[#393939] pr-2 mr-1">
+			<div class="mr-1 flex items-center gap-1 border-r border-[#393939] pr-2">
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'all')}
-					class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'all' ? 'bg-[#0f62fe] text-white border-[#0f62fe]' : 'bg-[#161616] text-[#c6c6c6] border-[#393939] hover:bg-[#353535]'}"
+					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
+					'all'
+						? 'border-[#0f62fe] bg-[#0f62fe] text-white'
+						: 'border-[#393939] bg-[#161616] text-[#c6c6c6] hover:bg-[#353535]'}"
 				>
 					All ({servers.length})
 				</button>
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'running')}
-					class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'running' ? 'bg-[#198038] text-white border-[#198038]' : 'bg-[#161616] text-[#6fdc8c] border-[#198038]/50 hover:bg-[#353535]'}"
+					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
+					'running'
+						? 'border-[#198038] bg-[#198038] text-white'
+						: 'border-[#198038]/50 bg-[#161616] text-[#6fdc8c] hover:bg-[#353535]'}"
 				>
 					Running ({servers.filter((s) => s.status === ServerStatus.RUNNING).length})
 				</button>
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'stopped')}
-					class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'stopped' ? 'bg-[#525252] text-white border-[#525252]' : 'bg-[#161616] text-[#c6c6c6] border-[#525252]/60 hover:bg-[#353535]'}"
+					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
+					'stopped'
+						? 'border-[#525252] bg-[#525252] text-white'
+						: 'border-[#525252]/60 bg-[#161616] text-[#c6c6c6] hover:bg-[#353535]'}"
 				>
 					Stopped ({servers.filter((s) => s.status === ServerStatus.STOPPED).length})
 				</button>
@@ -242,9 +259,14 @@
 					<button
 						type="button"
 						onclick={() => (statusFilter = 'issues')}
-						class="px-2.5 py-1 text-xs font-mono uppercase transition-colors cursor-pointer rounded-none border {statusFilter === 'issues' ? 'bg-[#da1e28] text-white border-[#da1e28]' : 'bg-[#161616] text-[#ff8389] border-[#da1e28]/50 hover:bg-[#353535]'}"
+						class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
+						'issues'
+							? 'border-[#da1e28] bg-[#da1e28] text-white'
+							: 'border-[#da1e28]/50 bg-[#161616] text-[#ff8389] hover:bg-[#353535]'}"
 					>
-						Issues ({servers.filter((s) => s.status === ServerStatus.ERROR || s.status === ServerStatus.UNHEALTHY).length})
+						Issues ({servers.filter(
+							(s) => s.status === ServerStatus.ERROR || s.status === ServerStatus.UNHEALTHY
+						).length})
 					</button>
 				{/if}
 			</div>
@@ -256,7 +278,10 @@
 					onclick={() => (viewMode = 'table')}
 					title="Table View"
 					aria-label="Table View"
-					class="h-8 w-8 flex items-center justify-center transition-colors cursor-pointer rounded-none {viewMode === 'table' ? 'bg-[#393939] text-[#f4f4f4]' : 'text-[#8d8d8d] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none transition-colors {viewMode ===
+					'table'
+						? 'bg-[#393939] text-[#f4f4f4]'
+						: 'text-[#8d8d8d] hover:bg-[#262626] hover:text-[#f4f4f4]'}"
 				>
 					<TableIcon class="h-4 w-4" />
 				</button>
@@ -265,7 +290,10 @@
 					onclick={() => (viewMode = 'tiles')}
 					title="Tile View"
 					aria-label="Tile View"
-					class="h-8 w-8 flex items-center justify-center transition-colors cursor-pointer rounded-none {viewMode === 'tiles' ? 'bg-[#393939] text-[#f4f4f4]' : 'text-[#8d8d8d] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none transition-colors {viewMode ===
+					'tiles'
+						? 'bg-[#393939] text-[#f4f4f4]'
+						: 'text-[#8d8d8d] hover:bg-[#262626] hover:text-[#f4f4f4]'}"
 				>
 					<LayoutGrid class="h-4 w-4" />
 				</button>
@@ -275,21 +303,31 @@
 
 	<!-- Empty State -->
 	{#if filteredServers.length === 0}
-		<div class="bg-[#262626] border border-[#393939] p-12 text-center rounded-none">
+		<div class="rounded-none border border-[#393939] bg-[#262626] p-12 text-center">
 			{#if servers.length === 0}
-				<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center bg-[#161616] border border-[#393939] text-[#0f62fe]">
+				<div
+					class="mx-auto mb-4 flex h-14 w-14 items-center justify-center border border-[#393939] bg-[#161616] text-[#0f62fe]"
+				>
 					<ServerIcon class="h-7 w-7" />
 				</div>
 				<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">No servers configured</h3>
-				<p class="mb-6 text-xs text-[#a8a8a8] max-w-md mx-auto font-sans">
-					Create your first Minecraft server instance to begin managing containers and game topology.
+				<p class="mx-auto mb-6 max-w-md font-sans text-xs text-[#a8a8a8]">
+					Create your first Minecraft server instance to begin managing containers and game
+					topology.
 				</p>
-				<CarbonButton kind="primary" size="md" href="/servers/new" class="inline-flex justify-center gap-2">
+				<CarbonButton
+					kind="primary"
+					size="md"
+					href="/servers/new"
+					class="inline-flex justify-center gap-2"
+				>
 					<Plus class="h-4 w-4" />
 					<span>Create Server</span>
 				</CarbonButton>
 			{:else}
-				<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center bg-[#161616] border border-[#393939] text-[#8d8d8d]">
+				<div
+					class="mx-auto mb-4 flex h-14 w-14 items-center justify-center border border-[#393939] bg-[#161616] text-[#8d8d8d]"
+				>
 					<Search class="h-7 w-7" />
 				</div>
 				<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">No matching servers</h3>
@@ -308,14 +346,16 @@
 			{/if}
 		</div>
 
-	<!-- Carbon DataTable Layout (Requirement 2) -->
+		<!-- Carbon DataTable Layout (Requirement 2) -->
 	{:else if viewMode === 'table'}
-		<div class="w-full bg-[#161616] border border-[#393939] rounded-none overflow-x-auto">
+		<div class="w-full overflow-x-auto rounded-none border border-[#393939] bg-[#161616]">
 			<table class="w-full border-collapse text-left font-sans text-sm">
 				<!-- Sharp Header Row #393939 -->
-				<thead class="bg-[#393939] text-[#f4f4f4] border-b border-[#525252] text-xs uppercase font-medium tracking-wider select-none">
+				<thead
+					class="border-b border-[#525252] bg-[#393939] text-xs font-medium tracking-wider text-[#f4f4f4] uppercase select-none"
+				>
 					<tr>
-						<th scope="col" class="px-4 py-3 w-28">Status</th>
+						<th scope="col" class="w-28 px-4 py-3">Status</th>
 						<th scope="col" class="px-4 py-3">Server Instance</th>
 						<th scope="col" class="px-4 py-3">Engine & Loader</th>
 						<th scope="col" class="px-4 py-3">Host / Port</th>
@@ -329,7 +369,7 @@
 				<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
 					{#each filteredServers as server (server.id)}
 						<tr
-							class="hover:bg-[#353535] transition-colors group cursor-pointer"
+							class="group cursor-pointer transition-colors hover:bg-[#353535]"
 							onclick={() => window.location.assign(resolve(`/servers/${server.id}`))}
 						>
 							<!-- Status Cell -->
@@ -340,20 +380,22 @@
 							</td>
 
 							<!-- Name & Description -->
-							<td class="px-4 py-3.5 min-w-[200px]">
+							<td class="min-w-[200px] px-4 py-3.5">
 								<div class="flex items-center gap-2.5">
-									<div class="flex h-8 w-8 shrink-0 items-center justify-center bg-[#161616] border border-[#393939] text-[#78a9ff]">
+									<div
+										class="flex h-8 w-8 shrink-0 items-center justify-center border border-[#393939] bg-[#161616] text-[#78a9ff]"
+									>
 										<ServerIcon class="h-4 w-4" />
 									</div>
 									<div class="min-w-0">
 										<a
 											href={resolve(`/servers/${server.id}`)}
-											class="font-medium text-sm text-[#f4f4f4] hover:text-[#78a9ff] hover:underline truncate block"
+											class="block truncate text-sm font-medium text-[#f4f4f4] hover:text-[#78a9ff] hover:underline"
 											onclick={(e) => e.stopPropagation()}
 										>
 											{server.name}
 										</a>
-										<p class="text-xs text-[#a8a8a8] line-clamp-1">
+										<p class="line-clamp-1 text-xs text-[#a8a8a8]">
 											{server.description || 'No description provided'}
 										</p>
 									</div>
@@ -369,7 +411,7 @@
 											{getModLoaderDisplay(server.modLoader)}
 										</CarbonTag>
 									{:else}
-										<span class="text-[#8d8d8d] text-[11px]">Vanilla</span>
+										<span class="text-[11px] text-[#8d8d8d]">Vanilla</span>
 									{/if}
 								</div>
 							</td>
@@ -396,29 +438,38 @@
 							<td class="px-4 py-3.5 whitespace-nowrap">
 								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
 									<div class="flex items-center gap-3 font-mono text-xs">
-										<span class="text-[#6fdc8c] flex items-center gap-1">
+										<span class="flex items-center gap-1 text-[#6fdc8c]">
 											<Users class="h-3.5 w-3.5" />
 											{server.playersOnline || 0}/{server.maxPlayers}
 										</span>
-										<span class="flex items-center gap-1 {server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : server.tps && server.tps >= 15 ? 'text-[#f1c21b]' : 'text-[#ff8389]'}">
+										<span
+											class="flex items-center gap-1 {server.tps && server.tps >= 18
+												? 'text-[#6fdc8c]'
+												: server.tps && server.tps >= 15
+													? 'text-[#f1c21b]'
+													: 'text-[#ff8389]'}"
+										>
 											<Zap class="h-3.5 w-3.5" />
 											{server.tps ? server.tps.toFixed(1) : '—'}
 										</span>
 									</div>
 								{:else}
-									<span class="text-xs text-[#6f6f6f] font-mono">—</span>
+									<span class="font-mono text-xs text-[#6f6f6f]">—</span>
 								{/if}
 							</td>
 
 							<!-- Actions -->
-							<td class="px-4 py-3.5 text-right whitespace-nowrap" onclick={(e) => e.stopPropagation()}>
+							<td
+								class="px-4 py-3.5 text-right whitespace-nowrap"
+								onclick={(e) => e.stopPropagation()}
+							>
 								<div class="inline-flex items-center border border-[#393939] bg-[#161616]">
 									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
 										<button
 											title="Start"
 											aria-label={`Start server ${server.name}`}
 											disabled={loading}
-											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#6fdc8c] hover:bg-[#198038]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+											class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#6fdc8c] transition-colors hover:bg-[#198038]/20 disabled:opacity-40"
 											onclick={(e) => handleServerAction('start', server, e)}
 										>
 											<Play class="h-3.5 w-3.5 fill-current" />
@@ -430,7 +481,7 @@
 											title="Stop"
 											aria-label={`Stop server ${server.name}`}
 											disabled={loading}
-											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+											class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#ff8389] transition-colors hover:bg-[#da1e28]/20 disabled:opacity-40"
 											onclick={(e) => handleServerAction('stop', server, e)}
 										>
 											<Square class="h-3.5 w-3.5 fill-current" />
@@ -442,7 +493,7 @@
 											title="Restart"
 											aria-label={`Restart server ${server.name}`}
 											disabled={loading}
-											class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#f1c21b] hover:bg-[#f1c21b]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+											class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#f1c21b] transition-colors hover:bg-[#f1c21b]/20 disabled:opacity-40"
 											onclick={(e) => handleServerAction('restart', server, e)}
 										>
 											<RotateCw class="h-3.5 w-3.5" />
@@ -453,7 +504,7 @@
 										title="Recreate"
 										aria-label={`Recreate server ${server.name}`}
 										disabled={loading}
-										class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#c6c6c6] hover:bg-[#353535] transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+										class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#c6c6c6] transition-colors hover:bg-[#353535] disabled:opacity-40"
 										onclick={(e) => handleServerAction('recreate', server, e)}
 									>
 										<RefreshCcw class="h-3.5 w-3.5" />
@@ -463,7 +514,7 @@
 										title="Delete"
 										aria-label={`Delete server ${server.name}`}
 										disabled={loading}
-										class="h-8 w-8 flex items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-40 cursor-pointer rounded-none"
+										class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#ff8389] transition-colors hover:bg-[#da1e28]/20 disabled:opacity-40"
 										onclick={(e) => deleteServer(server, e)}
 									>
 										<Trash2 class="h-3.5 w-3.5" />
@@ -473,7 +524,7 @@
 										href={resolve(`/servers/${server.id}`)}
 										title="View Details"
 										aria-label={`View details for ${server.name}`}
-										class="h-8 w-8 flex items-center justify-center text-[#78a9ff] hover:bg-[#0f62fe]/20 transition-colors cursor-pointer rounded-none"
+										class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none text-[#78a9ff] transition-colors hover:bg-[#0f62fe]/20"
 									>
 										<ArrowRight class="h-3.5 w-3.5" />
 									</a>
@@ -485,26 +536,30 @@
 			</table>
 		</div>
 
-	<!-- Carbon Tile / Grid Layout -->
+		<!-- Carbon Tile / Grid Layout -->
 	{:else}
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredServers as server (server.id)}
-				<div class="bg-[#262626] border border-[#393939] hover:border-[#525252] transition-colors rounded-none p-4 flex flex-col justify-between">
+				<div
+					class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4 transition-colors hover:border-[#525252]"
+				>
 					<div>
 						<!-- Header & Actions -->
-						<div class="flex items-start justify-between gap-3 pb-3 border-b border-[#393939]">
-							<div class="flex items-center gap-3 min-w-0">
-								<div class="flex h-10 w-10 shrink-0 items-center justify-center bg-[#161616] border border-[#393939] text-[#78a9ff]">
+						<div class="flex items-start justify-between gap-3 border-b border-[#393939] pb-3">
+							<div class="flex min-w-0 items-center gap-3">
+								<div
+									class="flex h-10 w-10 shrink-0 items-center justify-center border border-[#393939] bg-[#161616] text-[#78a9ff]"
+								>
 									<ServerIcon class="h-5 w-5" />
 								</div>
 								<div class="min-w-0">
 									<a
 										href={resolve(`/servers/${server.id}`)}
-										class="font-semibold text-base text-[#f4f4f4] hover:text-[#78a9ff] truncate block"
+										class="block truncate text-base font-semibold text-[#f4f4f4] hover:text-[#78a9ff]"
 									>
 										{server.name}
 									</a>
-									<p class="text-xs text-[#a8a8a8] truncate">
+									<p class="truncate text-xs text-[#a8a8a8]">
 										{server.description || 'No description provided'}
 									</p>
 								</div>
@@ -517,7 +572,7 @@
 										title="Start"
 										aria-label={`Start server ${server.name}`}
 										disabled={loading}
-										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#6fdc8c] hover:bg-[#198038]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+										class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#6fdc8c] transition-colors hover:bg-[#198038]/20 disabled:opacity-50"
 										onclick={(e) => handleServerAction('start', server, e)}
 									>
 										<Play class="h-3 w-3 fill-current" />
@@ -528,7 +583,7 @@
 										title="Stop"
 										aria-label={`Stop server ${server.name}`}
 										disabled={loading}
-										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+										class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#ff8389] transition-colors hover:bg-[#da1e28]/20 disabled:opacity-50"
 										onclick={(e) => handleServerAction('stop', server, e)}
 									>
 										<Square class="h-2.5 w-2.5 fill-current" />
@@ -539,7 +594,7 @@
 										title="Restart"
 										aria-label={`Restart server ${server.name}`}
 										disabled={loading}
-										class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#f1c21b] hover:bg-[#f1c21b]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+										class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#f1c21b] transition-colors hover:bg-[#f1c21b]/20 disabled:opacity-50"
 										onclick={(e) => handleServerAction('restart', server, e)}
 									>
 										<RotateCw class="h-3 w-3" />
@@ -549,7 +604,7 @@
 									title="Recreate"
 									aria-label={`Recreate server ${server.name}`}
 									disabled={loading}
-									class="flex h-7 w-7 items-center justify-center border-r border-[#393939] text-[#c6c6c6] hover:bg-[#353535] transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+									class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#c6c6c6] transition-colors hover:bg-[#353535] disabled:opacity-50"
 									onclick={(e) => handleServerAction('recreate', server, e)}
 								>
 									<RefreshCcw class="h-3 w-3" />
@@ -558,7 +613,7 @@
 									title="Delete"
 									aria-label={`Delete server ${server.name}`}
 									disabled={loading}
-									class="flex h-7 w-7 items-center justify-center text-[#ff8389] hover:bg-[#da1e28]/20 transition-colors disabled:opacity-50 cursor-pointer rounded-none"
+									class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#ff8389] transition-colors hover:bg-[#da1e28]/20 disabled:opacity-50"
 									onclick={(e) => deleteServer(server, e)}
 								>
 									<Trash2 class="h-3 w-3" />
@@ -580,38 +635,64 @@
 						</div>
 
 						<!-- Stats Sharp Grid -->
-						<div class="grid grid-cols-2 gap-2 mt-3">
-							<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+						<div class="mt-3 grid grid-cols-2 gap-2">
+							<div
+								class="flex items-center gap-2 rounded-none border border-[#393939] bg-[#161616] p-2"
+							>
 								<Wifi class="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
 								<div class="min-w-0">
-									<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">Port</p>
-									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">{server.port}</p>
+									<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">Port</p>
+									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">
+										{server.port}
+									</p>
 								</div>
 							</div>
-							<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+							<div
+								class="flex items-center gap-2 rounded-none border border-[#393939] bg-[#161616] p-2"
+							>
 								<MemoryStick class="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
 								<div class="min-w-0">
-									<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">Memory</p>
+									<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">
+										Memory
+									</p>
 									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">
 										{(server.memory / 1024).toFixed(1)} GB
 									</p>
 								</div>
 							</div>
 							{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
-								<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
+								<div
+									class="flex items-center gap-2 rounded-none border border-[#393939] bg-[#161616] p-2"
+								>
 									<Users class="h-3.5 w-3.5 shrink-0 text-[#6fdc8c]" />
 									<div class="min-w-0">
-										<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">Players</p>
+										<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">
+											Players
+										</p>
 										<p class="font-mono text-xs font-semibold text-[#6fdc8c]">
 											{server.playersOnline || 0} / {server.maxPlayers}
 										</p>
 									</div>
 								</div>
-								<div class="flex items-center gap-2 bg-[#161616] border border-[#393939] p-2 rounded-none">
-									<Zap class="h-3.5 w-3.5 shrink-0 {server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : server.tps && server.tps >= 15 ? 'text-[#f1c21b]' : 'text-[#ff8389]'}" />
+								<div
+									class="flex items-center gap-2 rounded-none border border-[#393939] bg-[#161616] p-2"
+								>
+									<Zap
+										class="h-3.5 w-3.5 shrink-0 {server.tps && server.tps >= 18
+											? 'text-[#6fdc8c]'
+											: server.tps && server.tps >= 15
+												? 'text-[#f1c21b]'
+												: 'text-[#ff8389]'}"
+									/>
 									<div class="min-w-0">
-										<p class="text-[10px] tracking-wider text-[#8d8d8d] uppercase font-mono">TPS</p>
-										<p class="font-mono text-xs font-semibold {server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : server.tps && server.tps >= 15 ? 'text-[#f1c21b]' : 'text-[#ff8389]'}">
+										<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">TPS</p>
+										<p
+											class="font-mono text-xs font-semibold {server.tps && server.tps >= 18
+												? 'text-[#6fdc8c]'
+												: server.tps && server.tps >= 15
+													? 'text-[#f1c21b]'
+													: 'text-[#ff8389]'}"
+										>
 											{server.tps ? server.tps.toFixed(1) : '—'}
 										</p>
 									</div>
@@ -621,10 +702,10 @@
 					</div>
 
 					<!-- Bottom Link -->
-					<div class="mt-4 pt-3 border-t border-[#393939]">
+					<div class="mt-4 border-t border-[#393939] pt-3">
 						<a
 							href={resolve(`/servers/${server.id}`)}
-							class="w-full h-8 px-3 bg-[#161616] hover:bg-[#353535] border border-[#393939] text-xs font-sans text-[#f4f4f4] flex items-center justify-between transition-colors rounded-none"
+							class="flex h-8 w-full items-center justify-between rounded-none border border-[#393939] bg-[#161616] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<span>View Server Details</span>
 							<ArrowRight class="h-3.5 w-3.5 text-[#78a9ff]" />

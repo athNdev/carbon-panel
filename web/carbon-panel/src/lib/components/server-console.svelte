@@ -61,8 +61,7 @@
 	$effect(() => {
 		const s = wsConnectionState;
 		if (
-			(previousConnectionState === 'connected' ||
-				previousConnectionState === 'authenticated') &&
+			(previousConnectionState === 'connected' || previousConnectionState === 'authenticated') &&
 			s === 'disconnected'
 		) {
 			alertMessage = 'Console connection lost. Attempting to reconnect.';
@@ -221,8 +220,7 @@
 		// Defense-in-depth (MINE-129): the input/button are disabled unless
 		// RUNNING/UNHEALTHY, but guard here too so no path (Enter, click,
 		// programmatic call) can dispatch a command to an inactive server.
-		if (server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY)
-			return;
+		if (server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY) return;
 
 		const currentCommand = command.trim();
 		command = '';
@@ -326,16 +324,15 @@
 	<ResizablePane defaultSize={78} minSize={30}>
 		<div class="flex h-full flex-col">
 			<!-- Terminal Header -->
-			<div class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-4 py-2">
+			<div
+				class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-4 py-2"
+			>
 				<div class="flex items-center gap-2.5">
 					<Terminal class="h-4 w-4 text-[#0f62fe]" />
-					<span class="font-mono text-xs font-semibold text-[#f4f4f4] tracking-wider uppercase">
+					<span class="font-mono text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase">
 						Server Console
 					</span>
-					<CarbonTag
-						type={server.status === ServerStatus.RUNNING ? 'green' : 'gray'}
-						size="sm"
-					>
+					<CarbonTag type={server.status === ServerStatus.RUNNING ? 'green' : 'gray'} size="sm">
 						{getStringForEnum(ServerStatus, server.status)?.toUpperCase()}
 					</CarbonTag>
 					{#if wsConnectionState === 'authenticated'}
@@ -354,7 +351,7 @@
 								onclick={fetchLogs}
 								disabled={loading}
 								aria-label="Refresh logs"
-								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 							>
 								{#if loading}
 									<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -363,7 +360,9 @@
 								{/if}
 							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+						<Tooltip.Content
+							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
+						>
 							Refresh logs
 						</Tooltip.Content>
 					</Tooltip.Root>
@@ -375,7 +374,7 @@
 								onclick={uploadToMCLogs}
 								disabled={uploading}
 								aria-label="Upload logs to mclo.gs"
-								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 							>
 								{#if uploading}
 									<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -384,7 +383,9 @@
 								{/if}
 							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+						<Tooltip.Content
+							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
+						>
 							Upload to mclo.gs
 						</Tooltip.Content>
 					</Tooltip.Root>
@@ -396,12 +397,14 @@
 								onclick={downloadLogs}
 								disabled={logEntries.length === 0}
 								aria-label="Download raw log"
-								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer disabled:opacity-40"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:opacity-40"
 							>
 								<Download class="h-3.5 w-3.5" />
 							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+						<Tooltip.Content
+							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
+						>
 							Download raw log
 						</Tooltip.Content>
 					</Tooltip.Root>
@@ -413,12 +416,14 @@
 								onclick={clearLogs}
 								disabled={logEntries.length === 0}
 								aria-label="Clear log buffer"
-								class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-[#ff8389] hover:bg-[#353535] rounded-none transition-colors cursor-pointer disabled:opacity-40"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-[#ff8389] disabled:opacity-40"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</button>
 						</Tooltip.Trigger>
-						<Tooltip.Content class="bg-[#262626] border border-[#393939] text-xs text-[#f4f4f4] rounded-none">
+						<Tooltip.Content
+							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
+						>
 							Clear buffer
 						</Tooltip.Content>
 					</Tooltip.Root>
@@ -439,14 +444,10 @@
 			>
 				<div class="font-mono text-xs leading-relaxed text-[#f4f4f4]">
 					{#if logEntries.length === 0}
-						<div class="py-12 text-center text-[#6f6f6f] font-mono text-xs">
+						<div class="py-12 text-center font-mono text-xs text-[#6f6f6f]">
 							{#if server.status === ServerStatus.CREATING}
 								Server container is being initialized and configured...
-							{:else if [
-								ServerStatus.RUNNING,
-								ServerStatus.STARTING,
-								ServerStatus.UNHEALTHY
-							].includes(server.status)}
+							{:else if [ServerStatus.RUNNING, ServerStatus.STARTING, ServerStatus.UNHEALTHY].includes(server.status)}
 								No logs available. Try refreshing or waiting for container output.
 							{:else}
 								No logs available. Start server to view live container telemetry.
@@ -465,32 +466,36 @@
 		</div>
 	</ResizablePane>
 
-	<ResizableHandle class="bg-[#393939] hover:bg-[#525252] transition-colors" />
+	<ResizableHandle class="bg-[#393939] transition-colors hover:bg-[#525252]" />
 
 	<!-- Carbon Command Input Bar -->
 	<div class="flex flex-col bg-[#262626]">
 		<div class="flex shrink-0 items-center gap-2 p-3">
-			<span class="font-mono text-sm text-[#0f62fe] font-bold select-none">$</span>
+			<span class="font-mono text-sm font-bold text-[#0f62fe] select-none">$</span>
 			<input
 				type="text"
 				placeholder={server.status === ServerStatus.CREATING
 					? 'Server is creating...'
 					: server.status === ServerStatus.STARTING
-					? 'Server is starting...'
-					: server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY
-					? 'Enter Minecraft server command (e.g. op, whitelist, stop)...'
-					: 'Server must be active to execute commands'}
+						? 'Server is starting...'
+						: server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY
+							? 'Enter Minecraft server command (e.g. op, whitelist, stop)...'
+							: 'Server must be active to execute commands'}
 				bind:value={command}
-				disabled={server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY}
+				disabled={server.status !== ServerStatus.RUNNING &&
+					server.status !== ServerStatus.UNHEALTHY}
 				onkeydown={(e) => e.key === 'Enter' && sendCommand()}
-				class="flex-1 h-9 px-3 bg-[#161616] border border-[#525252] focus:border-[#0f62fe] focus:outline-none font-mono text-xs text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none transition-all disabled:opacity-40"
+				class="h-9 flex-1 rounded-none border border-[#525252] bg-[#161616] px-3 font-mono text-xs text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-[#0f62fe] focus:outline-none disabled:opacity-40"
 			/>
 			<button
 				type="button"
 				data-testid="console-send"
 				onclick={sendCommand}
-				disabled={(server.status !== ServerStatus.RUNNING && server.status !== ServerStatus.UNHEALTHY) || !command.trim() || loading}
-				class="h-9 px-4 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-xs font-mono flex items-center gap-1.5 rounded-none transition-colors cursor-pointer disabled:opacity-40 disabled:bg-[#393939]"
+				disabled={(server.status !== ServerStatus.RUNNING &&
+					server.status !== ServerStatus.UNHEALTHY) ||
+					!command.trim() ||
+					loading}
+				class="flex h-9 cursor-pointer items-center gap-1.5 rounded-none bg-[#0f62fe] px-4 font-mono text-xs text-white transition-colors hover:bg-[#0353e9] active:bg-[#002d9c] disabled:bg-[#393939] disabled:opacity-40"
 			>
 				<Send class="h-3.5 w-3.5" />
 				<span>Send</span>
@@ -498,9 +503,11 @@
 		</div>
 
 		<!-- Status / Config Footer -->
-		<div class="flex shrink-0 items-center justify-between border-t border-[#393939] bg-[#161616] px-3 py-1.5 text-xs text-[#8d8d8d] font-mono">
+		<div
+			class="flex shrink-0 items-center justify-between border-t border-[#393939] bg-[#161616] px-3 py-1.5 font-mono text-xs text-[#8d8d8d]"
+		>
 			<div class="flex items-center gap-4">
-				<label class="flex items-center gap-2 cursor-pointer select-none">
+				<label class="flex cursor-pointer items-center gap-2 select-none">
 					<input
 						type="checkbox"
 						bind:checked={autoScroll}
@@ -513,7 +520,7 @@
 					<select
 						bind:value={tailLines}
 						onchange={handleTailChange}
-						class="h-6 px-1.5 bg-[#262626] border border-[#393939] text-xs font-mono text-[#f4f4f4] rounded-none focus:outline-none focus:border-[#0f62fe]"
+						class="h-6 rounded-none border border-[#393939] bg-[#262626] px-1.5 font-mono text-xs text-[#f4f4f4] focus:border-[#0f62fe] focus:outline-none"
 					>
 						<option value={100}>100</option>
 						<option value={500}>500</option>

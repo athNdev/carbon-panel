@@ -532,7 +532,7 @@
 										e.currentTarget.value ? e.currentTarget.value.trim() : undefined
 									)}
 								{disabled}
-								class="h-8 text-xs font-mono"
+								class="h-8 font-mono text-xs"
 							/>
 						</div>
 						<div class="space-y-2">

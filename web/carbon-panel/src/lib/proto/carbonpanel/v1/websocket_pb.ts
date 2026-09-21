@@ -2,414 +2,446 @@
 // @generated from file carbonpanel/v1/websocket.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { LogEntry } from "./server_pb";
-import { file_carbonpanel_v1_server } from "./server_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenEnum, GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2';
+import { enumDesc, fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2';
+import type { LogEntry } from './server_pb';
+import { file_carbonpanel_v1_server } from './server_pb';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file carbonpanel/v1/websocket.proto.
  */
-export const file_carbonpanel_v1_websocket: GenFile = /*@__PURE__*/
-  fileDesc("Ch5jYXJib25wYW5lbC92MS93ZWJzb2NrZXQucHJvdG8SDmNhcmJvbnBhbmVsLnYxIqICChZXZWJTb2NrZXRDbGllbnRNZXNzYWdlEisKBHR5cGUYASABKA4yHS5jYXJib25wYW5lbC52MS5XU01lc3NhZ2VUeXBlEisKBGF1dGgYAiABKAsyGy5jYXJib25wYW5lbC52MS5BdXRoTWVzc2FnZUgAEjUKCXN1YnNjcmliZRgDIAEoCzIgLmNhcmJvbnBhbmVsLnYxLlN1YnNjcmliZU1lc3NhZ2VIABI5Cgt1bnN1YnNjcmliZRgEIAEoCzIiLmNhcmJvbnBhbmVsLnYxLlVuc3Vic2NyaWJlTWVzc2FnZUgAEjEKB2NvbW1hbmQYBSABKAsyHi5jYXJib25wYW5lbC52MS5Db21tYW5kTWVzc2FnZUgAQgkKB3BheWxvYWQi9QMKFldlYlNvY2tldFNlcnZlck1lc3NhZ2USKwoEdHlwZRgBIAEoDjIdLmNhcmJvbnBhbmVsLnYxLldTTWVzc2FnZVR5cGUSMAoHYXV0aF9vaxgCIAEoCzIdLmNhcmJvbnBhbmVsLnYxLkF1dGhPa01lc3NhZ2VIABI0CglhdXRoX2ZhaWwYAyABKAsyHy5jYXJib25wYW5lbC52MS5BdXRoRmFpbE1lc3NhZ2VIABI3CgpzdWJzY3JpYmVkGAQgASgLMiEuY2FyYm9ucGFuZWwudjEuU3Vic2NyaWJlZE1lc3NhZ2VIABI7Cgx1bnN1YnNjcmliZWQYBSABKAsyIy5jYXJib25wYW5lbC52MS5VbnN1YnNjcmliZWRNZXNzYWdlSAASKwoEbG9ncxgGIAEoCzIbLmNhcmJvbnBhbmVsLnYxLkxvZ3NNZXNzYWdlSAASKQoDbG9nGAcgASgLMhouY2FyYm9ucGFuZWwudjEuTG9nTWVzc2FnZUgAEj4KDmNvbW1hbmRfcmVzdWx0GAggASgLMiQuY2FyYm9ucGFuZWwudjEuQ29tbWFuZFJlc3VsdE1lc3NhZ2VIABItCgVlcnJvchgJIAEoCzIcLmNhcmJvbnBhbmVsLnYxLkVycm9yTWVzc2FnZUgAQgkKB3BheWxvYWQiHAoLQXV0aE1lc3NhZ2USDQoFdG9rZW4YASABKAkiMwoQU3Vic2NyaWJlTWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkSDAoEdGFpbBgCIAEoBSInChJVbnN1YnNjcmliZU1lc3NhZ2USEQoJc2VydmVyX2lkGAEgASgJIlQKDkNvbW1hbmRNZXNzYWdlEhEKCXNlcnZlcl9pZBgBIAEoCRIPCgdjb21tYW5kGAIgASgJEhMKBnNpbGVudBgDIAEoCEgAiAEBQgkKB19zaWxlbnQiMgoNQXV0aE9rTWVzc2FnZRIPCgd1c2VyX2lkGAEgASgJEhAKCHVzZXJuYW1lGAIgASgJIiAKD0F1dGhGYWlsTWVzc2FnZRINCgVlcnJvchgBIAEoCSImChFTdWJzY3JpYmVkTWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkiKAoTVW5zdWJzY3JpYmVkTWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkiSAoLTG9nc01lc3NhZ2USEQoJc2VydmVyX2lkGAEgASgJEiYKBGxvZ3MYAiADKAsyGC5jYXJib25wYW5lbC52MS5Mb2dFbnRyeSJGCgpMb2dNZXNzYWdlEhEKCXNlcnZlcl9pZBgBIAEoCRIlCgNsb2cYAiABKAsyGC5jYXJib25wYW5lbC52MS5Mb2dFbnRyeSJZChRDb21tYW5kUmVzdWx0TWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBIOCgZvdXRwdXQYAyABKAkSDQoFZXJyb3IYBCABKAkiHQoMRXJyb3JNZXNzYWdlEg0KBWVycm9yGAEgASgJKssDCg1XU01lc3NhZ2VUeXBlEh8KG1dTX01FU1NBR0VfVFlQRV9VTlNQRUNJRklFRBAAEhgKFFdTX01FU1NBR0VfVFlQRV9BVVRIEAESHQoZV1NfTUVTU0FHRV9UWVBFX1NVQlNDUklCRRACEh8KG1dTX01FU1NBR0VfVFlQRV9VTlNVQlNDUklCRRADEhsKF1dTX01FU1NBR0VfVFlQRV9DT01NQU5EEAQSGAoUV1NfTUVTU0FHRV9UWVBFX1BJTkcQBRIbChdXU19NRVNTQUdFX1RZUEVfQVVUSF9PSxAKEh0KGVdTX01FU1NBR0VfVFlQRV9BVVRIX0ZBSUwQCxIeChpXU19NRVNTQUdFX1RZUEVfU1VCU0NSSUJFRBAMEiAKHFdTX01FU1NBR0VfVFlQRV9VTlNVQlNDUklCRUQQDRIYChRXU19NRVNTQUdFX1RZUEVfTE9HUxAOEhcKE1dTX01FU1NBR0VfVFlQRV9MT0cQDxIiCh5XU19NRVNTQUdFX1RZUEVfQ09NTUFORF9SRVNVTFQQEBIZChVXU19NRVNTQUdFX1RZUEVfRVJST1IQERIYChRXU19NRVNTQUdFX1RZUEVfUE9ORxASQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw", [file_carbonpanel_v1_server]);
+export const file_carbonpanel_v1_websocket: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'Ch5jYXJib25wYW5lbC92MS93ZWJzb2NrZXQucHJvdG8SDmNhcmJvbnBhbmVsLnYxIqICChZXZWJTb2NrZXRDbGllbnRNZXNzYWdlEisKBHR5cGUYASABKA4yHS5jYXJib25wYW5lbC52MS5XU01lc3NhZ2VUeXBlEisKBGF1dGgYAiABKAsyGy5jYXJib25wYW5lbC52MS5BdXRoTWVzc2FnZUgAEjUKCXN1YnNjcmliZRgDIAEoCzIgLmNhcmJvbnBhbmVsLnYxLlN1YnNjcmliZU1lc3NhZ2VIABI5Cgt1bnN1YnNjcmliZRgEIAEoCzIiLmNhcmJvbnBhbmVsLnYxLlVuc3Vic2NyaWJlTWVzc2FnZUgAEjEKB2NvbW1hbmQYBSABKAsyHi5jYXJib25wYW5lbC52MS5Db21tYW5kTWVzc2FnZUgAQgkKB3BheWxvYWQi9QMKFldlYlNvY2tldFNlcnZlck1lc3NhZ2USKwoEdHlwZRgBIAEoDjIdLmNhcmJvbnBhbmVsLnYxLldTTWVzc2FnZVR5cGUSMAoHYXV0aF9vaxgCIAEoCzIdLmNhcmJvbnBhbmVsLnYxLkF1dGhPa01lc3NhZ2VIABI0CglhdXRoX2ZhaWwYAyABKAsyHy5jYXJib25wYW5lbC52MS5BdXRoRmFpbE1lc3NhZ2VIABI3CgpzdWJzY3JpYmVkGAQgASgLMiEuY2FyYm9ucGFuZWwudjEuU3Vic2NyaWJlZE1lc3NhZ2VIABI7Cgx1bnN1YnNjcmliZWQYBSABKAsyIy5jYXJib25wYW5lbC52MS5VbnN1YnNjcmliZWRNZXNzYWdlSAASKwoEbG9ncxgGIAEoCzIbLmNhcmJvbnBhbmVsLnYxLkxvZ3NNZXNzYWdlSAASKQoDbG9nGAcgASgLMhouY2FyYm9ucGFuZWwudjEuTG9nTWVzc2FnZUgAEj4KDmNvbW1hbmRfcmVzdWx0GAggASgLMiQuY2FyYm9ucGFuZWwudjEuQ29tbWFuZFJlc3VsdE1lc3NhZ2VIABItCgVlcnJvchgJIAEoCzIcLmNhcmJvbnBhbmVsLnYxLkVycm9yTWVzc2FnZUgAQgkKB3BheWxvYWQiHAoLQXV0aE1lc3NhZ2USDQoFdG9rZW4YASABKAkiMwoQU3Vic2NyaWJlTWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkSDAoEdGFpbBgCIAEoBSInChJVbnN1YnNjcmliZU1lc3NhZ2USEQoJc2VydmVyX2lkGAEgASgJIlQKDkNvbW1hbmRNZXNzYWdlEhEKCXNlcnZlcl9pZBgBIAEoCRIPCgdjb21tYW5kGAIgASgJEhMKBnNpbGVudBgDIAEoCEgAiAEBQgkKB19zaWxlbnQiMgoNQXV0aE9rTWVzc2FnZRIPCgd1c2VyX2lkGAEgASgJEhAKCHVzZXJuYW1lGAIgASgJIiAKD0F1dGhGYWlsTWVzc2FnZRINCgVlcnJvchgBIAEoCSImChFTdWJzY3JpYmVkTWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkiKAoTVW5zdWJzY3JpYmVkTWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkiSAoLTG9nc01lc3NhZ2USEQoJc2VydmVyX2lkGAEgASgJEiYKBGxvZ3MYAiADKAsyGC5jYXJib25wYW5lbC52MS5Mb2dFbnRyeSJGCgpMb2dNZXNzYWdlEhEKCXNlcnZlcl9pZBgBIAEoCRIlCgNsb2cYAiABKAsyGC5jYXJib25wYW5lbC52MS5Mb2dFbnRyeSJZChRDb21tYW5kUmVzdWx0TWVzc2FnZRIRCglzZXJ2ZXJfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBIOCgZvdXRwdXQYAyABKAkSDQoFZXJyb3IYBCABKAkiHQoMRXJyb3JNZXNzYWdlEg0KBWVycm9yGAEgASgJKssDCg1XU01lc3NhZ2VUeXBlEh8KG1dTX01FU1NBR0VfVFlQRV9VTlNQRUNJRklFRBAAEhgKFFdTX01FU1NBR0VfVFlQRV9BVVRIEAESHQoZV1NfTUVTU0FHRV9UWVBFX1NVQlNDUklCRRACEh8KG1dTX01FU1NBR0VfVFlQRV9VTlNVQlNDUklCRRADEhsKF1dTX01FU1NBR0VfVFlQRV9DT01NQU5EEAQSGAoUV1NfTUVTU0FHRV9UWVBFX1BJTkcQBRIbChdXU19NRVNTQUdFX1RZUEVfQVVUSF9PSxAKEh0KGVdTX01FU1NBR0VfVFlQRV9BVVRIX0ZBSUwQCxIeChpXU19NRVNTQUdFX1RZUEVfU1VCU0NSSUJFRBAMEiAKHFdTX01FU1NBR0VfVFlQRV9VTlNVQlNDUklCRUQQDRIYChRXU19NRVNTQUdFX1RZUEVfTE9HUxAOEhcKE1dTX01FU1NBR0VfVFlQRV9MT0cQDxIiCh5XU19NRVNTQUdFX1RZUEVfQ09NTUFORF9SRVNVTFQQEBIZChVXU19NRVNTQUdFX1RZUEVfRVJST1IQERIYChRXU19NRVNTQUdFX1RZUEVfUE9ORxASQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw',
+		[file_carbonpanel_v1_server]
+	);
 
 /**
  * Client -> Server messages
  *
  * @generated from message carbonpanel.v1.WebSocketClientMessage
  */
-export type WebSocketClientMessage = Message<"carbonpanel.v1.WebSocketClientMessage"> & {
-  /**
-   * @generated from field: carbonpanel.v1.WSMessageType type = 1;
-   */
-  type: WSMessageType;
+export type WebSocketClientMessage = Message<'carbonpanel.v1.WebSocketClientMessage'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.WSMessageType type = 1;
+	 */
+	type: WSMessageType;
 
-  /**
-   * Client payload for the server
-   *
-   * @generated from oneof carbonpanel.v1.WebSocketClientMessage.payload
-   */
-  payload: {
-    /**
-     * @generated from field: carbonpanel.v1.AuthMessage auth = 2;
-     */
-    value: AuthMessage;
-    case: "auth";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.SubscribeMessage subscribe = 3;
-     */
-    value: SubscribeMessage;
-    case: "subscribe";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.UnsubscribeMessage unsubscribe = 4;
-     */
-    value: UnsubscribeMessage;
-    case: "unsubscribe";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.CommandMessage command = 5;
-     */
-    value: CommandMessage;
-    case: "command";
-  } | { case: undefined; value?: undefined };
+	/**
+	 * Client payload for the server
+	 *
+	 * @generated from oneof carbonpanel.v1.WebSocketClientMessage.payload
+	 */
+	payload:
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.AuthMessage auth = 2;
+				 */
+				value: AuthMessage;
+				case: 'auth';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.SubscribeMessage subscribe = 3;
+				 */
+				value: SubscribeMessage;
+				case: 'subscribe';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.UnsubscribeMessage unsubscribe = 4;
+				 */
+				value: UnsubscribeMessage;
+				case: 'unsubscribe';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.CommandMessage command = 5;
+				 */
+				value: CommandMessage;
+				case: 'command';
+		  }
+		| { case: undefined; value?: undefined };
 };
 
 /**
  * Describes the message carbonpanel.v1.WebSocketClientMessage.
  * Use `create(WebSocketClientMessageSchema)` to create a new message.
  */
-export const WebSocketClientMessageSchema: GenMessage<WebSocketClientMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 0);
+export const WebSocketClientMessageSchema: GenMessage<WebSocketClientMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 0);
 
 /**
  * Server -> Client messages
  *
  * @generated from message carbonpanel.v1.WebSocketServerMessage
  */
-export type WebSocketServerMessage = Message<"carbonpanel.v1.WebSocketServerMessage"> & {
-  /**
-   * @generated from field: carbonpanel.v1.WSMessageType type = 1;
-   */
-  type: WSMessageType;
+export type WebSocketServerMessage = Message<'carbonpanel.v1.WebSocketServerMessage'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.WSMessageType type = 1;
+	 */
+	type: WSMessageType;
 
-  /**
-   * Server payload for the client
-   *
-   * @generated from oneof carbonpanel.v1.WebSocketServerMessage.payload
-   */
-  payload: {
-    /**
-     * @generated from field: carbonpanel.v1.AuthOkMessage auth_ok = 2;
-     */
-    value: AuthOkMessage;
-    case: "authOk";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.AuthFailMessage auth_fail = 3;
-     */
-    value: AuthFailMessage;
-    case: "authFail";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.SubscribedMessage subscribed = 4;
-     */
-    value: SubscribedMessage;
-    case: "subscribed";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.UnsubscribedMessage unsubscribed = 5;
-     */
-    value: UnsubscribedMessage;
-    case: "unsubscribed";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.LogsMessage logs = 6;
-     */
-    value: LogsMessage;
-    case: "logs";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.LogMessage log = 7;
-     */
-    value: LogMessage;
-    case: "log";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.CommandResultMessage command_result = 8;
-     */
-    value: CommandResultMessage;
-    case: "commandResult";
-  } | {
-    /**
-     * @generated from field: carbonpanel.v1.ErrorMessage error = 9;
-     */
-    value: ErrorMessage;
-    case: "error";
-  } | { case: undefined; value?: undefined };
+	/**
+	 * Server payload for the client
+	 *
+	 * @generated from oneof carbonpanel.v1.WebSocketServerMessage.payload
+	 */
+	payload:
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.AuthOkMessage auth_ok = 2;
+				 */
+				value: AuthOkMessage;
+				case: 'authOk';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.AuthFailMessage auth_fail = 3;
+				 */
+				value: AuthFailMessage;
+				case: 'authFail';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.SubscribedMessage subscribed = 4;
+				 */
+				value: SubscribedMessage;
+				case: 'subscribed';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.UnsubscribedMessage unsubscribed = 5;
+				 */
+				value: UnsubscribedMessage;
+				case: 'unsubscribed';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.LogsMessage logs = 6;
+				 */
+				value: LogsMessage;
+				case: 'logs';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.LogMessage log = 7;
+				 */
+				value: LogMessage;
+				case: 'log';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.CommandResultMessage command_result = 8;
+				 */
+				value: CommandResultMessage;
+				case: 'commandResult';
+		  }
+		| {
+				/**
+				 * @generated from field: carbonpanel.v1.ErrorMessage error = 9;
+				 */
+				value: ErrorMessage;
+				case: 'error';
+		  }
+		| { case: undefined; value?: undefined };
 };
 
 /**
  * Describes the message carbonpanel.v1.WebSocketServerMessage.
  * Use `create(WebSocketServerMessageSchema)` to create a new message.
  */
-export const WebSocketServerMessageSchema: GenMessage<WebSocketServerMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 1);
+export const WebSocketServerMessageSchema: GenMessage<WebSocketServerMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 1);
 
 /**
  * Auth request
  *
  * @generated from message carbonpanel.v1.AuthMessage
  */
-export type AuthMessage = Message<"carbonpanel.v1.AuthMessage"> & {
-  /**
-   * @generated from field: string token = 1;
-   */
-  token: string;
+export type AuthMessage = Message<'carbonpanel.v1.AuthMessage'> & {
+	/**
+	 * @generated from field: string token = 1;
+	 */
+	token: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.AuthMessage.
  * Use `create(AuthMessageSchema)` to create a new message.
  */
-export const AuthMessageSchema: GenMessage<AuthMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 2);
+export const AuthMessageSchema: GenMessage<AuthMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 2);
 
 /**
  * Subscribe to server logs
  *
  * @generated from message carbonpanel.v1.SubscribeMessage
  */
-export type SubscribeMessage = Message<"carbonpanel.v1.SubscribeMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type SubscribeMessage = Message<'carbonpanel.v1.SubscribeMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: int32 tail = 2;
-   */
-  tail: number;
+	/**
+	 * @generated from field: int32 tail = 2;
+	 */
+	tail: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.SubscribeMessage.
  * Use `create(SubscribeMessageSchema)` to create a new message.
  */
-export const SubscribeMessageSchema: GenMessage<SubscribeMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 3);
+export const SubscribeMessageSchema: GenMessage<SubscribeMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 3);
 
 /**
  * Unsubscribe from server logs
  *
  * @generated from message carbonpanel.v1.UnsubscribeMessage
  */
-export type UnsubscribeMessage = Message<"carbonpanel.v1.UnsubscribeMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type UnsubscribeMessage = Message<'carbonpanel.v1.UnsubscribeMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UnsubscribeMessage.
  * Use `create(UnsubscribeMessageSchema)` to create a new message.
  */
-export const UnsubscribeMessageSchema: GenMessage<UnsubscribeMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 4);
+export const UnsubscribeMessageSchema: GenMessage<UnsubscribeMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 4);
 
 /**
  * Send command to server
  *
  * @generated from message carbonpanel.v1.CommandMessage
  */
-export type CommandMessage = Message<"carbonpanel.v1.CommandMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type CommandMessage = Message<'carbonpanel.v1.CommandMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: string command = 2;
-   */
-  command: string;
+	/**
+	 * @generated from field: string command = 2;
+	 */
+	command: string;
 
-  /**
-   * @generated from field: optional bool silent = 3;
-   */
-  silent?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool silent = 3;
+	 */
+	silent?: boolean | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CommandMessage.
  * Use `create(CommandMessageSchema)` to create a new message.
  */
-export const CommandMessageSchema: GenMessage<CommandMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 5);
+export const CommandMessageSchema: GenMessage<CommandMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 5);
 
 /**
  * Auth success
  *
  * @generated from message carbonpanel.v1.AuthOkMessage
  */
-export type AuthOkMessage = Message<"carbonpanel.v1.AuthOkMessage"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
+export type AuthOkMessage = Message<'carbonpanel.v1.AuthOkMessage'> & {
+	/**
+	 * @generated from field: string user_id = 1;
+	 */
+	userId: string;
 
-  /**
-   * @generated from field: string username = 2;
-   */
-  username: string;
+	/**
+	 * @generated from field: string username = 2;
+	 */
+	username: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.AuthOkMessage.
  * Use `create(AuthOkMessageSchema)` to create a new message.
  */
-export const AuthOkMessageSchema: GenMessage<AuthOkMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 6);
+export const AuthOkMessageSchema: GenMessage<AuthOkMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 6);
 
 /**
  * Auth failure
  *
  * @generated from message carbonpanel.v1.AuthFailMessage
  */
-export type AuthFailMessage = Message<"carbonpanel.v1.AuthFailMessage"> & {
-  /**
-   * @generated from field: string error = 1;
-   */
-  error: string;
+export type AuthFailMessage = Message<'carbonpanel.v1.AuthFailMessage'> & {
+	/**
+	 * @generated from field: string error = 1;
+	 */
+	error: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.AuthFailMessage.
  * Use `create(AuthFailMessageSchema)` to create a new message.
  */
-export const AuthFailMessageSchema: GenMessage<AuthFailMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 7);
+export const AuthFailMessageSchema: GenMessage<AuthFailMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 7);
 
 /**
  * Subscription confirmed
  *
  * @generated from message carbonpanel.v1.SubscribedMessage
  */
-export type SubscribedMessage = Message<"carbonpanel.v1.SubscribedMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type SubscribedMessage = Message<'carbonpanel.v1.SubscribedMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.SubscribedMessage.
  * Use `create(SubscribedMessageSchema)` to create a new message.
  */
-export const SubscribedMessageSchema: GenMessage<SubscribedMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 8);
+export const SubscribedMessageSchema: GenMessage<SubscribedMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 8);
 
 /**
  * Unsubscription confirmed
  *
  * @generated from message carbonpanel.v1.UnsubscribedMessage
  */
-export type UnsubscribedMessage = Message<"carbonpanel.v1.UnsubscribedMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type UnsubscribedMessage = Message<'carbonpanel.v1.UnsubscribedMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UnsubscribedMessage.
  * Use `create(UnsubscribedMessageSchema)` to create a new message.
  */
-export const UnsubscribedMessageSchema: GenMessage<UnsubscribedMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 9);
+export const UnsubscribedMessageSchema: GenMessage<UnsubscribedMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 9);
 
 /**
  * Initial batch of logs
  *
  * @generated from message carbonpanel.v1.LogsMessage
  */
-export type LogsMessage = Message<"carbonpanel.v1.LogsMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type LogsMessage = Message<'carbonpanel.v1.LogsMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.LogEntry logs = 2;
-   */
-  logs: LogEntry[];
+	/**
+	 * @generated from field: repeated carbonpanel.v1.LogEntry logs = 2;
+	 */
+	logs: LogEntry[];
 };
 
 /**
  * Describes the message carbonpanel.v1.LogsMessage.
  * Use `create(LogsMessageSchema)` to create a new message.
  */
-export const LogsMessageSchema: GenMessage<LogsMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 10);
+export const LogsMessageSchema: GenMessage<LogsMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 10);
 
 /**
  * Single new log entry
  *
  * @generated from message carbonpanel.v1.LogMessage
  */
-export type LogMessage = Message<"carbonpanel.v1.LogMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type LogMessage = Message<'carbonpanel.v1.LogMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: carbonpanel.v1.LogEntry log = 2;
-   */
-  log?: LogEntry | undefined;
+	/**
+	 * @generated from field: carbonpanel.v1.LogEntry log = 2;
+	 */
+	log?: LogEntry | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.LogMessage.
  * Use `create(LogMessageSchema)` to create a new message.
  */
-export const LogMessageSchema: GenMessage<LogMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 11);
+export const LogMessageSchema: GenMessage<LogMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 11);
 
 /**
  * Command execution result
  *
  * @generated from message carbonpanel.v1.CommandResultMessage
  */
-export type CommandResultMessage = Message<"carbonpanel.v1.CommandResultMessage"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type CommandResultMessage = Message<'carbonpanel.v1.CommandResultMessage'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: bool success = 2;
-   */
-  success: boolean;
+	/**
+	 * @generated from field: bool success = 2;
+	 */
+	success: boolean;
 
-  /**
-   * @generated from field: string output = 3;
-   */
-  output: string;
+	/**
+	 * @generated from field: string output = 3;
+	 */
+	output: string;
 
-  /**
-   * @generated from field: string error = 4;
-   */
-  error: string;
+	/**
+	 * @generated from field: string error = 4;
+	 */
+	error: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.CommandResultMessage.
  * Use `create(CommandResultMessageSchema)` to create a new message.
  */
-export const CommandResultMessageSchema: GenMessage<CommandResultMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 12);
+export const CommandResultMessageSchema: GenMessage<CommandResultMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 12);
 
 /**
  * Error message
  *
  * @generated from message carbonpanel.v1.ErrorMessage
  */
-export type ErrorMessage = Message<"carbonpanel.v1.ErrorMessage"> & {
-  /**
-   * @generated from field: string error = 1;
-   */
-  error: string;
+export type ErrorMessage = Message<'carbonpanel.v1.ErrorMessage'> & {
+	/**
+	 * @generated from field: string error = 1;
+	 */
+	error: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ErrorMessage.
  * Use `create(ErrorMessageSchema)` to create a new message.
  */
-export const ErrorMessageSchema: GenMessage<ErrorMessage> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_websocket, 13);
+export const ErrorMessageSchema: GenMessage<ErrorMessage> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_websocket, 13);
 
 /**
  * WebSocket message types
@@ -417,89 +449,89 @@ export const ErrorMessageSchema: GenMessage<ErrorMessage> = /*@__PURE__*/
  * @generated from enum carbonpanel.v1.WSMessageType
  */
 export enum WSMessageType {
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_UNSPECIFIED = 0;
-   */
-  WS_MESSAGE_TYPE_UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_UNSPECIFIED = 0;
+	 */
+	WS_MESSAGE_TYPE_UNSPECIFIED = 0,
 
-  /**
-   * Client -> Server
-   *
-   * @generated from enum value: WS_MESSAGE_TYPE_AUTH = 1;
-   */
-  WS_MESSAGE_TYPE_AUTH = 1,
+	/**
+	 * Client -> Server
+	 *
+	 * @generated from enum value: WS_MESSAGE_TYPE_AUTH = 1;
+	 */
+	WS_MESSAGE_TYPE_AUTH = 1,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_SUBSCRIBE = 2;
-   */
-  WS_MESSAGE_TYPE_SUBSCRIBE = 2,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_SUBSCRIBE = 2;
+	 */
+	WS_MESSAGE_TYPE_SUBSCRIBE = 2,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_UNSUBSCRIBE = 3;
-   */
-  WS_MESSAGE_TYPE_UNSUBSCRIBE = 3,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_UNSUBSCRIBE = 3;
+	 */
+	WS_MESSAGE_TYPE_UNSUBSCRIBE = 3,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_COMMAND = 4;
-   */
-  WS_MESSAGE_TYPE_COMMAND = 4,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_COMMAND = 4;
+	 */
+	WS_MESSAGE_TYPE_COMMAND = 4,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_PING = 5;
-   */
-  WS_MESSAGE_TYPE_PING = 5,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_PING = 5;
+	 */
+	WS_MESSAGE_TYPE_PING = 5,
 
-  /**
-   * Server -> Client
-   *
-   * @generated from enum value: WS_MESSAGE_TYPE_AUTH_OK = 10;
-   */
-  WS_MESSAGE_TYPE_AUTH_OK = 10,
+	/**
+	 * Server -> Client
+	 *
+	 * @generated from enum value: WS_MESSAGE_TYPE_AUTH_OK = 10;
+	 */
+	WS_MESSAGE_TYPE_AUTH_OK = 10,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_AUTH_FAIL = 11;
-   */
-  WS_MESSAGE_TYPE_AUTH_FAIL = 11,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_AUTH_FAIL = 11;
+	 */
+	WS_MESSAGE_TYPE_AUTH_FAIL = 11,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_SUBSCRIBED = 12;
-   */
-  WS_MESSAGE_TYPE_SUBSCRIBED = 12,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_SUBSCRIBED = 12;
+	 */
+	WS_MESSAGE_TYPE_SUBSCRIBED = 12,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_UNSUBSCRIBED = 13;
-   */
-  WS_MESSAGE_TYPE_UNSUBSCRIBED = 13,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_UNSUBSCRIBED = 13;
+	 */
+	WS_MESSAGE_TYPE_UNSUBSCRIBED = 13,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_LOGS = 14;
-   */
-  WS_MESSAGE_TYPE_LOGS = 14,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_LOGS = 14;
+	 */
+	WS_MESSAGE_TYPE_LOGS = 14,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_LOG = 15;
-   */
-  WS_MESSAGE_TYPE_LOG = 15,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_LOG = 15;
+	 */
+	WS_MESSAGE_TYPE_LOG = 15,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_COMMAND_RESULT = 16;
-   */
-  WS_MESSAGE_TYPE_COMMAND_RESULT = 16,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_COMMAND_RESULT = 16;
+	 */
+	WS_MESSAGE_TYPE_COMMAND_RESULT = 16,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_ERROR = 17;
-   */
-  WS_MESSAGE_TYPE_ERROR = 17,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_ERROR = 17;
+	 */
+	WS_MESSAGE_TYPE_ERROR = 17,
 
-  /**
-   * @generated from enum value: WS_MESSAGE_TYPE_PONG = 18;
-   */
-  WS_MESSAGE_TYPE_PONG = 18,
+	/**
+	 * @generated from enum value: WS_MESSAGE_TYPE_PONG = 18;
+	 */
+	WS_MESSAGE_TYPE_PONG = 18
 }
 
 /**
  * Describes the enum carbonpanel.v1.WSMessageType.
  */
-export const WSMessageTypeSchema: GenEnum<WSMessageType> = /*@__PURE__*/
-  enumDesc(file_carbonpanel_v1_websocket, 0);
-
+export const WSMessageTypeSchema: GenEnum<WSMessageType> =
+	/*@__PURE__*/
+	enumDesc(file_carbonpanel_v1_websocket, 0);

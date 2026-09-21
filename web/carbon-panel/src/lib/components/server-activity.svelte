@@ -48,27 +48,29 @@
 </script>
 
 <div class="h-full overflow-y-auto">
-	<div class="bg-[#262626] border border-[#393939] p-6 rounded-none">
-		<div class="flex items-center justify-between mb-1">
+	<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
+		<div class="mb-1 flex items-center justify-between">
 			<h3 class="text-base font-semibold text-[#f4f4f4]">Activity</h3>
 			<button
-				class="h-8 px-4 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs items-center rounded-none transition-colors"
+				class="h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c]"
 				onclick={loadActivity}
 				disabled={loading}
 			>
 				{loading ? 'Loading…' : 'Refresh'}
 			</button>
 		</div>
-		<p class="text-xs text-[#a8a8a8] mb-6">Who did what on this server, newest first</p>
+		<p class="mb-6 text-xs text-[#a8a8a8]">Who did what on this server, newest first</p>
 
 		{#if entries.length === 0}
-			<p class="text-xs font-mono text-[#6f6f6f] py-8 text-center">
-				{loading ? 'Loading activity…' : 'No activity recorded yet. Start or stop the server to generate entries.'}
+			<p class="py-8 text-center font-mono text-xs text-[#6f6f6f]">
+				{loading
+					? 'Loading activity…'
+					: 'No activity recorded yet. Start or stop the server to generate entries.'}
 			</p>
 		{:else}
 			<table class="w-full text-xs" aria-label="Server activity log">
 				<thead>
-					<tr class="text-left text-[#a8a8a8] border-b border-[#393939]">
+					<tr class="border-b border-[#393939] text-left text-[#a8a8a8]">
 						<th scope="col" class="py-2 pr-4 font-medium">Time</th>
 						<th scope="col" class="py-2 pr-4 font-medium">Actor</th>
 						<th scope="col" class="py-2 pr-4 font-medium">Event</th>
@@ -77,7 +79,7 @@
 				</thead>
 				<tbody>
 					{#each entries as entry (entry.id)}
-						<tr class="border-b border-[#262626] text-[#f4f4f4] font-mono">
+						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
 							<td class="py-2 pr-4 whitespace-nowrap">{formatTime(entry.createdAt)}</td>
 							<td class="py-2 pr-4">{entry.actorName || entry.actorId || '—'}</td>
 							<td class="py-2 pr-4">{entry.event}</td>

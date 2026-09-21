@@ -217,11 +217,13 @@
 	<title>Profile - Carbon Panel</title>
 </svelte:head>
 
-<div class="flex-1 space-y-6 font-sans text-[#f4f4f4] rounded-none">
+<div class="flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
 	{#if user}
 		<!-- Header with Sharp Avatar -->
-		<div class="flex items-center gap-6 border-b border-[#393939] pb-6 rounded-none">
-			<div class="flex h-16 w-16 items-center justify-center bg-[#0f62fe] text-white font-mono text-2xl font-bold rounded-none shadow-lg">
+		<div class="flex items-center gap-6 rounded-none border-b border-[#393939] pb-6">
+			<div
+				class="flex h-16 w-16 items-center justify-center rounded-none bg-[#0f62fe] font-mono text-2xl font-bold text-white shadow-lg"
+			>
 				{initials}
 			</div>
 			<div class="space-y-1">
@@ -229,15 +231,19 @@
 					<h1 class="text-3xl font-semibold tracking-tight text-white">{user.username}</h1>
 					<CarbonTag type={getRoleTagType(primaryRole)} size="md">{primaryRole}</CarbonTag>
 				</div>
-				<p class="text-sm text-[#a8a8a8]">Manage your user account credentials, security, and API tokens</p>
+				<p class="text-sm text-[#a8a8a8]">
+					Manage your user account credentials, security, and API tokens
+				</p>
 			</div>
 		</div>
 
 		<div class="grid gap-6 md:grid-cols-2">
 			<!-- Account Information Tile -->
 			<CarbonTile class="rounded-none">
-				<div class="flex items-center gap-3 pb-4 border-b border-[#393939] mb-4">
-					<div class="h-8 w-8 bg-[#393939] text-[#0f62fe] flex items-center justify-center rounded-none">
+				<div class="mb-4 flex items-center gap-3 border-b border-[#393939] pb-4">
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-none bg-[#393939] text-[#0f62fe]"
+					>
 						<User class="h-4 w-4" />
 					</div>
 					<div>
@@ -248,16 +254,20 @@
 
 				<div class="space-y-3">
 					<!-- Username -->
-					<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+					<div
+						class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+					>
 						<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 							<User class="h-3.5 w-3.5 text-[#a8a8a8]" />
 							<span>Username</span>
 						</div>
-						<span class="text-sm font-medium text-white font-mono">{user.username}</span>
+						<span class="font-mono text-sm font-medium text-white">{user.username}</span>
 					</div>
 
 					<!-- Auth Provider -->
-					<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+					<div
+						class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+					>
 						<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 							<Shield class="h-3.5 w-3.5 text-[#a8a8a8]" />
 							<span>Auth Provider</span>
@@ -267,17 +277,21 @@
 
 					<!-- Email -->
 					{#if user.email}
-						<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+						<div
+							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+						>
 							<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 								<Mail class="h-3.5 w-3.5 text-[#a8a8a8]" />
 								<span>Email</span>
 							</div>
-							<span class="text-sm text-white font-mono">{user.email}</span>
+							<span class="font-mono text-sm text-white">{user.email}</span>
 						</div>
 					{/if}
 
 					<!-- Roles -->
-					<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+					<div
+						class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+					>
 						<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 							<Shield class="h-3.5 w-3.5 text-[#a8a8a8]" />
 							<span>Roles</span>
@@ -293,7 +307,9 @@
 					</div>
 
 					<!-- Member Since -->
-					<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+					<div
+						class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+					>
 						<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 							<Calendar class="h-3.5 w-3.5 text-[#a8a8a8]" />
 							<span>Member Since</span>
@@ -303,7 +319,9 @@
 
 					<!-- Last Active -->
 					{#if lastActive}
-						<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+						<div
+							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+						>
 							<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 								<Clock class="h-3.5 w-3.5 text-[#a8a8a8]" />
 								<span>Last Active</span>
@@ -313,7 +331,9 @@
 					{/if}
 
 					<!-- Account Status -->
-					<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+					<div
+						class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+					>
 						<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
 							<Activity class="h-3.5 w-3.5 text-[#a8a8a8]" />
 							<span>Account Status</span>
@@ -327,8 +347,10 @@
 
 			<!-- Security Tile -->
 			<CarbonTile class="rounded-none">
-				<div class="flex items-center gap-3 pb-4 border-b border-[#393939] mb-4">
-					<div class="h-8 w-8 bg-[#393939] text-[#0f62fe] flex items-center justify-center rounded-none">
+				<div class="mb-4 flex items-center gap-3 border-b border-[#393939] pb-4">
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-none bg-[#393939] text-[#0f62fe]"
+					>
 						<Key class="h-4 w-4" />
 					</div>
 					<div>
@@ -338,14 +360,16 @@
 				</div>
 
 				<div class="space-y-4">
-					<div class="flex items-center justify-between p-3 bg-[#161616] border border-[#393939] rounded-none">
+					<div
+						class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+					>
 						<span class="text-xs text-[#c6c6c6]">Active Session Provider</span>
 						<CarbonTag type="blue" size="sm">{providerLabel}</CarbonTag>
 					</div>
 
 					{#if user.authProvider === 'local' || !user.authProvider}
 						<div class="pt-2">
-							<h3 class="text-sm font-semibold text-white mb-3">Change Password</h3>
+							<h3 class="mb-3 text-sm font-semibold text-white">Change Password</h3>
 							<form
 								onsubmit={(e) => {
 									e.preventDefault();
@@ -376,7 +400,11 @@
 									required
 									disabled={saving}
 								/>
-								<CarbonButton type="submit" disabled={saving} class="w-full justify-center rounded-none">
+								<CarbonButton
+									type="submit"
+									disabled={saving}
+									class="w-full justify-center rounded-none"
+								>
 									{#if saving}
 										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 										Updating Password...
@@ -388,10 +416,14 @@
 							</form>
 						</div>
 					{:else}
-						<div class="p-4 border border-dashed border-[#525252] bg-[#161616] text-center rounded-none">
+						<div
+							class="rounded-none border border-dashed border-[#525252] bg-[#161616] p-4 text-center"
+						>
 							<Key class="mx-auto mb-2 h-6 w-6 text-[#8d8d8d]" />
 							<p class="text-xs text-[#a8a8a8]">
-								Your account is authenticated via <span class="font-semibold text-white">{providerLabel}</span> SSO. Password changes must be performed through your identity provider.
+								Your account is authenticated via <span class="font-semibold text-white"
+									>{providerLabel}</span
+								> SSO. Password changes must be performed through your identity provider.
 							</p>
 						</div>
 					{/if}
@@ -401,11 +433,7 @@
 
 		<!-- API Tokens Table in Carbon Tile -->
 		{#snippet tokenToolbar()}
-			<CarbonButton
-				size="sm"
-				class="rounded-none"
-				onclick={() => (showCreateTokenDialog = true)}
-			>
+			<CarbonButton size="sm" class="rounded-none" onclick={() => (showCreateTokenDialog = true)}>
 				<Plus class="mr-1.5 h-3.5 w-3.5" />
 				Create Token
 			</CarbonButton>
@@ -413,15 +441,23 @@
 
 		{#snippet tokenHeader()}
 			<tr>
-				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Name</th>
-				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Created</th>
-				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Expires</th>
-				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Last Used</th>
-				<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right w-20">Action</th>
+				<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Name</th>
+				<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Created</th
+				>
+				<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Expires</th
+				>
+				<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase"
+					>Last Used</th
+				>
+				<th
+					scope="col"
+					class="w-20 px-4 py-3 text-right text-xs font-semibold tracking-wider uppercase"
+					>Action</th
+				>
 			</tr>
 		{/snippet}
 
-		<CarbonTile class="p-0 rounded-none overflow-hidden">
+		<CarbonTile class="overflow-hidden rounded-none p-0">
 			<CarbonDataTable
 				title="API Tokens"
 				description="Programmatic bearer tokens that inherit your user identity and permissions"
@@ -442,24 +478,25 @@
 						<td colspan="5" class="py-12 text-center text-[#8d8d8d]">
 							<KeyRound class="mx-auto mb-2 h-8 w-8 text-[#525252]" />
 							<p class="text-sm font-medium text-[#c6c6c6]">No API tokens generated</p>
-							<p class="text-xs text-[#8d8d8d] mt-1">
-								Generate a token to interact with the Carbon Panel gRPC/Connect API programmatically.
+							<p class="mt-1 text-xs text-[#8d8d8d]">
+								Generate a token to interact with the Carbon Panel gRPC/Connect API
+								programmatically.
 							</p>
 						</td>
 					</tr>
 				{:else}
 					{#each apiTokens as token (token.id)}
-						<tr class="hover:bg-[#353535] transition-colors">
-							<td class="py-3 px-4 font-medium text-white">
+						<tr class="transition-colors hover:bg-[#353535]">
+							<td class="px-4 py-3 font-medium text-white">
 								<div class="flex items-center gap-2">
-									<KeyRound class="h-3.5 w-3.5 text-[#0f62fe] shrink-0" />
+									<KeyRound class="h-3.5 w-3.5 shrink-0 text-[#0f62fe]" />
 									<span class="font-mono text-sm">{token.name}</span>
 								</div>
 							</td>
-							<td class="py-3 px-4 text-xs text-[#a8a8a8] font-mono">
+							<td class="px-4 py-3 font-mono text-xs text-[#a8a8a8]">
 								{formatTimestamp(token.createdAt)}
 							</td>
-							<td class="py-3 px-4">
+							<td class="px-4 py-3">
 								{#if token.expiresAt}
 									<CarbonTag type={isExpired(token.expiresAt) ? 'red' : 'gray'} size="sm">
 										{isExpired(token.expiresAt) ? 'Expired' : formatTimestamp(token.expiresAt)}
@@ -468,15 +505,15 @@
 									<CarbonTag type="gray" size="sm">Never</CarbonTag>
 								{/if}
 							</td>
-							<td class="py-3 px-4 text-xs text-[#a8a8a8] font-mono">
+							<td class="px-4 py-3 font-mono text-xs text-[#a8a8a8]">
 								{formatTimestamp(token.lastUsedAt)}
 							</td>
-							<td class="py-3 px-4 text-right">
+							<td class="px-4 py-3 text-right">
 								<CarbonButton
 									kind="ghost"
 									size="sm"
 									iconOnly
-									class="text-[#da1e28] hover:bg-[#da1e28]/20 rounded-none"
+									class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 									onclick={() => deleteToken(token.id)}
 									disabled={deletingTokenId === token.id}
 									title="Delete token"
@@ -500,26 +537,32 @@
 <CarbonModal
 	bind:open={showCreateTokenDialog}
 	title={createdToken ? 'Token Created Successfully' : 'Create New API Token'}
-	description={createdToken ? 'Copy your token now — it will not be displayed again' : 'Provision a new programmatic access token'}
+	description={createdToken
+		? 'Copy your token now — it will not be displayed again'
+		: 'Provision a new programmatic access token'}
 	hasFooter={false}
 	onclose={closeCreateDialog}
 	size="3xl"
 >
 	{#if createdToken}
 		<div class="space-y-4">
-			<div class="p-4 bg-[#0f62fe]/10 border-l-4 border-[#0f62fe] text-xs text-white space-y-2 rounded-none">
-				<div class="flex items-center gap-2 text-[#78a9ff] font-semibold">
+			<div
+				class="space-y-2 rounded-none border-l-4 border-[#0f62fe] bg-[#0f62fe]/10 p-4 text-xs text-white"
+			>
+				<div class="flex items-center gap-2 font-semibold text-[#78a9ff]">
 					<Check class="h-4 w-4" />
 					<span>API Token Generated</span>
 				</div>
 				<div class="relative mt-2">
-					<div class="p-3 bg-[#161616] border border-[#393939] font-mono text-xs text-[#6fdc8c] break-all select-all pr-12 rounded-none">
+					<div
+						class="rounded-none border border-[#393939] bg-[#161616] p-3 pr-12 font-mono text-xs break-all text-[#6fdc8c] select-all"
+					>
 						{createdToken}
 					</div>
 					<button
 						type="button"
 						onclick={copyToken}
-						class="absolute top-2 right-2 p-1.5 bg-[#262626] hover:bg-[#353535] text-[#f4f4f4] border border-[#393939] cursor-pointer rounded-none transition-colors"
+						class="absolute top-2 right-2 cursor-pointer rounded-none border border-[#393939] bg-[#262626] p-1.5 text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						title="Copy Token"
 						aria-label="Copy Token"
 					>
@@ -532,29 +575,34 @@
 				</div>
 			</div>
 
-			<div class="p-3 bg-[#da1e28]/10 border-l-4 border-[#da1e28] text-xs text-[#ff8389] flex items-start gap-2 rounded-none">
-				<AlertTriangle class="h-4 w-4 shrink-0 mt-0.5" />
+			<div
+				class="flex items-start gap-2 rounded-none border-l-4 border-[#da1e28] bg-[#da1e28]/10 p-3 text-xs text-[#ff8389]"
+			>
+				<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
 				<div>
 					<p class="font-semibold">Save this secret now</p>
-					<p class="text-[#c6c6c6] mt-0.5">This bearer token will never be displayed again. Store it securely in your secrets manager or CI/CD environment.</p>
+					<p class="mt-0.5 text-[#c6c6c6]">
+						This bearer token will never be displayed again. Store it securely in your secrets
+						manager or CI/CD environment.
+					</p>
 				</div>
 			</div>
 
 			<div class="space-y-1.5 pt-2">
 				<span class="text-xs font-semibold text-[#c6c6c6]">Example Usage</span>
-				<pre class="overflow-x-auto p-3 bg-[#161616] border border-[#393939] font-mono text-xs text-[#a8a8a8] rounded-none">curl {typeof window !== 'undefined' ? window.location.origin : ''}/carbonpanel.v1.UserService/ListUsers \
+				<pre
+					class="overflow-x-auto rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#a8a8a8]">curl {typeof window !==
+					'undefined'
+						? window.location.origin
+						: ''}/carbonpanel.v1.UserService/ListUsers \
   -X POST \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer {createdToken}' \
   -d '{'{}'}'</pre>
 			</div>
 
-			<div class="flex items-center justify-end gap-3 pt-4 border-t border-[#393939]">
-				<CarbonButton
-					kind="secondary"
-					onclick={copyToken}
-					class="rounded-none"
-				>
+			<div class="flex items-center justify-end gap-3 border-t border-[#393939] pt-4">
+				<CarbonButton kind="secondary" onclick={copyToken} class="rounded-none">
 					{#if copied}
 						<Check class="mr-2 h-4 w-4" />
 						Copied!
@@ -563,11 +611,7 @@
 						Copy Token
 					{/if}
 				</CarbonButton>
-				<CarbonButton
-					kind="primary"
-					onclick={closeCreateDialog}
-					class="rounded-none"
-				>
+				<CarbonButton kind="primary" onclick={closeCreateDialog} class="rounded-none">
 					Done
 				</CarbonButton>
 			</div>
@@ -586,7 +630,9 @@
 				label="Expiration Duration"
 				bind:value={newTokenForm.expiresInDays}
 				disabled={creatingToken}
-				helperText={newTokenForm.expiresInDays ? `Token will expire after ${newTokenForm.expiresInDays} days` : 'Token will never expire unless revoked'}
+				helperText={newTokenForm.expiresInDays
+					? `Token will expire after ${newTokenForm.expiresInDays} days`
+					: 'Token will never expire unless revoked'}
 			>
 				<option value="">No expiration (Never)</option>
 				<option value="7">7 days</option>
@@ -595,12 +641,17 @@
 				<option value="365">1 year (365 days)</option>
 			</CarbonSelect>
 
-			<div class="p-3 bg-[#161616] border-l-4 border-[#0f62fe] text-xs text-[#c6c6c6] space-y-1 rounded-none">
+			<div
+				class="space-y-1 rounded-none border-l-4 border-[#0f62fe] bg-[#161616] p-3 text-xs text-[#c6c6c6]"
+			>
 				<p class="font-semibold text-white">Security note:</p>
-				<p>This token inherits all permissions and roles granted to your account ({user?.username}). Treat it with the same confidentiality as your password.</p>
+				<p>
+					This token inherits all permissions and roles granted to your account ({user?.username}).
+					Treat it with the same confidentiality as your password.
+				</p>
 			</div>
 
-			<div class="flex items-center justify-end gap-3 pt-4 border-t border-[#393939]">
+			<div class="flex items-center justify-end gap-3 border-t border-[#393939] pt-4">
 				<CarbonButton
 					kind="secondary"
 					onclick={closeCreateDialog}

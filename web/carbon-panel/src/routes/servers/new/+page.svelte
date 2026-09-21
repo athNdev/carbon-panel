@@ -154,7 +154,9 @@
 
 			if (portData.status === 'fulfilled') {
 				formData.port = portData.value.port;
-				usedPorts = Object.fromEntries(portData.value.usedPorts?.map((p) => [p.port, p.inUse]) || []);
+				usedPorts = Object.fromEntries(
+					portData.value.usedPorts?.map((p) => [p.port, p.inUse]) || []
+				);
 			}
 
 			if (nodesData.status === 'fulfilled') {
@@ -378,13 +380,13 @@
 	}
 </script>
 
-<div class="h-full overflow-y-auto bg-[#161616] text-[#f4f4f4] font-sans">
+<div class="h-full overflow-y-auto bg-[#161616] font-sans text-[#f4f4f4]">
 	<div class="space-y-6 p-6">
 		<!-- Carbon Page Header -->
 		<div class="flex items-center gap-4 border-b border-[#393939] pb-5">
 			<a
 				href="/servers"
-				class="flex h-10 w-10 shrink-0 items-center justify-center bg-[#262626] hover:bg-[#353535] border border-[#393939] text-[#c6c6c6] hover:text-white transition-colors rounded-none"
+				class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				title="Back to Servers"
 			>
 				<ArrowLeft class="h-4 w-4" />
@@ -392,28 +394,40 @@
 			<div>
 				<div class="flex items-center gap-2.5">
 					<h1 class="text-2xl font-light tracking-tight text-[#f4f4f4]">Create New Server</h1>
-					<span class="px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 text-xs font-mono">
+					<span
+						class="border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-2 py-0.5 font-mono text-xs text-[#78a9ff]"
+					>
 						WIZARD
 					</span>
 				</div>
-				<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
+				<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
 					Configure instance runtime, container engine, resource quotas, and network proxy
 				</p>
 			</div>
 		</div>
 
 		<!-- Carbon Progress Indicator / Steps (Requirement 3) -->
-		<div class="w-full bg-[#262626] border border-[#393939] p-4 rounded-none">
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+		<div class="w-full rounded-none border border-[#393939] bg-[#262626] p-4">
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each steps as step (step.id)}
 					<button
 						type="button"
 						onclick={() => goToStep(step.id)}
-						class="flex items-center gap-3 p-3 text-left transition-colors border cursor-pointer rounded-none relative select-none {currentStep === step.id ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : currentStep > step.id ? 'bg-[#161616] border-[#393939] hover:bg-[#2e2e2e]' : 'bg-[#161616] border-[#2e2e2e] opacity-70 hover:opacity-100'}"
+						class="relative flex cursor-pointer items-center gap-3 rounded-none border p-3 text-left transition-colors select-none {currentStep ===
+						step.id
+							? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+							: currentStep > step.id
+								? 'border-[#393939] bg-[#161616] hover:bg-[#2e2e2e]'
+								: 'border-[#2e2e2e] bg-[#161616] opacity-70 hover:opacity-100'}"
 					>
 						<!-- Indicator Badge -->
 						<div
-							class="flex h-7 w-7 shrink-0 items-center justify-center font-mono text-xs font-bold rounded-none {currentStep === step.id ? 'bg-[#0f62fe] text-white' : currentStep > step.id ? 'bg-[#24a148] text-white' : 'bg-[#393939] text-[#8d8d8d]'}"
+							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-none font-mono text-xs font-bold {currentStep ===
+							step.id
+								? 'bg-[#0f62fe] text-white'
+								: currentStep > step.id
+									? 'bg-[#24a148] text-white'
+									: 'bg-[#393939] text-[#8d8d8d]'}"
 						>
 							{#if currentStep > step.id}
 								<Check class="h-4 w-4" />
@@ -423,10 +437,17 @@
 						</div>
 
 						<div class="min-w-0 flex-1">
-							<p class="text-xs font-semibold tracking-wide uppercase truncate {currentStep === step.id ? 'text-[#f4f4f4]' : currentStep > step.id ? 'text-[#c6c6c6]' : 'text-[#8d8d8d]'}">
+							<p
+								class="truncate text-xs font-semibold tracking-wide uppercase {currentStep ===
+								step.id
+									? 'text-[#f4f4f4]'
+									: currentStep > step.id
+										? 'text-[#c6c6c6]'
+										: 'text-[#8d8d8d]'}"
+							>
 								{step.title}
 							</p>
-							<p class="text-[11px] text-[#8d8d8d] truncate mt-0.5 font-sans">
+							<p class="mt-0.5 truncate font-sans text-[11px] text-[#8d8d8d]">
 								{step.subtitle}
 							</p>
 						</div>
@@ -439,31 +460,37 @@
 		<form onsubmit={handleSubmit} class="space-y-6">
 			<!-- Step 0: Basic Information & Preset -->
 			{#if currentStep === 0}
-				<div class="bg-[#262626] border border-[#393939] p-6 rounded-none space-y-6">
+				<div class="space-y-6 rounded-none border border-[#393939] bg-[#262626] p-6">
 					<div>
 						<h2 class="text-lg font-light text-[#f4f4f4]">Step 1: Basic Information & Preset</h2>
-						<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
-							Provide server identification and select whether to build manual config or load from a curated modpack.
+						<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
+							Provide server identification and select whether to build manual config or load from a
+							curated modpack.
 						</p>
 					</div>
 
 					<!-- Preset Selection (Carbon Tiles) -->
 					<div class="space-y-2">
-						<label class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+						<label
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
 							Configuration Method
 						</label>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 							<!-- Manual Tile -->
 							<button
 								type="button"
 								onclick={() => (selectedModpack = null)}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {selectedModpack === null ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="relative cursor-pointer rounded-none border p-4 text-left transition-colors {selectedModpack ===
+								null
+									? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+									: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<Settings class="h-4 w-4 text-[#0f62fe]" />
-									<h4 class="font-semibold text-sm text-[#f4f4f4]">Manual Configuration</h4>
+									<h4 class="text-sm font-semibold text-[#f4f4f4]">Manual Configuration</h4>
 								</div>
-								<p class="text-xs text-[#a8a8a8] mt-1">
+								<p class="mt-1 text-xs text-[#a8a8a8]">
 									Start with clean Minecraft server settings and custom modloaders.
 								</p>
 							</button>
@@ -472,15 +499,18 @@
 							<button
 								type="button"
 								onclick={() => (showModpackDialog = true)}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {selectedModpack !== null ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="relative cursor-pointer rounded-none border p-4 text-left transition-colors {selectedModpack !==
+								null
+									? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+									: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<Package class="h-4 w-4 text-[#78a9ff]" />
-									<h4 class="font-semibold text-sm text-[#f4f4f4]">
+									<h4 class="text-sm font-semibold text-[#f4f4f4]">
 										{selectedModpack ? selectedModpack.name : 'From Modpack Preset'}
 									</h4>
 								</div>
-								<p class="text-xs text-[#a8a8a8] mt-1">
+								<p class="mt-1 text-xs text-[#a8a8a8]">
 									{selectedModpack
 										? `${selectedModpack.indexer} • MC ${selectedModpack.mcVersion}`
 										: favoriteModpacks.length === 0
@@ -491,34 +521,37 @@
 						</div>
 
 						{#if selectedModpack}
-							<div class="mt-3 p-4 bg-[#161616] border border-[#0f62fe] rounded-none flex items-start justify-between gap-4">
-								<div class="flex items-start gap-3 min-w-0">
+							<div
+								class="mt-3 flex items-start justify-between gap-4 rounded-none border border-[#0f62fe] bg-[#161616] p-4"
+							>
+								<div class="flex min-w-0 items-start gap-3">
 									{#if selectedModpack.logoUrl}
 										<img
 											src={selectedModpack.logoUrl}
 											alt={selectedModpack.name}
-											class="h-12 w-12 object-cover border border-[#393939] rounded-none shrink-0"
+											class="h-12 w-12 shrink-0 rounded-none border border-[#393939] object-cover"
 										/>
 									{/if}
 									<div class="min-w-0">
 										<div class="flex items-center gap-2">
-											<h4 class="font-semibold text-sm text-[#f4f4f4]">{selectedModpack.name}</h4>
+											<h4 class="text-sm font-semibold text-[#f4f4f4]">{selectedModpack.name}</h4>
 											<CarbonTag type="blue" size="sm">{selectedModpack.indexer}</CarbonTag>
 										</div>
-										<p class="text-xs text-[#a8a8a8] line-clamp-2 mt-1 font-sans">
+										<p class="mt-1 line-clamp-2 font-sans text-xs text-[#a8a8a8]">
 											{selectedModpack.summary}
 										</p>
 										{#if modpackVersions.length > 0}
 											<div class="mt-2 flex items-center gap-2">
-												<span class="text-xs text-[#c6c6c6] font-mono">Version:</span>
+												<span class="font-mono text-xs text-[#c6c6c6]">Version:</span>
 												<select
 													bind:value={selectedVersionId}
-													class="h-8 px-2 bg-[#262626] border border-[#525252] text-xs font-mono text-[#f4f4f4] rounded-none focus:outline-none focus:border-[#0f62fe]"
+													class="h-8 rounded-none border border-[#525252] bg-[#262626] px-2 font-mono text-xs text-[#f4f4f4] focus:border-[#0f62fe] focus:outline-none"
 												>
 													<option value="">Latest Release</option>
 													{#each modpackVersions as version (version.id)}
 														<option value={version.id}>
-															{version.displayName} {version.releaseType ? `(${version.releaseType})` : ''}
+															{version.displayName}
+															{version.releaseType ? `(${version.releaseType})` : ''}
 														</option>
 													{/each}
 												</select>
@@ -529,7 +562,7 @@
 								<button
 									type="button"
 									onclick={removeModpack}
-									class="px-3 py-1.5 bg-[#393939] hover:bg-[#da1e28] text-white text-xs font-mono uppercase transition-colors cursor-pointer rounded-none shrink-0"
+									class="shrink-0 cursor-pointer rounded-none bg-[#393939] px-3 py-1.5 font-mono text-xs text-white uppercase transition-colors hover:bg-[#da1e28]"
 								>
 									Remove
 								</button>
@@ -539,7 +572,10 @@
 
 					<!-- Server Name (Carbon TextInput) -->
 					<div class="space-y-1.5">
-						<label for="name" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+						<label
+							for="name"
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
 							Server Name <span class="text-[#ff8389]">*</span>
 						</label>
 						<input
@@ -548,42 +584,50 @@
 							placeholder="survival-smp-01"
 							bind:value={formData.name}
 							required
-							class="w-full h-10 px-4 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none transition-all"
+							class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 text-sm text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 						/>
 					</div>
 
 					<!-- Server Description -->
 					<div class="space-y-1.5">
-						<label for="description" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
-							Description <span class="text-xs text-[#8d8d8d] lowercase font-normal">(optional)</span>
+						<label
+							for="description"
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
+							Description <span class="text-xs font-normal text-[#8d8d8d] lowercase"
+								>(optional)</span
+							>
 						</label>
 						<textarea
 							id="description"
 							placeholder="Primary survival server instance for cluster..."
 							bind:value={formData.description}
 							rows={3}
-							class="w-full p-3 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none resize-none transition-all"
+							class="w-full resize-none rounded-none border-b border-[#8d8d8d] bg-[#161616] p-3 text-sm text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 						></textarea>
 					</div>
 				</div>
 
-			<!-- Step 1: Game Engine & Version -->
+				<!-- Step 1: Game Engine & Version -->
 			{:else if currentStep === 1}
-				<div class="bg-[#262626] border border-[#393939] p-6 rounded-none space-y-6">
+				<div class="space-y-6 rounded-none border border-[#393939] bg-[#262626] p-6">
 					<div>
 						<h2 class="text-lg font-light text-[#f4f4f4]">Step 2: Engine & Version</h2>
-						<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
+						<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
 							Select the Minecraft server release and runtime loader.
 						</p>
 					</div>
 
 					<!-- Minecraft Version (Carbon Select) -->
 					<div class="space-y-1.5">
-						<label for="mcVersion" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+						<label
+							for="mcVersion"
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
 							Minecraft Version
 						</label>
 						{#if loadingVersions}
-							<div class="flex items-center gap-2 p-3 bg-[#161616] border border-[#393939]">
+							<div class="flex items-center gap-2 border border-[#393939] bg-[#161616] p-3">
 								<CarbonInlineLoading description="Loading supported versions catalog..." />
 							</div>
 						{:else}
@@ -592,17 +636,24 @@
 									id="mcVersion"
 									bind:value={formData.mcVersion}
 									disabled={loading}
-									class="w-full h-10 px-4 pr-10 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm text-[#f4f4f4] rounded-none appearance-none cursor-pointer"
+									class="h-10 w-full cursor-pointer appearance-none rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 pr-10 text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 								>
 									{#each minecraftVersions as version (version)}
 										<option value={version}>
-											{version} {version === latestVersion ? '(Latest Official)' : ''}
+											{version}
+											{version === latestVersion ? '(Latest Official)' : ''}
 										</option>
 									{/each}
 								</select>
-								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]">
+								<div
+									class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]"
+								>
 									<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-										<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+										<path
+											fill-rule="evenodd"
+											d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+											clip-rule="evenodd"
+										/>
 									</svg>
 								</div>
 							</div>
@@ -611,7 +662,10 @@
 
 					<!-- Mod Loader (Carbon Select) -->
 					<div class="space-y-1.5">
-						<label for="modLoader" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+						<label
+							for="modLoader"
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
 							Mod Loader / Server Software
 						</label>
 						<div class="relative">
@@ -623,44 +677,51 @@
 									formData.modLoader = val as ModLoader;
 								}}
 								disabled={loading || !!selectedModpack}
-								class="w-full h-10 px-4 pr-10 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm text-[#f4f4f4] rounded-none appearance-none cursor-pointer disabled:opacity-50"
+								class="h-10 w-full cursor-pointer appearance-none rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 pr-10 text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none disabled:opacity-50"
 							>
 								{#each modLoaders as loader (loader.name)}
-									{@const enumVal = ModLoader[loader.name.toUpperCase() as keyof typeof ModLoader] ?? 0}
+									{@const enumVal =
+										ModLoader[loader.name.toUpperCase() as keyof typeof ModLoader] ?? 0}
 									<option value={enumVal.toString()}>
 										{loader.displayName}
 									</option>
 								{/each}
 							</select>
-							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]">
+							<div
+								class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]"
+							>
 								<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+									<path
+										fill-rule="evenodd"
+										d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+										clip-rule="evenodd"
+									/>
 								</svg>
 							</div>
 						</div>
 
 						{#if selectedModpack}
-							<p class="text-xs text-[#78a9ff] font-mono mt-1">
+							<p class="mt-1 font-mono text-xs text-[#78a9ff]">
 								Mod loader auto-determined by preset configuration.
 							</p>
 						{:else if formData.modLoader === ModLoader.VANILLA}
-							<p class="text-xs text-[#8d8d8d] font-sans mt-1">
+							<p class="mt-1 font-sans text-xs text-[#8d8d8d]">
 								Vanilla Minecraft server binary with no mod dependencies.
 							</p>
 						{:else}
-							<p class="text-xs text-[#6fdc8c] font-sans mt-1">
+							<p class="mt-1 font-sans text-xs text-[#6fdc8c]">
 								Supports runtime mod jar injection and server extensions.
 							</p>
 						{/if}
 					</div>
 				</div>
 
-			<!-- Step 2: Resources & Network -->
+				<!-- Step 2: Resources & Network -->
 			{:else if currentStep === 2}
-				<div class="bg-[#262626] border border-[#393939] p-6 rounded-none space-y-6">
+				<div class="space-y-6 rounded-none border border-[#393939] bg-[#262626] p-6">
 					<div>
 						<h2 class="text-lg font-light text-[#f4f4f4]">Step 3: Resources & Network</h2>
-						<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
+						<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
 							Configure port routing, reverse proxy domain, and system memory limits.
 						</p>
 					</div>
@@ -668,10 +729,12 @@
 					<!-- Connection Method (Carbon Tiles) -->
 					{#if proxyEnabled}
 						<div class="space-y-2">
-							<label class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+							<label
+								class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+							>
 								Connection Ingress Method
 							</label>
-							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 								<button
 									type="button"
 									onclick={() => {
@@ -679,10 +742,12 @@
 										formData.proxyHostname = '';
 										portError = '';
 									}}
-									class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {!useProxyMode ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+									class="relative cursor-pointer rounded-none border p-4 text-left transition-colors {!useProxyMode
+										? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+										: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 								>
-									<h4 class="font-semibold text-sm text-[#f4f4f4]">Direct Port</h4>
-									<p class="text-xs text-[#a8a8a8] mt-1">
+									<h4 class="text-sm font-semibold text-[#f4f4f4]">Direct Port</h4>
+									<p class="mt-1 text-xs text-[#a8a8a8]">
 										Bind directly to container host port (e.g. :25565)
 									</p>
 								</button>
@@ -694,16 +759,20 @@
 											formData.proxyHostname =
 												formData.name.toLowerCase().replace(/\s+/g, '-') || 'minecraft-server';
 										}
-										const currentListener = proxyListeners.find((l) => l.id === formData.proxyListenerId) || proxyListeners[0];
+										const currentListener =
+											proxyListeners.find((l) => l.id === formData.proxyListenerId) ||
+											proxyListeners[0];
 										if (currentListener) {
 											formData.port = currentListener.port;
 										}
 										portError = '';
 									}}
-									class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {useProxyMode ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+									class="relative cursor-pointer rounded-none border p-4 text-left transition-colors {useProxyMode
+										? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+										: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 								>
-									<h4 class="font-semibold text-sm text-[#f4f4f4]">SNI / Custom Hostname</h4>
-									<p class="text-xs text-[#a8a8a8] mt-1">
+									<h4 class="text-sm font-semibold text-[#f4f4f4]">SNI / Custom Hostname</h4>
+									<p class="mt-1 text-xs text-[#a8a8a8]">
 										Route traffic through proxy using virtual domain hostname
 									</p>
 								</button>
@@ -713,27 +782,38 @@
 
 					<!-- Port or Proxy Hostname inputs -->
 					{#if useProxyMode && proxyEnabled}
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							{#if proxyListeners.length > 0}
 								<div class="space-y-1.5">
-									<label for="proxy_listener" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+									<label
+										for="proxy_listener"
+										class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+									>
 										Proxy Listener
 									</label>
 									<div class="relative">
 										<select
 											id="proxy_listener"
 											bind:value={formData.proxyListenerId}
-											class="w-full h-10 px-4 pr-10 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm text-[#f4f4f4] rounded-none appearance-none cursor-pointer"
+											class="h-10 w-full cursor-pointer appearance-none rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 pr-10 text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 										>
 											{#each proxyListeners as listener (listener.id)}
 												<option value={listener.id}>
-													{listener.name} (Port {listener.port}) {listener.isDefault ? '[Default]' : ''}
+													{listener.name} (Port {listener.port}) {listener.isDefault
+														? '[Default]'
+														: ''}
 												</option>
 											{/each}
 										</select>
-										<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]">
+										<div
+											class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]"
+										>
 											<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-												<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+												<path
+													fill-rule="evenodd"
+													d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										</div>
 									</div>
@@ -741,7 +821,10 @@
 							{/if}
 
 							<div class="space-y-1.5">
-								<label for="proxy_hostname" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+								<label
+									for="proxy_hostname"
+									class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+								>
 									Server Hostname
 								</label>
 								<input
@@ -749,20 +832,23 @@
 									type="text"
 									placeholder={proxyBaseURL ? 'survival' : 'survival.example.com'}
 									bind:value={formData.proxyHostname}
-									class="w-full h-10 px-4 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm font-mono text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none"
+									class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 font-mono text-sm text-[#f4f4f4] placeholder-[#6f6f6f] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 								/>
 							</div>
 						</div>
 					{:else}
 						<div class="space-y-1.5">
 							<div class="flex items-center justify-between">
-								<label for="port" class="text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+								<label
+									for="port"
+									class="font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+								>
 									Server Port
 								</label>
 								<button
 									type="button"
 									onclick={refreshAvailablePort}
-									class="text-xs font-mono text-[#78a9ff] hover:underline cursor-pointer"
+									class="cursor-pointer font-mono text-xs text-[#78a9ff] hover:underline"
 								>
 									Auto-Assign Next Port
 								</button>
@@ -774,18 +860,23 @@
 								max="65535"
 								bind:value={formData.port}
 								oninput={(e) => validatePort(Number(e.currentTarget.value))}
-								class="w-full h-10 px-4 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm font-mono text-[#f4f4f4] rounded-none {portError ? '!border-b-2 !border-[#da1e28]' : ''}"
+								class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 font-mono text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none {portError
+									? '!border-b-2 !border-[#da1e28]'
+									: ''}"
 							/>
 							{#if portError}
-								<p class="text-xs text-[#ff8389] font-mono mt-1">{portError}</p>
+								<p class="mt-1 font-mono text-xs text-[#ff8389]">{portError}</p>
 							{/if}
 						</div>
 					{/if}
 
 					<!-- Quotas: Memory & Max Players -->
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+					<div class="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
 						<div class="space-y-1.5">
-							<label for="memory" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+							<label
+								for="memory"
+								class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+							>
 								Memory Allocation (MB)
 							</label>
 							<input
@@ -794,15 +885,18 @@
 								min="512"
 								step="256"
 								bind:value={formData.memory}
-								class="w-full h-10 px-4 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm font-mono text-[#f4f4f4] rounded-none"
+								class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 font-mono text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 							/>
-							<p class="text-xs text-[#8d8d8d] font-mono">
+							<p class="font-mono text-xs text-[#8d8d8d]">
 								Equals {(formData.memory / 1024).toFixed(1)} GB
 							</p>
 						</div>
 
 						<div class="space-y-1.5">
-							<label for="max_players" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+							<label
+								for="max_players"
+								class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+							>
 								Max Players
 							</label>
 							<input
@@ -811,13 +905,13 @@
 								min="1"
 								max="1000"
 								bind:value={formData.maxPlayers}
-								class="w-full h-10 px-4 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm font-mono text-[#f4f4f4] rounded-none"
+								class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 font-mono text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 							/>
 						</div>
 					</div>
 
 					<!-- Additional Ports Editor -->
-					<div class="pt-2 border-t border-[#393939]">
+					<div class="border-t border-[#393939] pt-2">
 						<AdditionalPortsEditor
 							bind:ports={formData.additionalPorts}
 							disabled={loading}
@@ -827,60 +921,74 @@
 					</div>
 				</div>
 
-			<!-- Step 3: Cluster Placement & Runtime -->
+				<!-- Step 3: Cluster Placement & Runtime -->
 			{:else if currentStep === 3}
-				<div class="bg-[#262626] border border-[#393939] p-6 rounded-none space-y-6">
+				<div class="space-y-6 rounded-none border border-[#393939] bg-[#262626] p-6">
 					<div>
 						<h2 class="text-lg font-light text-[#f4f4f4]">Step 4: Cluster Placement & Runtime</h2>
-						<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
+						<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
 							Designate physical cluster host and configure container startup options.
 						</p>
 					</div>
 
 					<!-- Cluster Placement Mode (Carbon Tiles) -->
 					<div class="space-y-3">
-						<label class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
+						<label
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
 							Node Placement Mode
 						</label>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 							<button
 								type="button"
 								onclick={() => (nodePlacementMode = 'auto')}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {nodePlacementMode === 'auto' ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="relative cursor-pointer rounded-none border p-4 text-left transition-colors {nodePlacementMode ===
+								'auto'
+									? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+									: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<Activity class="h-4 w-4 text-[#0f62fe]" />
-									<h4 class="font-semibold text-sm text-[#f4f4f4]">Auto-Placement (Load Balanced)</h4>
+									<h4 class="text-sm font-semibold text-[#f4f4f4]">
+										Auto-Placement (Load Balanced)
+									</h4>
 								</div>
-								<p class="text-xs text-[#a8a8a8] mt-1">
-									Cluster scheduler selects optimal worker node based on available memory and active workload.
+								<p class="mt-1 text-xs text-[#a8a8a8]">
+									Cluster scheduler selects optimal worker node based on available memory and active
+									workload.
 								</p>
 							</button>
 
 							<button
 								type="button"
 								onclick={() => (nodePlacementMode = 'manual')}
-								class="p-4 text-left border transition-colors cursor-pointer rounded-none relative {nodePlacementMode === 'manual' ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'}"
+								class="relative cursor-pointer rounded-none border p-4 text-left transition-colors {nodePlacementMode ===
+								'manual'
+									? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+									: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
 									<ServerIcon class="h-4 w-4 text-[#78a9ff]" />
-									<h4 class="font-semibold text-sm text-[#f4f4f4]">Target Specific Node</h4>
+									<h4 class="text-sm font-semibold text-[#f4f4f4]">Target Specific Node</h4>
 								</div>
-								<p class="text-xs text-[#a8a8a8] mt-1">
+								<p class="mt-1 text-xs text-[#a8a8a8]">
 									Pin this Minecraft container instance to a designated Docker host machine.
 								</p>
 							</button>
 						</div>
 
 						{#if nodePlacementMode === 'auto'}
-							<div class="p-4 bg-[#161616] border border-[#393939] rounded-none space-y-2">
-								<label for="placement_strategy" class="block text-xs text-[#c6c6c6] font-mono uppercase">
+							<div class="space-y-2 rounded-none border border-[#393939] bg-[#161616] p-4">
+								<label
+									for="placement_strategy"
+									class="block font-mono text-xs text-[#c6c6c6] uppercase"
+								>
 									Placement Strategy
 								</label>
 								<select
 									id="placement_strategy"
 									bind:value={placementStrategy}
-									class="w-full h-10 px-3 bg-[#262626] border border-[#525252] text-xs font-mono text-[#f4f4f4] rounded-none focus:outline-none focus:border-[#0f62fe]"
+									class="h-10 w-full rounded-none border border-[#525252] bg-[#262626] px-3 font-mono text-xs text-[#f4f4f4] focus:border-[#0f62fe] focus:outline-none"
 								>
 									<option value="least_memory">Least Memory Allocated (Recommended)</option>
 									<option value="least_servers">Least Active Server Count</option>
@@ -890,33 +998,49 @@
 						{:else}
 							<div class="space-y-2">
 								{#if loadingNodes}
-									<div class="flex items-center justify-center p-6 bg-[#161616] border border-[#393939]">
+									<div
+										class="flex items-center justify-center border border-[#393939] bg-[#161616] p-6"
+									>
 										<CarbonInlineLoading description="Scanning cluster topology..." />
 									</div>
 								{:else if nodes.length === 0}
-									<div class="p-4 bg-[#161616] border border-[#393939] text-xs text-[#a8a8a8]">
-										No worker nodes available. Add and enable a Docker node in Settings → Docker Nodes before creating servers.
+									<div class="border border-[#393939] bg-[#161616] p-4 text-xs text-[#a8a8a8]">
+										No worker nodes available. Add and enable a Docker node in Settings → Docker
+										Nodes before creating servers.
 									</div>
 								{:else}
-									<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+									<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 										{#each nodes as node (node.id)}
 											<button
 												type="button"
-												onclick={() => { if (node.enabled) selectedNodeId = node.id; }}
-												class="p-3.5 text-left border transition-colors cursor-pointer rounded-none relative {selectedNodeId === node.id ? 'bg-[#353535] border-[#0f62fe] shadow-[inset_3px_0_0_#0f62fe]' : 'bg-[#161616] border-[#393939] hover:bg-[#2a2a2a]'} {!node.enabled ? 'opacity-40 cursor-not-allowed' : ''}"
+												onclick={() => {
+													if (node.enabled) selectedNodeId = node.id;
+												}}
+												class="relative cursor-pointer rounded-none border p-3.5 text-left transition-colors {selectedNodeId ===
+												node.id
+													? 'border-[#0f62fe] bg-[#353535] shadow-[inset_3px_0_0_#0f62fe]'
+													: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'} {!node.enabled
+													? 'cursor-not-allowed opacity-40'
+													: ''}"
 											>
 												<div class="flex items-center justify-between">
 													<div class="flex items-center gap-2">
-														<span class="font-medium text-sm text-[#f4f4f4]">{node.name}</span>
+														<span class="text-sm font-medium text-[#f4f4f4]">{node.name}</span>
 														{#if node.isLocal}
-															<span class="px-1.5 py-0.2 bg-[#393939] text-[10px] font-mono text-[#c6c6c6]">Local</span>
+															<span
+																class="py-0.2 bg-[#393939] px-1.5 font-mono text-[10px] text-[#c6c6c6]"
+																>Local</span
+															>
 														{/if}
 													</div>
-													<CarbonTag type={node.status === NodeStatus.ONLINE ? 'green' : 'red'} size="sm">
+													<CarbonTag
+														type={node.status === NodeStatus.ONLINE ? 'green' : 'red'}
+														size="sm"
+													>
 														{node.status === NodeStatus.ONLINE ? 'ONLINE' : 'OFFLINE'}
 													</CarbonTag>
 												</div>
-												<p class="text-xs font-mono text-[#8d8d8d] mt-1 truncate">
+												<p class="mt-1 truncate font-mono text-xs text-[#8d8d8d]">
 													{node.host || node.advertisedIp || 'local socket'}
 												</p>
 											</button>
@@ -928,15 +1052,20 @@
 					</div>
 
 					<!-- Advanced Docker Image -->
-					<div class="space-y-1.5 pt-2 border-t border-[#393939]">
-						<label for="docker_image" class="block text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">
-							Docker Image <span class="text-xs text-[#8d8d8d] lowercase font-normal">(Advanced)</span>
+					<div class="space-y-1.5 border-t border-[#393939] pt-2">
+						<label
+							for="docker_image"
+							class="block font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase"
+						>
+							Docker Image <span class="text-xs font-normal text-[#8d8d8d] lowercase"
+								>(Advanced)</span
+							>
 						</label>
 						<div class="relative">
 							<select
 								id="docker_image"
 								bind:value={formData.dockerImage}
-								class="w-full h-10 px-4 pr-10 bg-[#161616] border-b border-[#8d8d8d] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none text-sm font-mono text-[#f4f4f4] rounded-none appearance-none cursor-pointer"
+								class="h-10 w-full cursor-pointer appearance-none rounded-none border-b border-[#8d8d8d] bg-[#161616] px-4 pr-10 font-mono text-sm text-[#f4f4f4] focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#262626] focus:outline-none"
 							>
 								<option value="">Auto-select base image (Recommended)</option>
 								{#each getUniqueDockerImages(dockerImages) as image (image.tag)}
@@ -945,33 +1074,49 @@
 									</option>
 								{/each}
 							</select>
-							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]">
+							<div
+								class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]"
+							>
 								<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+									<path
+										fill-rule="evenodd"
+										d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+										clip-rule="evenodd"
+									/>
 								</svg>
 							</div>
 						</div>
 					</div>
 
 					<!-- Lifecycle Toggles -->
-					<div class="space-y-3 pt-2 border-t border-[#393939]">
-						<h3 class="text-xs text-[#c6c6c6] uppercase font-mono tracking-wider font-semibold">Lifecycle & Autostart</h3>
-						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+					<div class="space-y-3 border-t border-[#393939] pt-2">
+						<h3 class="font-mono text-xs font-semibold tracking-wider text-[#c6c6c6] uppercase">
+							Lifecycle & Autostart
+						</h3>
+						<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 							<!-- Start Immediately -->
-							<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none">
+							<label
+								class="flex cursor-pointer items-center gap-3 rounded-none border border-[#393939] bg-[#161616] p-3 select-none hover:bg-[#202020]"
+							>
 								<input
 									type="checkbox"
 									bind:checked={formData.startImmediately}
 									class="h-4 w-4 rounded-none accent-[#0f62fe]"
 								/>
 								<div>
-									<span class="text-xs font-medium text-[#f4f4f4] block">Start Immediately</span>
-									<span class="text-[11px] text-[#8d8d8d] block font-sans">Boot container upon creation</span>
+									<span class="block text-xs font-medium text-[#f4f4f4]">Start Immediately</span>
+									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+										>Boot container upon creation</span
+									>
 								</div>
 							</label>
 
 							<!-- Detached Mode -->
-							<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none {useProxyMode ? 'opacity-50 cursor-not-allowed' : ''}">
+							<label
+								class="flex cursor-pointer items-center gap-3 rounded-none border border-[#393939] bg-[#161616] p-3 select-none hover:bg-[#202020] {useProxyMode
+									? 'cursor-not-allowed opacity-50'
+									: ''}"
+							>
 								<input
 									type="checkbox"
 									bind:checked={formData.detached}
@@ -979,55 +1124,71 @@
 									class="h-4 w-4 rounded-none accent-[#0f62fe]"
 								/>
 								<div>
-									<span class="text-xs font-medium text-[#f4f4f4] block">Detached Mode</span>
-									<span class="text-[11px] text-[#8d8d8d] block font-sans">Persists past daemon stop</span>
+									<span class="block text-xs font-medium text-[#f4f4f4]">Detached Mode</span>
+									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+										>Persists past daemon stop</span
+									>
 								</div>
 							</label>
 
-						<!-- Auto Start -->
-						<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none {formData.detached ? 'opacity-50 cursor-not-allowed' : ''}">
-							<input
-								type="checkbox"
-								bind:checked={formData.autoStart}
-								disabled={formData.detached}
-								class="h-4 w-4 rounded-none accent-[#0f62fe]"
-							/>
-							<div>
-								<span class="text-xs font-medium text-[#f4f4f4] block">Auto Start</span>
-								<span class="text-[11px] text-[#8d8d8d] block font-sans">Start when host daemon starts</span>
-							</div>
-						</label>
+							<!-- Auto Start -->
+							<label
+								class="flex cursor-pointer items-center gap-3 rounded-none border border-[#393939] bg-[#161616] p-3 select-none hover:bg-[#202020] {formData.detached
+									? 'cursor-not-allowed opacity-50'
+									: ''}"
+							>
+								<input
+									type="checkbox"
+									bind:checked={formData.autoStart}
+									disabled={formData.detached}
+									class="h-4 w-4 rounded-none accent-[#0f62fe]"
+								/>
+								<div>
+									<span class="block text-xs font-medium text-[#f4f4f4]">Auto Start</span>
+									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+										>Start when host daemon starts</span
+									>
+								</div>
+							</label>
 
-						<!-- Freeze on Idle -->
-						<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none">
-							<input
-								type="checkbox"
-								bind:checked={formData.autoHibernate}
-								class="h-4 w-4 rounded-none accent-[#0f62fe]"
-							/>
-							<div>
-								<span class="text-xs font-medium text-[#f4f4f4] block">Freeze on Idle</span>
-								<span class="text-[11px] text-[#8d8d8d] block font-sans">Pause container when empty</span>
-							</div>
-						</label>
+							<!-- Freeze on Idle -->
+							<label
+								class="flex cursor-pointer items-center gap-3 rounded-none border border-[#393939] bg-[#161616] p-3 select-none hover:bg-[#202020]"
+							>
+								<input
+									type="checkbox"
+									bind:checked={formData.autoHibernate}
+									class="h-4 w-4 rounded-none accent-[#0f62fe]"
+								/>
+								<div>
+									<span class="block text-xs font-medium text-[#f4f4f4]">Freeze on Idle</span>
+									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+										>Pause container when empty</span
+									>
+								</div>
+							</label>
 
-						<!-- Deep Sleep on Idle -->
-						<label class="p-3 bg-[#161616] border border-[#393939] flex items-center gap-3 cursor-pointer rounded-none hover:bg-[#202020] select-none">
-							<input
-								type="checkbox"
-								bind:checked={formData.autoDeepSleep}
-								class="h-4 w-4 rounded-none accent-[#0f62fe]"
-							/>
-							<div>
-								<span class="text-xs font-medium text-[#f4f4f4] block">Deep Sleep on Idle</span>
-								<span class="text-[11px] text-[#8d8d8d] block font-sans">Stop container when empty</span>
-							</div>
-						</label>
+							<!-- Deep Sleep on Idle -->
+							<label
+								class="flex cursor-pointer items-center gap-3 rounded-none border border-[#393939] bg-[#161616] p-3 select-none hover:bg-[#202020]"
+							>
+								<input
+									type="checkbox"
+									bind:checked={formData.autoDeepSleep}
+									class="h-4 w-4 rounded-none accent-[#0f62fe]"
+								/>
+								<div>
+									<span class="block text-xs font-medium text-[#f4f4f4]">Deep Sleep on Idle</span>
+									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+										>Stop container when empty</span
+									>
+								</div>
+							</label>
+						</div>
 					</div>
-				</div>
 
 					<!-- Docker Overrides -->
-					<div class="pt-2 border-t border-[#393939]">
+					<div class="border-t border-[#393939] pt-2">
 						<DockerOverridesEditor
 							bind:overrides={formData.dockerOverrides}
 							disabled={loading}
@@ -1041,7 +1202,7 @@
 			<div class="flex items-center justify-between border-t border-[#393939] pt-4">
 				<a
 					href="/servers"
-					class="h-10 px-4 bg-[#262626] hover:bg-[#353535] text-[#c6c6c6] hover:text-white text-sm font-sans flex items-center gap-2 rounded-none transition-colors border border-[#393939]"
+					class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				>
 					Cancel
 				</a>
@@ -1051,7 +1212,7 @@
 						<button
 							type="button"
 							onclick={prevStep}
-							class="h-10 px-4 bg-[#393939] hover:bg-[#4c4c4c] text-white text-sm font-sans flex items-center gap-2 rounded-none transition-colors cursor-pointer"
+							class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#393939] px-4 font-sans text-sm text-white transition-colors hover:bg-[#4c4c4c]"
 						>
 							<ChevronLeft class="h-4 w-4" />
 							<span>Previous</span>
@@ -1062,7 +1223,7 @@
 						<button
 							type="button"
 							onclick={nextStep}
-							class="h-10 px-5 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-sm font-sans font-medium flex items-center gap-2 rounded-none transition-colors cursor-pointer"
+							class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-5 font-sans text-sm font-medium text-white transition-colors hover:bg-[#0353e9] active:bg-[#002d9c]"
 						>
 							<span>Next Step</span>
 							<ChevronRight class="h-4 w-4" />
@@ -1071,7 +1232,7 @@
 						<button
 							type="submit"
 							disabled={loading || loadingVersions}
-							class="h-10 px-6 bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#002d9c] text-white text-sm font-sans font-medium flex items-center gap-2 rounded-none transition-colors cursor-pointer disabled:opacity-50"
+							class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-6 font-sans text-sm font-medium text-white transition-colors hover:bg-[#0353e9] active:bg-[#002d9c] disabled:opacity-50"
 						>
 							{#if loading}
 								<Loader2 class="h-4 w-4 animate-spin" />
@@ -1090,7 +1251,9 @@
 
 <!-- Modpack Selection Modal (Sharp Carbon Modal) -->
 <Dialog bind:open={showModpackDialog}>
-	<DialogContent class="max-w-2xl bg-[#161616] border border-[#393939] text-[#f4f4f4] rounded-none p-6">
+	<DialogContent
+		class="max-w-2xl rounded-none border border-[#393939] bg-[#161616] p-6 text-[#f4f4f4]"
+	>
 		<DialogHeader class="border-b border-[#393939] pb-3">
 			<DialogTitle class="text-lg font-light text-[#f4f4f4]">Select Favorite Modpack</DialogTitle>
 			<DialogDescription class="text-xs text-[#a8a8a8]">
@@ -1098,12 +1261,12 @@
 			</DialogDescription>
 		</DialogHeader>
 
-		<div class="max-h-[60vh] overflow-y-auto space-y-3 py-4">
+		<div class="max-h-[60vh] space-y-3 overflow-y-auto py-4">
 			{#if favoriteModpacks.length === 0}
-				<div class="p-8 text-center bg-[#262626] border border-[#393939] rounded-none">
-					<Package class="h-8 w-8 text-[#8d8d8d] mx-auto mb-2" />
+				<div class="rounded-none border border-[#393939] bg-[#262626] p-8 text-center">
+					<Package class="mx-auto mb-2 h-8 w-8 text-[#8d8d8d]" />
 					<p class="text-sm font-semibold text-[#f4f4f4]">No favorite modpacks yet</p>
-					<p class="text-xs text-[#a8a8a8] mt-1">
+					<p class="mt-1 text-xs text-[#a8a8a8]">
 						Visit the Modpacks directory to search and favorite packs to use as presets.
 					</p>
 				</div>
@@ -1112,24 +1275,24 @@
 					<button
 						type="button"
 						onclick={() => selectModpack(modpack)}
-						class="w-full p-3.5 bg-[#262626] hover:bg-[#353535] border border-[#393939] text-left transition-colors flex items-start gap-3 rounded-none cursor-pointer"
+						class="flex w-full cursor-pointer items-start gap-3 rounded-none border border-[#393939] bg-[#262626] p-3.5 text-left transition-colors hover:bg-[#353535]"
 					>
 						{#if modpack.logoUrl}
 							<img
 								src={modpack.logoUrl}
 								alt={modpack.name}
-								class="h-12 w-12 object-cover border border-[#393939] rounded-none shrink-0"
+								class="h-12 w-12 shrink-0 rounded-none border border-[#393939] object-cover"
 							/>
 						{/if}
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-2">
-								<h4 class="font-semibold text-sm text-[#f4f4f4]">{modpack.name}</h4>
+								<h4 class="text-sm font-semibold text-[#f4f4f4]">{modpack.name}</h4>
 								<CarbonTag type="blue" size="sm">{modpack.indexer}</CarbonTag>
 							</div>
-							<p class="text-xs text-[#a8a8a8] line-clamp-2 mt-1">
+							<p class="mt-1 line-clamp-2 text-xs text-[#a8a8a8]">
 								{modpack.summary}
 							</p>
-							<div class="mt-2 flex items-center gap-2 text-[11px] font-mono text-[#78a9ff]">
+							<div class="mt-2 flex items-center gap-2 font-mono text-[11px] text-[#78a9ff]">
 								{#if parseJsonArray(modpack.gameVersions).length > 0}
 									<span>MC {parseJsonArray(modpack.gameVersions)[0]}</span>
 								{/if}

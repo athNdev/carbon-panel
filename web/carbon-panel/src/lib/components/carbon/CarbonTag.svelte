@@ -2,7 +2,17 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		type?: 'blue' | 'green' | 'red' | 'purple' | 'cyan' | 'teal' | 'magenta' | 'gray' | 'warm-gray' | 'cool-gray';
+		type?:
+			| 'blue'
+			| 'green'
+			| 'red'
+			| 'purple'
+			| 'cyan'
+			| 'teal'
+			| 'magenta'
+			| 'gray'
+			| 'warm-gray'
+			| 'cool-gray';
 		size?: 'sm' | 'md';
 		filter?: boolean;
 		pulse?: boolean;
@@ -40,13 +50,17 @@
 	};
 </script>
 
-<span class="inline-flex items-center gap-1 font-mono uppercase tracking-wider font-semibold rounded-none select-none transition-[color,background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-out-quart)] {pulse ? 'motion-pulse' : ''} {sizeClasses[size]} {typeClasses[type]} {className}">
+<span
+	class="inline-flex items-center gap-1 rounded-none font-mono font-semibold tracking-wider uppercase transition-[color,background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-out-quart)] select-none {pulse
+		? 'motion-pulse'
+		: ''} {sizeClasses[size]} {typeClasses[type]} {className}"
+>
 	{@render children?.()}
 	{#if filter}
 		<button
 			type="button"
 			onclick={onclose}
-			class="hover:opacity-75 focus:outline-none ml-1 cursor-pointer"
+			class="ml-1 cursor-pointer hover:opacity-75 focus:outline-none"
 			aria-label="Remove filter"
 		>
 			×

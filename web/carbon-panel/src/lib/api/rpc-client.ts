@@ -16,7 +16,8 @@ let loggingOut = false;
 // SERVICES
 import { AuthService } from '$lib/proto/carbonpanel/v1/auth_pb';
 import { ActivityService } from '$lib/proto/carbonpanel/v1/activity_pb';
-import { BackupService } from '$lib/proto/carbonpanel/v1/backup_pb';import { ConfigService } from '$lib/proto/carbonpanel/v1/config_pb';
+import { BackupService } from '$lib/proto/carbonpanel/v1/backup_pb';
+import { ConfigService } from '$lib/proto/carbonpanel/v1/config_pb';
 import { FileService } from '$lib/proto/carbonpanel/v1/file_pb';
 import { MinecraftService } from '$lib/proto/carbonpanel/v1/minecraft_pb';
 import { ModService } from '$lib/proto/carbonpanel/v1/mod_pb';
