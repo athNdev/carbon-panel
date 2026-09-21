@@ -1,0 +1,120 @@
+# Carbon Cloud local development stack: Postgres + controld + noded + console.
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+#
+# Notes:
+# - All credentials are obvious fakes (see .env.example). No host networking,
+#   named volumes only.
+# - controld/noded images build from cloud/deploy/docker/Dockerfile.*. Those
+#   Dockerfiles target cloud/cmd/cloudcontrold and cloud/cmd/cloudnoded, which
+#   land in wave 3 — `docker compose build` for those two services fails until
+#   then. postgres + console validate today via `docker compose config`.
+# - Healthchecks assume the wave-3 surfaces: GET /healthz on controld/noded.
+#   The final images are distroless (no shell), so checks exec the binary's
+#   `healthcheck` subcommand, which w3-apiserver/w3-noded provide.
+
+name: carbon-cloud
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-carbon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme-fake-local-only}
+      POSTGRES_DB: ${POSTGRES_DB:-carboncloud}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-carbon} -d $${POSTGRES_DB:-carboncloud}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - cloud
+
+  controld:
+    build:
+      context: ../../..
+      dockerfile: cloud/deploy/docker/Dockerfile.cloudcontrold
+    image: carbon-cloud-controld:dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      CARBONCLOUD_DATABASE_URL: ${CARBONCLOUD_DATABASE_URL:-postgres://carbon:changeme-fake-local-only@postgres:5432/carboncloud?sslmode=disable}
+      CARBONCLOUD_CLERK_ISSUER: ${CARBONCLOUD_CLERK_ISSUER:-}
+      CARBONCLOUD_CLERK_WEBHOOK_SECRET: ${CARBONCLOUD_CLERK_WEBHOOK_SECRET:-}
+      CARBONCLOUD_NODE_JOIN_TOKEN_SECRET: ${CARBONCLOUD_NODE_JOIN_TOKEN_SECRET:-changeme-fake-local-only}
+    volumes:
+      - controld-data:/data
+      - ../../docker/controld.dev.yaml:/etc/carbon-cloud/controld.yaml:ro
+    healthcheck:
+      # Exec-form: the distroless image has no shell. Requires the wave-3
+      # `healthcheck` subcommand on cloudcontrold.
+      test: ["CMD", "/cloudcontrold", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+    networks:
+      - cloud
+
+  noded:
+    build:
+      context: ../../..
+      dockerfile: cloud/deploy/docker/Dockerfile.cloudnoded
+    image: carbon-cloud-noded:dev
+    restart: unless-stopped
+    depends_on:
+      controld:
+        condition: service_started
+    ports:
+      - "8090:8090"
+    environment:
+      CLOUD_CONTROL_PLANE_URL: ${CLOUD_CONTROL_PLANE_URL:-http://controld:8080}
+      CLOUD_JOIN_TOKEN: ${CLOUD_JOIN_TOKEN:-CHANGEME-fake-local-only}
+    volumes:
+      - noded-data:/data
+      - ../../docker/noded.dev.yaml:/etc/carbon-cloud/noded.yaml:ro
+    healthcheck:
+      # Exec-form: distroless image has no shell. Requires the wave-3
+      # `healthcheck` subcommand on cloudnoded.
+      test: ["CMD", "/cloudnoded", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+    networks:
+      - cloud
+
+  console:
+    # Built from cloud/web/cloud-console; its Dockerfile lands with w3-console.
+    build:
+      context: ../../web/cloud-console
+    image: carbon-cloud-console:dev
+    restart: unless-stopped
+    depends_on:
+      controld:
+        condition: service_started
+    ports:
+      - "4173:4173"
+    environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8080}
+    networks:
+      - cloud
+
+volumes:
+  pgdata:
+  controld-data:
+  noded-data:
+
+networks:
+  cloud:
+    driver: bridge

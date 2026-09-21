@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "carbon-cloud.fullname" . }}-controld
+  labels:
+    {{- include "carbon-cloud.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controld
+spec:
+  type: {{ .Values.controld.service.type }}
+  ports:
+    - port: {{ .Values.controld.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/component: controld
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "carbon-cloud.fullname" . }}-noded
+  labels:
+    {{- include "carbon-cloud.labels" . | nindent 4 }}
+    app.kubernetes.io/component: noded
+spec:
+  type: {{ .Values.noded.service.type }}
+  ports:
+    - port: {{ .Values.noded.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/component: noded

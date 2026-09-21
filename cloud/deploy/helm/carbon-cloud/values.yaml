@@ -1,0 +1,59 @@
+# Default values for carbon-cloud. No secrets here: credentials arrive via
+# an externally-managed Secret referenced by global.existingSecret (see
+# templates/secret.yaml for the optional placeholder path).
+global:
+  existingSecret: carbon-cloud-secrets
+
+controld:
+  replicaCount: 1
+  image:
+    repository: athndev/carbon-cloud-controld
+    tag: dev
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources: {}
+  config: {}
+  # Extra env entries, e.g. [{name: FOO, valueFrom: {...}}]. No literals.
+  extraEnv: []
+
+noded:
+  replicaCount: 1
+  image:
+    repository: athndev/carbon-cloud-noded
+    tag: dev
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8090
+  resources: {}
+  controlPlaneURL: http://carbon-cloud-controld:8080
+  extraEnv: []
+
+postgres:
+  # Embedded postgres is OFF by default; point at a managed instance.
+  enabled: false
+  host: postgres
+  port: 5432
+  database: carboncloud
+
+ingress:
+  enabled: false
+  className: ""
+  hosts:
+    - host: cloud.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+secrets:
+  # When true, renders a placeholder Secret with obvious CHANGEME fakes for
+  # local/dev clusters only. Production must use an external secret manager
+  # and leave this false.
+  create: false
+
+serviceAccount:
+  create: true
+  name: ""
