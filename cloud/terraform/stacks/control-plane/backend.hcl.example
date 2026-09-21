@@ -1,0 +1,6 @@
+# Copy to backend.hcl and fill in. State for THIS stack lives in an
+# S3-compatible bucket; per-node workspace state uses var.state_bucket.
+bucket  = "carbon-cloud-tfstate-prod"
+key     = "stacks/control-plane/terraform.tfstate"
+region  = "eu-central-1"
+encrypt = true
