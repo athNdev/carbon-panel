@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -131,6 +133,9 @@ func (s *NodeService) CreateNode(ctx context.Context, req *connect.Request[v1.Cr
 	if msg.Host == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("node host is required"))
 	}
+	if err := validateNodeHost(msg.Host); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
 	node := &storage.Node{
 		Name:          msg.Name,
@@ -181,6 +186,9 @@ func (s *NodeService) UpdateNode(ctx context.Context, req *connect.Request[v1.Up
 		node.Name = *msg.Name
 	}
 	if msg.Host != nil && *msg.Host != node.Host {
+		if err := validateNodeHost(*msg.Host); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		node.Host = *msg.Host
 		hostOrTLSChanged = true
 	}
@@ -299,4 +307,89 @@ func (s *NodeService) PingNode(ctx context.Context, req *connect.Request[v1.Ping
 		Status:    v1.NodeStatus_NODE_STATUS_ONLINE,
 		LatencyMs: latency,
 	}), nil
+}
+
+// validateNodeHost rejects Docker daemon endpoints that would make the panel
+// connect to an unintended target. Docker hosts are unix sockets, tcp://, or
+// ssh://; loopback and RFC1918 addresses are legitimate (local socket and
+// homelab nodes) but link-local/metadata and unspecified addresses are not.
+func validateNodeHost(host string) error {
+	allowedSchemes := []string{"unix", "tcp", "http", "https", "ssh", "npipe"}
+	scheme := ""
+	rest := host
+	if idx := strings.Index(host, "://"); idx != -1 {
+		scheme = strings.ToLower(host[:idx])
+		rest = host[idx+3:]
+	}
+
+	switch scheme {
+	case "unix", "npipe":
+		if rest == "" {
+			return fmt.Errorf("node host %q is missing a socket path", host)
+		}
+		return nil
+	case "tcp", "http", "https", "ssh":
+		// fall through to address validation below
+	default:
+		if scheme == "" {
+			return fmt.Errorf("node host %q is missing a scheme (expected one of %s)", host, strings.Join(allowedSchemes, ", "))
+		}
+		return fmt.Errorf("node host scheme %q is not allowed (expected one of %s)", scheme, strings.Join(allowedSchemes, ", "))
+	}
+
+	// Strip optional credentials (ssh://user@host).
+	if at := strings.LastIndex(rest, "@"); at != -1 {
+		rest = rest[at+1:]
+	}
+	// Strip a trailing path (tcp://host:2375/foo).
+	if slash := strings.IndexAny(rest, "/?"); slash != -1 {
+		rest = rest[:slash]
+	}
+
+	hostname := rest
+	if h, _, err := net.SplitHostPort(rest); err == nil {
+		hostname = h
+	}
+	hostname = strings.Trim(hostname, "[]")
+	if hostname == "" {
+		return fmt.Errorf("node host %q has no address", host)
+	}
+
+	if ip := net.ParseIP(hostname); ip != nil {
+		if err := validateNodeIP(ip); err != nil {
+			return fmt.Errorf("node host %q is not allowed: %w", host, err)
+		}
+		return nil
+	}
+
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return fmt.Errorf("node host %q cannot be resolved: %w", host, err)
+	}
+	for _, ip := range ips {
+		if err := validateNodeIP(ip); err != nil {
+			return fmt.Errorf("node host %q resolves to a disallowed address: %w", host, err)
+		}
+	}
+	return nil
+}
+
+// validateNodeIP allows loopback (a locally exposed Docker daemon) and RFC1918
+// (homelab nodes) while refusing link-local/metadata, unspecified and multicast
+// addresses. utils.ValidateIP is stricter than Docker nodes need (it always
+// refuses loopback), so the policy lives here.
+func validateNodeIP(ip net.IP) error {
+	if ip == nil {
+		return errors.New("invalid IP address")
+	}
+	if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return fmt.Errorf("link-local address %s is prohibited", ip)
+	}
+	if ip.IsUnspecified() {
+		return fmt.Errorf("unspecified address %s is prohibited", ip)
+	}
+	if ip.IsMulticast() {
+		return fmt.Errorf("multicast address %s is prohibited", ip)
+	}
+	return nil
 }
