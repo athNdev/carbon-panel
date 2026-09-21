@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -31,17 +32,24 @@ type AuthService struct {
 	enforcer    *rbac.Enforcer
 	oidcHandler *auth.OIDCHandler
 	log         *logger.Logger
-	throttle    *auth.LoginThrottle
+
+	// userThrottle keys on the attempted username (tight ceiling: targeted
+	// guessing). ipThrottle keys on the client IP with a looser ceiling, so a
+	// spray from one address cannot lock out every user sharing a NAT or the
+	// reverse proxy.
+	userThrottle *auth.LoginThrottle
+	ipThrottle   *auth.LoginThrottle
 }
 
 func NewAuthService(store *storage.Store, authManager *auth.Manager, enforcer *rbac.Enforcer, oidcHandler *auth.OIDCHandler, log *logger.Logger) *AuthService {
 	return &AuthService{
-		store:       store,
-		authManager: authManager,
-		enforcer:    enforcer,
-		oidcHandler: oidcHandler,
-		log:         log,
-		throttle:    auth.NewLoginThrottle(),
+		store:        store,
+		authManager:  authManager,
+		enforcer:     enforcer,
+		oidcHandler:  oidcHandler,
+		log:          log,
+		userThrottle: auth.NewLoginThrottleWithLimits(5, 5*time.Minute, 15*time.Minute),
+		ipThrottle:   auth.NewLoginThrottleWithLimits(30, 5*time.Minute, 15*time.Minute),
 	}
 }
 
@@ -70,13 +78,14 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username and password are required"))
 	}
 
-	// Throttle online password guessing per client IP and per username.
-	ipKey := "ip:" + clientIP(req.Peer().Addr)
+	// Throttle online password guessing: tight per-username, looser per-IP.
+	ipKey := "ip:" + realClientIP(req.Header(), req.Peer().Addr)
 	userKey := "user:" + strings.ToLower(msg.Username)
-	for _, key := range []string{ipKey, userKey} {
-		if allowed, retryAfter := s.throttle.Allow(key); !allowed {
-			return nil, throttledError(retryAfter)
-		}
+	if allowed, retryAfter := s.userThrottle.Allow(userKey); !allowed {
+		return nil, throttledError(retryAfter)
+	}
+	if allowed, retryAfter := s.ipThrottle.Allow(ipKey); !allowed {
+		return nil, throttledError(retryAfter)
 	}
 
 	user, roles, token, expiresAt, err := s.authManager.Login(ctx, msg.Username, msg.Password)
@@ -84,8 +93,8 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		if errors.Is(err, auth.ErrInvalidCredentials) || errors.Is(err, auth.ErrUserNotActive) {
 			// Record the failure against both keys before answering, so a
 			// single attacker cannot rotate usernames or source ports for free.
-			s.throttle.Failure(ipKey)
-			s.throttle.Failure(userKey)
+			s.userThrottle.Failure(userKey)
+			s.ipThrottle.Failure(ipKey)
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 		}
 		if errors.Is(err, auth.ErrLocalAuthDisabled) {
@@ -95,8 +104,8 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, connect.NewError(connect.CodeInternal, errors.New("login failed"))
 	}
 
-	s.throttle.Reset(ipKey)
-	s.throttle.Reset(userKey)
+	s.userThrottle.Reset(userKey)
+	s.ipThrottle.Reset(ipKey)
 
 	// Audit trail (MINE-141): never break login on audit failure.
 	if aerr := activity.Log(s.store.DB(), activity.Entry{
@@ -120,6 +129,25 @@ func clientIP(peerAddr string) string {
 		return host
 	}
 	return peerAddr
+}
+
+// realClientIP resolves the client address for throttling. When the direct peer
+// is a trusted (loopback or private) proxy it honours X-Forwarded-For /
+// X-Real-IP, otherwise it uses the peer address. A LAN client can therefore
+// spoof the IP key, but the per-username limiter still applies.
+func realClientIP(hdr http.Header, peerAddr string) string {
+	peer := clientIP(peerAddr)
+	if ip := net.ParseIP(peer); ip != nil && (ip.IsLoopback() || ip.IsPrivate()) {
+		if xff := hdr.Get("X-Forwarded-For"); xff != "" {
+			if first := strings.TrimSpace(strings.Split(xff, ",")[0]); first != "" {
+				return first
+			}
+		}
+		if xri := strings.TrimSpace(hdr.Get("X-Real-IP")); xri != "" {
+			return xri
+		}
+	}
+	return peer
 }
 
 // throttledError builds a resource_exhausted error and advertises the retry
