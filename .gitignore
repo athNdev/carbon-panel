@@ -442,3 +442,10 @@ result
 # carbon-panel Tier 0 (qmd) — index artifacts are local-only, sync via scripts/memory-sync.sh
 .qmd/index.sqlite
 .qmd/*.sqlite*
+
+# Secret / key material. The local OIDC dev stack generates its cert with
+# oidc/authelia/gen-dev-tls.sh; never commit a private key.
+*.key
+*.pem
+*.p12
+*.pfx
