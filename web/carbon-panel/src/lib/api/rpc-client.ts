@@ -36,6 +36,18 @@ const SILENT_HEADER = 'X-Silent-Request';
 
 export const silentCallOptions = { headers: new Headers({ [SILENT_HEADER]: 'true' }) };
 
+/**
+ * True when the RPC interceptor already showed a toast for this error.
+ * Callers with their own failure UI should check this to avoid a duplicate.
+ */
+export function wasRpcErrorToasted(error: unknown): boolean {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		(error as { __rpcToasted?: boolean }).__rpcToasted === true
+	);
+}
+
 // Login auth interception
 const authInterceptor: Interceptor = (next) => async (req) => {
 	// Auth headers
@@ -77,6 +89,11 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 		if (!isSilent && !onLoginPage) {
 			const message = error instanceof Error ? error.message : 'An error occurred';
 			toast.error(message);
+			// Tag the error so a caller that also reports failures does not show
+			// the same problem twice.
+			if (typeof error === 'object' && error !== null) {
+				(error as { __rpcToasted?: boolean }).__rpcToasted = true;
+			}
 		}
 		throw error;
 	} finally {

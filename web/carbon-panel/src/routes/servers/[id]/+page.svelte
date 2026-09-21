@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
-	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
+	import { rpcClient, silentCallOptions, wasRpcErrorToasted } from '$lib/api/rpc-client';
 	import { serversStore } from '$lib/stores/servers';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -111,15 +111,34 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 			const request = create(GetServerRequestSchema, { id: requestedId });
 			const callOptions = skipLoading ? silentCallOptions : undefined;
 			const response = await rpcClient.server.getServer(request, callOptions);
-			if (response.server && serverId === requestedId) {
+			if (serverId !== requestedId) return;
+
+			if (response.server) {
 				server = response.server;
 				serversStore.updateServer(server);
 				loading = false;
-			}
-		} catch {
-			if (serverId === requestedId && !server) {
-				toast.error('Failed to load server');
+			} else {
+				// A successful call with no server means it was deleted or moved;
+				// stop the spinner instead of leaving the page loading forever.
 				loading = false;
+				if (!skipLoading) {
+					toast.error('Server not found');
+				}
+			}
+		} catch (error) {
+			if (serverId !== requestedId) return;
+
+			if (!server) {
+				// First load failed: stop the spinner and report (unless the RPC
+				// interceptor already toasted).
+				loading = false;
+				if (!wasRpcErrorToasted(error)) {
+					toast.error('Failed to load server');
+				}
+			} else {
+				// Background poll failure while data is on screen: keep the last
+				// known values and log rather than spamming toasts every 5s.
+				console.debug('Server status poll failed:', error);
 			}
 		}
 	}
