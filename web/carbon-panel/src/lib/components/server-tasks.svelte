@@ -1161,8 +1161,9 @@ one at https://mozilla.org/MPL/2.0/.
 											<Select.Item value={TaskType.WEBHOOK.toString()} label="Webhook"
 												>Webhook</Select.Item
 											>
-											<Select.Item value={TaskType.MODPACK_UPDATE.toString()} label="Modpack Auto-Update"
-												>Modpack Auto-Update</Select.Item
+											<Select.Item
+												value={TaskType.MODPACK_UPDATE.toString()}
+												label="Modpack Auto-Update">Modpack Auto-Update</Select.Item
 											>
 										</Select.Content>
 									</Select.Root>
@@ -1363,7 +1364,9 @@ one at https://mozilla.org/MPL/2.0/.
 											<div class="space-y-1">
 												<span class="font-medium">Restart Immediately on Update</span>
 												<p class="text-sm text-muted-foreground">
-													If enabled, automatically restarts the Minecraft server whenever new commits are pulled. If disabled, new files are synced and restart is deferred to scheduled maintenance.
+													If enabled, automatically restarts the Minecraft server whenever new
+													commits are pulled. If disabled, new files are synced and restart is
+													deferred to scheduled maintenance.
 												</p>
 											</div>
 										</label>
