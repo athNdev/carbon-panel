@@ -26,11 +26,13 @@ one at https://mozilla.org/MPL/2.0/.
 	let showSearch = $state(false);
 </script>
 
-<div class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-3 py-1.5 font-sans">
+<div
+	class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-3 py-1.5 font-sans"
+>
 	<div class="flex items-center gap-1">
 		<button
 			type="button"
-			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
+			class="flex h-7 cursor-pointer items-center gap-1 rounded-none px-2 text-xs text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 			onclick={onNewFile}
 			title="New File"
 			aria-label="New File"
@@ -40,7 +42,7 @@ one at https://mozilla.org/MPL/2.0/.
 		</button>
 		<button
 			type="button"
-			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
+			class="flex h-7 cursor-pointer items-center gap-1 rounded-none px-2 text-xs text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 			onclick={onNewFolder}
 			title="New Folder"
 			aria-label="New Folder"
@@ -50,7 +52,7 @@ one at https://mozilla.org/MPL/2.0/.
 		</button>
 		<button
 			type="button"
-			class="h-7 px-2 flex items-center gap-1 text-xs text-[#c6c6c6] hover:text-white hover:bg-[#353535] transition-colors rounded-none cursor-pointer"
+			class="flex h-7 cursor-pointer items-center gap-1 rounded-none px-2 text-xs text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 			onclick={onUpload}
 			title="Upload Files"
 			aria-label="Upload Files"
@@ -64,7 +66,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{#if showSearch}
 			<div class="flex items-center gap-1">
 				<input
-					class="h-7 w-48 px-2 bg-[#161616] border border-[#525252] focus:border-[#0f62fe] focus:outline-none text-xs text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none font-sans"
+					class="h-7 w-48 rounded-none border border-[#525252] bg-[#161616] px-2 font-sans text-xs text-[#f4f4f4] placeholder-[#6f6f6f] focus:border-[#0f62fe] focus:outline-none"
 					placeholder="Search files..."
 					value={filterText}
 					oninput={(e) => onFilterChange((e.target as HTMLInputElement).value)}
@@ -74,7 +76,7 @@ one at https://mozilla.org/MPL/2.0/.
 					type="button"
 					title="Close search"
 					aria-label="Close search"
-					class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
+					class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 					onclick={() => {
 						showSearch = false;
 						onFilterChange('');
@@ -86,7 +88,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{:else}
 			<button
 				type="button"
-				class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
+				class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				onclick={() => (showSearch = true)}
 				title="Filter / Search"
 				aria-label="Filter / Search"
@@ -96,7 +98,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{/if}
 		<button
 			type="button"
-			class="h-7 w-7 flex items-center justify-center text-[#c6c6c6] hover:text-white hover:bg-[#353535] rounded-none transition-colors cursor-pointer"
+			class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 			onclick={onRefresh}
 			title="Refresh tree"
 			aria-label="Refresh tree"
