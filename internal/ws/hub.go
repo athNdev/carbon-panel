@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/command"
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -15,6 +14,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -274,8 +274,15 @@ func (c *Client) handleAuth(msg *v1.AuthMessage) {
 		return
 	}
 
-	// If no auth providers are enabled, bypass auth entirely - grant full admin access
+	// If no auth providers are enabled the panel is running without
+	// authentication. That is only permitted when the operator explicitly
+	// opted in (auth.allow_no_auth); otherwise fail closed rather than grant
+	// every client admin.
 	if !c.hub.authManager.IsAnyAuthEnabled() {
+		if !c.hub.authManager.NoAuthAllowed() {
+			c.sendAuthFail("no authentication provider is enabled")
+			return
+		}
 		c.user = &auth.AuthenticatedUser{
 			ID:       "admin",
 			Username: "admin",
@@ -332,13 +339,15 @@ func (c *Client) handleSubscribe(msg *v1.SubscribeMessage) {
 		return
 	}
 
-	// Check permission
-	if c.hub.enforcer != nil && c.user != nil {
-		allowed, err := c.hub.enforcer.Enforce(c.user.Roles, rbac.ResourceServers, rbac.ActionRead, msg.ServerId)
-		if err != nil || !allowed {
-			c.sendError("permission denied")
-			return
-		}
+	// Check permission. Fail closed when the enforcer is unavailable rather
+	// than skipping the check (the RPC interceptor denies in the same case).
+	if c.hub.enforcer == nil || c.user == nil {
+		c.sendError("permission denied")
+		return
+	}
+	if allowed, err := c.hub.enforcer.Enforce(c.user.Roles, rbac.ResourceServers, rbac.ActionRead, msg.ServerId); err != nil || !allowed {
+		c.sendError("permission denied")
+		return
 	}
 
 	// Get server to find container ID
@@ -433,13 +442,14 @@ func (c *Client) handleCommand(msg *v1.CommandMessage) {
 		silent = *msg.Silent
 	}
 
-	// Check command permission
-	if c.hub.enforcer != nil && c.user != nil {
-		allowed, err := c.hub.enforcer.Enforce(c.user.Roles, rbac.ResourceServers, rbac.ActionCommand, msg.ServerId)
-		if err != nil || !allowed {
-			c.sendCommandResult(msg.ServerId, false, "", "permission denied")
-			return
-		}
+	// Check command permission. Fail closed when the enforcer is unavailable.
+	if c.hub.enforcer == nil || c.user == nil {
+		c.sendCommandResult(msg.ServerId, false, "", "permission denied")
+		return
+	}
+	if allowed, err := c.hub.enforcer.Enforce(c.user.Roles, rbac.ResourceServers, rbac.ActionCommand, msg.ServerId); err != nil || !allowed {
+		c.sendCommandResult(msg.ServerId, false, "", "permission denied")
+		return
 	}
 
 	ctx := context.Background()

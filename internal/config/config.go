@@ -31,6 +31,10 @@ type AuthConfig struct {
 	JWTSecret       string      `mapstructure:"jwt_secret" json:"jwt_secret"`
 	OIDC            OIDCConfig  `mapstructure:"oidc" json:"oidc"`
 	Local           LocalConfig `mapstructure:"local" json:"local"`
+	// AllowNoAuth permits running the panel with neither local auth nor OIDC
+	// enabled. When false (default) every request is rejected instead of
+	// being granted admin, and startup fails with a clear error.
+	AllowNoAuth bool `mapstructure:"allow_no_auth" json:"allow_no_auth"`
 }
 
 type OIDCConfig struct {
@@ -66,11 +70,11 @@ type ServerConfig struct {
 }
 
 type DockerConfig struct {
-	SyncInterval int               `mapstructure:"sync_interval" json:"sync_interval"`
-	Host         string            `mapstructure:"host" json:"host"`
-	Version      string            `mapstructure:"version" json:"version"`
-	NetworkName  string            `mapstructure:"network_name" json:"network_name"`
-	RegistryURL  string            `mapstructure:"registry_url" json:"registry_url"`
+	SyncInterval    int               `mapstructure:"sync_interval" json:"sync_interval"`
+	Host            string            `mapstructure:"host" json:"host"`
+	Version         string            `mapstructure:"version" json:"version"`
+	NetworkName     string            `mapstructure:"network_name" json:"network_name"`
+	RegistryURL     string            `mapstructure:"registry_url" json:"registry_url"`
 	DNS             string            `mapstructure:"dns" json:"dns"`
 	Labels          map[string]string `mapstructure:"labels" json:"labels"`
 	EnableRateLimit bool              `mapstructure:"enable_rate_limit" json:"enable_rate_limit"`
@@ -282,6 +286,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("auth.oidc.required_values", []string{})
 	v.SetDefault("auth.local.enabled", true)
 	v.SetDefault("auth.local.allow_registration", false)
+	v.SetDefault("auth.allow_no_auth", false)
 
 	// Upload defaults
 	v.SetDefault("upload.session_ttl", 240)                // 4 hours (in minutes)

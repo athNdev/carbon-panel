@@ -6,12 +6,12 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/athNdev/carbon-panel/internal/config"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/utils"
+	"github.com/glebarez/sqlite"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
-	"github.com/athNdev/carbon-panel/internal/config"
-	"github.com/athNdev/carbon-panel/pkg/utils"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -939,6 +939,17 @@ func (s *Store) DeleteSession(ctx context.Context, token string) error {
 	return s.db.WithContext(ctx).Where("token = ?", token).Delete(&Session{}).Error
 }
 
+// DeleteUserSessionsExcept removes every stored session for userID, keeping the
+// session identified by exceptToken when it is non-empty. Used after a password
+// change so other sessions cannot outlive the credential rotation.
+func (s *Store) DeleteUserSessionsExcept(ctx context.Context, userID, exceptToken string) error {
+	q := s.db.WithContext(ctx).Where("user_id = ?", userID)
+	if exceptToken != "" {
+		q = q.Where("token <> ?", exceptToken)
+	}
+	return q.Delete(&Session{}).Error
+}
+
 func (s *Store) CleanExpiredSessions(ctx context.Context) error {
 	return s.db.WithContext(ctx).Where("expires_at < ?", time.Now()).Delete(&Session{}).Error
 }
@@ -1091,7 +1102,7 @@ func (s *Store) GetScheduledTask(ctx context.Context, id string) (*ScheduledTask
 	err := s.db.WithContext(ctx).First(&task, "id = ?", id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("scheduled task not found")
+			return nil, ErrScheduledTaskNotFound
 		}
 		return nil, err
 	}

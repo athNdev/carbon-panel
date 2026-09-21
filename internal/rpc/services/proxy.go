@@ -682,4 +682,3 @@ func (s *ProxyService) SyncVelocitySecretToServer(ctx context.Context, req *conn
 		Message:     fmt.Sprintf("Successfully synced Velocity secret to %s", updatedFile),
 	}), nil
 }
-
