@@ -74,30 +74,30 @@ const (
 )
 
 type Server struct {
-	ID              string               `json:"id" gorm:"primaryKey"`
-	Name            string               `json:"name" gorm:"not null"`
-	Description     string               `json:"description"`
-	ModLoader       ModLoader            `json:"mod_loader" gorm:"not null"`
-	MCVersion       string               `json:"mc_version" gorm:"not null;column:mc_version"`
-	NodeID          string               `json:"node_id" gorm:"column:node_id;default:'default'"`
-	ContainerID     string               `json:"container_id" gorm:"column:container_id"`
-	Status          ServerStatus         `json:"status" gorm:"not null"`
-	Port            int                  `json:"port"`
-	ProxyPort       int                  `json:"proxy_port" gorm:"column:proxy_port"`
-	ProxyHostname   string               `json:"proxy_hostname" gorm:"column:proxy_hostname;uniqueIndex:idx_proxy_hostname_listener,where:proxy_hostname != ''"`
-	ProxyListenerID string               `json:"proxy_listener_id" gorm:"column:proxy_listener_id;uniqueIndex:idx_proxy_hostname_listener,where:proxy_listener_id != ''"` // Which listener this server uses
-	MaxPlayers      int                  `json:"max_players" gorm:"default:20;column:max_players"`
-	Memory          int                  `json:"memory" gorm:"default:4096"` // in MB (allocated) - IMPORTANT: This applies to the container's memory allocation first, then used to calc the JVM min/max for mc server proc inside w/ overhead
-	CreatedAt       time.Time            `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time            `json:"updated_at" gorm:"autoUpdateTime"`
-	LastStarted     *time.Time           `json:"last_started" gorm:"column:last_started"`
-	JavaVersion     string               `json:"java_version" gorm:"column:java_version"`
-	DockerImage     string               `json:"docker_image" gorm:"column:docker_image"`
-	DataPath        string               `json:"data_path" gorm:"not null;column:data_path"`
-	Detached        bool                 `json:"detached" gorm:"default:false;column:detached"`                             // Detach server container from Carbon Panel lifecycle (default: false)
-	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when Carbon Panel starts (default: false)
-	AutoHibernate   bool                 `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`                 // Sleep/wake container on idle via cgroup freezer (MINE-18)
-	IdleTimeoutMinutes int               `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"`       // Minutes idle before auto-hibernating
+	ID                 string       `json:"id" gorm:"primaryKey"`
+	Name               string       `json:"name" gorm:"not null"`
+	Description        string       `json:"description"`
+	ModLoader          ModLoader    `json:"mod_loader" gorm:"not null"`
+	MCVersion          string       `json:"mc_version" gorm:"not null;column:mc_version"`
+	NodeID             string       `json:"node_id" gorm:"column:node_id;default:'default'"`
+	ContainerID        string       `json:"container_id" gorm:"column:container_id"`
+	Status             ServerStatus `json:"status" gorm:"not null"`
+	Port               int          `json:"port"`
+	ProxyPort          int          `json:"proxy_port" gorm:"column:proxy_port"`
+	ProxyHostname      string       `json:"proxy_hostname" gorm:"column:proxy_hostname;uniqueIndex:idx_proxy_hostname_listener,where:proxy_hostname != ''"`
+	ProxyListenerID    string       `json:"proxy_listener_id" gorm:"column:proxy_listener_id;uniqueIndex:idx_proxy_hostname_listener,where:proxy_listener_id != ''"` // Which listener this server uses
+	MaxPlayers         int          `json:"max_players" gorm:"default:20;column:max_players"`
+	Memory             int          `json:"memory" gorm:"default:4096"` // in MB (allocated) - IMPORTANT: This applies to the container's memory allocation first, then used to calc the JVM min/max for mc server proc inside w/ overhead
+	CreatedAt          time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt          time.Time    `json:"updated_at" gorm:"autoUpdateTime"`
+	LastStarted        *time.Time   `json:"last_started" gorm:"column:last_started"`
+	JavaVersion        string       `json:"java_version" gorm:"column:java_version"`
+	DockerImage        string       `json:"docker_image" gorm:"column:docker_image"`
+	DataPath           string       `json:"data_path" gorm:"not null;column:data_path"`
+	Detached           bool         `json:"detached" gorm:"default:false;column:detached"`                      // Detach server container from Carbon Panel lifecycle (default: false)
+	AutoStart          bool         `json:"auto_start" gorm:"default:false;column:auto_start"`                  // Start server when Carbon Panel starts (default: false)
+	AutoHibernate      bool         `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`          // Sleep/wake container on idle via cgroup freezer (MINE-18)
+	IdleTimeoutMinutes int          `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"` // Minutes idle before auto-hibernating
 
 	// Deep sleep: stop container on idle (zero RAM), boot on login via proxy (MINE-121).
 	AutoDeepSleep           bool `json:"auto_deep_sleep" gorm:"default:false;column:auto_deep_sleep"`
@@ -382,10 +382,10 @@ type ProxyConfig struct {
 
 // ProxyListener represents an individual proxy listening port configuration
 type ProxyListener struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	Port        int       `json:"port" gorm:"not null;uniqueIndex"`
-	Name        string    `json:"name"` // e.g., "Primary", "Secondary", "Development"
-	Description string    `json:"description"`
+	ID            string    `json:"id" gorm:"primaryKey"`
+	Port          int       `json:"port" gorm:"not null;uniqueIndex"`
+	Name          string    `json:"name"` // e.g., "Primary", "Secondary", "Development"
+	Description   string    `json:"description"`
 	Enabled       bool      `json:"enabled" gorm:"not null;default:true"`
 	IsDefault     bool      `json:"is_default" gorm:"not null;default:false"`
 	ProxyProtocol bool      `json:"proxy_protocol" gorm:"not null;default:false"`
@@ -525,11 +525,11 @@ type StagedConfigChange struct {
 type TaskType string
 
 const (
-	TaskTypeCommand TaskType = "command" // Execute an RCON command
-	TaskTypeBackup  TaskType = "backup"  // Create a backup
-	TaskTypeRestart TaskType = "restart" // Restart the server
-	TaskTypeStart   TaskType = "start"   // Start the server
-	TaskTypeStop    TaskType = "stop"    // Stop the server
+	TaskTypeCommand       TaskType = "command"        // Execute an RCON command
+	TaskTypeBackup        TaskType = "backup"         // Create a backup
+	TaskTypeRestart       TaskType = "restart"        // Restart the server
+	TaskTypeStart         TaskType = "start"          // Start the server
+	TaskTypeStop          TaskType = "stop"           // Stop the server
 	TaskTypeScript        TaskType = "script"         // Run a custom script
 	TaskTypeWebhook       TaskType = "webhook"        // Send an HTTP webhook
 	TaskTypeModpackUpdate TaskType = "modpack_update" // Periodically fetch and update modpack from Git/source
@@ -650,7 +650,7 @@ type BackupRecord struct {
 	SizeBytes int64  `json:"size_bytes" gorm:"column:size_bytes"`
 	SHA256    string `json:"sha256"`
 	Locked    bool   `json:"locked" gorm:"default:false"`
-	Status    string `json:"status" gorm:"default:complete"` // complete, restoring, failed
+	Status    string `json:"status" gorm:"default:complete"`      // complete, restoring, failed
 	RemoteKey string `json:"remote_key" gorm:"column:remote_key"` // S3 object key when offloaded (MINE-138)
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
