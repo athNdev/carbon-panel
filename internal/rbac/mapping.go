@@ -53,7 +53,7 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.ServerService/SendCommand":          {Resource: ResourceServers, Action: ActionCommand, ObjectIDField: "id"},
 	"/carbonpanel.v1.ServerService/UploadToMCLogs":       {Resource: ResourceServers, Action: ActionRead, ObjectIDField: "id"},
 	"/carbonpanel.v1.ServerService/MigrateServer":        {Resource: ResourceServers, Action: ActionUpdate, ObjectIDField: "id"},
-	"/carbonpanel.v1.ServerService/ListServerPlayers":  {Resource: ResourceServers, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.ServerService/ListServerPlayers":    {Resource: ResourceServers, Action: ActionRead, ObjectIDField: "server_id"},
 
 	// â”€â”€ AuthService (admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.AuthService/GetAuthConfig":      {Resource: ResourceSettings, Action: ActionRead},
@@ -148,16 +148,21 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.NodeService/PingNode":   {Resource: ResourceNodes, Action: ActionRead, ObjectIDField: "id"},
 
 	// â”€â”€ ProxyService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-	"/carbonpanel.v1.ProxyService/GetProxyRoutes":             {Resource: ResourceProxy, Action: ActionRead},
-	"/carbonpanel.v1.ProxyService/GetProxyStatus":             {Resource: ResourceProxy, Action: ActionRead},
-	"/carbonpanel.v1.ProxyService/UpdateProxyConfig":          {Resource: ResourceProxy, Action: ActionUpdate},
-	"/carbonpanel.v1.ProxyService/GetProxyListeners":          {Resource: ResourceProxy, Action: ActionRead},
-	"/carbonpanel.v1.ProxyService/CreateProxyListener":        {Resource: ResourceProxy, Action: ActionCreate},
-	"/carbonpanel.v1.ProxyService/UpdateProxyListener":        {Resource: ResourceProxy, Action: ActionUpdate, ObjectIDField: "id"},
-	"/carbonpanel.v1.ProxyService/DeleteProxyListener":        {Resource: ResourceProxy, Action: ActionDelete, ObjectIDField: "id"},
-	"/carbonpanel.v1.ProxyService/GetServerRouting":           {Resource: ResourceProxy, Action: ActionRead, ObjectIDField: "server_id"},
-	"/carbonpanel.v1.ProxyService/UpdateServerRouting":        {Resource: ResourceProxy, Action: ActionUpdate, ObjectIDField: "server_id"},
-	"/carbonpanel.v1.ProxyService/GetVelocitySecret":          {Resource: ResourceProxy, Action: ActionRead},
+	"/carbonpanel.v1.ProxyService/GetProxyRoutes":      {Resource: ResourceProxy, Action: ActionRead},
+	"/carbonpanel.v1.ProxyService/GetProxyStatus":      {Resource: ResourceProxy, Action: ActionRead},
+	"/carbonpanel.v1.ProxyService/UpdateProxyConfig":   {Resource: ResourceProxy, Action: ActionUpdate},
+	"/carbonpanel.v1.ProxyService/GetProxyListeners":   {Resource: ResourceProxy, Action: ActionRead},
+	"/carbonpanel.v1.ProxyService/CreateProxyListener": {Resource: ResourceProxy, Action: ActionCreate},
+	"/carbonpanel.v1.ProxyService/UpdateProxyListener": {Resource: ResourceProxy, Action: ActionUpdate, ObjectIDField: "id"},
+	"/carbonpanel.v1.ProxyService/DeleteProxyListener": {Resource: ResourceProxy, Action: ActionDelete, ObjectIDField: "id"},
+	"/carbonpanel.v1.ProxyService/GetServerRouting":    {Resource: ResourceProxy, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.ProxyService/UpdateServerRouting": {Resource: ResourceProxy, Action: ActionUpdate, ObjectIDField: "server_id"},
+	// GetVelocitySecret returns credential material (the modern-forwarding
+	// secret). It is deliberately gated on settings rather than proxy read:
+	// the default "user" and "anonymous" roles hold proxy read, and must not
+	// be able to retrieve a secret that lets them spoof player identity to
+	// backend servers.
+	"/carbonpanel.v1.ProxyService/GetVelocitySecret":          {Resource: ResourceSettings, Action: ActionRead},
 	"/carbonpanel.v1.ProxyService/RotateVelocitySecret":       {Resource: ResourceProxy, Action: ActionUpdate},
 	"/carbonpanel.v1.ProxyService/SyncVelocitySecretToServer": {Resource: ResourceProxy, Action: ActionUpdate, ObjectIDField: "server_id"},
 
@@ -188,9 +193,9 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.BlueprintService/GetBlueprint":   {Resource: ResourceServers, Action: ActionRead},
 
 	// ── BackupService ───────────────────────────────────────────────
-	"/carbonpanel.v1.BackupService/ListBackups":   {Resource: ResourceBackups, Action: ActionRead, ObjectIDField: "server_id"},
-	"/carbonpanel.v1.BackupService/DeleteBackup": {Resource: ResourceBackups, Action: ActionDelete},
-	"/carbonpanel.v1.BackupService/RestoreBackup": {Resource: ResourceBackups, Action: ActionUpdate},
+	"/carbonpanel.v1.BackupService/ListBackups":     {Resource: ResourceBackups, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.BackupService/DeleteBackup":    {Resource: ResourceBackups, Action: ActionDelete},
+	"/carbonpanel.v1.BackupService/RestoreBackup":   {Resource: ResourceBackups, Action: ActionUpdate},
 	"/carbonpanel.v1.BackupService/SetBackupLocked": {Resource: ResourceBackups, Action: ActionUpdate},
 
 	// â”€â”€ UserService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -64,7 +64,32 @@ m = g(r.sub, p.sub) && (p.res == "*" || r.res == p.res) && (p.act == "*" || r.ac
 
 // Ensures default roles have their base permissions
 func (e *Enforcer) SeedDefaultPolicies(anonymousEnabled bool) error {
-	policies := map[string][][]string{
+	policies := DefaultRolePolicies()
+
+	for role, rolePolicies := range policies {
+		existing, err := e.enforcer.GetFilteredPolicy(0, role)
+		if err != nil {
+			return err
+		}
+		if len(existing) > 0 {
+			continue
+		}
+
+		for _, p := range rolePolicies {
+			if _, err := e.enforcer.AddPolicy(p[0], p[1], p[2], p[3]); err != nil {
+				return err
+			}
+		}
+	}
+
+	return e.enforcer.SavePolicy()
+}
+
+// DefaultRolePolicies returns the built-in role policy sets (role, resource,
+// action, object). It is exported so tests can assert that a procedure's
+// required permission is not accidentally granted to a low-privilege role.
+func DefaultRolePolicies() map[string][][]string {
+	return map[string][][]string{
 		"admin": {
 			{"admin", "*", "*", "*"},
 		},
@@ -97,24 +122,6 @@ func (e *Enforcer) SeedDefaultPolicies(anonymousEnabled bool) error {
 			{"anonymous", ResourceActivity, ActionRead, "*"},
 		},
 	}
-
-	for role, rolePolicies := range policies {
-		existing, err := e.enforcer.GetFilteredPolicy(0, role)
-		if err != nil {
-			return err
-		}
-		if len(existing) > 0 {
-			continue
-		}
-
-		for _, p := range rolePolicies {
-			if _, err := e.enforcer.AddPolicy(p[0], p[1], p[2], p[3]); err != nil {
-				return err
-			}
-		}
-	}
-
-	return e.enforcer.SavePolicy()
 }
 
 // Enforce checks if any of the given roles allows the specified action on a
