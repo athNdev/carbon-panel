@@ -145,11 +145,11 @@ func TestCreateServer_BenignOverrides_AllowedWithoutElevatedPermission(t *testin
 	ctx := ctxWithRole("operator")
 
 	resp, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
-		Name:      "test-server-benign",
-		NodeId:    "test-node",
-		McVersion: "1.20.1",
+		Name:        "test-server-benign",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
 		DockerImage: "java21",
-		Port:      25567,
+		Port:        25567,
 		DockerOverrides: &v1.DockerOverrides{
 			PidsLimit:   1024,
 			CpusetCpus:  "0,1",
@@ -171,11 +171,11 @@ func TestCreateServer_NoOverrides_UnaffectedByPrivilegeCheck(t *testing.T) {
 	ctx := ctxWithRole("operator")
 
 	_, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
-		Name:      "plain-server",
-		NodeId:    "test-node",
-		McVersion: "1.20.1",
+		Name:        "plain-server",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
 		DockerImage: "java21",
-		Port:      25568,
+		Port:        25568,
 	}))
 	if err != nil {
 		t.Fatalf("expected CreateServer without DockerOverrides to succeed for ordinary operator, got %v", err)
@@ -187,11 +187,11 @@ func TestUpdateServer_PrivilegedOverrides_RejectedWithoutElevatedPermission(t *t
 	adminCtx := ctxWithRole("docker-admin")
 
 	created, err := svc.CreateServer(adminCtx, connect.NewRequest(&v1.CreateServerRequest{
-		Name:      "update-target",
-		NodeId:    "test-node",
-		McVersion: "1.20.1",
+		Name:        "update-target",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
 		DockerImage: "java21",
-		Port:      25569,
+		Port:        25569,
 	}))
 	if err != nil {
 		t.Fatalf("failed to create server fixture: %v", err)
@@ -219,11 +219,11 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 	adminCtx := ctxWithRole("docker-admin")
 
 	created, err := svc.CreateServer(adminCtx, connect.NewRequest(&v1.CreateServerRequest{
-		Name:      "update-target-2",
-		NodeId:    "test-node",
-		McVersion: "1.20.1",
+		Name:        "update-target-2",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
 		DockerImage: "java21",
-		Port:      25570,
+		Port:        25570,
 	}))
 	if err != nil {
 		t.Fatalf("failed to create server fixture: %v", err)
