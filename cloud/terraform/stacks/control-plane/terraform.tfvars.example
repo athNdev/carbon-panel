@@ -1,0 +1,25 @@
+environment                 = "prod"
+region                      = "eu-central-1"
+control_plane_url           = "https://cloud.example.com"
+control_plane_version       = "latest"
+control_plane_install_url   = "https://releases.example.com/cloudcontrold/latest/cloudcontrold-linux-amd64"
+control_plane_sha256        = ""
+
+control_plane_hosts = [
+  { host = "192.0.2.11" },
+]
+
+db_host     = "prod-db.example.com"
+db_port     = 5432
+db_name     = "carbon_cloud"
+db_user     = "carbon_cloud"
+db_password = "changeme-via-TF_VAR_db_password"
+
+state_bucket        = "carbon-cloud-tfstate-prod"
+state_bucket_region = "eu-central-1"
+
+allowed_ssh_cidr = "203.0.113.0/24"
+
+tags = {
+  managed-by = "tofu"
+}
