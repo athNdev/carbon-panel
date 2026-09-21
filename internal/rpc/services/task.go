@@ -13,6 +13,7 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/utils"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -673,6 +674,11 @@ func validateWebhookConfig(cfg string) error {
 	}
 	if wcfg.URL == "" {
 		return fmt.Errorf("webhook URL is required")
+	}
+	// Reject loopback / link-local / metadata targets at configuration time so
+	// the operator gets a clear error instead of a silent delivery failure.
+	if _, err := utils.ValidateURLStatic(wcfg.URL, true); err != nil {
+		return fmt.Errorf("invalid webhook URL: %w", err)
 	}
 	if wcfg.PayloadTemplate != "" {
 		if err := webhook.ValidateTemplate(wcfg.PayloadTemplate); err != nil {
