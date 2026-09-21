@@ -27,6 +27,11 @@ import (
 	"sync"
 	"time"
 
+	models "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/athNdev/carbon-panel/pkg/utils"
 	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -37,11 +42,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
-	models "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/athNdev/carbon-panel/internal/minecraft"
-	"github.com/athNdev/carbon-panel/pkg/utils"
-	"github.com/athNdev/carbon-panel/pkg/logger"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 const (
@@ -508,7 +508,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 
 		// Apply DOCKER-USER iptables proxy port isolation guard
 		if c.firewall != nil && server.Port > 0 {
-			_ = c.firewall.RemovePortRateLimiting(ctx, server.Port)
+			_ = c.firewall.RemovePortRateLimiting(ctx, server.Port, c.config.RateLimitPerMin, c.config.RateLimitBurst)
 			_ = c.firewall.ApplyProxyPortIsolation(ctx, server.Port)
 		}
 	}
