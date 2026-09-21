@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"sync"
 	"sync/atomic"
 
 	models "github.com/athNdev/carbon-panel/internal/db"
@@ -36,7 +35,6 @@ type PlacementStore interface {
 type PlacementEngine struct {
 	store PlacementStore
 	rrIdx uint64
-	mu    sync.Mutex
 }
 
 // NewPlacementEngine constructs a new PlacementEngine.
