@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// Provision is one Terraform workspace that turns a spec into a managed node.
+message Provision {
+  // Server-side provision id.
+  string id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Display name for the resulting node.
+  string name = 3;
+  // Infrastructure backend.
+  ProviderId provider = 4;
+  // Region the node is created in.
+  string region = 5;
+  // Node type being provisioned.
+  string node_type_id = 6;
+  // Lifecycle state.
+  ProvisionStatus status = 7;
+  // Opaque Terraform workspace key.
+  string workspace = 8;
+  // Terraform plan summary (adds/changes/destroys), absent until planned.
+  string plan_summary = 9;
+  // Human-readable plan diff, truncated for display.
+  string plan_diff = 10;
+  // Terraform outputs after apply, e.g. public_ip, node_id.
+  map<string, string> outputs = 11;
+  // Failure detail when status is FAILED.
+  string error = 12;
+  // Id of the node this provision created, once registered.
+  string node_id = 13;
+  // Who requested it.
+  string created_by = 14;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 15;
+  // Last modification time.
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+// ProvisionLogLine is one line of Terraform output.
+message ProvisionLogLine {
+  // Monotonic sequence number.
+  int64 sequence = 1;
+  // Line text with secrets redacted.
+  string line = 2;
+  // Whether the line went to stderr.
+  bool stderr = 3;
+}
+
+// ProvisionService drives Terraform provisioning of managed nodes.
+service ProvisionService {
+  // CreateProvision records a provisioning intent and renders its workspace.
+  rpc CreateProvision(CreateProvisionRequest) returns (CreateProvisionResponse);
+  // PlanProvision runs terraform init and plan for the workspace.
+  rpc PlanProvision(PlanProvisionRequest) returns (PlanProvisionResponse);
+  // ApplyProvision applies a successfully planned workspace.
+  rpc ApplyProvision(ApplyProvisionRequest) returns (ApplyProvisionResponse);
+  // DestroyProvision destroys the managed node's infrastructure.
+  rpc DestroyProvision(DestroyProvisionRequest) returns (DestroyProvisionResponse);
+  // GetProvision returns one provision.
+  rpc GetProvision(GetProvisionRequest) returns (GetProvisionResponse);
+  // ListProvisions lists provisions in the active org.
+  rpc ListProvisions(ListProvisionsRequest) returns (ListProvisionsResponse);
+  // StreamProvisionLogs streams terraform output as it is produced.
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc StreamProvisionLogs(StreamProvisionLogsRequest) returns (stream ProvisionLogLine);
+}
+
+// CreateProvisionRequest describes the managed node to create.
+message CreateProvisionRequest {
+  // Display name for the resulting node.
+  string name = 1;
+  // Infrastructure backend.
+  ProviderId provider = 2;
+  // Region to create the node in.
+  string region = 3;
+  // Node type to provision.
+  string node_type_id = 4;
+  // Optional extra provider variables; values are encrypted at rest.
+  map<string, string> provider_vars = 5;
+  // When true the provision stops after a successful plan.
+  bool plan_only = 6;
+}
+
+// CreateProvisionResponse returns the created provision.
+message CreateProvisionResponse {
+  // The created provision.
+  Provision provision = 1;
+}
+
+// PlanProvisionRequest plans a provision.
+message PlanProvisionRequest {
+  // Provision id.
+  string id = 1;
+}
+
+// PlanProvisionResponse returns the planned provision.
+message PlanProvisionResponse {
+  // The planned provision, including plan_summary and plan_diff.
+  Provision provision = 1;
+}
+
+// ApplyProvisionRequest applies a planned provision.
+message ApplyProvisionRequest {
+  // Provision id.
+  string id = 1;
+  // Must equal the provision's current plan hash; guards against applying a
+  // stale plan that the operator never reviewed.
+  string confirm_plan_hash = 2;
+}
+
+// ApplyProvisionResponse returns the applied provision.
+message ApplyProvisionResponse {
+  // The applied provision with outputs.
+  Provision provision = 1;
+}
+
+// DestroyProvisionRequest destroys a managed node.
+message DestroyProvisionRequest {
+  // Provision id.
+  string id = 1;
+  // Must equal the provision id; guards against accidental destruction.
+  string confirm_id = 2;
+}
+
+// DestroyProvisionResponse returns the destroyed provision.
+message DestroyProvisionResponse {
+  // The provision after destruction.
+  Provision provision = 1;
+}
+
+// GetProvisionRequest fetches one provision.
+message GetProvisionRequest {
+  // Provision id.
+  string id = 1;
+}
+
+// GetProvisionResponse returns one provision.
+message GetProvisionResponse {
+  // The requested provision.
+  Provision provision = 1;
+}
+
+// ListProvisionsRequest lists provisions.
+message ListProvisionsRequest {
+  // Optional status filter.
+  ProvisionStatus status = 1;
+  // Optional pagination.
+  PageRequest page = 2;
+}
+
+// ListProvisionsResponse lists provisions.
+message ListProvisionsResponse {
+  // Provisions in the active org.
+  repeated Provision provisions = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// StreamProvisionLogsRequest streams logs for a provision.
+message StreamProvisionLogsRequest {
+  // Provision id.
+  string id = 1;
+  // Resume after this sequence number; zero starts from the beginning.
+  int64 from_sequence = 2;
+}

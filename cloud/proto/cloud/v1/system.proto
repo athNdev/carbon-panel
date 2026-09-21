@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// Capability reports whether a feature is usable on this deployment and, when it
+// is not, exactly what is missing. Capabilities are how "API keys will be
+// provided later" stays honest instead of crashing.
+message Capability {
+  // Stable capability id, e.g. "clerk", "provisioning", "state.s3".
+  string id = 1;
+  // Whether the capability is fully configured and usable.
+  bool enabled = 2;
+  // Secret keys required to enable it (never their values).
+  repeated string required_keys = 3;
+  // Secret keys that are required but missing right now.
+  repeated string missing_keys = 4;
+  // Operator-facing explanation when disabled.
+  string detail = 5;
+}
+
+// BuildInfo identifies the running control-plane build.
+message BuildInfo {
+  // Semantic version, injected at build time.
+  string version = 1;
+  // Git commit, injected at build time.
+  string commit = 2;
+  // Build timestamp, RFC 3339.
+  string build_time = 3;
+  // Go runtime version the binary was built with.
+  string go_version = 4;
+  // Detected Terraform/OpenTofu version, empty when not installed.
+  string terraform_version = 5;
+  // Database driver in use ("postgres" or "sqlite").
+  string database_driver = 6;
+}
+
+// SystemService exposes non-tenant-scoped deployment introspection.
+service SystemService {
+  // GetCapabilities reports which features are configured and what is missing.
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  // GetBuildInfo returns build and runtime metadata.
+  rpc GetBuildInfo(GetBuildInfoRequest) returns (GetBuildInfoResponse);
+}
+
+// GetCapabilitiesRequest is the capability request.
+message GetCapabilitiesRequest {}
+
+// GetCapabilitiesResponse lists capabilities.
+message GetCapabilitiesResponse {
+  // One entry per known capability.
+  repeated Capability capabilities = 1;
+}
+
+// GetBuildInfoRequest is the build metadata request.
+message GetBuildInfoRequest {}
+
+// GetBuildInfoResponse returns build metadata.
+message GetBuildInfoResponse {
+  // Build metadata.
+  BuildInfo build = 1;
+}

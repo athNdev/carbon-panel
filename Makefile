@@ -162,6 +162,8 @@ check:
 proto:
 	@echo "Generating protocol buffer code (using Docker)..."
 	$(BUF_RUN) generate
+	@echo "Generating Carbon Cloud protocol buffer code..."
+	$(BUF_RUN) generate --template buf.gen.cloud.yaml
 	@echo "Proto generation complete!"
 
 proto-clean:

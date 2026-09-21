@@ -1,0 +1,265 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// WorkloadSpec is the declarative description of a Minecraft server. It is the
+// cloud-level equivalent of the OSS server record, minus anything node-local.
+message WorkloadSpec {
+  // Loader or server software, e.g. "paper", "fabric", "vanilla", "velocity".
+  string loader = 1;
+  // Minecraft version, e.g. "1.21.4".
+  string minecraft_version = 2;
+  // Memory reservation in MiB.
+  int64 memory_mb = 3;
+  // CPU reservation in millicores.
+  int64 cpu_millicores = 4;
+  // Disk reservation in GiB.
+  int32 disk_gb = 5;
+  // Extra environment variables passed to the container.
+  map<string, string> env = 6;
+  // Optional public hostname to route player traffic to this workload.
+  string hostname = 7;
+  // Whether the workload may be placed on a BYO node.
+  bool allow_byo_nodes = 8;
+  // Extra JVM flags appended to the generated command line.
+  repeated string jvm_flags = 9;
+}
+
+// WorkloadEvent is an auditable lifecycle transition of a workload.
+message WorkloadEvent {
+  // Event id.
+  string id = 1;
+  // Workload the event belongs to.
+  string workload_id = 2;
+  // Short event kind, e.g. "placed", "started", "stopped", "crashed".
+  string kind = 3;
+  // Human-readable message.
+  string message = 4;
+  // Time the event was recorded.
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// Workload is a Minecraft server placed on a node.
+message Workload {
+  // Server-side workload id.
+  string id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Node the workload is placed on; empty while pending.
+  string node_id = 3;
+  // Display name; unique within the org.
+  string name = 4;
+  // Requested specification.
+  WorkloadSpec spec = 5;
+  // Current lifecycle state.
+  WorkloadStatus status = 6;
+  // Container id reported by the node agent.
+  string container_id = 7;
+  // Host port the container is bound to on the node, if any.
+  int32 host_port = 8;
+  // Player-facing hostname, when configured.
+  string hostname = 9;
+  // Reason for the most recent non-running state.
+  string status_detail = 10;
+  // Creator's user id.
+  string created_by = 11;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 12;
+  // Last modification time.
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// WorkloadService manages Minecraft servers placed on org nodes.
+service WorkloadService {
+  // ListWorkloads lists workloads in the active org.
+  rpc ListWorkloads(ListWorkloadsRequest) returns (ListWorkloadsResponse);
+  // GetWorkload returns one workload.
+  rpc GetWorkload(GetWorkloadRequest) returns (GetWorkloadResponse);
+  // CreateWorkload places a new workload, optionally pinning a node.
+  rpc CreateWorkload(CreateWorkloadRequest) returns (CreateWorkloadResponse);
+  // UpdateWorkload patches the spec; changes take effect on next restart.
+  rpc UpdateWorkload(UpdateWorkloadRequest) returns (UpdateWorkloadResponse);
+  // DeleteWorkload removes a workload and its data.
+  rpc DeleteWorkload(DeleteWorkloadRequest) returns (DeleteWorkloadResponse);
+  // StartWorkload starts the workload's container.
+  rpc StartWorkload(StartWorkloadRequest) returns (StartWorkloadResponse);
+  // StopWorkload stops the workload's container.
+  rpc StopWorkload(StopWorkloadRequest) returns (StopWorkloadResponse);
+  // RestartWorkload restarts the workload's container.
+  rpc RestartWorkload(RestartWorkloadRequest) returns (RestartWorkloadResponse);
+  // StreamWorkloadLogs streams console output from the workload.
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc StreamWorkloadLogs(StreamWorkloadLogsRequest) returns (stream WorkloadLogLine);
+  // SendWorkloadCommand sends a console command over RCON.
+  rpc SendWorkloadCommand(SendWorkloadCommandRequest) returns (SendWorkloadCommandResponse);
+  // ListWorkloadEvents lists lifecycle events for a workload.
+  rpc ListWorkloadEvents(ListWorkloadEventsRequest) returns (ListWorkloadEventsResponse);
+}
+
+// WorkloadLogLine is one console line from a workload.
+message WorkloadLogLine {
+  // Source of the line.
+  string source = 1;
+  // Line text.
+  string line = 2;
+  // Whether the line is from stderr.
+  bool stderr = 3;
+  // Time the line was produced.
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// ListWorkloadsRequest lists workloads.
+message ListWorkloadsRequest {
+  // Optional node filter.
+  string node_id = 1;
+  // Optional status filter.
+  WorkloadStatus status = 2;
+  // Optional name substring filter.
+  string name_contains = 3;
+  // Optional pagination.
+  PageRequest page = 4;
+}
+
+// ListWorkloadsResponse lists workloads.
+message ListWorkloadsResponse {
+  // Workloads in the active org.
+  repeated Workload workloads = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// GetWorkloadRequest fetches one workload.
+message GetWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// GetWorkloadResponse returns one workload.
+message GetWorkloadResponse {
+  // The requested workload.
+  Workload workload = 1;
+}
+
+// CreateWorkloadRequest creates a workload.
+message CreateWorkloadRequest {
+  // Display name; unique within the org.
+  string name = 1;
+  // Requested specification.
+  WorkloadSpec spec = 2;
+  // Optional node to pin the workload to; empty lets the scheduler choose.
+  string node_id = 3;
+}
+
+// CreateWorkloadResponse returns the created workload.
+message CreateWorkloadResponse {
+  // The created workload, already placed when a node was available.
+  Workload workload = 1;
+}
+
+// UpdateWorkloadRequest patches a workload.
+message UpdateWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // New display name; unchanged when omitted.
+  optional string name = 2;
+  // Replaces the spec when present.
+  optional WorkloadSpec spec = 3;
+}
+
+// UpdateWorkloadResponse returns the updated workload.
+message UpdateWorkloadResponse {
+  // The updated workload.
+  Workload workload = 1;
+}
+
+// DeleteWorkloadRequest deletes a workload.
+message DeleteWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // When true, world data is deleted with the container.
+  bool delete_data = 2;
+}
+
+// DeleteWorkloadResponse acknowledges deletion.
+message DeleteWorkloadResponse {}
+
+// StartWorkloadRequest starts a workload.
+message StartWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// StartWorkloadResponse returns the workload after the request was accepted.
+message StartWorkloadResponse {
+  // The workload, with status reflecting the accepted transition.
+  Workload workload = 1;
+}
+
+// StopWorkloadRequest stops a workload.
+message StopWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // Seconds to wait for a graceful shutdown before killing.
+  int32 timeout_seconds = 2;
+}
+
+// StopWorkloadResponse returns the workload after the request was accepted.
+message StopWorkloadResponse {
+  // The workload, with status reflecting the accepted transition.
+  Workload workload = 1;
+}
+
+// RestartWorkloadRequest restarts a workload.
+message RestartWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// RestartWorkloadResponse returns the workload after the request was accepted.
+message RestartWorkloadResponse {
+  // The workload, with status reflecting the accepted transition.
+  Workload workload = 1;
+}
+
+// StreamWorkloadLogsRequest streams console output.
+message StreamWorkloadLogsRequest {
+  // Workload id.
+  string id = 1;
+  // Number of trailing lines to replay before following live output.
+  int32 tail_lines = 2;
+}
+
+// SendWorkloadCommandRequest sends a console command.
+message SendWorkloadCommandRequest {
+  // Workload id.
+  string id = 1;
+  // Command text, without a leading slash.
+  string command = 2;
+}
+
+// SendWorkloadCommandResponse returns the command output.
+message SendWorkloadCommandResponse {
+  // Raw command output.
+  string output = 1;
+}
+
+// ListWorkloadEventsRequest lists lifecycle events.
+message ListWorkloadEventsRequest {
+  // Workload id.
+  string id = 1;
+  // Optional pagination.
+  PageRequest page = 2;
+}
+
+// ListWorkloadEventsResponse lists events.
+message ListWorkloadEventsResponse {
+  // Events, newest first.
+  repeated WorkloadEvent events = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}

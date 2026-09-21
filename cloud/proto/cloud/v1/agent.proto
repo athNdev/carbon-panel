@@ -1,0 +1,248 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "cloud/v1/node.proto";
+import "cloud/v1/workload.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// NodeIdentity is the credential material a node receives after joining.
+message NodeIdentity {
+  // Assigned node id.
+  string node_id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Control-plane endpoint the agent must dial.
+  string control_plane_endpoint = 3;
+  // PEM-encoded client certificate for mTLS.
+  string client_cert_pem = 4;
+  // PEM-encoded client private key for mTLS.
+  string client_key_pem = 5;
+  // PEM-encoded CA bundle to verify the control plane.
+  string ca_cert_pem = 6;
+  // Unix timestamp when the credential expires and must be renewed.
+  int64 expires_at_unix = 7;
+  // Heartbeat interval the agent must honour, in seconds.
+  int32 heartbeat_interval_seconds = 8;
+}
+
+// AgentHello is the first message a connected agent sends.
+message AgentHello {
+  // Node id from the node's identity.
+  string node_id = 1;
+  // Agent semantic version.
+  string agent_version = 2;
+  // Docker Engine version the agent can reach.
+  string docker_version = 3;
+  // Hostname of the machine.
+  string hostname = 4;
+  // Declared capacity the agent believes it has.
+  NodeCapacity capacity = 5;
+}
+
+// AgentHeartbeat is periodic liveness and telemetry.
+message AgentHeartbeat {
+  // Node id.
+  string node_id = 1;
+  // Latest telemetry.
+  NodeMetrics metrics = 2;
+  // Number of containers the agent manages.
+  int32 container_count = 3;
+  // Current allocation as computed by the agent.
+  NodeAllocation allocation = 4;
+}
+
+// AgentWorkloadStatus reports a workload transition observed on the node.
+message AgentWorkloadStatus {
+  // Node id.
+  string node_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Observed status.
+  WorkloadStatus status = 3;
+  // Container id, when one exists.
+  string container_id = 4;
+  // Detail for non-running states, e.g. the last error line.
+  string detail = 5;
+}
+
+// AgentLogChunk is a batch of console lines for a workload.
+message AgentLogChunk {
+  // Node id.
+  string node_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Lines in the chunk.
+  repeated WorkloadLogLine lines = 3;
+}
+
+// AgentCommandResult is the outcome of a control command.
+message AgentCommandResult {
+  // Correlation id from the originating control message.
+  string command_id = 1;
+  // Whether the command succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+  // Command output, e.g. RCON response.
+  string output = 4;
+}
+
+// AgentMessage is anything the agent sends to the control plane.
+message AgentMessage {
+  // Exactly one payload per message.
+  oneof payload {
+    // Initial handshake, sent once per connection.
+    AgentHello hello = 1;
+    // Periodic liveness and telemetry.
+    AgentHeartbeat heartbeat = 2;
+    // Workload lifecycle transition observed locally.
+    AgentWorkloadStatus workload_status = 3;
+    // Console lines for a workload.
+    AgentLogChunk logs = 4;
+    // Result of a previously issued control command.
+    AgentCommandResult command_result = 5;
+  }
+}
+
+// ControlWelcome acknowledges a connection and reports control-plane state.
+message ControlWelcome {
+  // Current time on the control plane, for clock skew detection.
+  google.protobuf.Timestamp server_time = 1;
+  // Heartbeat interval the agent must use, in seconds.
+  int32 heartbeat_interval_seconds = 2;
+  // Whether the node is currently draining.
+  bool draining = 3;
+}
+
+// ControlWorkloadAssignment asks the agent to materialise or change a workload.
+message ControlWorkloadAssignment {
+  // Correlation id the agent must echo in its result.
+  string command_id = 1;
+  // Full desired state of the workload.
+  Workload workload = 2;
+  // Whether the underlying container should be started after materialising.
+  bool start = 3;
+}
+
+// ControlWorkloadStop asks the agent to stop a workload's container.
+message ControlWorkloadStop {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Grace period in seconds before killing.
+  int32 timeout_seconds = 3;
+}
+
+// ControlWorkloadDelete asks the agent to remove a workload's container.
+message ControlWorkloadDelete {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Whether to delete the workload's data volume as well.
+  bool delete_data = 3;
+}
+
+// ControlRunCommand asks the agent to run a console command via RCON.
+message ControlRunCommand {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Command text.
+  string command = 3;
+}
+
+// ControlProbe asks the agent to refresh and report its telemetry.
+message ControlProbe {
+  // Correlation id.
+  string command_id = 1;
+}
+
+// ControlDisconnect tells the agent to reconnect after a delay, e.g. to pick up
+// rotated credentials.
+message ControlDisconnect {
+  // Seconds to wait before reconnecting.
+  int32 reconnect_after_seconds = 1;
+  // Why the control plane is closing the stream.
+  string reason = 2;
+}
+
+// ControlMessage is anything the control plane sends to an agent.
+message ControlMessage {
+  // Exactly one payload per message.
+  oneof payload {
+    // Handshake acknowledgement.
+    ControlWelcome welcome = 1;
+    // Materialise or change a workload.
+    ControlWorkloadAssignment assign_workload = 2;
+    // Stop a workload.
+    ControlWorkloadStop stop_workload = 3;
+    // Delete a workload.
+    ControlWorkloadDelete delete_workload = 4;
+    // Run a console command.
+    ControlRunCommand run_command = 5;
+    // Refresh telemetry.
+    ControlProbe probe = 6;
+    // Ask the agent to reconnect.
+    ControlDisconnect disconnect = 7;
+  }
+}
+
+// JoinNodeRequest redeems a join token. It is the only call a node makes before
+// it holds credentials, so it is authenticated by the token itself.
+message JoinNodeRequest {
+  // The plaintext join token.
+  string token = 1;
+  // Hostname of the joining machine.
+  string hostname = 2;
+  // Agent version.
+  string agent_version = 3;
+  // Docker Engine version the agent can reach.
+  string docker_version = 4;
+  // Capacity the agent declares.
+  NodeCapacity capacity = 5;
+  // Certificate signing request (PEM) generated locally by the agent; the
+  // control plane signs it and returns the certificate without ever seeing the
+  // private key.
+  string csr_pem = 6;
+}
+
+// JoinNodeResponse returns the node's identity and credential.
+message JoinNodeResponse {
+  // Issued identity.
+  NodeIdentity identity = 1;
+  // Node record as registered.
+  Node node = 2;
+}
+
+// AgentService is the node-facing API. Every method except JoinNode requires the
+// node's client certificate.
+service AgentService {
+  // JoinNode redeems a join token and returns node credentials.
+  rpc JoinNode(JoinNodeRequest) returns (JoinNodeResponse);
+  // Connect opens the long-lived bidirectional control stream. The agent sends
+  // AgentMessage frames and receives ControlMessage frames.
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc Connect(stream AgentMessage) returns (stream ControlMessage);
+  // RenewCredentials rotates the node's certificate before expiry.
+  rpc RenewCredentials(RenewCredentialsRequest) returns (RenewCredentialsResponse);
+}
+
+// RenewCredentialsRequest asks for a fresh certificate from the same CSR flow.
+message RenewCredentialsRequest {
+  // Certificate signing request (PEM).
+  string csr_pem = 1;
+}
+
+// RenewCredentialsResponse returns the new identity material.
+message RenewCredentialsResponse {
+  // Refreshed identity.
+  NodeIdentity identity = 1;
+}

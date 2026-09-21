@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package carboncloud.v1;
+package cloud.v1;
 
 import "google/protobuf/timestamp.proto";
 
