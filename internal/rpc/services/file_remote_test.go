@@ -163,10 +163,10 @@ func TestFileService_DownloadRemoteArchive_ChecksumMismatch(t *testing.T) {
 	svc := NewFileService(store, nil, nil, nil, logger.New())
 
 	req := connect.NewRequest(&v1.DownloadRemoteArchiveRequest{
-		ServerId:       server.ID,
-		Url:            ts.URL + "/test.zip",
-		Sha256Checksum: "0000000000000000000000000000000000000000000000000000000000000000",
-		AutoExtract:    true,
+		ServerId:        server.ID,
+		Url:             ts.URL + "/test.zip",
+		Sha256Checksum:  "0000000000000000000000000000000000000000000000000000000000000000",
+		AutoExtract:     true,
 	})
 
 	resp, err := svc.DownloadRemoteArchive(context.Background(), req)
