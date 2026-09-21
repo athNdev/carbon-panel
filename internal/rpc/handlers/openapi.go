@@ -148,7 +148,11 @@ func NewOpenAPIHandler(log *logger.Logger, isAuthEnabled func() bool) http.Handl
 		}
 
 		if spec == nil {
-			http.Error(w, "OpenAPI spec not available", http.StatusInternalServerError)
+			// The spec is missing (no embedded build and no static fallback).
+			// Report it as not-found rather than a 500 so probes and clients can
+			// distinguish "not deployed" from "server error".
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			http.Error(w, "OpenAPI spec is not available in this build", http.StatusNotFound)
 			return
 		}
 
