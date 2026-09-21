@@ -39,7 +39,13 @@ func NewFirewallManager(log *logger.Logger, enabled bool, rateMin, burst int) *F
 	}
 }
 
-// BuildPortRules generates the DOCKER-USER iptables arguments for SYN flood and rate limiting
+// BuildPortRules generates the DOCKER-USER iptables arguments for SYN flood and
+// per-source connection rate limiting on a published game port.
+//
+// The returned slice is in evaluation order and both ratePerMin and burst are
+// honoured. ApplyPortRateLimiting inserts the rules while preserving this
+// order, so the per-source DROP and the rate-limited ACCEPT are reached before
+// the catch-all SYN DROP.
 func (f *FirewallManager) BuildPortRules(port int, ratePerMin, burst int) [][]string {
 	if ratePerMin <= 0 {
 		ratePerMin = f.defaultRateMin
@@ -50,21 +56,28 @@ func (f *FirewallManager) BuildPortRules(port int, ratePerMin, burst int) [][]st
 
 	portStr := strconv.Itoa(port)
 	burstStr := strconv.Itoa(burst)
+	limitStr := fmt.Sprintf("%d/minute", ratePerMin)
 	recentName := fmt.Sprintf("MC_CONN_%d", port)
 
 	return [][]string{
-		// 1. Accept valid TCP SYN packets under burst limit (30/s burst 60)
-		{"-p", "tcp", "--dport", portStr, "--tcp-flags", "SYN,ACK,FIN,RST", "SYN", "-m", "limit", "--limit", "30/s", "--limit-burst", "60", "-j", "ACCEPT"},
-		// 2. Drop SYN flood attacks exceeding limit before container socket
-		{"-p", "tcp", "--dport", portStr, "--tcp-flags", "SYN,ACK,FIN,RST", "SYN", "-j", "DROP"},
-		// 3. Track new connections per source IP in recent list
-		{"-p", "tcp", "--dport", portStr, "-m", "state", "--state", "NEW", "-m", "recent", "--set", "--name", recentName},
-		// 4. Drop connections exceeding burst limit per minute from same source IP
+		// 1. Drop further NEW connections from a source that already opened
+		//    `burst` connections within the last 60s (per-source limiter).
 		{"-p", "tcp", "--dport", portStr, "-m", "state", "--state", "NEW", "-m", "recent", "--update", "--seconds", "60", "--hitcount", burstStr, "--name", recentName, "-j", "DROP"},
+		// 2. Record this source as having opened a NEW connection.
+		{"-p", "tcp", "--dport", portStr, "-m", "state", "--state", "NEW", "-m", "recent", "--set", "--name", recentName},
+		// 3. Accept SYN packets while within the configured global rate.
+		{"-p", "tcp", "--dport", portStr, "--tcp-flags", "SYN,ACK,FIN,RST", "SYN", "-m", "limit", "--limit", limitStr, "--limit-burst", burstStr, "-j", "ACCEPT"},
+		// 4. Drop SYN packets that exceeded the global rate (SYN-flood guard).
+		{"-p", "tcp", "--dport", portStr, "--tcp-flags", "SYN,ACK,FIN,RST", "SYN", "-j", "DROP"},
 	}
 }
 
-// ApplyPortRateLimiting applies DOCKER-USER chain rules for the given port
+// ApplyPortRateLimiting applies DOCKER-USER chain rules for the given port.
+//
+// Rules are inserted at increasing positions (1, 2, 3, ...) so the chain order
+// matches BuildPortRules' evaluation order. Inserting every rule at position 1
+// would reverse the order and put the catch-all DROP first, blackholing the
+// port.
 func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, ratePerMin, burst int) error {
 	if !f.enabled || f.iptablesPath == "" {
 		if f.log != nil {
@@ -75,7 +88,7 @@ func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, r
 
 	rules := f.BuildPortRules(port, ratePerMin, burst)
 
-	for _, ruleArgs := range rules {
+	for i, ruleArgs := range rules {
 		// Check if rule already exists (-C)
 		checkArgs := append([]string{"-C", "DOCKER-USER"}, ruleArgs...)
 		cmdCheck := exec.CommandContext(ctx, f.iptablesPath, checkArgs...)
@@ -84,8 +97,9 @@ func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, r
 			continue
 		}
 
-		// Insert rule (-I DOCKER-USER 1)
-		insertArgs := append([]string{"-I", "DOCKER-USER", "1"}, ruleArgs...)
+		// Insert rule at its intended position
+		position := strconv.Itoa(i + 1)
+		insertArgs := append([]string{"-I", "DOCKER-USER", position}, ruleArgs...)
 		cmdInsert := exec.CommandContext(ctx, f.iptablesPath, insertArgs...)
 		if out, err := cmdInsert.CombinedOutput(); err != nil {
 			msg := strings.TrimSpace(string(out))
@@ -103,13 +117,15 @@ func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, r
 	return nil
 }
 
-// RemovePortRateLimiting removes DOCKER-USER rules for a closed/deleted port
-func (f *FirewallManager) RemovePortRateLimiting(ctx context.Context, port int) error {
+// RemovePortRateLimiting removes DOCKER-USER rules for a closed/deleted port.
+// The same rate/burst values used when applying must be supplied so the
+// generated rules match and can be deleted.
+func (f *FirewallManager) RemovePortRateLimiting(ctx context.Context, port, ratePerMin, burst int) error {
 	if !f.enabled || f.iptablesPath == "" {
 		return nil
 	}
 
-	rules := f.BuildPortRules(port, f.defaultRateMin, f.defaultBurst)
+	rules := f.BuildPortRules(port, ratePerMin, burst)
 	for _, ruleArgs := range rules {
 		deleteArgs := append([]string{"-D", "DOCKER-USER"}, ruleArgs...)
 		cmdDelete := exec.CommandContext(ctx, f.iptablesPath, deleteArgs...)
@@ -142,14 +158,17 @@ func (f *FirewallManager) ApplyProxyPortIsolation(ctx context.Context, port int)
 	}
 
 	rules := f.BuildIsolationRules(port)
-	for _, ruleArgs := range rules {
+	for i, ruleArgs := range rules {
 		checkArgs := append([]string{"-C", "DOCKER-USER"}, ruleArgs...)
 		cmdCheck := exec.CommandContext(ctx, f.iptablesPath, checkArgs...)
 		if err := cmdCheck.Run(); err == nil {
 			continue
 		}
 
-		insertArgs := append([]string{"-I", "DOCKER-USER", "1"}, ruleArgs...)
+		// Insert at increasing positions so the allow rules are evaluated
+		// before the catch-all DROP (see BuildIsolationRules).
+		position := strconv.Itoa(i + 1)
+		insertArgs := append([]string{"-I", "DOCKER-USER", position}, ruleArgs...)
 		cmdInsert := exec.CommandContext(ctx, f.iptablesPath, insertArgs...)
 		if out, err := cmdInsert.CombinedOutput(); err != nil {
 			msg := strings.TrimSpace(string(out))
@@ -180,4 +199,3 @@ func (f *FirewallManager) RemoveProxyPortIsolation(ctx context.Context, port int
 	}
 	return nil
 }
-
