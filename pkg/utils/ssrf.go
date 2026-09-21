@@ -55,6 +55,30 @@ func ValidateIP(ip net.IP, allowPrivate bool) error {
 	return nil
 }
 
+// ValidateURLStatic validates a URL without performing DNS resolution. It
+// enforces the scheme and, when the host is an IP literal, the address policy.
+// Use it where a DNS lookup must not happen (e.g. saving configuration);
+// ValidateURL remains the resolving variant for actual outbound requests.
+func ValidateURLStatic(rawURL string, allowPrivate bool) (*url.URL, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse url: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, ErrInvalidScheme
+	}
+	hostname := parsed.Hostname()
+	if hostname == "" {
+		return nil, ErrMissingHost
+	}
+	if ip := net.ParseIP(hostname); ip != nil {
+		if err := ValidateIP(ip, allowPrivate); err != nil {
+			return nil, err
+		}
+	}
+	return parsed, nil
+}
+
 // ValidateURL performs static and DNS resolution validation on a URL
 func ValidateURL(rawURL string, allowPrivate bool) (*url.URL, error) {
 	parsed, err := url.Parse(rawURL)
