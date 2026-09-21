@@ -114,6 +114,10 @@ func buildHarness(t *testing.T, anonymousAccess, noAuth bool, enforcerOverride *
 		Local:           config.LocalConfig{Enabled: !noAuth},
 		OIDC:            config.OIDCConfig{Enabled: false},
 		AnonymousAccess: anonymousAccess,
+		// The harness deliberately exercises the "no auth provider" mode, so it
+		// must opt in; without this the manager fails closed (MINE-150) and the
+		// synthetic-admin assertions would (correctly) fail.
+		AllowNoAuth: noAuth,
 	}
 	// AuthenticateFromHeader uses the *enforcer passed into NewManager only
 	// for password/session bookkeeping, not for the RBAC check itself, so a
@@ -250,11 +254,42 @@ func TestAuthInterceptor_PermissionedProcedure_DeniedForRoleWithoutPermission(t 
 func TestAuthInterceptor_PermissionedProcedure_AllowedForAdminBypass(t *testing.T) {
 	// No-auth mode (both Local and OIDC disabled) synthesizes an "admin"
 	// user with wildcard permissions; a mapped, permissioned procedure must
-	// still work end-to-end for it.
+	// still work end-to-end for it. The harness opts in via AllowNoAuth.
 	_, ts := buildHarness(t, false, true /* noAuth */, nil, false)
 
 	connErr := callEcho(t, ts, "/carbonpanel.v1.ServerService/DeleteServer", "")
 	if connErr != nil {
 		t.Fatalf("expected delete-permissioned procedure to succeed for admin bypass user, got %v", connErr)
+	}
+}
+
+// TestAuthInterceptor_NoAuthProviderWithoutOptIn_FailsClosed covers MINE-150:
+// with local auth and OIDC both disabled and no explicit opt-in, an
+// unauthenticated request must be rejected instead of being granted admin.
+func TestAuthInterceptor_NoAuthProviderWithoutOptIn_FailsClosed(t *testing.T) {
+	store := newTestStore(t)
+	log := logger.New()
+
+	authManager, err := auth.NewManager(store, nil, &config.AuthConfig{
+		Local:       config.LocalConfig{Enabled: false},
+		OIDC:        config.OIDCConfig{Enabled: false},
+		AllowNoAuth: false,
+	})
+	if err != nil {
+		t.Fatalf("failed to create auth manager: %v", err)
+	}
+
+	srv := &Server{store: store, authManager: authManager, log: log}
+	mux := http.NewServeMux()
+	registerEcho(mux, srv, "/carbonpanel.v1.ServerService/ListServers")
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	connErr := callEcho(t, ts, "/carbonpanel.v1.ServerService/ListServers", "")
+	if connErr == nil {
+		t.Fatal("expected unauthenticated request to be rejected when no auth provider is enabled")
+	}
+	if connErr.Code() != connect.CodeUnauthenticated {
+		t.Errorf("expected CodeUnauthenticated, got %v (%v)", connErr.Code(), connErr)
 	}
 }

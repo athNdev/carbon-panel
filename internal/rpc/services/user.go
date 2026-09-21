@@ -74,6 +74,9 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 
 	user, err := s.authManager.CreateLocalUser(ctx, msg.Username, msg.Email, msg.Password)
 	if err != nil {
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		s.log.Error("Failed to create user: %v", err)
 		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("failed to create user"))
 	}
