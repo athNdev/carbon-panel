@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -59,6 +60,10 @@ type Server struct {
 	uploadManager    *upload.Manager
 	downloadManager  *download.Manager
 	wsHub            *ws.Hub
+
+	// startedAt is the server construction time, surfaced by /healthz and
+	// /readyz as an uptime.
+	startedAt time.Time
 }
 
 // Creates new Connect RPC server
@@ -109,7 +114,14 @@ func NewServer(
 
 	// Initialize upload manager
 	uploadTTL := time.Duration(cfg.Upload.SessionTTL) * time.Minute
-	uploadManager := upload.NewManager(cfg.Storage.TempDir, uploadTTL, cfg.Upload.MaxUploadSize, log)
+	// Initialize upload manager. The effective limit is upload.max_upload_size
+	// when set, otherwise storage.max_upload_size (which would otherwise be
+	// dead configuration and leave streaming uploads unbounded).
+	maxUploadSize := cfg.Upload.MaxUploadSize
+	if maxUploadSize <= 0 {
+		maxUploadSize = cfg.Storage.MaxUploadSize
+	}
+	uploadManager := upload.NewManager(cfg.Storage.TempDir, uploadTTL, maxUploadSize, log)
 
 	// Initialize download manager
 	downloadManager := download.NewManager(cfg.Storage.TempDir, uploadTTL, log)
@@ -152,6 +164,7 @@ func NewServer(
 		uploadManager:    uploadManager,
 		downloadManager:  downloadManager,
 		wsHub:            wsHub,
+		startedAt:        time.Now(),
 	}
 
 	s.setupHandler()
@@ -202,6 +215,11 @@ func (s *Server) setupHandler() {
 
 	// Register WebSocket handler
 	mux.Handle("/ws", s.wsHub)
+
+	// Liveness and readiness endpoints (must be registered before the frontend
+	// catch-all, which otherwise answers 200 HTML for any unknown path).
+	mux.HandleFunc("/healthz", handlers.NewHealthHandler(s.startedAt, nil))
+	mux.HandleFunc("/readyz", handlers.NewHealthHandler(s.startedAt, s.dbReady))
 
 	// Register OIDC HTTP handlers
 	if s.oidcHandler != nil && s.oidcHandler.IsEnabled() {
@@ -554,6 +572,20 @@ func extractObjectID(req connect.AnyRequest, fieldName string) string {
 // RecoveryKey returns the current recovery key from the auth manager.
 func (s *Server) RecoveryKey() string {
 	return s.authManager.GetRecoveryKey()
+}
+
+// dbReady reports whether the database is reachable. It backs /readyz.
+func (s *Server) dbReady() error {
+	if s.store == nil {
+		return errors.New("storage is not initialized")
+	}
+	sqlDB, err := s.store.DB().DB()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return sqlDB.PingContext(ctx)
 }
 
 // Starts log streaming for a container
