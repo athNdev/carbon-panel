@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/download"
@@ -26,28 +25,94 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"github.com/athNdev/carbon-panel/pkg/upload"
 	"github.com/athNdev/carbon-panel/pkg/utils"
+	"github.com/google/uuid"
 )
 
 // Compile-time check that FileService implements the interface
 var _ carbonpanelv1connect.FileServiceHandler = (*FileService)(nil)
 
 // extractionOp tracks an in-progress or completed extraction.
+//
+// State, Error and CompletedAt are written by the background extraction
+// goroutine and read concurrently by GetExtractionStatus and
+// cleanupExtractions, so they are guarded by mu. FilesExtracted is atomic.
 type extractionOp struct {
+	mu             sync.Mutex
 	State          string // "extracting", "completed", "failed"
 	FilesExtracted atomic.Int32
 	Error          string
 	CompletedAt    time.Time
 }
 
-// remoteDownloadOp tracks background remote archive download and extraction
+func (o *extractionOp) fail(msg string) {
+	o.mu.Lock()
+	o.State = "failed"
+	o.Error = msg
+	o.CompletedAt = time.Now()
+	o.mu.Unlock()
+}
+
+func (o *extractionOp) complete() {
+	o.mu.Lock()
+	o.State = "completed"
+	o.CompletedAt = time.Now()
+	o.mu.Unlock()
+}
+
+func (o *extractionOp) snapshot() (state, errMsg string, completedAt time.Time) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.State, o.Error, o.CompletedAt
+}
+
+// remoteDownloadOp tracks background remote archive download and extraction.
+//
+// Status, Error and CompletedAt are written by the background goroutine and
+// read concurrently by GetRemoteArchiveProgress, so they are guarded by mu.
+// The counters are atomic.
 type remoteDownloadOp struct {
 	TaskID          string
-	Status          string // "downloading", "verifying", "extracting", "completed", "failed"
 	BytesDownloaded atomic.Int64
 	TotalBytes      atomic.Int64
 	ProgressPercent atomic.Int32
-	Error           string
-	CompletedAt     time.Time
+
+	mu          sync.Mutex
+	Status      string // "downloading", "verifying", "extracting", "completed", "failed"
+	Error       string
+	CompletedAt time.Time
+}
+
+func (o *remoteDownloadOp) setStatus(status string) {
+	o.mu.Lock()
+	o.Status = status
+	o.mu.Unlock()
+}
+
+func (o *remoteDownloadOp) fail(msg string) {
+	o.mu.Lock()
+	o.Status = "failed"
+	o.Error = msg
+	o.mu.Unlock()
+}
+
+func (o *remoteDownloadOp) complete() {
+	o.mu.Lock()
+	o.ProgressPercent.Store(100)
+	o.Status = "completed"
+	o.CompletedAt = time.Now()
+	o.mu.Unlock()
+}
+
+func (o *remoteDownloadOp) markCompletedAt() {
+	o.mu.Lock()
+	o.CompletedAt = time.Now()
+	o.mu.Unlock()
+}
+
+func (o *remoteDownloadOp) snapshot() (status, errMsg string) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.Status, o.Error
 }
 
 // FileService implements the File service
@@ -427,14 +492,12 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 	go func() {
 		_, err := files.ExtractArchive(context.Background(), fullArchivePath, destPath, &op.FilesExtracted)
 		if err != nil {
-			op.Error = err.Error()
-			op.State = "failed"
+			op.fail(err.Error())
 			s.log.Error("Extraction %s failed: %v", opID, err)
 		} else {
-			op.State = "completed"
+			op.complete()
 			s.log.Info("Extraction %s completed: %d files", opID, op.FilesExtracted.Load())
 		}
-		op.CompletedAt = time.Now()
 	}()
 
 	return connect.NewResponse(&v1.ExtractArchiveResponse{
@@ -449,11 +512,12 @@ func (s *FileService) GetExtractionStatus(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("extraction operation not found"))
 	}
 	op := val.(*extractionOp)
+	state, errMsg, _ := op.snapshot()
 
 	return connect.NewResponse(&v1.GetExtractionStatusResponse{
-		State:          op.State,
+		State:          state,
 		FilesExtracted: op.FilesExtracted.Load(),
-		Error:          op.Error,
+		Error:          errMsg,
 	}), nil
 }
 
@@ -498,30 +562,25 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 
 	// Run download in background
 	go func() {
-		defer func() {
-			op.CompletedAt = time.Now()
-		}()
+		defer op.markCompletedAt()
 
 		client := utils.NewSafeHTTPClient(15*time.Minute, true)
 		httpReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, rawURL, nil)
 		if err != nil {
-			op.Status = "failed"
-			op.Error = fmt.Sprintf("failed to create HTTP request: %v", err)
+			op.fail(fmt.Sprintf("failed to create HTTP request: %v", err))
 			return
 		}
 		httpReq.Header.Set("User-Agent", "CarbonPanel/2.x (Archive Downloader)")
 
 		resp, err := client.Do(httpReq)
 		if err != nil {
-			op.Status = "failed"
-			op.Error = fmt.Sprintf("download request failed: %v", err)
+			op.fail(fmt.Sprintf("download request failed: %v", err))
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			op.Status = "failed"
-			op.Error = fmt.Sprintf("remote server returned HTTP status %d", resp.StatusCode)
+			op.fail(fmt.Sprintf("remote server returned HTTP status %d", resp.StatusCode))
 			return
 		}
 
@@ -532,8 +591,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 
 		tmpFile, err := os.CreateTemp("", "remote-archive-*.tmp")
 		if err != nil {
-			op.Status = "failed"
-			op.Error = fmt.Sprintf("failed to create temp file: %v", err)
+			op.fail(fmt.Sprintf("failed to create temp file: %v", err))
 			return
 		}
 		tmpPath := tmpFile.Name()
@@ -549,8 +607,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 			n, rErr := resp.Body.Read(buf)
 			if n > 0 {
 				if _, wErr := writer.Write(buf[:n]); wErr != nil {
-					op.Status = "failed"
-					op.Error = fmt.Sprintf("failed writing download stream: %v", wErr)
+					op.fail(fmt.Sprintf("failed writing download stream: %v", wErr))
 					return
 				}
 				downloaded += int64(n)
@@ -567,8 +624,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 				break
 			}
 			if rErr != nil {
-				op.Status = "failed"
-				op.Error = fmt.Sprintf("error during download stream: %v", rErr)
+				op.fail(fmt.Sprintf("error during download stream: %v", rErr))
 				return
 			}
 		}
@@ -576,22 +632,20 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 		// Verify SHA256 checksum if specified
 		expectedSHA := strings.TrimSpace(msg.Sha256Checksum)
 		if expectedSHA != "" {
-			op.Status = "verifying"
+			op.setStatus("verifying")
 			actualSHA := hex.EncodeToString(hasher.Sum(nil))
 			if !strings.EqualFold(actualSHA, expectedSHA) {
-				op.Status = "failed"
-				op.Error = fmt.Sprintf("SHA256 checksum mismatch: expected %s, got %s", expectedSHA, actualSHA)
+				op.fail(fmt.Sprintf("SHA256 checksum mismatch: expected %s, got %s", expectedSHA, actualSHA))
 				return
 			}
 		}
 
 		// Auto-extract if requested
 		if msg.AutoExtract {
-			op.Status = "extracting"
+			op.setStatus("extracting")
 			_, err := files.ExtractArchive(context.Background(), tmpPath, destPath, nil)
 			if err != nil {
-				op.Status = "failed"
-				op.Error = fmt.Sprintf("failed to extract archive: %v", err)
+				op.fail(fmt.Sprintf("failed to extract archive: %v", err))
 				return
 			}
 		} else {
@@ -608,16 +662,14 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 			tmpFile.Seek(0, 0)
 			out, err := os.Create(targetPath)
 			if err != nil {
-				op.Status = "failed"
-				op.Error = fmt.Sprintf("failed to save file to destination: %v", err)
+				op.fail(fmt.Sprintf("failed to save file to destination: %v", err))
 				return
 			}
 			_, _ = io.Copy(out, tmpFile)
 			out.Close()
 		}
 
-		op.ProgressPercent.Store(100)
-		op.Status = "completed"
+		op.complete()
 	}()
 
 	return connect.NewResponse(&v1.DownloadRemoteArchiveResponse{
@@ -633,14 +685,15 @@ func (s *FileService) GetRemoteArchiveProgress(ctx context.Context, req *connect
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("remote download task not found"))
 	}
 	op := val.(*remoteDownloadOp)
+	status, errMsg := op.snapshot()
 
 	return connect.NewResponse(&v1.GetRemoteArchiveProgressResponse{
 		TaskId:          op.TaskID,
-		Status:          op.Status,
+		Status:          status,
 		BytesDownloaded: op.BytesDownloaded.Load(),
 		TotalBytes:      op.TotalBytes.Load(),
 		ProgressPercent: op.ProgressPercent.Load(),
-		Error:           op.Error,
+		Error:           errMsg,
 	}), nil
 }
 
@@ -652,7 +705,8 @@ func (s *FileService) cleanupExtractions() {
 		cutoff := time.Now().Add(-1 * time.Hour)
 		s.extractions.Range(func(key, value any) bool {
 			op := value.(*extractionOp)
-			if !op.CompletedAt.IsZero() && op.CompletedAt.Before(cutoff) {
+			_, _, completedAt := op.snapshot()
+			if !completedAt.IsZero() && completedAt.Before(cutoff) {
 				s.extractions.Delete(key)
 			}
 			return true

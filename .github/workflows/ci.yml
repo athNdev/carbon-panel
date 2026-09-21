@@ -99,7 +99,9 @@ jobs:
             exit 1
           fi
 
-  # Race detector over concurrency-heavy packages (MINE-146).
+  # Race detector over concurrency-heavy packages (MINE-146, MINE-149).
+  # internal/rpc/... is included because the async remote-download/extraction
+  # progress trackers live there and raced undetected until MINE-149.
   test-race:
     name: Go Race Detector
     runs-on: ubuntu-latest
@@ -118,7 +120,7 @@ jobs:
         run: mkdir -p web/carbon-panel/build && touch web/carbon-panel/build/.gitkeep
 
       - name: Run race detector
-        run: go test -race -count=1 ./internal/reconciler/ ./internal/scheduler/ ./internal/docker/ ./internal/activity/ ./internal/metrics/
+        run: go test -race -count=1 ./internal/rpc/... ./internal/reconciler/ ./internal/scheduler/ ./internal/docker/ ./internal/activity/ ./internal/metrics/ ./internal/proxy/ ./internal/db/ ./internal/ws/ ./internal/s3/ ./internal/snapshot/ ./internal/module/
 
   lint-proto:
     name: Proto Lint
