@@ -243,3 +243,4 @@ func TestServerService_MigrateServer_CapacityChecks(t *testing.T) {
 		t.Errorf("expected res.Msg.Success to be true")
 	}
 }
+
