@@ -5,7 +5,7 @@ import path from 'node:path';
 
 test('all <th> elements in svelte views declare scope attribute', () => {
 	const srcDir = path.resolve(import.meta.dirname, '../..');
-	
+
 	function scanDir(dir: string, fileList: string[] = []): string[] {
 		const files = fs.readdirSync(dir);
 		for (const file of files) {
@@ -36,7 +36,11 @@ test('all <th> elements in svelte views declare scope attribute', () => {
 		}
 	}
 
-	assert.deepEqual(violations, [], `Found <th> elements without scope attribute: ${JSON.stringify(violations, null, 2)}`);
+	assert.deepEqual(
+		violations,
+		[],
+		`Found <th> elements without scope attribute: ${JSON.stringify(violations, null, 2)}`
+	);
 });
 
 test('CarbonModal enforces dialog semantics, keyboard trap, and ARIA attributes', () => {
@@ -49,5 +53,8 @@ test('CarbonModal enforces dialog semantics, keyboard trap, and ARIA attributes'
 	assert.ok(content.includes('aria-describedby='), 'CarbonModal must have aria-describedby');
 	assert.ok(content.includes("event.key === 'Escape'"), 'CarbonModal must handle Escape key');
 	assert.ok(content.includes("event.key === 'Tab'"), 'CarbonModal must handle Tab focus trapping');
-	assert.ok(content.includes('<svelte:window onkeydown={handleKeydown} />'), 'CarbonModal must listen for global keydown');
+	assert.ok(
+		content.includes('<svelte:window onkeydown={handleKeydown} />'),
+		'CarbonModal must listen for global keydown'
+	);
 });

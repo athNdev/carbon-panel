@@ -2,141 +2,148 @@
 // @generated from file carbonpanel/v1/blueprint.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file carbonpanel/v1/blueprint.proto.
  */
-export const file_carbonpanel_v1_blueprint: GenFile = /*@__PURE__*/
-  fileDesc("Ch5jYXJib25wYW5lbC92MS9ibHVlcHJpbnQucHJvdG8SDmNhcmJvbnBhbmVsLnYxIqQBCg9TZXJ2ZXJCbHVlcHJpbnQSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgptb2RfbG9hZGVyGAQgASgJEhIKCm1jX3ZlcnNpb24YBSABKAkSFAoMZG9ja2VyX2ltYWdlGAYgASgJEhMKC2RlZmF1bHRfZW52GAcgASgJEg8KB2J1aWx0aW4YCCABKAgiFwoVTGlzdEJsdWVwcmludHNSZXF1ZXN0Ik0KFkxpc3RCbHVlcHJpbnRzUmVzcG9uc2USMwoKYmx1ZXByaW50cxgBIAMoCzIfLmNhcmJvbnBhbmVsLnYxLlNlcnZlckJsdWVwcmludCIhChNHZXRCbHVlcHJpbnRSZXF1ZXN0EgoKAmlkGAEgASgJIkoKFEdldEJsdWVwcmludFJlc3BvbnNlEjIKCWJsdWVwcmludBgBIAEoCzIfLmNhcmJvbnBhbmVsLnYxLlNlcnZlckJsdWVwcmludDLOAQoQQmx1ZXByaW50U2VydmljZRJfCg5MaXN0Qmx1ZXByaW50cxIlLmNhcmJvbnBhbmVsLnYxLkxpc3RCbHVlcHJpbnRzUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkxpc3RCbHVlcHJpbnRzUmVzcG9uc2USWQoMR2V0Qmx1ZXByaW50EiMuY2FyYm9ucGFuZWwudjEuR2V0Qmx1ZXByaW50UmVxdWVzdBokLmNhcmJvbnBhbmVsLnYxLkdldEJsdWVwcmludFJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw");
+export const file_carbonpanel_v1_blueprint: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'Ch5jYXJib25wYW5lbC92MS9ibHVlcHJpbnQucHJvdG8SDmNhcmJvbnBhbmVsLnYxIqQBCg9TZXJ2ZXJCbHVlcHJpbnQSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRISCgptb2RfbG9hZGVyGAQgASgJEhIKCm1jX3ZlcnNpb24YBSABKAkSFAoMZG9ja2VyX2ltYWdlGAYgASgJEhMKC2RlZmF1bHRfZW52GAcgASgJEg8KB2J1aWx0aW4YCCABKAgiFwoVTGlzdEJsdWVwcmludHNSZXF1ZXN0Ik0KFkxpc3RCbHVlcHJpbnRzUmVzcG9uc2USMwoKYmx1ZXByaW50cxgBIAMoCzIfLmNhcmJvbnBhbmVsLnYxLlNlcnZlckJsdWVwcmludCIhChNHZXRCbHVlcHJpbnRSZXF1ZXN0EgoKAmlkGAEgASgJIkoKFEdldEJsdWVwcmludFJlc3BvbnNlEjIKCWJsdWVwcmludBgBIAEoCzIfLmNhcmJvbnBhbmVsLnYxLlNlcnZlckJsdWVwcmludDLOAQoQQmx1ZXByaW50U2VydmljZRJfCg5MaXN0Qmx1ZXByaW50cxIlLmNhcmJvbnBhbmVsLnYxLkxpc3RCbHVlcHJpbnRzUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkxpc3RCbHVlcHJpbnRzUmVzcG9uc2USWQoMR2V0Qmx1ZXByaW50EiMuY2FyYm9ucGFuZWwudjEuR2V0Qmx1ZXByaW50UmVxdWVzdBokLmNhcmJvbnBhbmVsLnYxLkdldEJsdWVwcmludFJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw'
+	);
 
 /**
  * One blueprint
  *
  * @generated from message carbonpanel.v1.ServerBlueprint
  */
-export type ServerBlueprint = Message<"carbonpanel.v1.ServerBlueprint"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type ServerBlueprint = Message<'carbonpanel.v1.ServerBlueprint'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
+	/**
+	 * @generated from field: string name = 2;
+	 */
+	name: string;
 
-  /**
-   * @generated from field: string description = 3;
-   */
-  description: string;
+	/**
+	 * @generated from field: string description = 3;
+	 */
+	description: string;
 
-  /**
-   * @generated from field: string mod_loader = 4;
-   */
-  modLoader: string;
+	/**
+	 * @generated from field: string mod_loader = 4;
+	 */
+	modLoader: string;
 
-  /**
-   * @generated from field: string mc_version = 5;
-   */
-  mcVersion: string;
+	/**
+	 * @generated from field: string mc_version = 5;
+	 */
+	mcVersion: string;
 
-  /**
-   * @generated from field: string docker_image = 6;
-   */
-  dockerImage: string;
+	/**
+	 * @generated from field: string docker_image = 6;
+	 */
+	dockerImage: string;
 
-  /**
-   * @generated from field: string default_env = 7;
-   */
-  defaultEnv: string;
+	/**
+	 * @generated from field: string default_env = 7;
+	 */
+	defaultEnv: string;
 
-  /**
-   * @generated from field: bool builtin = 8;
-   */
-  builtin: boolean;
+	/**
+	 * @generated from field: bool builtin = 8;
+	 */
+	builtin: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.ServerBlueprint.
  * Use `create(ServerBlueprintSchema)` to create a new message.
  */
-export const ServerBlueprintSchema: GenMessage<ServerBlueprint> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_blueprint, 0);
+export const ServerBlueprintSchema: GenMessage<ServerBlueprint> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_blueprint, 0);
 
 /**
  * List request (no filters yet)
  *
  * @generated from message carbonpanel.v1.ListBlueprintsRequest
  */
-export type ListBlueprintsRequest = Message<"carbonpanel.v1.ListBlueprintsRequest"> & {
-};
+export type ListBlueprintsRequest = Message<'carbonpanel.v1.ListBlueprintsRequest'> & {};
 
 /**
  * Describes the message carbonpanel.v1.ListBlueprintsRequest.
  * Use `create(ListBlueprintsRequestSchema)` to create a new message.
  */
-export const ListBlueprintsRequestSchema: GenMessage<ListBlueprintsRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_blueprint, 1);
+export const ListBlueprintsRequestSchema: GenMessage<ListBlueprintsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_blueprint, 1);
 
 /**
  * List response
  *
  * @generated from message carbonpanel.v1.ListBlueprintsResponse
  */
-export type ListBlueprintsResponse = Message<"carbonpanel.v1.ListBlueprintsResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.ServerBlueprint blueprints = 1;
-   */
-  blueprints: ServerBlueprint[];
+export type ListBlueprintsResponse = Message<'carbonpanel.v1.ListBlueprintsResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.ServerBlueprint blueprints = 1;
+	 */
+	blueprints: ServerBlueprint[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListBlueprintsResponse.
  * Use `create(ListBlueprintsResponseSchema)` to create a new message.
  */
-export const ListBlueprintsResponseSchema: GenMessage<ListBlueprintsResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_blueprint, 2);
+export const ListBlueprintsResponseSchema: GenMessage<ListBlueprintsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_blueprint, 2);
 
 /**
  * Get request
  *
  * @generated from message carbonpanel.v1.GetBlueprintRequest
  */
-export type GetBlueprintRequest = Message<"carbonpanel.v1.GetBlueprintRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type GetBlueprintRequest = Message<'carbonpanel.v1.GetBlueprintRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetBlueprintRequest.
  * Use `create(GetBlueprintRequestSchema)` to create a new message.
  */
-export const GetBlueprintRequestSchema: GenMessage<GetBlueprintRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_blueprint, 3);
+export const GetBlueprintRequestSchema: GenMessage<GetBlueprintRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_blueprint, 3);
 
 /**
  * Get response
  *
  * @generated from message carbonpanel.v1.GetBlueprintResponse
  */
-export type GetBlueprintResponse = Message<"carbonpanel.v1.GetBlueprintResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.ServerBlueprint blueprint = 1;
-   */
-  blueprint?: ServerBlueprint | undefined;
+export type GetBlueprintResponse = Message<'carbonpanel.v1.GetBlueprintResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.ServerBlueprint blueprint = 1;
+	 */
+	blueprint?: ServerBlueprint | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetBlueprintResponse.
  * Use `create(GetBlueprintResponseSchema)` to create a new message.
  */
-export const GetBlueprintResponseSchema: GenMessage<GetBlueprintResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_blueprint, 4);
+export const GetBlueprintResponseSchema: GenMessage<GetBlueprintResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_blueprint, 4);
 
 /**
  * Server flavor blueprints (MINE-143, egg equivalent)
@@ -144,26 +151,24 @@ export const GetBlueprintResponseSchema: GenMessage<GetBlueprintResponse> = /*@_
  * @generated from service carbonpanel.v1.BlueprintService
  */
 export const BlueprintService: GenService<{
-  /**
-   * List all blueprints, builtins first
-   *
-   * @generated from rpc carbonpanel.v1.BlueprintService.ListBlueprints
-   */
-  listBlueprints: {
-    methodKind: "unary";
-    input: typeof ListBlueprintsRequestSchema;
-    output: typeof ListBlueprintsResponseSchema;
-  },
-  /**
-   * Get one blueprint
-   *
-   * @generated from rpc carbonpanel.v1.BlueprintService.GetBlueprint
-   */
-  getBlueprint: {
-    methodKind: "unary";
-    input: typeof GetBlueprintRequestSchema;
-    output: typeof GetBlueprintResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_carbonpanel_v1_blueprint, 0);
-
+	/**
+	 * List all blueprints, builtins first
+	 *
+	 * @generated from rpc carbonpanel.v1.BlueprintService.ListBlueprints
+	 */
+	listBlueprints: {
+		methodKind: 'unary';
+		input: typeof ListBlueprintsRequestSchema;
+		output: typeof ListBlueprintsResponseSchema;
+	};
+	/**
+	 * Get one blueprint
+	 *
+	 * @generated from rpc carbonpanel.v1.BlueprintService.GetBlueprint
+	 */
+	getBlueprint: {
+		methodKind: 'unary';
+		input: typeof GetBlueprintRequestSchema;
+		output: typeof GetBlueprintResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_blueprint, 0);

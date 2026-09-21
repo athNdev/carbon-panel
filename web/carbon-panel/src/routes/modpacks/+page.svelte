@@ -398,21 +398,27 @@
 	<title>Modpacks - Carbon Panel</title>
 </svelte:head>
 
-<div class="h-full flex-1 space-y-6 font-sans text-[#f4f4f4] rounded-none">
+<div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
 	<!-- Top Bar -->
-	<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#393939] pb-6 rounded-none">
+	<div
+		class="flex flex-col justify-between gap-4 rounded-none border-b border-[#393939] pb-6 lg:flex-row lg:items-center"
+	>
 		<div class="flex items-center gap-4">
-			<div class="flex h-12 w-12 items-center justify-center bg-[#262626] border border-[#393939] rounded-none text-[#0f62fe]">
+			<div
+				class="flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#0f62fe]"
+			>
 				<Package class="h-6 w-6" />
 			</div>
 			<div class="space-y-0.5">
 				<h1 class="text-3xl font-semibold tracking-tight text-white">Modpacks</h1>
-				<p class="text-xs text-[#a8a8a8]">Browse, upload, and deploy modpacks to Minecraft servers</p>
+				<p class="text-xs text-[#a8a8a8]">
+					Browse, upload, and deploy modpacks to Minecraft servers
+				</p>
 			</div>
 		</div>
 
 		<!-- Top Action Buttons -->
-		<div class="flex items-center gap-2 flex-wrap">
+		<div class="flex flex-wrap items-center gap-2">
 			<CarbonButton
 				kind={showUploaded ? 'primary' : 'secondary'}
 				size="sm"
@@ -472,12 +478,22 @@
 	</div>
 
 	{#if selectedIndexer === 'fuego'}
-		<div class="p-3.5 bg-[#262626] border-l-4 border-[#0f62fe] border-y border-r border-[#393939] text-xs text-[#c6c6c6] flex items-center justify-between rounded-none">
+		<div
+			class="flex items-center justify-between rounded-none border-y border-r border-l-4 border-[#0f62fe] border-[#393939] bg-[#262626] p-3.5 text-xs text-[#c6c6c6]"
+		>
 			<div class="flex items-center gap-2">
-				<KeyRound class="h-4 w-4 text-[#78a9ff] shrink-0" />
-				<span>CurseForge Keyless Mode: syncing and browsing modpacks operates through community proxies.</span>
+				<KeyRound class="h-4 w-4 shrink-0 text-[#78a9ff]" />
+				<span
+					>CurseForge Keyless Mode: syncing and browsing modpacks operates through community
+					proxies.</span
+				>
 			</div>
-			<CarbonButton kind="ghost" size="sm" class="h-7 text-xs rounded-none" href="/settings?tab=api-keys">
+			<CarbonButton
+				kind="ghost"
+				size="sm"
+				class="h-7 rounded-none text-xs"
+				href="/settings?tab=api-keys"
+			>
 				<Settings class="mr-1 h-3.5 w-3.5" />
 				Custom API Key
 			</CarbonButton>
@@ -487,7 +503,7 @@
 	{#if !showFavorites && !showUploaded}
 		<!-- Search & Filter Controls -->
 		<div class="space-y-4">
-			<div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+			<div class="grid grid-cols-1 gap-2 md:grid-cols-12">
 				<div class="md:col-span-4">
 					<CarbonSearch
 						placeholder="Search modpacks by name or description..."
@@ -498,10 +514,7 @@
 				</div>
 
 				<div class="md:col-span-2">
-					<CarbonSelect
-						bind:value={searchParams.gameVersion}
-						disabled={loading}
-					>
+					<CarbonSelect bind:value={searchParams.gameVersion} disabled={loading}>
 						<option value="">All MC Versions</option>
 						{#each gameVersions as version}
 							<option value={version}>{version}</option>
@@ -510,10 +523,7 @@
 				</div>
 
 				<div class="md:col-span-2">
-					<CarbonSelect
-						bind:value={searchParams.modLoader}
-						disabled={loading}
-					>
+					<CarbonSelect bind:value={searchParams.modLoader} disabled={loading}>
 						<option value="">All Loaders</option>
 						<option value="forge">Forge</option>
 						<option value="fabric">Fabric</option>
@@ -533,7 +543,7 @@
 					</CarbonSelect>
 				</div>
 
-				<div class="md:col-span-2 flex items-center gap-1">
+				<div class="flex items-center gap-1 md:col-span-2">
 					<CarbonButton
 						kind="primary"
 						class="w-full justify-center rounded-none"
@@ -546,7 +556,7 @@
 			</div>
 
 			<!-- Secondary Action Row -->
-			<div class="flex items-center justify-between gap-2 flex-wrap pt-1">
+			<div class="flex flex-wrap items-center justify-between gap-2 pt-1">
 				<div class="flex items-center gap-2">
 					<CarbonButton
 						kind="tertiary"
@@ -590,7 +600,7 @@
 					/>
 				</div>
 
-				<div class="text-xs text-[#8d8d8d] font-mono">
+				<div class="font-mono text-xs text-[#8d8d8d]">
 					{#if searchResults}
 						TOTAL: {searchResults.total} PACKS
 					{/if}
@@ -598,16 +608,20 @@
 			</div>
 
 			{#if uploading && uploadProgress}
-				<div class="p-4 bg-[#262626] border border-[#393939] rounded-none space-y-2">
+				<div class="space-y-2 rounded-none border border-[#393939] bg-[#262626] p-4">
 					<div class="flex items-center justify-between text-xs">
 						<span class="font-medium text-white">Uploading modpack archive...</span>
 						<div class="flex items-center gap-3 font-mono text-[#a8a8a8]">
 							<span>{uploadProgress.percentComplete.toFixed(0)}%</span>
-							<span>{formatBytes(uploadProgress.bytesUploaded)} / {formatBytes(uploadProgress.totalBytes)}</span>
+							<span
+								>{formatBytes(uploadProgress.bytesUploaded)} / {formatBytes(
+									uploadProgress.totalBytes
+								)}</span
+							>
 							<button
 								type="button"
 								onclick={cancelCurrentUpload}
-								class="text-[#da1e28] hover:text-white cursor-pointer"
+								class="cursor-pointer text-[#da1e28] hover:text-white"
 								title="Cancel upload"
 								aria-label="Cancel upload"
 							>
@@ -615,8 +629,11 @@
 							</button>
 						</div>
 					</div>
-					<div class="w-full h-2 bg-[#161616] rounded-none overflow-hidden">
-						<div class="h-full bg-[#0f62fe] transition-all" style="width: {uploadProgress.percentComplete}%"></div>
+					<div class="h-2 w-full overflow-hidden rounded-none bg-[#161616]">
+						<div
+							class="h-full bg-[#0f62fe] transition-all"
+							style="width: {uploadProgress.percentComplete}%"
+						></div>
 					</div>
 				</div>
 			{/if}
@@ -626,7 +643,9 @@
 	<!-- Modpack Packages Grid with CarbonTiles -->
 	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each displayModpacks as modpack (modpack.id)}
-			<CarbonTile class="flex flex-col justify-between p-5 rounded-none border-[#393939] hover:border-[#525252] transition-colors group">
+			<CarbonTile
+				class="group flex flex-col justify-between rounded-none border-[#393939] p-5 transition-colors hover:border-[#525252]"
+			>
 				<div class="space-y-3">
 					<!-- Tile Header -->
 					<div class="flex items-start gap-3">
@@ -634,24 +653,26 @@
 							<img
 								src={modpack.logoUrl}
 								alt={modpack.name}
-								class="h-14 w-14 object-cover border border-[#393939] bg-[#161616] shrink-0 rounded-none"
+								class="h-14 w-14 shrink-0 rounded-none border border-[#393939] bg-[#161616] object-cover"
 							/>
 						{:else}
-							<div class="h-14 w-14 border border-[#393939] bg-[#161616] flex items-center justify-center text-[#525252] shrink-0 rounded-none">
+							<div
+								class="flex h-14 w-14 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#161616] text-[#525252]"
+							>
 								<Package class="h-7 w-7" />
 							</div>
 						{/if}
 
 						<div class="min-w-0 flex-1">
-							<h3 class="font-semibold text-base text-white truncate" title={modpack.name}>
+							<h3 class="truncate text-base font-semibold text-white" title={modpack.name}>
 								{modpack.name}
 							</h3>
-							<div class="flex items-center gap-2 mt-1 flex-wrap">
+							<div class="mt-1 flex flex-wrap items-center gap-2">
 								<CarbonTag type={modpack.indexer === 'manual' ? 'purple' : 'blue'} size="sm">
 									{modpack.indexer === 'manual' ? 'Manual Upload' : modpack.indexer}
 								</CarbonTag>
-								<span class="text-xs text-[#8d8d8d] font-mono flex items-center gap-1">
-									<Download class="h-3 w-3 inline" />
+								<span class="flex items-center gap-1 font-mono text-xs text-[#8d8d8d]">
+									<Download class="inline h-3 w-3" />
 									{formatNumber(modpack.downloadCount)}
 								</span>
 							</div>
@@ -660,16 +681,20 @@
 						<button
 							type="button"
 							onclick={() => toggleFavorite(modpack)}
-							class="p-2 text-[#8d8d8d] hover:text-[#da1e28] transition-colors cursor-pointer rounded-none"
+							class="cursor-pointer rounded-none p-2 text-[#8d8d8d] transition-colors hover:text-[#da1e28]"
 							title={modpack.isFavorited ? 'Remove favorite' : 'Add favorite'}
-							aria-label={modpack.isFavorited ? `Remove ${modpack.name} from favorites` : `Add ${modpack.name} to favorites`}
+							aria-label={modpack.isFavorited
+								? `Remove ${modpack.name} from favorites`
+								: `Add ${modpack.name} to favorites`}
 						>
-							<Heart class={`h-4 w-4 ${modpack.isFavorited ? 'fill-[#da1e28] text-[#da1e28]' : ''}`} />
+							<Heart
+								class={`h-4 w-4 ${modpack.isFavorited ? 'fill-[#da1e28] text-[#da1e28]' : ''}`}
+							/>
 						</button>
 					</div>
 
 					<!-- Description -->
-					<p class="text-xs text-[#a8a8a8] line-clamp-2 min-h-8">
+					<p class="line-clamp-2 min-h-8 text-xs text-[#a8a8a8]">
 						{modpack.summary || 'No summary available for this modpack.'}
 					</p>
 
@@ -684,7 +709,7 @@
 						{/if}
 
 						{#if parseJsonArray(modpack.gameVersions).length > 0}
-							<div class="text-[11px] text-[#8d8d8d] font-mono truncate">
+							<div class="truncate font-mono text-[11px] text-[#8d8d8d]">
 								MC: {parseJsonArray(modpack.gameVersions).slice(0, 3).join(', ')}
 								{#if parseJsonArray(modpack.gameVersions).length > 3}
 									+{parseJsonArray(modpack.gameVersions).length - 3} more
@@ -695,7 +720,7 @@
 				</div>
 
 				<!-- Tile Actions -->
-				<div class="mt-4 pt-3 border-t border-[#393939] flex items-center justify-between gap-2">
+				<div class="mt-4 flex items-center justify-between gap-2 border-t border-[#393939] pt-3">
 					<div class="flex items-center gap-1">
 						{#if modpack.websiteUrl}
 							<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
@@ -733,7 +758,7 @@
 
 	<!-- Empty state -->
 	{#if displayModpacks.length === 0}
-		<div class="py-16 text-center border border-dashed border-[#393939] bg-[#262626] rounded-none">
+		<div class="rounded-none border border-dashed border-[#393939] bg-[#262626] py-16 text-center">
 			<Package class="mx-auto mb-3 h-10 w-10 text-[#525252]" />
 			<p class="text-sm font-semibold text-[#f4f4f4]">
 				{#if showFavorites}
@@ -748,7 +773,7 @@
 					No modpacks available locally
 				{/if}
 			</p>
-			<p class="text-xs text-[#8d8d8d] mt-1 max-w-sm mx-auto">
+			<p class="mx-auto mt-1 max-w-sm text-xs text-[#8d8d8d]">
 				{#if showFavorites}
 					Click the heart icon on any package to add it to your pinned favorites.
 				{:else if !loading && !syncing}
@@ -760,7 +785,7 @@
 
 	<!-- Pagination -->
 	{#if !showFavorites && !showUploaded && searchResults && searchResults.total > searchResults.pageSize}
-		<div class="flex items-center justify-center gap-3 pt-4 border-t border-[#393939]">
+		<div class="flex items-center justify-center gap-3 border-t border-[#393939] pt-4">
 			<CarbonButton
 				kind="tertiary"
 				size="sm"
@@ -773,14 +798,15 @@
 			>
 				Previous
 			</CarbonButton>
-			<span class="text-xs text-[#a8a8a8] font-mono">
+			<span class="font-mono text-xs text-[#a8a8a8]">
 				Page {searchParams.page} of {Math.ceil(searchResults.total / searchResults.pageSize)}
 			</span>
 			<CarbonButton
 				kind="tertiary"
 				size="sm"
 				class="rounded-none"
-				disabled={(searchParams.page || 1) >= Math.ceil(searchResults.total / searchResults.pageSize)}
+				disabled={(searchParams.page || 1) >=
+					Math.ceil(searchResults.total / searchResults.pageSize)}
 				onclick={() => {
 					searchParams.page = (searchParams.page || 1) + 1;
 					searchModpacks(false);
@@ -824,11 +850,7 @@
 			</div>
 
 			<div class="grid grid-cols-2 gap-4">
-				<CarbonSelect
-					label="Mod Loader"
-					bind:value={remoteModLoader}
-					disabled={importingRemote}
-				>
+				<CarbonSelect label="Mod Loader" bind:value={remoteModLoader} disabled={importingRemote}>
 					<option value="">Auto-detect from manifest</option>
 					<option value="fabric">Fabric</option>
 					<option value="forge">Forge</option>
@@ -853,7 +875,7 @@
 				disabled={importingRemote}
 			/>
 
-			<div class="flex items-center justify-end gap-3 pt-4 border-t border-[#393939]">
+			<div class="flex items-center justify-end gap-3 border-t border-[#393939] pt-4">
 				<CarbonButton
 					kind="secondary"
 					onclick={() => (showRemoteModal = false)}

@@ -101,14 +101,21 @@
 	function getLoaderString(val: number | string): string {
 		if (typeof val === 'number') {
 			switch (val) {
-				case 1: return 'forge';
-				case 2: return 'fabric';
-				case 3: return 'quilt';
-				case 4: return 'neoforge';
-				default: return 'fabric';
+				case 1:
+					return 'forge';
+				case 2:
+					return 'fabric';
+				case 3:
+					return 'quilt';
+				case 4:
+					return 'neoforge';
+				default:
+					return 'fabric';
 			}
 		}
-		const s = String(val || '').toLowerCase().replace('mod_loader_', '');
+		const s = String(val || '')
+			.toLowerCase()
+			.replace('mod_loader_', '');
 		if (s.includes('neoforge')) return 'neoforge';
 		if (s.includes('forge') || s.includes('curseforge')) return 'forge';
 		if (s.includes('quilt')) return 'quilt';
@@ -156,8 +163,8 @@
 		if (!q) {
 			return FILTER_VOCABULARY.slice(0, 6);
 		}
-		return FILTER_VOCABULARY.filter(item =>
-			item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)
+		return FILTER_VOCABULARY.filter(
+			(item) => item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)
 		).slice(0, 6);
 	});
 
@@ -166,7 +173,7 @@
 		if (parts.length >= 2) {
 			const key = parts[0].trim().toLowerCase();
 			const value = parts.slice(1).join(':').trim().toLowerCase();
-			activeFilters = activeFilters.filter(f => f.key !== key);
+			activeFilters = activeFilters.filter((f) => f.key !== key);
 			activeFilters.push({ key, value, removable: true });
 			filterInput = '';
 			filterInputFocused = false;
@@ -175,17 +182,17 @@
 	}
 
 	function removeFilter(key: string) {
-		activeFilters = activeFilters.filter(f => f.key !== key);
+		activeFilters = activeFilters.filter((f) => f.key !== key);
 		searchMods();
 	}
 
 	// Filtered mods list - omits client-only mods by default in server context
 	let displayMods = $derived.by(() => {
-		const sideFilter = activeFilters.find(f => f.key === 'side')?.value;
+		const sideFilter = activeFilters.find((f) => f.key === 'side')?.value;
 		if (sideFilter === 'server') {
-			return mods.filter(m => m.server_side !== 'unsupported');
+			return mods.filter((m) => m.server_side !== 'unsupported');
 		} else if (sideFilter === 'client') {
-			return mods.filter(m => m.client_side !== 'unsupported');
+			return mods.filter((m) => m.client_side !== 'unsupported');
 		}
 		return mods;
 	});
@@ -195,10 +202,13 @@
 		searchError = '';
 		mods = [];
 		try {
-			const loaderVal = activeFilters.find(f => f.key === 'loader')?.value || getLoaderString(server.modLoader);
-			const versionVal = activeFilters.find(f => f.key === 'version')?.value || (filterByVersion ? (server.mcVersion || '') : '');
-			const sideVal = activeFilters.find(f => f.key === 'side')?.value || '';
-			const categoryVal = activeFilters.find(f => f.key === 'category')?.value || '';
+			const loaderVal =
+				activeFilters.find((f) => f.key === 'loader')?.value || getLoaderString(server.modLoader);
+			const versionVal =
+				activeFilters.find((f) => f.key === 'version')?.value ||
+				(filterByVersion ? server.mcVersion || '' : '');
+			const sideVal = activeFilters.find((f) => f.key === 'side')?.value || '';
+			const categoryVal = activeFilters.find((f) => f.key === 'category')?.value || '';
 
 			const params = new URLSearchParams({
 				query: searchQuery.trim(),
@@ -236,16 +246,21 @@
 		selectedDependencies = {};
 
 		try {
-			const loaderVal = activeFilters.find(f => f.key === 'loader')?.value || getLoaderString(server.modLoader);
-			const versionVal = activeFilters.find(f => f.key === 'version')?.value || (filterByVersion ? (server.mcVersion || '') : '');
+			const loaderVal =
+				activeFilters.find((f) => f.key === 'loader')?.value || getLoaderString(server.modLoader);
+			const versionVal =
+				activeFilters.find((f) => f.key === 'version')?.value ||
+				(filterByVersion ? server.mcVersion || '' : '');
 			const params = new URLSearchParams({
 				platform: mod.platform,
 				loader: loaderVal,
 				mc_version: versionVal
 			});
 
-			const modTarget = (mod.platform === 'curseforge' && mod.id) ? mod.id : (mod.slug || mod.id);
-			const res = await apiFetch(`/api/v1/servers/${server.id}/mods/${modTarget}/versions?${params.toString()}`);
+			const modTarget = mod.platform === 'curseforge' && mod.id ? mod.id : mod.slug || mod.id;
+			const res = await apiFetch(
+				`/api/v1/servers/${server.id}/mods/${modTarget}/versions?${params.toString()}`
+			);
 			if (!res.ok) {
 				const errorText = await res.text();
 				throw new Error(errorText || `HTTP ${res.status}`);
@@ -333,12 +348,17 @@
 </script>
 
 <DialogPrimitive.Root bind:open>
-	<DialogContent class="max-h-[90vh] !max-w-4xl overflow-hidden flex flex-col p-6">
+	<DialogContent class="flex max-h-[90vh] !max-w-4xl flex-col overflow-hidden p-6">
 		<DialogHeader>
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-3">
 					{#if selectedMod}
-						<Button variant="ghost" size="sm" onclick={() => (selectedMod = null)} class="h-8 w-8 p-0">
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => (selectedMod = null)}
+							class="h-8 w-8 p-0"
+						>
 							<ArrowLeft class="h-4 w-4" />
 						</Button>
 					{/if}
@@ -348,9 +368,13 @@
 							{selectedMod ? selectedMod.title : 'Browse & Install Online Mods'}
 						</DialogTitle>
 						<DialogDescription>
-							Loader: <span class="font-semibold text-foreground">{getLoaderString(server.modLoader).toUpperCase()}</span>
+							Loader: <span class="font-semibold text-foreground"
+								>{getLoaderString(server.modLoader).toUpperCase()}</span
+							>
 							{#if filterByVersion && server.mcVersion}
-								Â· Filtering for MC <span class="font-semibold text-foreground">{server.mcVersion}</span>
+								Â· Filtering for MC <span class="font-semibold text-foreground"
+									>{server.mcVersion}</span
+								>
 							{:else}
 								Â· <span class="text-muted-foreground">All MC versions</span>
 							{/if}
@@ -367,18 +391,25 @@
 							onclick={() => {
 								filterByVersion = !filterByVersion;
 								if (filterByVersion) {
-									if (!activeFilters.some(f => f.key === 'version')) {
-										activeFilters.push({ key: 'version', value: server.mcVersion, removable: true });
+									if (!activeFilters.some((f) => f.key === 'version')) {
+										activeFilters.push({
+											key: 'version',
+											value: server.mcVersion,
+											removable: true
+										});
 									}
 								} else {
-									activeFilters = activeFilters.filter(f => f.key !== 'version');
+									activeFilters = activeFilters.filter((f) => f.key !== 'version');
 								}
 								searchMods();
 							}}
-							class="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-mono font-semibold transition-colors cursor-pointer {filterByVersion ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted text-muted-foreground border border-dashed hover:text-foreground'}"
+							class="inline-flex cursor-pointer items-center rounded-md px-2.5 py-0.5 font-mono text-xs font-semibold transition-colors {filterByVersion
+								? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+								: 'border border-dashed bg-muted text-muted-foreground hover:text-foreground'}"
 							title="Click to toggle version filter"
 						>
-							MC {server.mcVersion} {filterByVersion ? 'âœ“' : '(any)'}
+							MC {server.mcVersion}
+							{filterByVersion ? 'âœ“' : '(any)'}
 						</button>
 					{/if}
 				</div>
@@ -410,7 +441,9 @@
 							onkeydown={(e) => e.key === 'Enter' && searchMods()}
 							class="pl-9"
 						/>
-						<Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+						<Search
+							class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
 					</div>
 
 					<Button onclick={searchMods} disabled={searching}>
@@ -423,21 +456,23 @@
 				</div>
 
 				<!-- Interactive Filter Bar -->
-				<div class="flex flex-wrap items-center gap-2 pt-1 border-t border-border/40">
-					<div class="flex items-center text-xs font-semibold text-muted-foreground mr-1">
-						<Filter class="h-3.5 w-3.5 mr-1 text-primary" />
+				<div class="flex flex-wrap items-center gap-2 border-t border-border/40 pt-1">
+					<div class="mr-1 flex items-center text-xs font-semibold text-muted-foreground">
+						<Filter class="mr-1 h-3.5 w-3.5 text-primary" />
 						Filters:
 					</div>
 
 					{#each activeFilters as f (f.key)}
-						<span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground border border-border/50">
-							<span class="font-mono text-muted-foreground text-[11px]">{f.key}:</span>
+						<span
+							class="inline-flex items-center gap-1 rounded-md border border-border/50 bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+						>
+							<span class="font-mono text-[11px] text-muted-foreground">{f.key}:</span>
 							<span class="font-semibold">{f.value}</span>
 							{#if f.removable}
 								<button
 									type="button"
 									onclick={() => removeFilter(f.key)}
-									class="ml-0.5 hover:text-destructive transition-colors cursor-pointer"
+									class="ml-0.5 cursor-pointer transition-colors hover:text-destructive"
 									title={`Remove ${f.key} filter`}
 								>
 									<X class="h-3 w-3" />
@@ -462,20 +497,24 @@
 										filterInputFocused = false;
 									}
 								}}
-								class="h-7 text-xs px-2 rounded-md bg-muted/50 border border-dashed border-border focus:border-primary focus:bg-background focus:outline-none w-72 placeholder:text-muted-foreground/70"
+								class="h-7 w-72 rounded-md border border-dashed border-border bg-muted/50 px-2 text-xs placeholder:text-muted-foreground/70 focus:border-primary focus:bg-background focus:outline-none"
 							/>
 						</div>
 
 						{#if filterInputFocused && suggestions.length > 0}
-							<div class="absolute left-0 top-full mt-1 z-50 w-80 rounded-lg border bg-popover text-popover-foreground shadow-lg overflow-hidden py-1">
-								<div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b mb-1">
+							<div
+								class="absolute top-full left-0 z-50 mt-1 w-80 overflow-hidden rounded-lg border bg-popover py-1 text-popover-foreground shadow-lg"
+							>
+								<div
+									class="mb-1 border-b px-2 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+								>
 									Filter Suggestions (type key:value)
 								</div>
 								{#each suggestions as s}
 									<button
 										type="button"
 										onmousedown={() => addFilter(s.label)}
-										class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground flex flex-col cursor-pointer transition-colors"
+										class="flex w-full cursor-pointer flex-col px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
 									>
 										<span class="font-mono font-medium text-primary">{s.label}</span>
 										<span class="text-[10px] text-muted-foreground">{s.desc}</span>
@@ -488,7 +527,7 @@
 			</div>
 
 			<!-- Search Results / Mod List -->
-			<div class="mt-4 flex-1 overflow-y-auto pr-1 space-y-3 min-h-[360px] max-h-[500px]">
+			<div class="mt-4 max-h-[500px] min-h-[360px] flex-1 space-y-3 overflow-y-auto pr-1">
 				{#if searchError}
 					<Alert variant="destructive" class="my-4">
 						<AlertTriangle class="h-4 w-4" />
@@ -504,57 +543,75 @@
 					<div class="flex flex-col items-center justify-center py-20 text-muted-foreground">
 						<Package class="h-10 w-10 stroke-[1.5]" />
 						<p class="mt-3 text-base font-medium">No matching mods found</p>
-						<p class="text-xs text-muted-foreground">Try a different query or remove some active filters.</p>
+						<p class="text-xs text-muted-foreground">
+							Try a different query or remove some active filters.
+						</p>
 					</div>
 				{:else}
 					<div class="grid grid-cols-1 gap-3">
 						{#each displayMods as mod (mod.id)}
-							<Card class="hover:border-primary/50 transition-colors">
-								<CardContent class="p-4 flex items-start justify-between gap-4">
-									<div class="flex items-start gap-3.5 flex-1 min-w-0">
+							<Card class="transition-colors hover:border-primary/50">
+								<CardContent class="flex items-start justify-between gap-4 p-4">
+									<div class="flex min-w-0 flex-1 items-start gap-3.5">
 										{#if mod.icon_url}
 											<img
 												src={mod.icon_url}
 												alt={mod.title}
-												class="h-12 w-12 rounded-lg object-contain bg-muted/40 p-1 flex-shrink-0"
+												class="h-12 w-12 flex-shrink-0 rounded-lg bg-muted/40 object-contain p-1"
 											/>
 										{:else}
-											<div class="h-12 w-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+											<div
+												class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted"
+											>
 												<Package class="h-6 w-6 text-muted-foreground" />
 											</div>
 										{/if}
 
-										<div class="space-y-1 flex-1 min-w-0">
+										<div class="min-w-0 flex-1 space-y-1">
 											<div class="flex items-center gap-2">
-												<span class="font-semibold text-base text-foreground truncate">{mod.title}</span>
+												<span class="truncate text-base font-semibold text-foreground"
+													>{mod.title}</span
+												>
 												{#if mod.author}
-													<span class="text-xs text-muted-foreground truncate">by {mod.author}</span>
+													<span class="truncate text-xs text-muted-foreground">by {mod.author}</span
+													>
 												{/if}
 												{#if mod.installed}
-													<Badge variant="default" class="bg-emerald-600 text-white text-[10px] px-1.5 py-0 h-4">
+													<Badge
+														variant="default"
+														class="h-4 bg-emerald-600 px-1.5 py-0 text-[10px] text-white"
+													>
 														Installed
 													</Badge>
 												{/if}
 											</div>
-											<p class="text-xs text-muted-foreground line-clamp-2">{mod.description}</p>
+											<p class="line-clamp-2 text-xs text-muted-foreground">{mod.description}</p>
 
 											<div class="flex flex-wrap items-center gap-1.5 pt-1">
-												<Badge variant="secondary" class="text-[11px] h-5 px-1.5">
+												<Badge variant="secondary" class="h-5 px-1.5 text-[11px]">
 													<Download class="mr-1 h-3 w-3" />
 													{formatDownloads(mod.downloads)}
 												</Badge>
 												{#if mod.server_side}
-													<Badge variant="outline" class="text-[10px] h-5 px-1.5 {mod.server_side === 'required' ? 'border-primary/60 text-primary' : 'text-muted-foreground'}">
+													<Badge
+														variant="outline"
+														class="h-5 px-1.5 text-[10px] {mod.server_side === 'required'
+															? 'border-primary/60 text-primary'
+															: 'text-muted-foreground'}"
+													>
 														Server: {mod.server_side}
 													</Badge>
 												{/if}
 												{#if mod.client_side}
-													<Badge variant="outline" class="text-[10px] h-5 px-1.5 text-muted-foreground">
+													<Badge
+														variant="outline"
+														class="h-5 px-1.5 text-[10px] text-muted-foreground"
+													>
 														Client: {mod.client_side}
 													</Badge>
 												{/if}
 												{#each (mod.categories || []).slice(0, 3) as cat}
-													<Badge variant="outline" class="text-[11px] h-5 px-1.5 capitalize">
+													<Badge variant="outline" class="h-5 px-1.5 text-[11px] capitalize">
 														{cat}
 													</Badge>
 												{/each}
@@ -562,10 +619,8 @@
 										</div>
 									</div>
 
-									<div class="flex flex-col items-end gap-2 flex-shrink-0">
-										<Button size="sm" onclick={() => viewModVersions(mod)}>
-											Select Version
-										</Button>
+									<div class="flex flex-shrink-0 flex-col items-end gap-2">
+										<Button size="sm" onclick={() => viewModVersions(mod)}>Select Version</Button>
 									</div>
 								</CardContent>
 							</Card>
@@ -573,13 +628,12 @@
 					</div>
 				{/if}
 			</div>
-
 		{:else}
 			<!-- Mod Versions & 1-Click Install View -->
-			<div class="mt-4 flex-1 overflow-y-auto pr-1 space-y-4 min-h-[360px] max-h-[500px]">
-				<div class="rounded-lg border bg-muted/20 p-4 space-y-2">
+			<div class="mt-4 max-h-[500px] min-h-[360px] flex-1 space-y-4 overflow-y-auto pr-1">
+				<div class="space-y-2 rounded-lg border bg-muted/20 p-4">
 					<div class="flex items-center justify-between">
-						<span class="font-semibold text-base">{selectedMod.title}</span>
+						<span class="text-base font-semibold">{selectedMod.title}</span>
 						<Badge variant="outline">{selectedMod.platform.toUpperCase()}</Badge>
 					</div>
 					<p class="text-sm text-muted-foreground">{selectedMod.description}</p>
@@ -595,32 +649,38 @@
 						<AlertTriangle class="h-4 w-4" />
 						<AlertTitle>No Compatible Versions</AlertTitle>
 						<AlertDescription>
-							No versions were found matching Minecraft {server.mcVersion} and {getLoaderString(server.modLoader)}.
+							No versions were found matching Minecraft {server.mcVersion} and {getLoaderString(
+								server.modLoader
+							)}.
 						</AlertDescription>
 					</Alert>
 				{:else}
 					<div class="space-y-3">
-						<label class="text-sm font-medium">Compatible Versions ({versions.length} available)</label>
-						<div class="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2">
+						<label class="text-sm font-medium"
+							>Compatible Versions ({versions.length} available)</label
+						>
+						<div class="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-2">
 							{#each versions as ver (ver.id)}
 								<div
 									role="button"
 									tabindex="0"
 									onclick={() => (selectedVersion = ver)}
 									onkeydown={(e) => e.key === 'Enter' && (selectedVersion = ver)}
-									class="flex items-center justify-between p-2 rounded-md cursor-pointer text-sm transition-colors
-										{selectedVersion?.id === ver.id ? 'bg-primary/15 border border-primary/40 font-medium' : 'hover:bg-muted/50'}"
+									class="flex cursor-pointer items-center justify-between rounded-md p-2 text-sm transition-colors
+										{selectedVersion?.id === ver.id
+										? 'border border-primary/40 bg-primary/15 font-medium'
+										: 'hover:bg-muted/50'}"
 								>
 									<div class="flex items-center gap-2">
 										<span>{ver.version_number || ver.name}</span>
 										<Badge
 											variant={ver.version_type === 'release' ? 'default' : 'secondary'}
-											class="text-[10px] h-4 px-1 capitalize"
+											class="h-4 px-1 text-[10px] capitalize"
 										>
 											{ver.version_type}
 										</Badge>
 									</div>
-									<div class="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+									<div class="flex items-center gap-2 font-mono text-xs text-muted-foreground">
 										<span>{ver.file_name}</span>
 										<span>({formatBytes(ver.file_size)})</span>
 									</div>
@@ -631,7 +691,7 @@
 
 					<!-- Dependencies Section -->
 					{#if selectedVersion && (selectedVersion.dependencies || []).length > 0}
-						<div class="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+						<div class="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-4">
 							<div class="flex items-center gap-2 text-sm font-semibold text-foreground">
 								<Layers class="h-4 w-4 text-primary" />
 								Required Dependencies Detected
@@ -652,10 +712,8 @@
 						</div>
 					{/if}
 
-					<div class="pt-3 flex justify-end gap-3">
-						<Button variant="outline" onclick={() => (selectedMod = null)}>
-							Cancel
-						</Button>
+					<div class="flex justify-end gap-3 pt-3">
+						<Button variant="outline" onclick={() => (selectedMod = null)}>Cancel</Button>
 						<Button onclick={installMod} disabled={installing || !selectedVersion}>
 							{#if installing}
 								<Loader2 class="mr-2 h-4 w-4 animate-spin" />

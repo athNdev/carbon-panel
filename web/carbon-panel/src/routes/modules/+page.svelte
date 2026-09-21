@@ -16,11 +16,13 @@
 	<title>Modules & Sidecars - Carbon Panel</title>
 </svelte:head>
 
-<div class="h-full flex-1 space-y-6 font-sans text-[#f4f4f4] rounded-none">
+<div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
 	<!-- Top Bar -->
-	<div class="flex items-center justify-between border-b border-[#393939] pb-6 rounded-none">
+	<div class="flex items-center justify-between rounded-none border-b border-[#393939] pb-6">
 		<div class="flex items-center gap-4">
-			<div class="flex h-12 w-12 items-center justify-center bg-[#262626] border border-[#393939] text-[#0f62fe] rounded-none shadow-sm">
+			<div
+				class="flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#0f62fe] shadow-sm"
+			>
 				<Puzzle class="h-6 w-6" />
 			</div>
 			<div class="space-y-0.5">
@@ -33,10 +35,7 @@
 	</div>
 
 	<!-- Carbon Navigation Tabs -->
-	<CarbonTabs
-		tabs={moduleTabs}
-		bind:selectedTab={activeTab}
-	/>
+	<CarbonTabs tabs={moduleTabs} bind:selectedTab={activeTab} />
 
 	<div>
 		{#if activeTab === 'templates'}

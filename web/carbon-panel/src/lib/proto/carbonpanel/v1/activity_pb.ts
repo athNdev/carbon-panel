@@ -2,125 +2,132 @@
 // @generated from file carbonpanel/v1/activity.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
+import type { Timestamp } from '@bufbuild/protobuf/wkt';
+import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file carbonpanel/v1/activity.proto.
  */
-export const file_carbonpanel_v1_activity: GenFile = /*@__PURE__*/
-  fileDesc("Ch1jYXJib25wYW5lbC92MS9hY3Rpdml0eS5wcm90bxIOY2FyYm9ucGFuZWwudjEizQEKEEFjdGl2aXR5TG9nRW50cnkSCgoCaWQYASABKAkSEAoIYWN0b3JfaWQYAiABKAkSEgoKYWN0b3JfbmFtZRgDIAEoCRIKCgJpcBgEIAEoCRINCgVldmVudBgFIAEoCRIUCgxzdWJqZWN0X3R5cGUYBiABKAkSEgoKc3ViamVjdF9pZBgHIAEoCRISCgpwcm9wZXJ0aWVzGAggASgJEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wInUKF0xpc3RBY3Rpdml0eUxvZ3NSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRINCgVhY3RvchgCIAEoCRIpCgVzaW5jZRgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFbGltaXQYBCABKAUiTQoYTGlzdEFjdGl2aXR5TG9nc1Jlc3BvbnNlEjEKB2VudHJpZXMYASADKAsyIC5jYXJib25wYW5lbC52MS5BY3Rpdml0eUxvZ0VudHJ5MngKD0FjdGl2aXR5U2VydmljZRJlChBMaXN0QWN0aXZpdHlMb2dzEicuY2FyYm9ucGFuZWwudjEuTGlzdEFjdGl2aXR5TG9nc1JlcXVlc3QaKC5jYXJib25wYW5lbC52MS5MaXN0QWN0aXZpdHlMb2dzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+export const file_carbonpanel_v1_activity: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'Ch1jYXJib25wYW5lbC92MS9hY3Rpdml0eS5wcm90bxIOY2FyYm9ucGFuZWwudjEizQEKEEFjdGl2aXR5TG9nRW50cnkSCgoCaWQYASABKAkSEAoIYWN0b3JfaWQYAiABKAkSEgoKYWN0b3JfbmFtZRgDIAEoCRIKCgJpcBgEIAEoCRINCgVldmVudBgFIAEoCRIUCgxzdWJqZWN0X3R5cGUYBiABKAkSEgoKc3ViamVjdF9pZBgHIAEoCRISCgpwcm9wZXJ0aWVzGAggASgJEi4KCmNyZWF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wInUKF0xpc3RBY3Rpdml0eUxvZ3NSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRINCgVhY3RvchgCIAEoCRIpCgVzaW5jZRgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFbGltaXQYBCABKAUiTQoYTGlzdEFjdGl2aXR5TG9nc1Jlc3BvbnNlEjEKB2VudHJpZXMYASADKAsyIC5jYXJib25wYW5lbC52MS5BY3Rpdml0eUxvZ0VudHJ5MngKD0FjdGl2aXR5U2VydmljZRJlChBMaXN0QWN0aXZpdHlMb2dzEicuY2FyYm9ucGFuZWwudjEuTGlzdEFjdGl2aXR5TG9nc1JlcXVlc3QaKC5jYXJib25wYW5lbC52MS5MaXN0QWN0aXZpdHlMb2dzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z',
+		[file_google_protobuf_timestamp]
+	);
 
 /**
  * One audit record
  *
  * @generated from message carbonpanel.v1.ActivityLogEntry
  */
-export type ActivityLogEntry = Message<"carbonpanel.v1.ActivityLogEntry"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type ActivityLogEntry = Message<'carbonpanel.v1.ActivityLogEntry'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: string actor_id = 2;
-   */
-  actorId: string;
+	/**
+	 * @generated from field: string actor_id = 2;
+	 */
+	actorId: string;
 
-  /**
-   * @generated from field: string actor_name = 3;
-   */
-  actorName: string;
+	/**
+	 * @generated from field: string actor_name = 3;
+	 */
+	actorName: string;
 
-  /**
-   * @generated from field: string ip = 4;
-   */
-  ip: string;
+	/**
+	 * @generated from field: string ip = 4;
+	 */
+	ip: string;
 
-  /**
-   * @generated from field: string event = 5;
-   */
-  event: string;
+	/**
+	 * @generated from field: string event = 5;
+	 */
+	event: string;
 
-  /**
-   * @generated from field: string subject_type = 6;
-   */
-  subjectType: string;
+	/**
+	 * @generated from field: string subject_type = 6;
+	 */
+	subjectType: string;
 
-  /**
-   * @generated from field: string subject_id = 7;
-   */
-  subjectId: string;
+	/**
+	 * @generated from field: string subject_id = 7;
+	 */
+	subjectId: string;
 
-  /**
-   * @generated from field: string properties = 8;
-   */
-  properties: string;
+	/**
+	 * @generated from field: string properties = 8;
+	 */
+	properties: string;
 
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 9;
-   */
-  createdAt?: Timestamp | undefined;
+	/**
+	 * @generated from field: google.protobuf.Timestamp created_at = 9;
+	 */
+	createdAt?: Timestamp | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.ActivityLogEntry.
  * Use `create(ActivityLogEntrySchema)` to create a new message.
  */
-export const ActivityLogEntrySchema: GenMessage<ActivityLogEntry> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_activity, 0);
+export const ActivityLogEntrySchema: GenMessage<ActivityLogEntry> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_activity, 0);
 
 /**
  * @generated from message carbonpanel.v1.ListActivityLogsRequest
  */
-export type ListActivityLogsRequest = Message<"carbonpanel.v1.ListActivityLogsRequest"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type ListActivityLogsRequest = Message<'carbonpanel.v1.ListActivityLogsRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: string actor = 2;
-   */
-  actor: string;
+	/**
+	 * @generated from field: string actor = 2;
+	 */
+	actor: string;
 
-  /**
-   * @generated from field: google.protobuf.Timestamp since = 3;
-   */
-  since?: Timestamp | undefined;
+	/**
+	 * @generated from field: google.protobuf.Timestamp since = 3;
+	 */
+	since?: Timestamp | undefined;
 
-  /**
-   * @generated from field: int32 limit = 4;
-   */
-  limit: number;
+	/**
+	 * @generated from field: int32 limit = 4;
+	 */
+	limit: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListActivityLogsRequest.
  * Use `create(ListActivityLogsRequestSchema)` to create a new message.
  */
-export const ListActivityLogsRequestSchema: GenMessage<ListActivityLogsRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_activity, 1);
+export const ListActivityLogsRequestSchema: GenMessage<ListActivityLogsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_activity, 1);
 
 /**
  * @generated from message carbonpanel.v1.ListActivityLogsResponse
  */
-export type ListActivityLogsResponse = Message<"carbonpanel.v1.ListActivityLogsResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.ActivityLogEntry entries = 1;
-   */
-  entries: ActivityLogEntry[];
+export type ListActivityLogsResponse = Message<'carbonpanel.v1.ListActivityLogsResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.ActivityLogEntry entries = 1;
+	 */
+	entries: ActivityLogEntry[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListActivityLogsResponse.
  * Use `create(ListActivityLogsResponseSchema)` to create a new message.
  */
-export const ListActivityLogsResponseSchema: GenMessage<ListActivityLogsResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_activity, 2);
+export const ListActivityLogsResponseSchema: GenMessage<ListActivityLogsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_activity, 2);
 
 /**
  * Append-only audit trail (MINE-141)
@@ -128,16 +135,14 @@ export const ListActivityLogsResponseSchema: GenMessage<ListActivityLogsResponse
  * @generated from service carbonpanel.v1.ActivityService
  */
 export const ActivityService: GenService<{
-  /**
-   * List audit records, newest first
-   *
-   * @generated from rpc carbonpanel.v1.ActivityService.ListActivityLogs
-   */
-  listActivityLogs: {
-    methodKind: "unary";
-    input: typeof ListActivityLogsRequestSchema;
-    output: typeof ListActivityLogsResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_carbonpanel_v1_activity, 0);
-
+	/**
+	 * List audit records, newest first
+	 *
+	 * @generated from rpc carbonpanel.v1.ActivityService.ListActivityLogs
+	 */
+	listActivityLogs: {
+		methodKind: 'unary';
+		input: typeof ListActivityLogsRequestSchema;
+		output: typeof ListActivityLogsResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_activity, 0);

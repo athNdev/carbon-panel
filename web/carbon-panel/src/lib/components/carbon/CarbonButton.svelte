@@ -28,7 +28,8 @@
 		...restProps
 	}: Props = $props();
 
-	const baseClasses = 'inline-flex items-center justify-between font-sans text-sm font-normal tracking-[0.16px] transition-[color,background-color,border-color,transform] motion-press focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none';
+	const baseClasses =
+		'inline-flex items-center justify-between font-sans text-sm font-normal tracking-[0.16px] transition-[color,background-color,border-color,transform] motion-press focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none';
 
 	const sizeClasses = {
 		sm: 'h-8 px-3 text-xs',
@@ -38,11 +39,16 @@
 	};
 
 	const kindClasses = {
-		primary: 'bg-[#0f62fe] text-white hover:bg-[#0353e9] active:bg-[#002d9c] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]',
-		secondary: 'bg-[#393939] text-white hover:bg-[#4c4c4c] active:bg-[#6f6f6f] border border-transparent disabled:bg-[#262626] disabled:text-[#8d8d8d]',
-		tertiary: 'bg-transparent text-white hover:bg-[#393939] active:bg-[#525252] border border-[#f4f4f4] hover:border-transparent disabled:border-[#6f6f6f] disabled:text-[#8d8d8d]',
-		ghost: 'bg-transparent text-[#0f62fe] hover:bg-[#353535] active:bg-[#525252] border border-transparent disabled:text-[#8d8d8d] disabled:hover:bg-transparent',
-		danger: 'bg-[#da1e28] text-white hover:bg-[#ba1b23] active:bg-[#750e13] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]'
+		primary:
+			'bg-[#0f62fe] text-white hover:bg-[#0353e9] active:bg-[#002d9c] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]',
+		secondary:
+			'bg-[#393939] text-white hover:bg-[#4c4c4c] active:bg-[#6f6f6f] border border-transparent disabled:bg-[#262626] disabled:text-[#8d8d8d]',
+		tertiary:
+			'bg-transparent text-white hover:bg-[#393939] active:bg-[#525252] border border-[#f4f4f4] hover:border-transparent disabled:border-[#6f6f6f] disabled:text-[#8d8d8d]',
+		ghost:
+			'bg-transparent text-[#0f62fe] hover:bg-[#353535] active:bg-[#525252] border border-transparent disabled:text-[#8d8d8d] disabled:hover:bg-transparent',
+		danger:
+			'bg-[#da1e28] text-white hover:bg-[#ba1b23] active:bg-[#750e13] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]'
 	};
 </script>
 
@@ -50,11 +56,16 @@
 	<a
 		{href}
 		aria-busy={loading ? 'true' : undefined}
-		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly ? '!p-2 !w-10 !h-10 !justify-center' : ''} {loading ? 'pointer-events-none opacity-60' : ''} {className}"
-		{...(restProps as HTMLAnchorAttributes)}
+		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly
+			? '!h-10 !w-10 !justify-center !p-2'
+			: ''} {loading ? 'pointer-events-none opacity-60' : ''} {className}"
+		{...restProps as HTMLAnchorAttributes}
 	>
 		{#if loading}
-			<span class="h-4 w-4 shrink-0 border-2 border-current border-t-transparent animate-spin" aria-hidden="true"></span>
+			<span
+				class="h-4 w-4 shrink-0 animate-spin border-2 border-current border-t-transparent"
+				aria-hidden="true"
+			></span>
 		{/if}
 		{@render children?.()}
 	</a>
@@ -63,11 +74,16 @@
 		type="button"
 		disabled={disabled || loading}
 		aria-busy={loading ? 'true' : undefined}
-		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly ? '!p-2 !w-10 !h-10 !justify-center' : ''} {className}"
-		{...(restProps as HTMLButtonAttributes)}
+		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly
+			? '!h-10 !w-10 !justify-center !p-2'
+			: ''} {className}"
+		{...restProps as HTMLButtonAttributes}
 	>
 		{#if loading}
-			<span class="h-4 w-4 shrink-0 border-2 border-current border-t-transparent animate-spin" aria-hidden="true"></span>
+			<span
+				class="h-4 w-4 shrink-0 animate-spin border-2 border-current border-t-transparent"
+				aria-hidden="true"
+			></span>
 		{/if}
 		{@render children?.()}
 	</button>

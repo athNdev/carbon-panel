@@ -2,527 +2,553 @@
 // @generated from file carbonpanel/v1/role.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Permission, Role } from "./common_pb";
-import { file_carbonpanel_v1_common } from "./common_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
+import type { Permission, Role } from './common_pb';
+import { file_carbonpanel_v1_common } from './common_pb';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file carbonpanel/v1/role.proto.
  */
-export const file_carbonpanel_v1_role: GenFile = /*@__PURE__*/
-  fileDesc("ChljYXJib25wYW5lbC92MS9yb2xlLnByb3RvEg5jYXJib25wYW5lbC52MSISChBMaXN0Um9sZXNSZXF1ZXN0IjgKEUxpc3RSb2xlc1Jlc3BvbnNlEiMKBXJvbGVzGAEgAygLMhQuY2FyYm9ucGFuZWwudjEuUm9sZSIcCg5HZXRSb2xlUmVxdWVzdBIKCgJpZBgBIAEoCSI1Cg9HZXRSb2xlUmVzcG9uc2USIgoEcm9sZRgBIAEoCzIULmNhcmJvbnBhbmVsLnYxLlJvbGUiewoRQ3JlYXRlUm9sZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRISCgppc19kZWZhdWx0GAMgASgIEi8KC3Blcm1pc3Npb25zGAQgAygLMhouY2FyYm9ucGFuZWwudjEuUGVybWlzc2lvbiI4ChJDcmVhdGVSb2xlUmVzcG9uc2USIgoEcm9sZRgBIAEoCzIULmNhcmJvbnBhbmVsLnYxLlJvbGUijQEKEVVwZGF0ZVJvbGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhcKCmlzX2RlZmF1bHQYBCABKAhIAogBAUIHCgVfbmFtZUIOCgxfZGVzY3JpcHRpb25CDQoLX2lzX2RlZmF1bHQiOAoSVXBkYXRlUm9sZVJlc3BvbnNlEiIKBHJvbGUYASABKAsyFC5jYXJib25wYW5lbC52MS5Sb2xlIh8KEURlbGV0ZVJvbGVSZXF1ZXN0EgoKAmlkGAEgASgJIiUKEkRlbGV0ZVJvbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJIjUKGkdldFBlcm1pc3Npb25NYXRyaXhSZXF1ZXN0EhcKD2luY2x1ZGVfb2JqZWN0cxgBIAEoCCJTCg9TY29wZWFibGVPYmplY3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghyZXNvdXJjZRgDIAEoCRIUCgxzY29wZV9zb3VyY2UYBCABKAkiNAoPUmVzb3VyY2VBY3Rpb25zEhAKCHJlc291cmNlGAEgASgJEg8KB2FjdGlvbnMYAiADKAkiyQIKG0dldFBlcm1pc3Npb25NYXRyaXhSZXNwb25zZRI5ChByZXNvdXJjZV9hY3Rpb25zGAEgAygLMh8uY2FyYm9ucGFuZWwudjEuUmVzb3VyY2VBY3Rpb25zEloKEHJvbGVfcGVybWlzc2lvbnMYAiADKAsyQC5jYXJib25wYW5lbC52MS5HZXRQZXJtaXNzaW9uTWF0cml4UmVzcG9uc2UuUm9sZVBlcm1pc3Npb25zRW50cnkSOgoRYXZhaWxhYmxlX29iamVjdHMYAyADKAsyHy5jYXJib25wYW5lbC52MS5TY29wZWFibGVPYmplY3QaVwoUUm9sZVBlcm1pc3Npb25zRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8uY2FyYm9ucGFuZWwudjEuUm9sZVBlcm1pc3Npb25zOgI4ASJCCg9Sb2xlUGVybWlzc2lvbnMSLwoLcGVybWlzc2lvbnMYASADKAsyGi5jYXJib25wYW5lbC52MS5QZXJtaXNzaW9uIl4KGFVwZGF0ZVBlcm1pc3Npb25zUmVxdWVzdBIRCglyb2xlX25hbWUYASABKAkSLwoLcGVybWlzc2lvbnMYAiADKAsyGi5jYXJib25wYW5lbC52MS5QZXJtaXNzaW9uIiwKGVVwZGF0ZVBlcm1pc3Npb25zUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSI3ChFBc3NpZ25Sb2xlUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhEKCXJvbGVfbmFtZRgCIAEoCSIlChJBc3NpZ25Sb2xlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSI5ChNVbmFzc2lnblJvbGVSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSEQoJcm9sZV9uYW1lGAIgASgJIicKFFVuYXNzaWduUm9sZVJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiJgoTR2V0VXNlclJvbGVzUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJIiUKFEdldFVzZXJSb2xlc1Jlc3BvbnNlEg0KBXJvbGVzGAEgAygJMo8HCgtSb2xlU2VydmljZRJQCglMaXN0Um9sZXMSIC5jYXJib25wYW5lbC52MS5MaXN0Um9sZXNSZXF1ZXN0GiEuY2FyYm9ucGFuZWwudjEuTGlzdFJvbGVzUmVzcG9uc2USSgoHR2V0Um9sZRIeLmNhcmJvbnBhbmVsLnYxLkdldFJvbGVSZXF1ZXN0Gh8uY2FyYm9ucGFuZWwudjEuR2V0Um9sZVJlc3BvbnNlElMKCkNyZWF0ZVJvbGUSIS5jYXJib25wYW5lbC52MS5DcmVhdGVSb2xlUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVJvbGVSZXNwb25zZRJTCgpVcGRhdGVSb2xlEiEuY2FyYm9ucGFuZWwudjEuVXBkYXRlUm9sZVJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5VcGRhdGVSb2xlUmVzcG9uc2USUwoKRGVsZXRlUm9sZRIhLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVJvbGVSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuRGVsZXRlUm9sZVJlc3BvbnNlEm4KE0dldFBlcm1pc3Npb25NYXRyaXgSKi5jYXJib25wYW5lbC52MS5HZXRQZXJtaXNzaW9uTWF0cml4UmVxdWVzdBorLmNhcmJvbnBhbmVsLnYxLkdldFBlcm1pc3Npb25NYXRyaXhSZXNwb25zZRJoChFVcGRhdGVQZXJtaXNzaW9ucxIoLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVBlcm1pc3Npb25zUmVxdWVzdBopLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVBlcm1pc3Npb25zUmVzcG9uc2USUwoKQXNzaWduUm9sZRIhLmNhcmJvbnBhbmVsLnYxLkFzc2lnblJvbGVSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuQXNzaWduUm9sZVJlc3BvbnNlElkKDFVuYXNzaWduUm9sZRIjLmNhcmJvbnBhbmVsLnYxLlVuYXNzaWduUm9sZVJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5VbmFzc2lnblJvbGVSZXNwb25zZRJZCgxHZXRVc2VyUm9sZXMSIy5jYXJib25wYW5lbC52MS5HZXRVc2VyUm9sZXNSZXF1ZXN0GiQuY2FyYm9ucGFuZWwudjEuR2V0VXNlclJvbGVzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z", [file_carbonpanel_v1_common]);
+export const file_carbonpanel_v1_role: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'ChljYXJib25wYW5lbC92MS9yb2xlLnByb3RvEg5jYXJib25wYW5lbC52MSISChBMaXN0Um9sZXNSZXF1ZXN0IjgKEUxpc3RSb2xlc1Jlc3BvbnNlEiMKBXJvbGVzGAEgAygLMhQuY2FyYm9ucGFuZWwudjEuUm9sZSIcCg5HZXRSb2xlUmVxdWVzdBIKCgJpZBgBIAEoCSI1Cg9HZXRSb2xlUmVzcG9uc2USIgoEcm9sZRgBIAEoCzIULmNhcmJvbnBhbmVsLnYxLlJvbGUiewoRQ3JlYXRlUm9sZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRISCgppc19kZWZhdWx0GAMgASgIEi8KC3Blcm1pc3Npb25zGAQgAygLMhouY2FyYm9ucGFuZWwudjEuUGVybWlzc2lvbiI4ChJDcmVhdGVSb2xlUmVzcG9uc2USIgoEcm9sZRgBIAEoCzIULmNhcmJvbnBhbmVsLnYxLlJvbGUijQEKEVVwZGF0ZVJvbGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhcKCmlzX2RlZmF1bHQYBCABKAhIAogBAUIHCgVfbmFtZUIOCgxfZGVzY3JpcHRpb25CDQoLX2lzX2RlZmF1bHQiOAoSVXBkYXRlUm9sZVJlc3BvbnNlEiIKBHJvbGUYASABKAsyFC5jYXJib25wYW5lbC52MS5Sb2xlIh8KEURlbGV0ZVJvbGVSZXF1ZXN0EgoKAmlkGAEgASgJIiUKEkRlbGV0ZVJvbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJIjUKGkdldFBlcm1pc3Npb25NYXRyaXhSZXF1ZXN0EhcKD2luY2x1ZGVfb2JqZWN0cxgBIAEoCCJTCg9TY29wZWFibGVPYmplY3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghyZXNvdXJjZRgDIAEoCRIUCgxzY29wZV9zb3VyY2UYBCABKAkiNAoPUmVzb3VyY2VBY3Rpb25zEhAKCHJlc291cmNlGAEgASgJEg8KB2FjdGlvbnMYAiADKAkiyQIKG0dldFBlcm1pc3Npb25NYXRyaXhSZXNwb25zZRI5ChByZXNvdXJjZV9hY3Rpb25zGAEgAygLMh8uY2FyYm9ucGFuZWwudjEuUmVzb3VyY2VBY3Rpb25zEloKEHJvbGVfcGVybWlzc2lvbnMYAiADKAsyQC5jYXJib25wYW5lbC52MS5HZXRQZXJtaXNzaW9uTWF0cml4UmVzcG9uc2UuUm9sZVBlcm1pc3Npb25zRW50cnkSOgoRYXZhaWxhYmxlX29iamVjdHMYAyADKAsyHy5jYXJib25wYW5lbC52MS5TY29wZWFibGVPYmplY3QaVwoUUm9sZVBlcm1pc3Npb25zRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8uY2FyYm9ucGFuZWwudjEuUm9sZVBlcm1pc3Npb25zOgI4ASJCCg9Sb2xlUGVybWlzc2lvbnMSLwoLcGVybWlzc2lvbnMYASADKAsyGi5jYXJib25wYW5lbC52MS5QZXJtaXNzaW9uIl4KGFVwZGF0ZVBlcm1pc3Npb25zUmVxdWVzdBIRCglyb2xlX25hbWUYASABKAkSLwoLcGVybWlzc2lvbnMYAiADKAsyGi5jYXJib25wYW5lbC52MS5QZXJtaXNzaW9uIiwKGVVwZGF0ZVBlcm1pc3Npb25zUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSI3ChFBc3NpZ25Sb2xlUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhEKCXJvbGVfbmFtZRgCIAEoCSIlChJBc3NpZ25Sb2xlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSI5ChNVbmFzc2lnblJvbGVSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSEQoJcm9sZV9uYW1lGAIgASgJIicKFFVuYXNzaWduUm9sZVJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiJgoTR2V0VXNlclJvbGVzUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJIiUKFEdldFVzZXJSb2xlc1Jlc3BvbnNlEg0KBXJvbGVzGAEgAygJMo8HCgtSb2xlU2VydmljZRJQCglMaXN0Um9sZXMSIC5jYXJib25wYW5lbC52MS5MaXN0Um9sZXNSZXF1ZXN0GiEuY2FyYm9ucGFuZWwudjEuTGlzdFJvbGVzUmVzcG9uc2USSgoHR2V0Um9sZRIeLmNhcmJvbnBhbmVsLnYxLkdldFJvbGVSZXF1ZXN0Gh8uY2FyYm9ucGFuZWwudjEuR2V0Um9sZVJlc3BvbnNlElMKCkNyZWF0ZVJvbGUSIS5jYXJib25wYW5lbC52MS5DcmVhdGVSb2xlUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVJvbGVSZXNwb25zZRJTCgpVcGRhdGVSb2xlEiEuY2FyYm9ucGFuZWwudjEuVXBkYXRlUm9sZVJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5VcGRhdGVSb2xlUmVzcG9uc2USUwoKRGVsZXRlUm9sZRIhLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVJvbGVSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuRGVsZXRlUm9sZVJlc3BvbnNlEm4KE0dldFBlcm1pc3Npb25NYXRyaXgSKi5jYXJib25wYW5lbC52MS5HZXRQZXJtaXNzaW9uTWF0cml4UmVxdWVzdBorLmNhcmJvbnBhbmVsLnYxLkdldFBlcm1pc3Npb25NYXRyaXhSZXNwb25zZRJoChFVcGRhdGVQZXJtaXNzaW9ucxIoLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVBlcm1pc3Npb25zUmVxdWVzdBopLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVBlcm1pc3Npb25zUmVzcG9uc2USUwoKQXNzaWduUm9sZRIhLmNhcmJvbnBhbmVsLnYxLkFzc2lnblJvbGVSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuQXNzaWduUm9sZVJlc3BvbnNlElkKDFVuYXNzaWduUm9sZRIjLmNhcmJvbnBhbmVsLnYxLlVuYXNzaWduUm9sZVJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5VbmFzc2lnblJvbGVSZXNwb25zZRJZCgxHZXRVc2VyUm9sZXMSIy5jYXJib25wYW5lbC52MS5HZXRVc2VyUm9sZXNSZXF1ZXN0GiQuY2FyYm9ucGFuZWwudjEuR2V0VXNlclJvbGVzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z',
+		[file_carbonpanel_v1_common]
+	);
 
 /**
  * Empty list request
  *
  * @generated from message carbonpanel.v1.ListRolesRequest
  */
-export type ListRolesRequest = Message<"carbonpanel.v1.ListRolesRequest"> & {
-};
+export type ListRolesRequest = Message<'carbonpanel.v1.ListRolesRequest'> & {};
 
 /**
  * Describes the message carbonpanel.v1.ListRolesRequest.
  * Use `create(ListRolesRequestSchema)` to create a new message.
  */
-export const ListRolesRequestSchema: GenMessage<ListRolesRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 0);
+export const ListRolesRequestSchema: GenMessage<ListRolesRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 0);
 
 /**
  * All roles
  *
  * @generated from message carbonpanel.v1.ListRolesResponse
  */
-export type ListRolesResponse = Message<"carbonpanel.v1.ListRolesResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.Role roles = 1;
-   */
-  roles: Role[];
+export type ListRolesResponse = Message<'carbonpanel.v1.ListRolesResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.Role roles = 1;
+	 */
+	roles: Role[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListRolesResponse.
  * Use `create(ListRolesResponseSchema)` to create a new message.
  */
-export const ListRolesResponseSchema: GenMessage<ListRolesResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 1);
+export const ListRolesResponseSchema: GenMessage<ListRolesResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 1);
 
 /**
  * Get role by ID
  *
  * @generated from message carbonpanel.v1.GetRoleRequest
  */
-export type GetRoleRequest = Message<"carbonpanel.v1.GetRoleRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type GetRoleRequest = Message<'carbonpanel.v1.GetRoleRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetRoleRequest.
  * Use `create(GetRoleRequestSchema)` to create a new message.
  */
-export const GetRoleRequestSchema: GenMessage<GetRoleRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 2);
+export const GetRoleRequestSchema: GenMessage<GetRoleRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 2);
 
 /**
  * Single role
  *
  * @generated from message carbonpanel.v1.GetRoleResponse
  */
-export type GetRoleResponse = Message<"carbonpanel.v1.GetRoleResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.Role role = 1;
-   */
-  role?: Role | undefined;
+export type GetRoleResponse = Message<'carbonpanel.v1.GetRoleResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.Role role = 1;
+	 */
+	role?: Role | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetRoleResponse.
  * Use `create(GetRoleResponseSchema)` to create a new message.
  */
-export const GetRoleResponseSchema: GenMessage<GetRoleResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 3);
+export const GetRoleResponseSchema: GenMessage<GetRoleResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 3);
 
 /**
  * New role details
  *
  * @generated from message carbonpanel.v1.CreateRoleRequest
  */
-export type CreateRoleRequest = Message<"carbonpanel.v1.CreateRoleRequest"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
+export type CreateRoleRequest = Message<'carbonpanel.v1.CreateRoleRequest'> & {
+	/**
+	 * @generated from field: string name = 1;
+	 */
+	name: string;
 
-  /**
-   * @generated from field: string description = 2;
-   */
-  description: string;
+	/**
+	 * @generated from field: string description = 2;
+	 */
+	description: string;
 
-  /**
-   * @generated from field: bool is_default = 3;
-   */
-  isDefault: boolean;
+	/**
+	 * @generated from field: bool is_default = 3;
+	 */
+	isDefault: boolean;
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.Permission permissions = 4;
-   */
-  permissions: Permission[];
+	/**
+	 * @generated from field: repeated carbonpanel.v1.Permission permissions = 4;
+	 */
+	permissions: Permission[];
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateRoleRequest.
  * Use `create(CreateRoleRequestSchema)` to create a new message.
  */
-export const CreateRoleRequestSchema: GenMessage<CreateRoleRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 4);
+export const CreateRoleRequestSchema: GenMessage<CreateRoleRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 4);
 
 /**
  * Created role
  *
  * @generated from message carbonpanel.v1.CreateRoleResponse
  */
-export type CreateRoleResponse = Message<"carbonpanel.v1.CreateRoleResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.Role role = 1;
-   */
-  role?: Role | undefined;
+export type CreateRoleResponse = Message<'carbonpanel.v1.CreateRoleResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.Role role = 1;
+	 */
+	role?: Role | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateRoleResponse.
  * Use `create(CreateRoleResponseSchema)` to create a new message.
  */
-export const CreateRoleResponseSchema: GenMessage<CreateRoleResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 5);
+export const CreateRoleResponseSchema: GenMessage<CreateRoleResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 5);
 
 /**
  * Role fields to update
  *
  * @generated from message carbonpanel.v1.UpdateRoleRequest
  */
-export type UpdateRoleRequest = Message<"carbonpanel.v1.UpdateRoleRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type UpdateRoleRequest = Message<'carbonpanel.v1.UpdateRoleRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: optional string name = 2;
-   */
-  name?: string | undefined;
+	/**
+	 * @generated from field: optional string name = 2;
+	 */
+	name?: string | undefined;
 
-  /**
-   * @generated from field: optional string description = 3;
-   */
-  description?: string | undefined;
+	/**
+	 * @generated from field: optional string description = 3;
+	 */
+	description?: string | undefined;
 
-  /**
-   * @generated from field: optional bool is_default = 4;
-   */
-  isDefault?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool is_default = 4;
+	 */
+	isDefault?: boolean | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateRoleRequest.
  * Use `create(UpdateRoleRequestSchema)` to create a new message.
  */
-export const UpdateRoleRequestSchema: GenMessage<UpdateRoleRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 6);
+export const UpdateRoleRequestSchema: GenMessage<UpdateRoleRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 6);
 
 /**
  * Updated role
  *
  * @generated from message carbonpanel.v1.UpdateRoleResponse
  */
-export type UpdateRoleResponse = Message<"carbonpanel.v1.UpdateRoleResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.Role role = 1;
-   */
-  role?: Role | undefined;
+export type UpdateRoleResponse = Message<'carbonpanel.v1.UpdateRoleResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.Role role = 1;
+	 */
+	role?: Role | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateRoleResponse.
  * Use `create(UpdateRoleResponseSchema)` to create a new message.
  */
-export const UpdateRoleResponseSchema: GenMessage<UpdateRoleResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 7);
+export const UpdateRoleResponseSchema: GenMessage<UpdateRoleResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 7);
 
 /**
  * Role to delete
  *
  * @generated from message carbonpanel.v1.DeleteRoleRequest
  */
-export type DeleteRoleRequest = Message<"carbonpanel.v1.DeleteRoleRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type DeleteRoleRequest = Message<'carbonpanel.v1.DeleteRoleRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteRoleRequest.
  * Use `create(DeleteRoleRequestSchema)` to create a new message.
  */
-export const DeleteRoleRequestSchema: GenMessage<DeleteRoleRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 8);
+export const DeleteRoleRequestSchema: GenMessage<DeleteRoleRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 8);
 
 /**
  * Deletion confirmation
  *
  * @generated from message carbonpanel.v1.DeleteRoleResponse
  */
-export type DeleteRoleResponse = Message<"carbonpanel.v1.DeleteRoleResponse"> & {
-  /**
-   * @generated from field: string message = 1;
-   */
-  message: string;
+export type DeleteRoleResponse = Message<'carbonpanel.v1.DeleteRoleResponse'> & {
+	/**
+	 * @generated from field: string message = 1;
+	 */
+	message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteRoleResponse.
  * Use `create(DeleteRoleResponseSchema)` to create a new message.
  */
-export const DeleteRoleResponseSchema: GenMessage<DeleteRoleResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 9);
+export const DeleteRoleResponseSchema: GenMessage<DeleteRoleResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 9);
 
 /**
  * Permission matrix request
  *
  * @generated from message carbonpanel.v1.GetPermissionMatrixRequest
  */
-export type GetPermissionMatrixRequest = Message<"carbonpanel.v1.GetPermissionMatrixRequest"> & {
-  /**
-   * @generated from field: bool include_objects = 1;
-   */
-  includeObjects: boolean;
+export type GetPermissionMatrixRequest = Message<'carbonpanel.v1.GetPermissionMatrixRequest'> & {
+	/**
+	 * @generated from field: bool include_objects = 1;
+	 */
+	includeObjects: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetPermissionMatrixRequest.
  * Use `create(GetPermissionMatrixRequestSchema)` to create a new message.
  */
-export const GetPermissionMatrixRequestSchema: GenMessage<GetPermissionMatrixRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 10);
+export const GetPermissionMatrixRequestSchema: GenMessage<GetPermissionMatrixRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 10);
 
 /**
  * An object that can be scoped in permissions (e.g. a specific server)
  *
  * @generated from message carbonpanel.v1.ScopeableObject
  */
-export type ScopeableObject = Message<"carbonpanel.v1.ScopeableObject"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type ScopeableObject = Message<'carbonpanel.v1.ScopeableObject'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
+	/**
+	 * @generated from field: string name = 2;
+	 */
+	name: string;
 
-  /**
-   * @generated from field: string resource = 3;
-   */
-  resource: string;
+	/**
+	 * @generated from field: string resource = 3;
+	 */
+	resource: string;
 
-  /**
-   * Entity type providing scope (e.g., "servers" when files scoped by server)
-   *
-   * @generated from field: string scope_source = 4;
-   */
-  scopeSource: string;
+	/**
+	 * Entity type providing scope (e.g., "servers" when files scoped by server)
+	 *
+	 * @generated from field: string scope_source = 4;
+	 */
+	scopeSource: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ScopeableObject.
  * Use `create(ScopeableObjectSchema)` to create a new message.
  */
-export const ScopeableObjectSchema: GenMessage<ScopeableObject> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 11);
+export const ScopeableObjectSchema: GenMessage<ScopeableObject> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 11);
 
 /**
  * Valid actions per resource, derived from procedure mappings
  *
  * @generated from message carbonpanel.v1.ResourceActions
  */
-export type ResourceActions = Message<"carbonpanel.v1.ResourceActions"> & {
-  /**
-   * @generated from field: string resource = 1;
-   */
-  resource: string;
+export type ResourceActions = Message<'carbonpanel.v1.ResourceActions'> & {
+	/**
+	 * @generated from field: string resource = 1;
+	 */
+	resource: string;
 
-  /**
-   * @generated from field: repeated string actions = 2;
-   */
-  actions: string[];
+	/**
+	 * @generated from field: repeated string actions = 2;
+	 */
+	actions: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ResourceActions.
  * Use `create(ResourceActionsSchema)` to create a new message.
  */
-export const ResourceActionsSchema: GenMessage<ResourceActions> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 12);
+export const ResourceActionsSchema: GenMessage<ResourceActions> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 12);
 
 /**
  * Permission matrix response
  *
  * @generated from message carbonpanel.v1.GetPermissionMatrixResponse
  */
-export type GetPermissionMatrixResponse = Message<"carbonpanel.v1.GetPermissionMatrixResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.ResourceActions resource_actions = 1;
-   */
-  resourceActions: ResourceActions[];
+export type GetPermissionMatrixResponse = Message<'carbonpanel.v1.GetPermissionMatrixResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.ResourceActions resource_actions = 1;
+	 */
+	resourceActions: ResourceActions[];
 
-  /**
-   * @generated from field: map<string, carbonpanel.v1.RolePermissions> role_permissions = 2;
-   */
-  rolePermissions: { [key: string]: RolePermissions };
+	/**
+	 * @generated from field: map<string, carbonpanel.v1.RolePermissions> role_permissions = 2;
+	 */
+	rolePermissions: { [key: string]: RolePermissions };
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.ScopeableObject available_objects = 3;
-   */
-  availableObjects: ScopeableObject[];
+	/**
+	 * @generated from field: repeated carbonpanel.v1.ScopeableObject available_objects = 3;
+	 */
+	availableObjects: ScopeableObject[];
 };
 
 /**
  * Describes the message carbonpanel.v1.GetPermissionMatrixResponse.
  * Use `create(GetPermissionMatrixResponseSchema)` to create a new message.
  */
-export const GetPermissionMatrixResponseSchema: GenMessage<GetPermissionMatrixResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 13);
+export const GetPermissionMatrixResponseSchema: GenMessage<GetPermissionMatrixResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 13);
 
 /**
  * Permissions for a single role
  *
  * @generated from message carbonpanel.v1.RolePermissions
  */
-export type RolePermissions = Message<"carbonpanel.v1.RolePermissions"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.Permission permissions = 1;
-   */
-  permissions: Permission[];
+export type RolePermissions = Message<'carbonpanel.v1.RolePermissions'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.Permission permissions = 1;
+	 */
+	permissions: Permission[];
 };
 
 /**
  * Describes the message carbonpanel.v1.RolePermissions.
  * Use `create(RolePermissionsSchema)` to create a new message.
  */
-export const RolePermissionsSchema: GenMessage<RolePermissions> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 14);
+export const RolePermissionsSchema: GenMessage<RolePermissions> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 14);
 
 /**
  * Update permissions for a role
  *
  * @generated from message carbonpanel.v1.UpdatePermissionsRequest
  */
-export type UpdatePermissionsRequest = Message<"carbonpanel.v1.UpdatePermissionsRequest"> & {
-  /**
-   * @generated from field: string role_name = 1;
-   */
-  roleName: string;
+export type UpdatePermissionsRequest = Message<'carbonpanel.v1.UpdatePermissionsRequest'> & {
+	/**
+	 * @generated from field: string role_name = 1;
+	 */
+	roleName: string;
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.Permission permissions = 2;
-   */
-  permissions: Permission[];
+	/**
+	 * @generated from field: repeated carbonpanel.v1.Permission permissions = 2;
+	 */
+	permissions: Permission[];
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdatePermissionsRequest.
  * Use `create(UpdatePermissionsRequestSchema)` to create a new message.
  */
-export const UpdatePermissionsRequestSchema: GenMessage<UpdatePermissionsRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 15);
+export const UpdatePermissionsRequestSchema: GenMessage<UpdatePermissionsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 15);
 
 /**
  * Update confirmation
  *
  * @generated from message carbonpanel.v1.UpdatePermissionsResponse
  */
-export type UpdatePermissionsResponse = Message<"carbonpanel.v1.UpdatePermissionsResponse"> & {
-  /**
-   * @generated from field: string message = 1;
-   */
-  message: string;
+export type UpdatePermissionsResponse = Message<'carbonpanel.v1.UpdatePermissionsResponse'> & {
+	/**
+	 * @generated from field: string message = 1;
+	 */
+	message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdatePermissionsResponse.
  * Use `create(UpdatePermissionsResponseSchema)` to create a new message.
  */
-export const UpdatePermissionsResponseSchema: GenMessage<UpdatePermissionsResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 16);
+export const UpdatePermissionsResponseSchema: GenMessage<UpdatePermissionsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 16);
 
 /**
  * Assign role to user
  *
  * @generated from message carbonpanel.v1.AssignRoleRequest
  */
-export type AssignRoleRequest = Message<"carbonpanel.v1.AssignRoleRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
+export type AssignRoleRequest = Message<'carbonpanel.v1.AssignRoleRequest'> & {
+	/**
+	 * @generated from field: string user_id = 1;
+	 */
+	userId: string;
 
-  /**
-   * @generated from field: string role_name = 2;
-   */
-  roleName: string;
+	/**
+	 * @generated from field: string role_name = 2;
+	 */
+	roleName: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.AssignRoleRequest.
  * Use `create(AssignRoleRequestSchema)` to create a new message.
  */
-export const AssignRoleRequestSchema: GenMessage<AssignRoleRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 17);
+export const AssignRoleRequestSchema: GenMessage<AssignRoleRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 17);
 
 /**
  * Assignment confirmation
  *
  * @generated from message carbonpanel.v1.AssignRoleResponse
  */
-export type AssignRoleResponse = Message<"carbonpanel.v1.AssignRoleResponse"> & {
-  /**
-   * @generated from field: string message = 1;
-   */
-  message: string;
+export type AssignRoleResponse = Message<'carbonpanel.v1.AssignRoleResponse'> & {
+	/**
+	 * @generated from field: string message = 1;
+	 */
+	message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.AssignRoleResponse.
  * Use `create(AssignRoleResponseSchema)` to create a new message.
  */
-export const AssignRoleResponseSchema: GenMessage<AssignRoleResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 18);
+export const AssignRoleResponseSchema: GenMessage<AssignRoleResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 18);
 
 /**
  * Unassign role from user
  *
  * @generated from message carbonpanel.v1.UnassignRoleRequest
  */
-export type UnassignRoleRequest = Message<"carbonpanel.v1.UnassignRoleRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
+export type UnassignRoleRequest = Message<'carbonpanel.v1.UnassignRoleRequest'> & {
+	/**
+	 * @generated from field: string user_id = 1;
+	 */
+	userId: string;
 
-  /**
-   * @generated from field: string role_name = 2;
-   */
-  roleName: string;
+	/**
+	 * @generated from field: string role_name = 2;
+	 */
+	roleName: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UnassignRoleRequest.
  * Use `create(UnassignRoleRequestSchema)` to create a new message.
  */
-export const UnassignRoleRequestSchema: GenMessage<UnassignRoleRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 19);
+export const UnassignRoleRequestSchema: GenMessage<UnassignRoleRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 19);
 
 /**
  * Unassignment confirmation
  *
  * @generated from message carbonpanel.v1.UnassignRoleResponse
  */
-export type UnassignRoleResponse = Message<"carbonpanel.v1.UnassignRoleResponse"> & {
-  /**
-   * @generated from field: string message = 1;
-   */
-  message: string;
+export type UnassignRoleResponse = Message<'carbonpanel.v1.UnassignRoleResponse'> & {
+	/**
+	 * @generated from field: string message = 1;
+	 */
+	message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UnassignRoleResponse.
  * Use `create(UnassignRoleResponseSchema)` to create a new message.
  */
-export const UnassignRoleResponseSchema: GenMessage<UnassignRoleResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 20);
+export const UnassignRoleResponseSchema: GenMessage<UnassignRoleResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 20);
 
 /**
  * Get user roles request
  *
  * @generated from message carbonpanel.v1.GetUserRolesRequest
  */
-export type GetUserRolesRequest = Message<"carbonpanel.v1.GetUserRolesRequest"> & {
-  /**
-   * @generated from field: string user_id = 1;
-   */
-  userId: string;
+export type GetUserRolesRequest = Message<'carbonpanel.v1.GetUserRolesRequest'> & {
+	/**
+	 * @generated from field: string user_id = 1;
+	 */
+	userId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetUserRolesRequest.
  * Use `create(GetUserRolesRequestSchema)` to create a new message.
  */
-export const GetUserRolesRequestSchema: GenMessage<GetUserRolesRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 21);
+export const GetUserRolesRequestSchema: GenMessage<GetUserRolesRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 21);
 
 /**
  * User roles response
  *
  * @generated from message carbonpanel.v1.GetUserRolesResponse
  */
-export type GetUserRolesResponse = Message<"carbonpanel.v1.GetUserRolesResponse"> & {
-  /**
-   * @generated from field: repeated string roles = 1;
-   */
-  roles: string[];
+export type GetUserRolesResponse = Message<'carbonpanel.v1.GetUserRolesResponse'> & {
+	/**
+	 * @generated from field: repeated string roles = 1;
+	 */
+	roles: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.GetUserRolesResponse.
  * Use `create(GetUserRolesResponseSchema)` to create a new message.
  */
-export const GetUserRolesResponseSchema: GenMessage<GetUserRolesResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_role, 22);
+export const GetUserRolesResponseSchema: GenMessage<GetUserRolesResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_role, 22);
 
 /**
  * Role and permission management service
@@ -530,106 +556,104 @@ export const GetUserRolesResponseSchema: GenMessage<GetUserRolesResponse> = /*@_
  * @generated from service carbonpanel.v1.RoleService
  */
 export const RoleService: GenService<{
-  /**
-   * List all roles
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.ListRoles
-   */
-  listRoles: {
-    methodKind: "unary";
-    input: typeof ListRolesRequestSchema;
-    output: typeof ListRolesResponseSchema;
-  },
-  /**
-   * Get a single role
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.GetRole
-   */
-  getRole: {
-    methodKind: "unary";
-    input: typeof GetRoleRequestSchema;
-    output: typeof GetRoleResponseSchema;
-  },
-  /**
-   * Create a new custom role
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.CreateRole
-   */
-  createRole: {
-    methodKind: "unary";
-    input: typeof CreateRoleRequestSchema;
-    output: typeof CreateRoleResponseSchema;
-  },
-  /**
-   * Update a role
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.UpdateRole
-   */
-  updateRole: {
-    methodKind: "unary";
-    input: typeof UpdateRoleRequestSchema;
-    output: typeof UpdateRoleResponseSchema;
-  },
-  /**
-   * Delete a custom role
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.DeleteRole
-   */
-  deleteRole: {
-    methodKind: "unary";
-    input: typeof DeleteRoleRequestSchema;
-    output: typeof DeleteRoleResponseSchema;
-  },
-  /**
-   * Get permission matrix for all roles
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.GetPermissionMatrix
-   */
-  getPermissionMatrix: {
-    methodKind: "unary";
-    input: typeof GetPermissionMatrixRequestSchema;
-    output: typeof GetPermissionMatrixResponseSchema;
-  },
-  /**
-   * Set permissions for a role
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.UpdatePermissions
-   */
-  updatePermissions: {
-    methodKind: "unary";
-    input: typeof UpdatePermissionsRequestSchema;
-    output: typeof UpdatePermissionsResponseSchema;
-  },
-  /**
-   * Assign a role to a user
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.AssignRole
-   */
-  assignRole: {
-    methodKind: "unary";
-    input: typeof AssignRoleRequestSchema;
-    output: typeof AssignRoleResponseSchema;
-  },
-  /**
-   * Unassign a role from a user
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.UnassignRole
-   */
-  unassignRole: {
-    methodKind: "unary";
-    input: typeof UnassignRoleRequestSchema;
-    output: typeof UnassignRoleResponseSchema;
-  },
-  /**
-   * Get roles for a user
-   *
-   * @generated from rpc carbonpanel.v1.RoleService.GetUserRoles
-   */
-  getUserRoles: {
-    methodKind: "unary";
-    input: typeof GetUserRolesRequestSchema;
-    output: typeof GetUserRolesResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_carbonpanel_v1_role, 0);
-
+	/**
+	 * List all roles
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.ListRoles
+	 */
+	listRoles: {
+		methodKind: 'unary';
+		input: typeof ListRolesRequestSchema;
+		output: typeof ListRolesResponseSchema;
+	};
+	/**
+	 * Get a single role
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.GetRole
+	 */
+	getRole: {
+		methodKind: 'unary';
+		input: typeof GetRoleRequestSchema;
+		output: typeof GetRoleResponseSchema;
+	};
+	/**
+	 * Create a new custom role
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.CreateRole
+	 */
+	createRole: {
+		methodKind: 'unary';
+		input: typeof CreateRoleRequestSchema;
+		output: typeof CreateRoleResponseSchema;
+	};
+	/**
+	 * Update a role
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.UpdateRole
+	 */
+	updateRole: {
+		methodKind: 'unary';
+		input: typeof UpdateRoleRequestSchema;
+		output: typeof UpdateRoleResponseSchema;
+	};
+	/**
+	 * Delete a custom role
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.DeleteRole
+	 */
+	deleteRole: {
+		methodKind: 'unary';
+		input: typeof DeleteRoleRequestSchema;
+		output: typeof DeleteRoleResponseSchema;
+	};
+	/**
+	 * Get permission matrix for all roles
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.GetPermissionMatrix
+	 */
+	getPermissionMatrix: {
+		methodKind: 'unary';
+		input: typeof GetPermissionMatrixRequestSchema;
+		output: typeof GetPermissionMatrixResponseSchema;
+	};
+	/**
+	 * Set permissions for a role
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.UpdatePermissions
+	 */
+	updatePermissions: {
+		methodKind: 'unary';
+		input: typeof UpdatePermissionsRequestSchema;
+		output: typeof UpdatePermissionsResponseSchema;
+	};
+	/**
+	 * Assign a role to a user
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.AssignRole
+	 */
+	assignRole: {
+		methodKind: 'unary';
+		input: typeof AssignRoleRequestSchema;
+		output: typeof AssignRoleResponseSchema;
+	};
+	/**
+	 * Unassign a role from a user
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.UnassignRole
+	 */
+	unassignRole: {
+		methodKind: 'unary';
+		input: typeof UnassignRoleRequestSchema;
+		output: typeof UnassignRoleResponseSchema;
+	};
+	/**
+	 * Get roles for a user
+	 *
+	 * @generated from rpc carbonpanel.v1.RoleService.GetUserRoles
+	 */
+	getUserRoles: {
+		methodKind: 'unary';
+		input: typeof GetUserRolesRequestSchema;
+		output: typeof GetUserRolesResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_role, 0);

@@ -122,7 +122,8 @@
 				Deploy "{packName}" to Server
 			</DialogTitle>
 			<DialogDescription>
-Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an existing server instance.
+				Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an existing
+				server instance.
 			</DialogDescription>
 		</DialogHeader>
 
@@ -142,22 +143,19 @@ Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an 
 						<AlertDescription>Create a server first before deploying modpacks.</AlertDescription>
 					</Alert>
 				{:else}
-					<Select
-						type="single"
-						bind:value={selectedServerId}
-					>
+					<Select type="single" bind:value={selectedServerId}>
 						<SelectTrigger class="w-full">
 							<div class="flex items-center gap-2 truncate">
-								<ServerIcon class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+								<ServerIcon class="h-4 w-4 flex-shrink-0 text-muted-foreground" />
 								<span class="truncate">{selectedServer?.name || 'Select a server...'}</span>
 							</div>
 						</SelectTrigger>
 						<SelectContent>
 							{#each servers as s (s.id)}
 								<SelectItem value={s.id}>
-									<div class="flex items-center justify-between w-full gap-4">
+									<div class="flex w-full items-center justify-between gap-4">
 										<span>{s.name}</span>
-										<div class="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+										<div class="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
 											<span>MC {s.mcVersion}</span>
 										</div>
 									</div>
@@ -179,18 +177,19 @@ Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an 
 						tabindex="0"
 						onclick={() => (deployMode = 'sync')}
 						onkeydown={(e) => e.key === 'Enter' && (deployMode = 'sync')}
-						class="flex items-start gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors
+						class="flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors
 							{deployMode === 'sync' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'}"
 					>
-						<Radio class="mt-0.5 h-5 w-5 text-primary flex-shrink-0" />
+						<Radio class="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
 						<div class="space-y-1 text-left">
 							<div class="flex items-center gap-2">
 								<span class="text-sm font-semibold">Mode A: Live Sync URL (itzg bootstrap)</span>
-								<Badge variant="secondary" class="text-[10px] px-1 py-0">Recommended</Badge>
+								<Badge variant="secondary" class="px-1 py-0 text-[10px]">Recommended</Badge>
 							</div>
 							<p class="text-xs text-muted-foreground">
-								Configures container environment with <code class="bg-muted px-1 rounded text-primary">PACKWIZ_URL</code>.
-								The server automatically syncs with Carbon Panel API on every startup.
+								Configures container environment with <code
+									class="rounded bg-muted px-1 text-primary">PACKWIZ_URL</code
+								>. The server automatically syncs with Carbon Panel API on every startup.
 							</p>
 						</div>
 					</div>
@@ -201,18 +200,18 @@ Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an 
 						tabindex="0"
 						onclick={() => (deployMode = 'bake')}
 						onkeydown={(e) => e.key === 'Enter' && (deployMode = 'bake')}
-						class="flex items-start gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors
+						class="flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors
 							{deployMode === 'bake' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'}"
 					>
-						<HardDrive class="mt-0.5 h-5 w-5 text-primary flex-shrink-0" />
+						<HardDrive class="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
 						<div class="space-y-1 text-left">
 							<div class="flex items-center gap-2">
 								<span class="text-sm font-semibold">Mode B: Bake to Server Data (/data/mods)</span>
-								<Badge variant="outline" class="text-[10px] px-1 py-0">Standalone</Badge>
+								<Badge variant="outline" class="px-1 py-0 text-[10px]">Standalone</Badge>
 							</div>
 							<p class="text-xs text-muted-foreground">
-								Downloads and installs all server-side mod JARs directly into the server's mods directory.
-								No external network calls needed during container startup.
+								Downloads and installs all server-side mod JARs directly into the server's mods
+								directory. No external network calls needed during container startup.
 							</p>
 						</div>
 					</div>
@@ -220,7 +219,10 @@ Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an 
 			</div>
 
 			{#if deployResult}
-				<Alert variant="default" class="bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+				<Alert
+					variant="default"
+					class="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+				>
 					<CheckCircle2 class="h-4 w-4" />
 					<AlertTitle>Success</AlertTitle>
 					<AlertDescription class="text-xs">{deployResult}</AlertDescription>
@@ -229,9 +231,7 @@ Deploy this Packwiz modpack ({modLoader.toUpperCase()} · MC {mcVersion}) to an 
 		</div>
 
 		<DialogFooter class="gap-2 sm:gap-0">
-			<Button variant="outline" onclick={() => (open = false)}>
-				Close
-			</Button>
+			<Button variant="outline" onclick={() => (open = false)}>Close</Button>
 			<Button onclick={executeDeploy} disabled={deploying || !selectedServerId}>
 				{#if deploying}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />

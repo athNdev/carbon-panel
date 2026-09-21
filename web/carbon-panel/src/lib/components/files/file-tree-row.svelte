@@ -124,8 +124,12 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="file-row group flex h-[30px] cursor-pointer items-center pr-3 text-xs select-none rounded-none border-b border-[#222222] transition-colors
-		{isSelected ? 'bg-[#262626] border-l-2 border-l-[#0f62fe]' : isFocused ? 'bg-[#2a2a2a]' : 'bg-[#161616]'}
+	class="file-row group flex h-[30px] cursor-pointer items-center rounded-none border-b border-[#222222] pr-3 text-xs transition-colors select-none
+		{isSelected
+		? 'border-l-2 border-l-[#0f62fe] bg-[#262626]'
+		: isFocused
+			? 'bg-[#2a2a2a]'
+			: 'bg-[#161616]'}
 		{isDragOver && file.isDir ? 'bg-[#0f62fe]/20 ring-1 ring-[#0f62fe]' : ''}
 		hover:bg-[#353535]"
 	draggable="true"
@@ -161,7 +165,7 @@
 	<div class="flex w-4 shrink-0 items-center justify-center">
 		{#if file.isDir}
 			<button
-				class="p-0 text-[#8d8d8d] hover:text-[#f4f4f4] rounded-none cursor-pointer"
+				class="cursor-pointer rounded-none p-0 text-[#8d8d8d] hover:text-[#f4f4f4]"
 				onclick={(e) => {
 					e.stopPropagation();
 					onToggleExpand(file.path);
@@ -185,14 +189,16 @@
 	</div>
 
 	<!-- Size (right-aligned) -->
-	<span class="w-20 shrink-0 text-right text-[#8d8d8d] font-mono text-[11px] tabular-nums">
+	<span class="w-20 shrink-0 text-right font-mono text-[11px] text-[#8d8d8d] tabular-nums">
 		{#if !file.isDir}
 			{formatBytes(Number(file.size))}
 		{/if}
 	</span>
 
 	<!-- Modified (right-aligned) -->
-	<span class="hidden w-24 shrink-0 text-right text-[#8d8d8d] font-mono text-[11px] sm:inline-block">
+	<span
+		class="hidden w-24 shrink-0 text-right font-mono text-[11px] text-[#8d8d8d] sm:inline-block"
+	>
 		{formatModified(file.modified)}
 	</span>
 </div>
