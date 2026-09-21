@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provider"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 )
 
 // NodeTypeService implements NodeTypeServiceHandler over nodetype.Catalog

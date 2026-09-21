@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 )
 
 // AuditService implements AuditServiceHandler over audit.Store (append-only,

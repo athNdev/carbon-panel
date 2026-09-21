@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/rbac"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
 )
 

@@ -5,8 +5,8 @@ import (
 	"runtime"
 
 	"connectrpc.com/connect"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/keys"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 )
 
 // SystemService implements SystemServiceHandler: build info and capability

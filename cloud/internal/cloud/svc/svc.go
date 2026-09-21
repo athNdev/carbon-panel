@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -232,7 +232,8 @@ func providerToString(p v1.ProviderId) string {
 	}
 }
 
-func provisionStatusToProto(s string) v1.ProvisionStatus {	switch strings.ToLower(strings.TrimSpace(s)) {
+func provisionStatusToProto(s string) v1.ProvisionStatus {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "pending":
 		return v1.ProvisionStatus_PROVISION_STATUS_PENDING
 	case "planned":
@@ -250,7 +251,8 @@ func provisionStatusToProto(s string) v1.ProvisionStatus {	switch strings.ToLowe
 	}
 }
 
-func workloadStatusToProto(s string) v1.WorkloadStatus {	switch strings.ToLower(strings.TrimSpace(s)) {
+func workloadStatusToProto(s string) v1.WorkloadStatus {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "pending", "starting", "creating":
 		return v1.WorkloadStatus_WORKLOAD_STATUS_PENDING
 	case "running":
@@ -275,7 +277,8 @@ func originToProto(origin string) v1.NodeOrigin {
 	}
 }
 
-func originToString(o v1.NodeOrigin) string {	switch o {
+func originToString(o v1.NodeOrigin) string {
+	switch o {
 	case v1.NodeOrigin_NODE_ORIGIN_BYO:
 		return "byo"
 	case v1.NodeOrigin_NODE_ORIGIN_MANAGED:

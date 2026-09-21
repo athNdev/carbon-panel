@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
 )
 
@@ -110,15 +110,16 @@ func (s *APIKeyService) RevokeApiKey(ctx context.Context, req *connect.Request[v
 // RotateApiKey revokes the old key and mints a replacement with the same
 // name and permissions. The new secret is returned exactly once.
 func (s *APIKeyService) RotateApiKey(ctx context.Context, req *connect.Request[v1.RotateApiKeyRequest]) (*connect.Response[v1.RotateApiKeyResponse], error) {
-	q, err := s.deps.Store.Org(ctx)
-	if err != nil {
+	if _, err := s.deps.Store.Org(ctx); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
 	}
 	if strings.TrimSpace(req.Msg.Id) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errKeyNoID)
 	}
 	var old db.ApiKey
-	if err := q.Where("id = ?", req.Msg.Id).First(&old).Error; err != nil {
+	if q, err := s.deps.Store.Org(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
+	} else if err := q.Where("id = ?", req.Msg.Id).First(&old).Error; err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errKeyNotFound)
 	}
 	secret, prefix, hash, err := auth.NewAPIKey()
@@ -136,10 +137,14 @@ func (s *APIKeyService) RotateApiKey(ctx context.Context, req *connect.Request[v
 		CreatedBy:   p.UserID,
 		ExpiresAt:   old.ExpiresAt,
 	}
-	if err := q.Create(next).Error; err != nil {
+	if q, err := s.deps.Store.Org(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
+	} else if err := q.Create(next).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errKeyCreate)
 	}
-	if err := q.Model(&db.ApiKey{}).Where("id = ?", old.ID).Update("revoked_at", now).Error; err != nil {
+	if q, err := s.deps.Store.Org(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
+	} else if err := q.Model(&db.ApiKey{}).Where("id = ?", old.ID).Update("revoked_at", now).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errKeyRevoke)
 	}
 	return connect.NewResponse(&v1.RotateApiKeyResponse{ApiKey: apiKeyToProto(next), Secret: secret}), nil
