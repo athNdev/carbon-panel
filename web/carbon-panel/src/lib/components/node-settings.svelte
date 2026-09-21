@@ -54,11 +54,20 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	let loading = $state(true);
 	let nodes = $state<Node[]>([]);
 	let pingingNodeId = $state<string | null>(null);
-	let pingLatencies = $state<Record<string, { latency: number; status: NodeStatus; message?: string }>>({});
+	let pingLatencies = $state<
+		Record<string, { latency: number; status: NodeStatus; message?: string }>
+	>({});
 	let scanning = $state(false);
 
 	// Detected-daemons dialog state (auto-detect results pending registration).
-	type DetectedDaemon = { host: string; latencyMs: number; source: string; alreadyRegistered: boolean; name: string; advertisedIp: string };
+	type DetectedDaemon = {
+		host: string;
+		latencyMs: number;
+		source: string;
+		alreadyRegistered: boolean;
+		name: string;
+		advertisedIp: string;
+	};
 	let showDetectedDialog = $state(false);
 	let detectedDaemons = $state<DetectedDaemon[]>([]);
 	let addingDaemonHost = $state<string | null>(null);
@@ -162,9 +171,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				// Per your workflow: found daemons should offer a prompt to add.
 				showDetectedDialog = true;
 			} else {
-				toast.success(
-					`Auto-detect found ${reachable.length} daemon(s) — all already registered.`
-				);
+				toast.success(`Auto-detect found ${reachable.length} daemon(s) — all already registered.`);
 			}
 			// Re-probe registered nodes via the existing health endpoint.
 			for (const node of nodes) {
@@ -227,7 +234,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				showDetectedDialog = false;
 			}
 		} catch (error: unknown) {
-			toast.error(`Failed to add node: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			toast.error(
+				`Failed to add node: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		} finally {
 			addingDaemonHost = null;
 		}
@@ -299,7 +308,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			};
 			await loadNodes();
 		} catch (error: unknown) {
-			toast.error(`Failed to add node: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			toast.error(
+				`Failed to add node: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		} finally {
 			isSaving = false;
 		}
@@ -356,7 +367,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			editingNode = null;
 			await loadNodes();
 		} catch (error: unknown) {
-			toast.error(`Failed to update node: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			toast.error(
+				`Failed to update node: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		} finally {
 			isSaving = false;
 		}
@@ -382,20 +395,38 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success(`Node "${node.name}" deleted`);
 			await loadNodes();
 		} catch (error: unknown) {
-			toast.error(`Failed to delete node: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			toast.error(
+				`Failed to delete node: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		}
 	}
 
 	function getNodeStatusBadge(status: NodeStatus) {
 		switch (status) {
 			case NodeStatus.ONLINE:
-				return { label: 'Online', class: 'bg-green-500/10 text-green-500 border-green-500/20', icon: CheckCircle2 };
+				return {
+					label: 'Online',
+					class: 'bg-green-500/10 text-green-500 border-green-500/20',
+					icon: CheckCircle2
+				};
 			case NodeStatus.OFFLINE:
-				return { label: 'Offline', class: 'bg-muted text-muted-foreground border-border', icon: XCircle };
+				return {
+					label: 'Offline',
+					class: 'bg-muted text-muted-foreground border-border',
+					icon: XCircle
+				};
 			case NodeStatus.ERROR:
-				return { label: 'Error', class: 'bg-destructive/10 text-destructive border-destructive/20', icon: AlertCircle };
+				return {
+					label: 'Error',
+					class: 'bg-destructive/10 text-destructive border-destructive/20',
+					icon: AlertCircle
+				};
 			default:
-				return { label: 'Unknown', class: 'bg-muted text-muted-foreground border-border', icon: AlertCircle };
+				return {
+					label: 'Unknown',
+					class: 'bg-muted text-muted-foreground border-border',
+					icon: AlertCircle
+				};
 		}
 	}
 
@@ -420,7 +451,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						<CardTitle>Docker Daemons & Nodes</CardTitle>
 					</div>
 					<CardDescription class="mt-1">
-						Configure multiple remote Docker daemons for distributed container execution and load balancing.
+						Configure multiple remote Docker daemons for distributed container execution and load
+						balancing.
 					</CardDescription>
 				</div>
 				<div class="flex items-center gap-2">
@@ -434,19 +466,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						<Radio class="mr-2 h-4 w-4 {scanning ? 'animate-pulse' : ''}" />
 						{scanning ? 'Scanning...' : 'Auto-detect'}
 					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						onclick={loadNodes}
-						disabled={loading}
-					>
+					<Button variant="outline" size="sm" onclick={loadNodes} disabled={loading}>
 						<RefreshCw class="mr-2 h-4 w-4 {loading ? 'animate-spin' : ''}" />
 						Refresh
 					</Button>
-					<Button
-						size="sm"
-						onclick={() => (showAddDialog = true)}
-					>
+					<Button size="sm" onclick={() => (showAddDialog = true)}>
 						<Plus class="mr-2 h-4 w-4" />
 						Add Docker Node
 					</Button>
@@ -475,8 +499,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				</div>
 				<h3 class="text-lg font-semibold">No Docker nodes found</h3>
 				<p class="mt-1 text-sm text-muted-foreground">
-					Add a remote Docker host to scale server instances across multiple physical machines,
-					or auto-detect daemons listening on your local network.
+					Add a remote Docker host to scale server instances across multiple physical machines, or
+					auto-detect daemons listening on your local network.
 				</p>
 				<div class="mt-4 flex items-center justify-center gap-2">
 					<Button onclick={handleAutoDetect} variant="outline" disabled={scanning}>
@@ -497,7 +521,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				{@const StatusIcon = statusInfo.icon}
 				{@const pingInfo = pingLatencies[node.id]}
 
-				<Card class="relative flex flex-col justify-between overflow-hidden transition-all duration-200 hover:shadow-md border-border/80">
+				<Card
+					class="relative flex flex-col justify-between overflow-hidden border-border/80 transition-all duration-200 hover:shadow-md"
+				>
 					<div>
 						<!-- Card Top -->
 						<CardHeader class="pb-3">
@@ -509,14 +535,18 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 											<Badge variant="secondary" class="text-xs">Local</Badge>
 										{/if}
 										{#if !node.enabled}
-											<Badge variant="outline" class="text-xs text-muted-foreground">Disabled</Badge>
+											<Badge variant="outline" class="text-xs text-muted-foreground">Disabled</Badge
+											>
 										{/if}
 									</div>
 									<p class="truncate font-mono text-xs text-muted-foreground" title={node.host}>
 										{node.host}
 									</p>
 								</div>
-								<Badge variant="outline" class="flex items-center gap-1.5 shrink-0 {statusInfo.class}">
+								<Badge
+									variant="outline"
+									class="flex shrink-0 items-center gap-1.5 {statusInfo.class}"
+								>
 									<StatusIcon class="h-3 w-3" />
 									{statusInfo.label}
 								</Badge>
@@ -553,7 +583,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								</div>
 
 								{#if node.advertisedIp}
-									<div class="col-span-2 space-y-0.5 pt-1 border-t border-border/50">
+									<div class="col-span-2 space-y-0.5 border-t border-border/50 pt-1">
 										<div class="flex items-center gap-1 text-muted-foreground">
 											<Radio class="h-3.5 w-3.5" />
 											<span>Advertised IP</span>
@@ -565,14 +595,16 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								{/if}
 
 								{#if node.tlsEnabled}
-									<div class="col-span-2 flex items-center gap-1 text-emerald-600 dark:text-emerald-400 pt-1">
+									<div
+										class="col-span-2 flex items-center gap-1 pt-1 text-emerald-600 dark:text-emerald-400"
+									>
 										<ShieldCheck class="h-3.5 w-3.5" />
 										<span>TLS Secured {node.tlsSkipVerify ? '(Insecure Skip Verify)' : ''}</span>
 									</div>
 								{/if}
 
 								{#if pingInfo}
-									<div class="col-span-2 flex items-center gap-1.5 text-xs text-primary pt-1">
+									<div class="col-span-2 flex items-center gap-1.5 pt-1 text-xs text-primary">
 										<Activity class="h-3.5 w-3.5" />
 										<span>Last Ping: {pingInfo.latency}ms</span>
 									</div>
@@ -582,7 +614,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					</div>
 
 					<!-- Card Footer Actions -->
-					<div class="flex items-center justify-between border-t border-border/60 bg-muted/20 px-4 py-2.5">
+					<div
+						class="flex items-center justify-between border-t border-border/60 bg-muted/20 px-4 py-2.5"
+					>
 						<Button
 							variant="ghost"
 							size="sm"
@@ -634,22 +668,25 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		<DialogHeader>
 			<DialogTitle>Docker daemons detected</DialogTitle>
 			<DialogDescription>
-				Auto-detect found reachable Docker daemons on this host's network. Register the ones
-				you want the placement engine to use — you can adjust names, IPs, and limits later.
+				Auto-detect found reachable Docker daemons on this host's network. Register the ones you
+				want the placement engine to use — you can adjust names, IPs, and limits later.
 			</DialogDescription>
 		</DialogHeader>
 
-		<div class="space-y-3 py-2 max-h-[50vh] overflow-y-auto">
+		<div class="max-h-[50vh] space-y-3 overflow-y-auto py-2">
 			{#each detectedDaemons as d (d.host)}
-				<div class="rounded-lg border p-3 space-y-2">
+				<div class="space-y-2 rounded-lg border p-3">
 					<div class="flex items-center justify-between gap-2">
 						<div class="min-w-0">
 							<div class="flex items-center gap-2">
-								<CheckCircle2 class="h-4 w-4 text-green-500 shrink-0" />
-								<span class="truncate font-mono text-xs text-foreground" title={d.host}>{d.host}</span>
+								<CheckCircle2 class="h-4 w-4 shrink-0 text-green-500" />
+								<span class="truncate font-mono text-xs text-foreground" title={d.host}
+									>{d.host}</span
+								>
 							</div>
-							<p class="text-xs text-muted-foreground mt-0.5">
-								{#if d.latencyMs > 0}responded in {d.latencyMs}ms · {/if}{d.source}
+							<p class="mt-0.5 text-xs text-muted-foreground">
+								{#if d.latencyMs > 0}responded in {d.latencyMs}ms ·
+								{/if}{d.source}
 							</p>
 						</div>
 						<Button
@@ -709,7 +746,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <!-- Add Node Dialog -->
 <Dialog bind:open={showAddDialog}>
-	<DialogContent class="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+	<DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
 		<DialogHeader>
 			<DialogTitle>Add Docker Daemon Node</DialogTitle>
 			<DialogDescription>
@@ -798,7 +835,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			</div>
 
 			<!-- TLS Configuration -->
-			<div class="rounded-lg border p-3 space-y-3">
+			<div class="space-y-3 rounded-lg border p-3">
 				<div class="flex items-center justify-between">
 					<div class="space-y-0.5">
 						<Label for="node-tls">TLS Authentication</Label>
@@ -815,9 +852,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				</div>
 
 				{#if newNode.tlsEnabled}
-					<div class="space-y-3 pt-2 border-t border-border/60">
+					<div class="space-y-3 border-t border-border/60 pt-2">
 						<div class="flex items-center justify-between">
-							<Label for="node-skip-verify" class="text-xs">Skip TLS Certificate Verification</Label>
+							<Label for="node-skip-verify" class="text-xs">Skip TLS Certificate Verification</Label
+							>
 							<Switch
 								id="node-skip-verify"
 								checked={newNode.tlsSkipVerify}
@@ -832,7 +870,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								id="node-ca-cert"
 								placeholder="-----BEGIN CERTIFICATE-----\n..."
 								bind:value={newNode.tlsCaCert}
-								class="font-mono text-xs h-16"
+								class="h-16 font-mono text-xs"
 								disabled={isSaving}
 							/>
 						</div>
@@ -843,7 +881,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								id="node-cert"
 								placeholder="-----BEGIN CERTIFICATE-----\n..."
 								bind:value={newNode.tlsCert}
-								class="font-mono text-xs h-16"
+								class="h-16 font-mono text-xs"
 								disabled={isSaving}
 							/>
 						</div>
@@ -854,7 +892,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								id="node-key"
 								placeholder="-----BEGIN RSA PRIVATE KEY-----\n..."
 								bind:value={newNode.tlsKey}
-								class="font-mono text-xs h-16"
+								class="h-16 font-mono text-xs"
 								disabled={isSaving}
 							/>
 						</div>
@@ -881,7 +919,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <!-- Edit Node Dialog -->
 <Dialog bind:open={showEditDialog}>
-	<DialogContent class="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+	<DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-lg">
 		<DialogHeader>
 			<DialogTitle>Edit Docker Daemon Node</DialogTitle>
 			<DialogDescription>
@@ -893,20 +931,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			<div class="space-y-4 py-2">
 				<div class="space-y-2">
 					<Label for="edit-node-name">Node Name *</Label>
-					<Input
-						id="edit-node-name"
-						bind:value={editingNode.name}
-						disabled={isSaving}
-					/>
+					<Input id="edit-node-name" bind:value={editingNode.name} disabled={isSaving} />
 				</div>
 
 				<div class="space-y-2">
 					<Label for="edit-node-host">Docker Host URL *</Label>
-					<Input
-						id="edit-node-host"
-						bind:value={editingNode.host}
-						disabled={isSaving}
-					/>
+					<Input id="edit-node-host" bind:value={editingNode.host} disabled={isSaving} />
 				</div>
 
 				<div class="space-y-2">
@@ -965,7 +995,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				</div>
 
 				<!-- TLS Configuration -->
-				<div class="rounded-lg border p-3 space-y-3">
+				<div class="space-y-3 rounded-lg border p-3">
 					<div class="flex items-center justify-between">
 						<div class="space-y-0.5">
 							<Label for="edit-node-tls">TLS Authentication</Label>
@@ -984,9 +1014,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					</div>
 
 					{#if editingNode.tlsEnabled}
-						<div class="space-y-3 pt-2 border-t border-border/60">
+						<div class="space-y-3 border-t border-border/60 pt-2">
 							<div class="flex items-center justify-between">
-								<Label for="edit-node-skip-verify" class="text-xs">Skip TLS Certificate Verification</Label>
+								<Label for="edit-node-skip-verify" class="text-xs"
+									>Skip TLS Certificate Verification</Label
+								>
 								<Switch
 									id="edit-node-skip-verify"
 									checked={editingNode.tlsSkipVerify}
@@ -1003,7 +1035,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 									id="edit-node-ca-cert"
 									placeholder="-----BEGIN CERTIFICATE-----\n..."
 									bind:value={editingNode.tlsCaCert}
-									class="font-mono text-xs h-16"
+									class="h-16 font-mono text-xs"
 									disabled={isSaving}
 								/>
 							</div>
@@ -1014,7 +1046,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 									id="edit-node-cert"
 									placeholder="-----BEGIN CERTIFICATE-----\n..."
 									bind:value={editingNode.tlsCert}
-									class="font-mono text-xs h-16"
+									class="h-16 font-mono text-xs"
 									disabled={isSaving}
 								/>
 							</div>
@@ -1025,7 +1057,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 									id="edit-node-key"
 									placeholder="-----BEGIN RSA PRIVATE KEY-----\n..."
 									bind:value={editingNode.tlsKey}
-									class="font-mono text-xs h-16"
+									class="h-16 font-mono text-xs"
 									disabled={isSaving}
 								/>
 							</div>
