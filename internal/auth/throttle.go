@@ -38,11 +38,28 @@ const maxThrottleEntries = 100000
 // NewLoginThrottle returns a throttle allowing 5 failures per 5 minutes before
 // a 15 minute lockout.
 func NewLoginThrottle() *LoginThrottle {
+	return NewLoginThrottleWithLimits(5, 5*time.Minute, 15*time.Minute)
+}
+
+// NewLoginThrottleWithLimits returns a throttle with custom thresholds. The
+// username limiter uses a low ceiling (targeted guessing), while the client-IP
+// limiter uses a higher one so a single attacker behind a shared NAT or reverse
+// proxy cannot lock every user out.
+func NewLoginThrottleWithLimits(max int, window, lockout time.Duration) *LoginThrottle {
+	if max <= 0 {
+		max = 5
+	}
+	if window <= 0 {
+		window = 5 * time.Minute
+	}
+	if lockout <= 0 {
+		lockout = 15 * time.Minute
+	}
 	return &LoginThrottle{
 		entries: make(map[string]*throttleEntry),
-		max:     5,
-		window:  5 * time.Minute,
-		lockout: 15 * time.Minute,
+		max:     max,
+		window:  window,
+		lockout: lockout,
 		now:     time.Now,
 	}
 }
