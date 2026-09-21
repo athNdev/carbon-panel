@@ -166,7 +166,7 @@ func (s *FileService) ListFiles(ctx context.Context, req *connect.Request[v1.Lis
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, path)
-	if !strings.HasPrefix(fullPath, server.DataPath) {
+	if !files.Within(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -200,7 +200,7 @@ func (s *FileService) GetFile(ctx context.Context, req *connect.Request[v1.GetFi
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !strings.HasPrefix(fullPath, server.DataPath) {
+	if !files.Within(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -275,7 +275,7 @@ func (s *FileService) SaveUploadedFile(ctx context.Context, req *connect.Request
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, targetPath)
-	if !strings.HasPrefix(fullPath, server.DataPath) {
+	if !files.Within(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -316,7 +316,7 @@ func (s *FileService) UpdateFile(ctx context.Context, req *connect.Request[v1.Up
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !strings.HasPrefix(fullPath, server.DataPath) {
+	if !files.Within(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -360,7 +360,7 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 
 	for _, p := range paths {
 		fullPath := filepath.Join(server.DataPath, p)
-		if !strings.HasPrefix(fullPath, server.DataPath) {
+		if !files.Within(server.DataPath, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 		if fullPath == server.DataPath {
@@ -411,7 +411,7 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 
 	// Clean and validate old path
 	oldFullPath := filepath.Join(server.DataPath, msg.Path)
-	if !strings.HasPrefix(oldFullPath, server.DataPath) {
+	if !files.Within(server.DataPath, oldFullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -421,7 +421,7 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 	newFullPath := filepath.Join(server.DataPath, newPath)
 
 	// Validate new path
-	if !strings.HasPrefix(newFullPath, server.DataPath) {
+	if !files.Within(server.DataPath, newFullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new path"))
 	}
 
@@ -462,7 +462,7 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 
 	// Clean and validate archive path
 	fullArchivePath := filepath.Join(server.DataPath, msg.Path)
-	if !strings.HasPrefix(fullArchivePath, server.DataPath) {
+	if !files.Within(server.DataPath, fullArchivePath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid archive path"))
 	}
 
@@ -555,7 +555,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 
 	// Resolve destination path inside server root
 	destPath := filepath.Join(server.DataPath, msg.DestinationPath)
-	if !strings.HasPrefix(destPath, server.DataPath) {
+	if !files.Within(server.DataPath, destPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 	if err := os.MkdirAll(destPath, 0755); err != nil {
@@ -733,7 +733,7 @@ func (s *FileService) CreateFolder(ctx context.Context, req *connect.Request[v1.
 	}
 
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !strings.HasPrefix(fullPath, server.DataPath) {
+	if !files.Within(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -759,7 +759,7 @@ func (s *FileService) MoveFile(ctx context.Context, req *connect.Request[v1.Move
 	srcFull := filepath.Join(server.DataPath, msg.SourcePath)
 	dstFull := filepath.Join(server.DataPath, msg.DestinationPath)
 
-	if !strings.HasPrefix(srcFull, server.DataPath) || !strings.HasPrefix(dstFull, server.DataPath) {
+	if !files.Within(server.DataPath, srcFull) || !files.Within(server.DataPath, dstFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -812,7 +812,7 @@ func (s *FileService) CopyFile(ctx context.Context, req *connect.Request[v1.Copy
 	srcFull := filepath.Join(server.DataPath, msg.SourcePath)
 	dstFull := filepath.Join(server.DataPath, msg.DestinationPath)
 
-	if !strings.HasPrefix(srcFull, server.DataPath) || !strings.HasPrefix(dstFull, server.DataPath) {
+	if !files.Within(server.DataPath, srcFull) || !files.Within(server.DataPath, dstFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -866,7 +866,7 @@ func (s *FileService) CreateArchive(ctx context.Context, req *connect.Request[v1
 	// Validate all paths
 	for _, p := range msg.Paths {
 		fullPath := filepath.Join(server.DataPath, p)
-		if !strings.HasPrefix(fullPath, server.DataPath) {
+		if !files.Within(server.DataPath, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 	}
@@ -885,7 +885,7 @@ func (s *FileService) CreateArchive(ctx context.Context, req *connect.Request[v1
 		destDir = "."
 	}
 	destFull := filepath.Join(server.DataPath, destDir, archiveName)
-	if !strings.HasPrefix(destFull, server.DataPath) {
+	if !files.Within(server.DataPath, destFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 
@@ -919,7 +919,7 @@ func (s *FileService) DownloadArchive(ctx context.Context, req *connect.Request[
 
 	for _, p := range msg.Paths {
 		fullPath := filepath.Join(server.DataPath, p)
-		if !strings.HasPrefix(fullPath, server.DataPath) {
+		if !files.Within(server.DataPath, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 	}
@@ -967,7 +967,7 @@ func (s *FileService) InitFileDownload(ctx context.Context, req *connect.Request
 	}
 
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !strings.HasPrefix(fullPath, server.DataPath) {
+	if !files.Within(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
