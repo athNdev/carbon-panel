@@ -2,178 +2,188 @@
 // @generated from file carbonpanel/v1/subuser.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file carbonpanel/v1/subuser.proto.
  */
-export const file_carbonpanel_v1_subuser: GenFile = /*@__PURE__*/
-  fileDesc("ChxjYXJib25wYW5lbC92MS9zdWJ1c2VyLnByb3RvEg5jYXJib25wYW5lbC52MSJZCgxTdWJ1c2VyR3JhbnQSEQoJc2VydmVyX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSEwoLcGVybWlzc2lvbnMYBCADKAkiKAoTTGlzdFN1YnVzZXJzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiRAoUTGlzdFN1YnVzZXJzUmVzcG9uc2USLAoGZ3JhbnRzGAEgAygLMhwuY2FyYm9ucGFuZWwudjEuU3VidXNlckdyYW50IkwKEVNldFN1YnVzZXJSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhMKC3Blcm1pc3Npb25zGAMgAygJIkEKElNldFN1YnVzZXJSZXNwb25zZRIrCgVncmFudBgBIAEoCzIcLmNhcmJvbnBhbmVsLnYxLlN1YnVzZXJHcmFudCI6ChRSZW1vdmVTdWJ1c2VyUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSIoChVSZW1vdmVTdWJ1c2VyUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCDKeAgoOU3VidXNlclNlcnZpY2USWQoMTGlzdFN1YnVzZXJzEiMuY2FyYm9ucGFuZWwudjEuTGlzdFN1YnVzZXJzUmVxdWVzdBokLmNhcmJvbnBhbmVsLnYxLkxpc3RTdWJ1c2Vyc1Jlc3BvbnNlElMKClNldFN1YnVzZXISIS5jYXJib25wYW5lbC52MS5TZXRTdWJ1c2VyUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLlNldFN1YnVzZXJSZXNwb25zZRJcCg1SZW1vdmVTdWJ1c2VyEiQuY2FyYm9ucGFuZWwudjEuUmVtb3ZlU3VidXNlclJlcXVlc3QaJS5jYXJib25wYW5lbC52MS5SZW1vdmVTdWJ1c2VyUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z");
+export const file_carbonpanel_v1_subuser: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'ChxjYXJib25wYW5lbC92MS9zdWJ1c2VyLnByb3RvEg5jYXJib25wYW5lbC52MSJZCgxTdWJ1c2VyR3JhbnQSEQoJc2VydmVyX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSEwoLcGVybWlzc2lvbnMYBCADKAkiKAoTTGlzdFN1YnVzZXJzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiRAoUTGlzdFN1YnVzZXJzUmVzcG9uc2USLAoGZ3JhbnRzGAEgAygLMhwuY2FyYm9ucGFuZWwudjEuU3VidXNlckdyYW50IkwKEVNldFN1YnVzZXJSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhMKC3Blcm1pc3Npb25zGAMgAygJIkEKElNldFN1YnVzZXJSZXNwb25zZRIrCgVncmFudBgBIAEoCzIcLmNhcmJvbnBhbmVsLnYxLlN1YnVzZXJHcmFudCI6ChRSZW1vdmVTdWJ1c2VyUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCSIoChVSZW1vdmVTdWJ1c2VyUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCDKeAgoOU3VidXNlclNlcnZpY2USWQoMTGlzdFN1YnVzZXJzEiMuY2FyYm9ucGFuZWwudjEuTGlzdFN1YnVzZXJzUmVxdWVzdBokLmNhcmJvbnBhbmVsLnYxLkxpc3RTdWJ1c2Vyc1Jlc3BvbnNlElMKClNldFN1YnVzZXISIS5jYXJib25wYW5lbC52MS5TZXRTdWJ1c2VyUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLlNldFN1YnVzZXJSZXNwb25zZRJcCg1SZW1vdmVTdWJ1c2VyEiQuY2FyYm9ucGFuZWwudjEuUmVtb3ZlU3VidXNlclJlcXVlc3QaJS5jYXJib25wYW5lbC52MS5SZW1vdmVTdWJ1c2VyUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z'
+	);
 
 /**
  * One grant
  *
  * @generated from message carbonpanel.v1.SubuserGrant
  */
-export type SubuserGrant = Message<"carbonpanel.v1.SubuserGrant"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type SubuserGrant = Message<'carbonpanel.v1.SubuserGrant'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: string user_id = 2;
-   */
-  userId: string;
+	/**
+	 * @generated from field: string user_id = 2;
+	 */
+	userId: string;
 
-  /**
-   * @generated from field: string username = 3;
-   */
-  username: string;
+	/**
+	 * @generated from field: string username = 3;
+	 */
+	username: string;
 
-  /**
-   * @generated from field: repeated string permissions = 4;
-   */
-  permissions: string[];
+	/**
+	 * @generated from field: repeated string permissions = 4;
+	 */
+	permissions: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.SubuserGrant.
  * Use `create(SubuserGrantSchema)` to create a new message.
  */
-export const SubuserGrantSchema: GenMessage<SubuserGrant> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 0);
+export const SubuserGrantSchema: GenMessage<SubuserGrant> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 0);
 
 /**
  * List grants request
  *
  * @generated from message carbonpanel.v1.ListSubusersRequest
  */
-export type ListSubusersRequest = Message<"carbonpanel.v1.ListSubusersRequest"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type ListSubusersRequest = Message<'carbonpanel.v1.ListSubusersRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListSubusersRequest.
  * Use `create(ListSubusersRequestSchema)` to create a new message.
  */
-export const ListSubusersRequestSchema: GenMessage<ListSubusersRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 1);
+export const ListSubusersRequestSchema: GenMessage<ListSubusersRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 1);
 
 /**
  * List grants response
  *
  * @generated from message carbonpanel.v1.ListSubusersResponse
  */
-export type ListSubusersResponse = Message<"carbonpanel.v1.ListSubusersResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.SubuserGrant grants = 1;
-   */
-  grants: SubuserGrant[];
+export type ListSubusersResponse = Message<'carbonpanel.v1.ListSubusersResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.SubuserGrant grants = 1;
+	 */
+	grants: SubuserGrant[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListSubusersResponse.
  * Use `create(ListSubusersResponseSchema)` to create a new message.
  */
-export const ListSubusersResponseSchema: GenMessage<ListSubusersResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 2);
+export const ListSubusersResponseSchema: GenMessage<ListSubusersResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 2);
 
 /**
  * Set grant request
  *
  * @generated from message carbonpanel.v1.SetSubuserRequest
  */
-export type SetSubuserRequest = Message<"carbonpanel.v1.SetSubuserRequest"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type SetSubuserRequest = Message<'carbonpanel.v1.SetSubuserRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: string user_id = 2;
-   */
-  userId: string;
+	/**
+	 * @generated from field: string user_id = 2;
+	 */
+	userId: string;
 
-  /**
-   * @generated from field: repeated string permissions = 3;
-   */
-  permissions: string[];
+	/**
+	 * @generated from field: repeated string permissions = 3;
+	 */
+	permissions: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.SetSubuserRequest.
  * Use `create(SetSubuserRequestSchema)` to create a new message.
  */
-export const SetSubuserRequestSchema: GenMessage<SetSubuserRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 3);
+export const SetSubuserRequestSchema: GenMessage<SetSubuserRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 3);
 
 /**
  * Set grant response
  *
  * @generated from message carbonpanel.v1.SetSubuserResponse
  */
-export type SetSubuserResponse = Message<"carbonpanel.v1.SetSubuserResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.SubuserGrant grant = 1;
-   */
-  grant?: SubuserGrant | undefined;
+export type SetSubuserResponse = Message<'carbonpanel.v1.SetSubuserResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.SubuserGrant grant = 1;
+	 */
+	grant?: SubuserGrant | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.SetSubuserResponse.
  * Use `create(SetSubuserResponseSchema)` to create a new message.
  */
-export const SetSubuserResponseSchema: GenMessage<SetSubuserResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 4);
+export const SetSubuserResponseSchema: GenMessage<SetSubuserResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 4);
 
 /**
  * Remove grant request
  *
  * @generated from message carbonpanel.v1.RemoveSubuserRequest
  */
-export type RemoveSubuserRequest = Message<"carbonpanel.v1.RemoveSubuserRequest"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type RemoveSubuserRequest = Message<'carbonpanel.v1.RemoveSubuserRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 
-  /**
-   * @generated from field: string user_id = 2;
-   */
-  userId: string;
+	/**
+	 * @generated from field: string user_id = 2;
+	 */
+	userId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RemoveSubuserRequest.
  * Use `create(RemoveSubuserRequestSchema)` to create a new message.
  */
-export const RemoveSubuserRequestSchema: GenMessage<RemoveSubuserRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 5);
+export const RemoveSubuserRequestSchema: GenMessage<RemoveSubuserRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 5);
 
 /**
  * Remove grant response
  *
  * @generated from message carbonpanel.v1.RemoveSubuserResponse
  */
-export type RemoveSubuserResponse = Message<"carbonpanel.v1.RemoveSubuserResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
+export type RemoveSubuserResponse = Message<'carbonpanel.v1.RemoveSubuserResponse'> & {
+	/**
+	 * @generated from field: bool success = 1;
+	 */
+	success: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.RemoveSubuserResponse.
  * Use `create(RemoveSubuserResponseSchema)` to create a new message.
  */
-export const RemoveSubuserResponseSchema: GenMessage<RemoveSubuserResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_subuser, 6);
+export const RemoveSubuserResponseSchema: GenMessage<RemoveSubuserResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_subuser, 6);
 
 /**
  * Per-server subuser grants (MINE-139)
@@ -181,36 +191,34 @@ export const RemoveSubuserResponseSchema: GenMessage<RemoveSubuserResponse> = /*
  * @generated from service carbonpanel.v1.SubuserService
  */
 export const SubuserService: GenService<{
-  /**
-   * List grants on a server
-   *
-   * @generated from rpc carbonpanel.v1.SubuserService.ListSubusers
-   */
-  listSubusers: {
-    methodKind: "unary";
-    input: typeof ListSubusersRequestSchema;
-    output: typeof ListSubusersResponseSchema;
-  },
-  /**
-   * Grant or replace permissions
-   *
-   * @generated from rpc carbonpanel.v1.SubuserService.SetSubuser
-   */
-  setSubuser: {
-    methodKind: "unary";
-    input: typeof SetSubuserRequestSchema;
-    output: typeof SetSubuserResponseSchema;
-  },
-  /**
-   * Revoke a grant
-   *
-   * @generated from rpc carbonpanel.v1.SubuserService.RemoveSubuser
-   */
-  removeSubuser: {
-    methodKind: "unary";
-    input: typeof RemoveSubuserRequestSchema;
-    output: typeof RemoveSubuserResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_carbonpanel_v1_subuser, 0);
-
+	/**
+	 * List grants on a server
+	 *
+	 * @generated from rpc carbonpanel.v1.SubuserService.ListSubusers
+	 */
+	listSubusers: {
+		methodKind: 'unary';
+		input: typeof ListSubusersRequestSchema;
+		output: typeof ListSubusersResponseSchema;
+	};
+	/**
+	 * Grant or replace permissions
+	 *
+	 * @generated from rpc carbonpanel.v1.SubuserService.SetSubuser
+	 */
+	setSubuser: {
+		methodKind: 'unary';
+		input: typeof SetSubuserRequestSchema;
+		output: typeof SetSubuserResponseSchema;
+	};
+	/**
+	 * Revoke a grant
+	 *
+	 * @generated from rpc carbonpanel.v1.SubuserService.RemoveSubuser
+	 */
+	removeSubuser: {
+		methodKind: 'unary';
+		input: typeof RemoveSubuserRequestSchema;
+		output: typeof RemoveSubuserResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_subuser, 0);

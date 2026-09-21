@@ -12,14 +12,8 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { toast } from 'svelte-sonner';
-	import {
-		inspectManifest,
-		exportServerManifest
-	} from '$lib/utils/manifest-inspector';
-	import type {
-		ManifestInspectionResult,
-		InspectedMod
-	} from '$lib/utils/manifest-inspector';
+	import { inspectManifest, exportServerManifest } from '$lib/utils/manifest-inspector';
+	import type { ManifestInspectionResult, InspectedMod } from '$lib/utils/manifest-inspector';
 	import {
 		FileSearch,
 		Upload,
@@ -117,24 +111,25 @@
 </script>
 
 <Dialog bind:open {onOpenChange}>
-	<DialogContent class="max-w-4xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+	<DialogContent class="flex max-h-[85vh] max-w-4xl flex-col overflow-hidden p-6">
 		<DialogHeader>
 			<DialogTitle class="flex items-center gap-2 text-xl font-bold">
 				<FileSearch class="h-5 w-5 text-primary" />
 				CurseForge & Modrinth Manifest Inspector
 			</DialogTitle>
 			<DialogDescription>
-				Inspect modpack manifests, detect client-only vs server-side mods, and export server-clean manifests.
+				Inspect modpack manifests, detect client-only vs server-side mods, and export server-clean
+				manifests.
 			</DialogDescription>
 		</DialogHeader>
 
 		{#if !inspection}
-			<div class="flex flex-col gap-4 py-4 overflow-y-auto">
+			<div class="flex flex-col gap-4 overflow-y-auto py-4">
 				<div class="flex items-center gap-4">
 					<label class="cursor-pointer">
 						<input type="file" accept=".json,.mrpack" class="hidden" onchange={handleFileUpload} />
 						<span
-							class="inline-flex items-center gap-2 px-4 py-2 border rounded-md text-sm font-medium hover:bg-muted transition-colors"
+							class="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
 						>
 							<Upload class="h-4 w-4" /> Upload manifest.json / modrinth.index.json
 						</span>
@@ -146,35 +141,35 @@
 					bind:value={rawInput}
 					rows={10}
 					placeholder="Paste manifest.json or modrinth.index.json contents here..."
-					class="w-full font-mono text-xs p-3 rounded-md border bg-muted/30 focus:outline-none focus:ring-1 focus:ring-primary"
+					class="w-full rounded-md border bg-muted/30 p-3 font-mono text-xs focus:ring-1 focus:ring-primary focus:outline-none"
 				></textarea>
 
 				{#if error}
-					<div class="p-3 text-xs text-destructive bg-destructive/10 rounded-md border border-destructive/20">
+					<div
+						class="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive"
+					>
 						{error}
 					</div>
 				{/if}
 
-				<Button onclick={handleInspect} class="w-full">
-					Inspect Manifest
-				</Button>
+				<Button onclick={handleInspect} class="w-full">Inspect Manifest</Button>
 			</div>
 		{:else}
-			<div class="flex flex-col gap-4 py-2 overflow-y-auto pr-1">
+			<div class="flex flex-col gap-4 overflow-y-auto py-2 pr-1">
 				<!-- Header info -->
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+				<div class="grid grid-cols-2 gap-3 md:grid-cols-4">
 					<Card>
 						<CardContent class="p-3">
 							<div class="text-xs text-muted-foreground">Format</div>
-							<div class="text-sm font-bold uppercase tracking-wider">{inspection.format}</div>
-							<div class="text-xs text-muted-foreground mt-1 truncate">{inspection.name}</div>
+							<div class="text-sm font-bold tracking-wider uppercase">{inspection.format}</div>
+							<div class="mt-1 truncate text-xs text-muted-foreground">{inspection.name}</div>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardContent class="p-3">
 							<div class="text-xs text-muted-foreground">Game & Loader</div>
-							<div class="text-sm font-bold truncate">{inspection.gameVersion}</div>
-							<div class="text-xs text-muted-foreground mt-1 truncate">{inspection.modLoader}</div>
+							<div class="truncate text-sm font-bold">{inspection.gameVersion}</div>
+							<div class="mt-1 truncate text-xs text-muted-foreground">{inspection.modLoader}</div>
 						</CardContent>
 					</Card>
 					<Card>
@@ -183,8 +178,12 @@
 							<div class="text-sm font-bold text-emerald-500">
 								{inspection.universalCount + inspection.serverOnlyCount} mods
 							</div>
-							<div class="text-xs text-muted-foreground mt-1">
-								{Math.round(((inspection.universalCount + inspection.serverOnlyCount) / Math.max(1, inspection.totalMods)) * 100)}% of total
+							<div class="mt-1 text-xs text-muted-foreground">
+								{Math.round(
+									((inspection.universalCount + inspection.serverOnlyCount) /
+										Math.max(1, inspection.totalMods)) *
+										100
+								)}% of total
 							</div>
 						</CardContent>
 					</Card>
@@ -192,34 +191,42 @@
 						<CardContent class="p-3">
 							<div class="text-xs text-muted-foreground">Client-Only (Omit)</div>
 							<div class="text-sm font-bold text-amber-500">{inspection.clientOnlyCount} mods</div>
-							<div class="text-xs text-muted-foreground mt-1">Safe to exclude on server</div>
+							<div class="mt-1 text-xs text-muted-foreground">Safe to exclude on server</div>
 						</CardContent>
 					</Card>
 				</div>
 
 				<!-- Controls -->
 				<div class="flex flex-wrap items-center justify-between gap-2 pt-2">
-					<div class="flex items-center gap-1 bg-muted p-1 rounded-md text-xs">
+					<div class="flex items-center gap-1 rounded-md bg-muted p-1 text-xs">
 						<button
-							class="px-2 py-1 rounded {filter === 'all' ? 'bg-background shadow-xs font-semibold' : 'text-muted-foreground'}"
+							class="rounded px-2 py-1 {filter === 'all'
+								? 'bg-background font-semibold shadow-xs'
+								: 'text-muted-foreground'}"
 							onclick={() => (filter = 'all')}
 						>
 							All ({inspection.totalMods})
 						</button>
 						<button
-							class="px-2 py-1 rounded {filter === 'both' ? 'bg-background shadow-xs font-semibold text-emerald-500' : 'text-muted-foreground'}"
+							class="rounded px-2 py-1 {filter === 'both'
+								? 'bg-background font-semibold text-emerald-500 shadow-xs'
+								: 'text-muted-foreground'}"
 							onclick={() => (filter = 'both')}
 						>
 							Universal ({inspection.universalCount})
 						</button>
 						<button
-							class="px-2 py-1 rounded {filter === 'client' ? 'bg-background shadow-xs font-semibold text-amber-500' : 'text-muted-foreground'}"
+							class="rounded px-2 py-1 {filter === 'client'
+								? 'bg-background font-semibold text-amber-500 shadow-xs'
+								: 'text-muted-foreground'}"
 							onclick={() => (filter = 'client')}
 						>
 							Client-Only ({inspection.clientOnlyCount})
 						</button>
 						<button
-							class="px-2 py-1 rounded {filter === 'server' ? 'bg-background shadow-xs font-semibold text-blue-500' : 'text-muted-foreground'}"
+							class="rounded px-2 py-1 {filter === 'server'
+								? 'bg-background font-semibold text-blue-500 shadow-xs'
+								: 'text-muted-foreground'}"
 							onclick={() => (filter = 'server')}
 						>
 							Server-Only ({inspection.serverOnlyCount})
@@ -235,9 +242,9 @@
 				</div>
 
 				<!-- Mod list table -->
-				<div class="border rounded-md max-h-64 overflow-y-auto">
+				<div class="max-h-64 overflow-y-auto rounded-md border">
 					<table class="w-full text-left text-xs">
-						<thead class="bg-muted/50 border-b sticky top-0">
+						<thead class="sticky top-0 border-b bg-muted/50">
 							<tr>
 								<th scope="col" class="p-2">Mod Name</th>
 								<th scope="col" class="p-2">Environment</th>
@@ -248,25 +255,25 @@
 						<tbody class="divide-y">
 							{#each filteredMods as mod}
 								<tr class="hover:bg-muted/20">
-									<td class="p-2 font-medium truncate max-w-[250px]">
+									<td class="max-w-[250px] truncate p-2 font-medium">
 										{mod.name}
 										{#if mod.filename && mod.filename !== mod.name}
-											<div class="text-[10px] text-muted-foreground font-mono truncate">
+											<div class="truncate font-mono text-[10px] text-muted-foreground">
 												{mod.filename}
 											</div>
 										{/if}
 									</td>
 									<td class="p-2">
 										{#if mod.env === 'client'}
-											<Badge variant="outline" class="border-amber-500/50 text-amber-500 gap-1">
+											<Badge variant="outline" class="gap-1 border-amber-500/50 text-amber-500">
 												<Laptop class="h-3 w-3" /> Client Only
 											</Badge>
 										{:else if mod.env === 'server'}
-											<Badge variant="outline" class="border-blue-500/50 text-blue-500 gap-1">
+											<Badge variant="outline" class="gap-1 border-blue-500/50 text-blue-500">
 												<Server class="h-3 w-3" /> Server Only
 											</Badge>
 										{:else}
-											<Badge variant="outline" class="border-emerald-500/50 text-emerald-500 gap-1">
+											<Badge variant="outline" class="gap-1 border-emerald-500/50 text-emerald-500">
 												<Layers class="h-3 w-3" /> Universal
 											</Badge>
 										{/if}
@@ -282,7 +289,7 @@
 												href={mod.downloadUrl}
 												target="_blank"
 												rel="noreferrer"
-												class="inline-flex items-center gap-1 text-primary hover:underline text-[11px]"
+												class="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
 											>
 												<ExternalLink class="h-3 w-3" /> Link
 											</a>

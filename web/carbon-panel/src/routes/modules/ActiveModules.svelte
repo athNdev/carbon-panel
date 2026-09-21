@@ -173,7 +173,7 @@
 	}
 </script>
 
-<div class="space-y-4 font-sans text-[#f4f4f4] rounded-none">
+<div class="space-y-4 rounded-none font-sans text-[#f4f4f4]">
 	{#snippet activeToolbar()}
 		<CarbonButton
 			kind="tertiary"
@@ -190,13 +190,19 @@
 
 	{#snippet activeHeader()}
 		<tr>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Module / Server</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Status</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Memory</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">CPU</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Auto-Start</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase"
+				>Module / Server</th
+			>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Template</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Status</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Memory</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">CPU</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase"
+				>Auto-Start</th
+			>
+			<th scope="col" class="px-4 py-3 text-right text-xs font-semibold tracking-wider uppercase"
+				>Actions</th
+			>
 		</tr>
 	{/snippet}
 
@@ -220,36 +226,38 @@
 				<td colspan="7" class="py-16 text-center text-[#8d8d8d]">
 					<Package class="mx-auto mb-3 h-10 w-10 text-[#525252]" />
 					<p class="text-sm font-semibold text-white">No active module instances</p>
-					<p class="text-xs text-[#8d8d8d] mt-1">Attach modules to a Minecraft server to provision sidecar containers.</p>
+					<p class="mt-1 text-xs text-[#8d8d8d]">
+						Attach modules to a Minecraft server to provision sidecar containers.
+					</p>
 				</td>
 			</tr>
 		{:else}
 			{#each modules as module (module.id)}
 				{@const isLoading = actionLoading === module.id}
-				<tr class="hover:bg-[#353535] transition-colors">
-					<td class="py-3 px-4">
+				<tr class="transition-colors hover:bg-[#353535]">
+					<td class="px-4 py-3">
 						<div class="space-y-0.5">
-							<div class="font-semibold text-sm text-white flex items-center gap-2">
+							<div class="flex items-center gap-2 text-sm font-semibold text-white">
 								<span>{module.name}</span>
 							</div>
-							<div class="flex items-center gap-1.5 text-xs text-[#a8a8a8] font-mono">
+							<div class="flex items-center gap-1.5 font-mono text-xs text-[#a8a8a8]">
 								<Server class="h-3 w-3 text-[#0f62fe]" />
 								<span>{module.serverName || module.serverId}</span>
 							</div>
 						</div>
 					</td>
 
-					<td class="py-3 px-4 text-xs font-mono text-[#c6c6c6]">
+					<td class="px-4 py-3 font-mono text-xs text-[#c6c6c6]">
 						{module.templateName}
 					</td>
 
-					<td class="py-3 px-4">
+					<td class="px-4 py-3">
 						<CarbonTag type={getStatusTagType(module.status)} size="sm">
 							{getStatusLabel(module.status)}
 						</CarbonTag>
 					</td>
 
-					<td class="py-3 px-4 font-mono text-xs text-[#a8a8a8]">
+					<td class="px-4 py-3 font-mono text-xs text-[#a8a8a8]">
 						{#if module.status === ModuleStatus.RUNNING && module.memoryUsage > 0}
 							{module.memoryUsage.toFixed(0)} MB
 						{:else}
@@ -257,7 +265,7 @@
 						{/if}
 					</td>
 
-					<td class="py-3 px-4 font-mono text-xs text-[#a8a8a8]">
+					<td class="px-4 py-3 font-mono text-xs text-[#a8a8a8]">
 						{#if module.status === ModuleStatus.RUNNING}
 							{module.cpuPercent.toFixed(1)}%
 						{:else}
@@ -265,15 +273,15 @@
 						{/if}
 					</td>
 
-					<td class="py-3 px-4">
+					<td class="px-4 py-3">
 						{#if module.autoStart}
 							<CarbonTag type="blue" size="sm">Enabled</CarbonTag>
 						{:else}
-							<span class="text-xs text-[#8d8d8d] font-mono">Disabled</span>
+							<span class="font-mono text-xs text-[#8d8d8d]">Disabled</span>
 						{/if}
 					</td>
 
-					<td class="py-3 px-4 text-right">
+					<td class="px-4 py-3 text-right">
 						<div class="flex items-center justify-end gap-1">
 							<!-- Start / Stop / Restart Control -->
 							{#if module.status === ModuleStatus.STOPPED}

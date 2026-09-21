@@ -77,13 +77,11 @@
 	});
 </script>
 
-<div class="space-y-4 font-sans text-[#f4f4f4] rounded-none">
+<div class="space-y-4 rounded-none font-sans text-[#f4f4f4]">
 	{#snippet templateToolbar()}
-		<div class="flex items-center gap-2 flex-wrap">
+		<div class="flex flex-wrap items-center gap-2">
 			<div class="w-36">
-				<CarbonSelect
-					bind:value={selectedCategory}
-				>
+				<CarbonSelect bind:value={selectedCategory}>
 					<option value="">All Categories</option>
 					{#each categories as cat}
 						<option value={cat}>{cat}</option>
@@ -117,12 +115,20 @@
 
 	{#snippet templateHeader()}
 		<tr>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Template Name</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Type</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Category</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Docker Image</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider">Description</th>
-			<th scope="col" class="py-3 px-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase"
+				>Template Name</th
+			>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Type</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Category</th>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase"
+				>Docker Image</th
+			>
+			<th scope="col" class="px-4 py-3 text-xs font-semibold tracking-wider uppercase"
+				>Description</th
+			>
+			<th scope="col" class="px-4 py-3 text-right text-xs font-semibold tracking-wider uppercase"
+				>Actions</th
+			>
 		</tr>
 	{/snippet}
 
@@ -146,7 +152,9 @@
 				<td colspan="6" class="py-16 text-center text-[#8d8d8d]">
 					<Layers class="mx-auto mb-3 h-10 w-10 text-[#525252]" />
 					<p class="text-sm font-semibold text-white">No module templates found</p>
-					<p class="text-xs text-[#8d8d8d] mt-1">Create your first custom module blueprint to get started.</p>
+					<p class="mt-1 text-xs text-[#8d8d8d]">
+						Create your first custom module blueprint to get started.
+					</p>
 					<div class="mt-4">
 						<CarbonButton size="sm" class="rounded-none" onclick={() => (createDialogOpen = true)}>
 							<Plus class="mr-1.5 h-4 w-4" />
@@ -157,17 +165,23 @@
 			</tr>
 		{:else}
 			{#each filteredTemplates as template (template.name)}
-				<tr class="hover:bg-[#353535] transition-colors">
-					<td class="py-3 px-4 font-medium text-white">
+				<tr class="transition-colors hover:bg-[#353535]">
+					<td class="px-4 py-3 font-medium text-white">
 						<div class="flex items-center gap-2.5">
-							<div class="h-7 w-7 bg-[#161616] border border-[#393939] flex items-center justify-center text-[#0f62fe] shrink-0 rounded-none">
-								<DynamicIcon name={template.icon} class="h-4 w-4 text-[#0f62fe]" fallback="Package" />
+							<div
+								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#161616] text-[#0f62fe]"
+							>
+								<DynamicIcon
+									name={template.icon}
+									class="h-4 w-4 text-[#0f62fe]"
+									fallback="Package"
+								/>
 							</div>
-							<span class="font-semibold text-sm">{template.name}</span>
+							<span class="text-sm font-semibold">{template.name}</span>
 						</div>
 					</td>
 
-					<td class="py-3 px-4">
+					<td class="px-4 py-3">
 						{#if template.type === ModuleTemplateType.BUILTIN}
 							<CarbonTag type="blue" size="sm">Built-in</CarbonTag>
 						{:else}
@@ -175,23 +189,29 @@
 						{/if}
 					</td>
 
-					<td class="py-3 px-4">
+					<td class="px-4 py-3">
 						{#if template.category}
 							<CarbonTag type="gray" size="sm">{template.category}</CarbonTag>
 						{:else}
-							<span class="text-xs text-[#8d8d8d] font-mono">-</span>
+							<span class="font-mono text-xs text-[#8d8d8d]">-</span>
 						{/if}
 					</td>
 
-					<td class="py-3 px-4 font-mono text-xs text-[#a8a8a8] max-w-[180px] truncate" title={template.dockerImage}>
+					<td
+						class="max-w-[180px] truncate px-4 py-3 font-mono text-xs text-[#a8a8a8]"
+						title={template.dockerImage}
+					>
 						{template.dockerImage}
 					</td>
 
-					<td class="py-3 px-4 text-xs text-[#a8a8a8] max-w-[240px] truncate" title={template.description}>
+					<td
+						class="max-w-[240px] truncate px-4 py-3 text-xs text-[#a8a8a8]"
+						title={template.description}
+					>
 						{template.description || 'No description provided'}
 					</td>
 
-					<td class="py-3 px-4 text-right">
+					<td class="px-4 py-3 text-right">
 						<div class="flex items-center justify-end gap-1">
 							{#if template.type === ModuleTemplateType.CUSTOM}
 								<CarbonButton

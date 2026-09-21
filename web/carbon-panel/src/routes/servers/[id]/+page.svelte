@@ -63,7 +63,7 @@
 	import ServerFiles from '$lib/components/files/server-files.svelte';
 	import ServerRouting from '$lib/components/server-routing.svelte';
 	import ServerTasks from '$lib/components/server-tasks.svelte';
-import ServerBackups from '$lib/components/server-backups.svelte';
+	import ServerBackups from '$lib/components/server-backups.svelte';
 	import ServerActivity from '$lib/components/server-activity.svelte';
 	import ServerPlayers from '$lib/components/server-players.svelte';
 	import ServerModules from '$lib/components/server/ServerModules.svelte';
@@ -278,23 +278,27 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 {#if loading && !server}
 	<div class="flex h-96 items-center justify-center bg-[#161616]">
 		<div class="flex flex-col items-center gap-3">
-			<div class="h-10 w-10 border-4 border-[#0f62fe] border-t-transparent animate-spin"></div>
-			<p class="text-xs font-mono text-[#a8a8a8]">Connecting to server daemon...</p>
+			<div class="h-10 w-10 animate-spin border-4 border-[#0f62fe] border-t-transparent"></div>
+			<p class="font-mono text-xs text-[#a8a8a8]">Connecting to server daemon...</p>
 		</div>
 	</div>
 {:else if server}
-	<div class="flex h-full flex-col bg-[#161616] p-6 text-[#f4f4f4] font-sans space-y-6">
+	<div class="flex h-full flex-col space-y-6 bg-[#161616] p-6 font-sans text-[#f4f4f4]">
 		<!-- Carbon Header & Server Management Actions -->
-		<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#393939] gap-4">
+		<div
+			class="flex flex-col justify-between gap-4 border-b border-[#393939] pb-4 sm:flex-row sm:items-center"
+		>
 			<div class="flex items-center gap-4">
 				<a
 					href="/servers"
-					class="flex h-10 w-10 shrink-0 items-center justify-center bg-[#262626] hover:bg-[#353535] border border-[#393939] text-[#c6c6c6] hover:text-white transition-colors rounded-none"
+					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 					title="Back to Servers"
 				>
 					<ArrowLeft class="h-4 w-4" />
 				</a>
-				<div class="flex h-12 w-12 shrink-0 items-center justify-center bg-[#262626] border border-[#393939] text-[#78a9ff] rounded-none">
+				<div
+					class="flex h-12 w-12 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#78a9ff]"
+				>
 					<Package class="h-6 w-6" />
 				</div>
 				<div>
@@ -305,13 +309,17 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 							{getStatusDisplayName(server.status)}
 						</CarbonTag>
 						{#if server.nodeId}
-							<span class="px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 text-xs font-mono rounded-none">
+							<span
+								class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-2 py-0.5 font-mono text-xs text-[#78a9ff]"
+							>
 								NODE: {server.nodeId}
 							</span>
 						{/if}
 					</div>
-					<p class="text-xs text-[#a8a8a8] mt-1 font-sans">
-						{server.description || 'Minecraft Server Instance'} • Created {timestampToDate(server.createdAt).toLocaleDateString()}
+					<p class="mt-1 font-sans text-xs text-[#a8a8a8]">
+						{server.description || 'Minecraft Server Instance'} • Created {timestampToDate(
+							server.createdAt
+						).toLocaleDateString()}
 					</p>
 				</div>
 			</div>
@@ -319,7 +327,9 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 			<!-- Sharp Action Buttons -->
 			<div class="flex items-center gap-2">
 				{#if server.status === ServerStatus.CREATING}
-					<div class="h-10 px-4 bg-[#262626] border border-[#393939] text-[#f4f4f4] text-sm font-sans flex items-center gap-2 rounded-none select-none">
+					<div
+						class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#f4f4f4] select-none"
+					>
 						<Loader2 class="h-4 w-4 animate-spin text-[#0f62fe]" />
 						<span>Creating Server...</span>
 					</div>
@@ -328,7 +338,7 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						type="button"
 						onclick={() => handleServerAction('start')}
 						disabled={actionLoading}
-						class="h-10 px-4 bg-[#198038] hover:bg-[#24a148] text-white text-sm font-sans flex items-center gap-2 rounded-none transition-colors cursor-pointer disabled:opacity-50"
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#198038] px-4 font-sans text-sm text-white transition-colors hover:bg-[#24a148] disabled:opacity-50"
 					>
 						{#if actionLoading}
 							<Loader2 class="h-4 w-4 animate-spin" />
@@ -342,7 +352,7 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						type="button"
 						onclick={() => handleServerAction('restart')}
 						disabled={actionLoading}
-						class="h-10 px-4 bg-[#f1c21b] hover:bg-[#d2a106] text-black font-medium text-sm font-sans flex items-center gap-2 rounded-none transition-colors cursor-pointer disabled:opacity-50"
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#f1c21b] px-4 font-sans text-sm font-medium text-black transition-colors hover:bg-[#d2a106] disabled:opacity-50"
 					>
 						{#if actionLoading}
 							<Loader2 class="h-4 w-4 animate-spin" />
@@ -355,7 +365,7 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						type="button"
 						onclick={() => handleServerAction('stop')}
 						disabled={actionLoading}
-						class="h-10 px-4 bg-[#da1e28] hover:bg-[#ba1b23] text-white text-sm font-sans flex items-center gap-2 rounded-none transition-colors cursor-pointer disabled:opacity-50"
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#da1e28] px-4 font-sans text-sm text-white transition-colors hover:bg-[#ba1b23] disabled:opacity-50"
 					>
 						<Square class="h-4 w-4 fill-current" />
 						<span>Stop</span>
@@ -365,7 +375,7 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						type="button"
 						onclick={() => handleServerAction('stop')}
 						disabled={actionLoading}
-						class="h-10 px-4 bg-[#da1e28] hover:bg-[#ba1b23] text-white text-sm font-sans flex items-center gap-2 rounded-none transition-colors cursor-pointer disabled:opacity-50"
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#da1e28] px-4 font-sans text-sm text-white transition-colors hover:bg-[#ba1b23] disabled:opacity-50"
 					>
 						{#if actionLoading}
 							<Loader2 class="h-4 w-4 animate-spin" />
@@ -378,13 +388,15 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						type="button"
 						onclick={() => handleServerAction('restart')}
 						disabled={actionLoading}
-						class="h-10 px-4 bg-[#393939] hover:bg-[#4c4c4c] text-white text-sm font-sans flex items-center gap-2 rounded-none border border-[#525252] transition-colors cursor-pointer disabled:opacity-50"
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none border border-[#525252] bg-[#393939] px-4 font-sans text-sm text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 					>
 						<RotateCw class="h-4 w-4" />
 						<span>Restart</span>
 					</button>
 				{:else if server.status === ServerStatus.STOPPING}
-					<div class="h-10 px-4 bg-[#393939] text-[#c6c6c6] text-sm font-sans flex items-center gap-2 rounded-none border border-[#525252]">
+					<div
+						class="flex h-10 items-center gap-2 rounded-none border border-[#525252] bg-[#393939] px-4 font-sans text-sm text-[#c6c6c6]"
+					>
 						<Loader2 class="h-4 w-4 animate-spin" />
 						<span>Stopping...</span>
 					</div>
@@ -399,22 +411,25 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 								{...props}
 								disabled={actionLoading}
 								aria-label="More server actions"
-								class="h-10 w-10 flex items-center justify-center bg-[#262626] hover:bg-[#353535] border border-[#393939] text-[#c6c6c6] hover:text-white transition-colors cursor-pointer rounded-none"
+								class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 							>
 								<MoreVertical class="h-4 w-4" />
 							</button>
 						{/snippet}
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" class="bg-[#161616] border border-[#393939] text-[#f4f4f4] rounded-none p-1">
+					<DropdownMenuContent
+						align="end"
+						class="rounded-none border border-[#393939] bg-[#161616] p-1 text-[#f4f4f4]"
+					>
 						<DropdownMenuItem
-							class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-[#353535] text-[#f4f4f4] cursor-pointer rounded-none"
+							class="flex cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-xs text-[#f4f4f4] hover:bg-[#353535]"
 							onclick={() => handleServerAction('recreate')}
 						>
 							<RefreshCcw class="h-3.5 w-3.5" />
 							<span>Force Recreate</span>
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-[#da1e28]/20 text-[#ff8389] cursor-pointer rounded-none"
+							class="flex cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-xs text-[#ff8389] hover:bg-[#da1e28]/20"
 							onclick={() => handleDeleteServer()}
 						>
 							<Trash2 class="h-3.5 w-3.5" />
@@ -426,16 +441,20 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 		</div>
 
 		<!-- Carbon Metric Tiles (ZERO rounded corners) -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 			<!-- Tile 1: Status & Heartbeat -->
-			<div class="bg-[#262626] border border-[#393939] p-4 rounded-none flex flex-col justify-between">
-				<div class="flex items-center justify-between pb-3 border-b border-[#393939]">
-					<span class="text-xs uppercase font-mono tracking-wider text-[#8d8d8d]">Runtime Status</span>
+			<div
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4"
+			>
+				<div class="flex items-center justify-between border-b border-[#393939] pb-3">
+					<span class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase"
+						>Runtime Status</span
+					>
 					<CarbonTag type={getStatusTagType(server.status)} size="sm">
 						{getStatusDisplayName(server.status)}
 					</CarbonTag>
 				</div>
-				<div class="py-4 flex items-center justify-center gap-2">
+				<div class="flex items-center justify-center gap-2 py-4">
 					<div class="heartbeat-container">
 						{#if server.status === ServerStatus.RUNNING}
 							{#each Array(5) as _, i (i)}
@@ -443,7 +462,10 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 							{/each}
 						{:else if server.status === ServerStatus.ERROR || server.status === ServerStatus.UNHEALTHY}
 							{#each Array(5) as _, i (i)}
-								<div class="heartbeat-bar heartbeat-erratic bg-[#da1e28]" style="animation-delay: {i * 0.1}s"></div>
+								<div
+									class="heartbeat-bar heartbeat-erratic bg-[#da1e28]"
+									style="animation-delay: {i * 0.1}s"
+								></div>
 							{/each}
 						{:else}
 							{#each Array(5) as _, i (i)}
@@ -452,8 +474,8 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						{/if}
 					</div>
 				</div>
-				<div class="text-center pt-2 border-t border-[#393939]">
-					<p class="text-xs text-[#a8a8a8] font-sans">
+				<div class="border-t border-[#393939] pt-2 text-center">
+					<p class="font-sans text-xs text-[#a8a8a8]">
 						{#if server.status === ServerStatus.RUNNING}
 							Server healthy and processing ticks
 						{:else if server.status === ServerStatus.STOPPED}
@@ -474,14 +496,18 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 			</div>
 
 			<!-- Tile 2: Connection Address -->
-			<div class="bg-[#262626] border border-[#393939] p-4 rounded-none flex flex-col justify-between">
-				<div class="flex items-center justify-between pb-3 border-b border-[#393939]">
-					<span class="text-xs uppercase font-mono tracking-wider text-[#8d8d8d]">Network Ingress</span>
+			<div
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4"
+			>
+				<div class="flex items-center justify-between border-b border-[#393939] pb-3">
+					<span class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase"
+						>Network Ingress</span
+					>
 					<ExternalLink class="h-4 w-4 text-[#78a9ff]" />
 				</div>
 				<div class="py-3">
-					<p class="text-[11px] text-[#8d8d8d] font-mono uppercase">Connect String</p>
-					<p class="font-mono text-base font-semibold text-[#f4f4f4] truncate mt-0.5">
+					<p class="font-mono text-[11px] text-[#8d8d8d] uppercase">Connect String</p>
+					<p class="mt-0.5 truncate font-mono text-base font-semibold text-[#f4f4f4]">
 						{#if server.proxyHostname}
 							{server.proxyHostname}
 						{:else}
@@ -489,14 +515,14 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						{/if}
 					</p>
 				</div>
-				<div class="pt-2 border-t border-[#393939]">
+				<div class="border-t border-[#393939] pt-2">
 					<button
 						type="button"
 						onclick={() => {
 							const addr = server?.proxyHostname || `localhost:${server?.port}`;
 							copyConnection(addr);
 						}}
-						class="w-full h-8 px-3 bg-[#161616] hover:bg-[#353535] border border-[#393939] text-xs font-mono text-[#78a9ff] flex items-center justify-center gap-2 transition-colors cursor-pointer rounded-none"
+						class="flex h-8 w-full cursor-pointer items-center justify-center gap-2 rounded-none border border-[#393939] bg-[#161616] px-3 font-mono text-xs text-[#78a9ff] transition-colors hover:bg-[#353535]"
 					>
 						<Copy class="h-3.5 w-3.5" />
 						<span>Copy Address</span>
@@ -505,15 +531,18 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 			</div>
 
 			<!-- Tile 3: Engine Details -->
-			<div class="bg-[#262626] border border-[#393939] p-4 rounded-none flex flex-col justify-between">
-				<div class="flex items-center justify-between pb-3 border-b border-[#393939]">
-					<span class="text-xs uppercase font-mono tracking-wider text-[#8d8d8d]">Engine Specs</span>
+			<div
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4"
+			>
+				<div class="flex items-center justify-between border-b border-[#393939] pb-3">
+					<span class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase">Engine Specs</span
+					>
 					<Info class="h-4 w-4 text-[#d4bbff]" />
 				</div>
-				<div class="space-y-2 py-2 text-xs font-mono">
+				<div class="space-y-2 py-2 font-mono text-xs">
 					<div class="flex items-center justify-between">
 						<span class="text-[#8d8d8d]">Minecraft:</span>
-						<span class="text-[#f4f4f4] font-semibold">{server.mcVersion || 'Latest'}</span>
+						<span class="font-semibold text-[#f4f4f4]">{server.mcVersion || 'Latest'}</span>
 					</div>
 					<div class="flex items-center justify-between">
 						<span class="text-[#8d8d8d]">Loader:</span>
@@ -528,94 +557,118 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 						</div>
 					{/if}
 				</div>
-				<div class="pt-2 border-t border-[#393939] flex items-center justify-between text-[11px] font-mono text-[#8d8d8d]">
+				<div
+					class="flex items-center justify-between border-t border-[#393939] pt-2 font-mono text-[11px] text-[#8d8d8d]"
+				>
 					<span>Port: {server.port}</span>
 					<span>Max Players: {server.maxPlayers}</span>
 				</div>
 			</div>
 
 			<!-- Tile 4: Hardware Quotas -->
-			<div class="bg-[#262626] border border-[#393939] p-4 rounded-none flex flex-col justify-between">
-				<div class="flex items-center justify-between pb-3 border-b border-[#393939]">
-					<span class="text-xs uppercase font-mono tracking-wider text-[#8d8d8d]">Resource Telemetry</span>
+			<div
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4"
+			>
+				<div class="flex items-center justify-between border-b border-[#393939] pb-3">
+					<span class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase"
+						>Resource Telemetry</span
+					>
 					<Cpu class="h-4 w-4 text-[#ff8389]" />
 				</div>
 				<div class="space-y-2.5 py-1">
 					<!-- Memory Bar -->
 					<div>
-						<div class="flex items-center justify-between text-xs font-mono">
+						<div class="flex items-center justify-between font-mono text-xs">
 							<span class="text-[#8d8d8d]">RAM</span>
 							<span class="text-[#f4f4f4]">
 								{#if server.status === ServerStatus.CREATING}
 									Allocated: {(server.memory / 1024).toFixed(1)} GB
 								{:else}
-									{server.memoryUsage ? (Number(server.memoryUsage) / 1024).toFixed(1) : '0'} / {(server.memory / 1024).toFixed(1)} GB
+									{server.memoryUsage ? (Number(server.memoryUsage) / 1024).toFixed(1) : '0'} / {(
+										server.memory / 1024
+									).toFixed(1)} GB
 								{/if}
 							</span>
 						</div>
-						<div class="w-full h-1.5 bg-[#161616] border border-[#393939] rounded-none mt-1">
+						<div class="mt-1 h-1.5 w-full rounded-none border border-[#393939] bg-[#161616]">
 							<div
-								class="h-full bg-[#0f62fe] rounded-none transition-all"
-								style="width: {server.status === ServerStatus.CREATING ? '100' : Math.min(server.memoryUsage ? (Number(server.memoryUsage) / server.memory) * 100 : 0, 100)}%"
+								class="h-full rounded-none bg-[#0f62fe] transition-all"
+								style="width: {server.status === ServerStatus.CREATING
+									? '100'
+									: Math.min(
+											server.memoryUsage ? (Number(server.memoryUsage) / server.memory) * 100 : 0,
+											100
+										)}%"
 							></div>
 						</div>
 					</div>
 
 					<!-- CPU Bar -->
 					<div>
-						<div class="flex items-center justify-between text-xs font-mono">
+						<div class="flex items-center justify-between font-mono text-xs">
 							<span class="text-[#8d8d8d]">CPU</span>
 							<span class="text-[#33b1ff]">
 								{server.cpuPercent !== undefined ? `${server.cpuPercent.toFixed(1)}%` : '—'}
 							</span>
 						</div>
-						<div class="w-full h-1.5 bg-[#161616] border border-[#393939] rounded-none mt-1">
+						<div class="mt-1 h-1.5 w-full rounded-none border border-[#393939] bg-[#161616]">
 							<div
-								class="h-full bg-[#33b1ff] rounded-none transition-all"
+								class="h-full rounded-none bg-[#33b1ff] transition-all"
 								style="width: {Math.min(server.cpuPercent || 0, 100)}%"
 							></div>
 						</div>
 					</div>
 				</div>
 
-				<div class="pt-2 border-t border-[#393939] flex items-center justify-between text-[11px] font-mono">
+				<div
+					class="flex items-center justify-between border-t border-[#393939] pt-2 font-mono text-[11px]"
+				>
 					<span class="text-[#8d8d8d]">TPS:</span>
-					<span class="{server.tps && server.tps >= 18 ? 'text-[#6fdc8c]' : 'text-[#f1c21b]'} font-semibold">
+					<span
+						class="{server.tps && server.tps >= 18
+							? 'text-[#6fdc8c]'
+							: 'text-[#f1c21b]'} font-semibold"
+					>
 						{server.tps ? server.tps.toFixed(1) : '20.0'}
 					</span>
 					<span class="text-[#8d8d8d]">Players:</span>
-					<span class="text-[#6fdc8c] font-semibold">{server.playersOnline || 0}</span>
+					<span class="font-semibold text-[#6fdc8c]">{server.playersOnline || 0}</span>
 				</div>
 			</div>
 		</div>
 
 		<!-- Startup & Creation Progress Banner (MINE-125 / MINE-128) -->
 		{#if server.status === ServerStatus.STARTING}
-			<div class="bg-[#161616] border-l-4 border-l-[#0f62fe] border border-[#393939] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+			<div
+				class="flex flex-col items-start justify-between gap-3 border border-l-4 border-[#393939] border-l-[#0f62fe] bg-[#161616] p-4 sm:flex-row sm:items-center"
+			>
 				<div class="flex items-center gap-3">
-					<Loader2 class="h-5 w-5 animate-spin text-[#0f62fe] shrink-0" />
+					<Loader2 class="h-5 w-5 shrink-0 animate-spin text-[#0f62fe]" />
 					<div>
 						<p class="text-sm font-semibold text-[#f4f4f4]">Server is starting up</p>
-						<p class="text-xs text-[#a8a8a8] mt-0.5">
-							First-boot modpack downloads (manifests, loader installers, mod jars) can take 2–5 minutes. Monitor real-time logs in the Console tab.
+						<p class="mt-0.5 text-xs text-[#a8a8a8]">
+							First-boot modpack downloads (manifests, loader installers, mod jars) can take 2–5
+							minutes. Monitor real-time logs in the Console tab.
 						</p>
 					</div>
 				</div>
 				<button
 					type="button"
 					onclick={() => (activeTab = 'console')}
-					class="shrink-0 h-8 px-3 bg-[#262626] hover:bg-[#353535] border border-[#393939] text-xs font-mono text-[#78a9ff] flex items-center gap-1.5 transition-colors cursor-pointer"
+					class="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 border border-[#393939] bg-[#262626] px-3 font-mono text-xs text-[#78a9ff] transition-colors hover:bg-[#353535]"
 				>
 					<Terminal class="h-3.5 w-3.5" />
 					<span>Open Console</span>
 				</button>
 			</div>
 		{:else if server.status === ServerStatus.CREATING}
-			<div class="bg-[#161616] border-l-4 border-l-[#0f62fe] border border-[#393939] p-4 flex items-center gap-3">
-				<Loader2 class="h-5 w-5 animate-spin text-[#0f62fe] shrink-0" />
+			<div
+				class="flex items-center gap-3 border border-l-4 border-[#393939] border-l-[#0f62fe] bg-[#161616] p-4"
+			>
+				<Loader2 class="h-5 w-5 shrink-0 animate-spin text-[#0f62fe]" />
 				<div>
 					<p class="text-sm font-semibold text-[#f4f4f4]">Creating server environment</p>
-					<p class="text-xs text-[#a8a8a8] mt-0.5">
+					<p class="mt-0.5 text-xs text-[#a8a8a8]">
 						Checking Docker image and allocating filesystem storage...
 					</p>
 				</div>
@@ -635,9 +688,11 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 			<!-- Tab Content Areas -->
 			<div class="min-h-0 flex-1">
 				{#if activeTab === 'overview'}
-					<div class="bg-[#262626] border border-[#393939] p-6 rounded-none">
-						<h3 class="text-base font-semibold text-[#f4f4f4] mb-1">Server Settings</h3>
-						<p class="text-xs text-[#a8a8a8] mb-6">Modify runtime container settings and server parameters</p>
+					<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
+						<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Server Settings</h3>
+						<p class="mb-6 text-xs text-[#a8a8a8]">
+							Modify runtime container settings and server parameters
+						</p>
 						<ServerSettings {server} onUpdate={loadServer} />
 					</div>
 				{:else if activeTab === 'console'}
@@ -672,9 +727,12 @@ import ServerBackups from '$lib/components/server-backups.svelte';
 	</div>
 {:else}
 	<div class="flex h-96 items-center justify-center bg-[#161616]">
-		<div class="text-center p-8 bg-[#262626] border border-[#393939] rounded-none">
-			<p class="text-sm text-[#ff8389] font-mono">Server instance not found</p>
-			<a href="/servers" class="mt-4 inline-flex h-8 px-4 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs font-sans items-center rounded-none transition-colors">
+		<div class="rounded-none border border-[#393939] bg-[#262626] p-8 text-center">
+			<p class="font-mono text-sm text-[#ff8389]">Server instance not found</p>
+			<a
+				href="/servers"
+				class="mt-4 inline-flex h-8 items-center rounded-none bg-[#393939] px-4 font-sans text-xs text-white transition-colors hover:bg-[#4c4c4c]"
+			>
 				Back to servers
 			</a>
 		</div>
