@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -51,7 +52,7 @@ func TestNoAuthProviderFailsClosed(t *testing.T) {
 	if m.IsAnyAuthEnabled() {
 		t.Fatal("expected no auth provider to be enabled")
 	}
-	if _, err := m.AuthenticateFromHeader(nil, ""); err == nil {
+	if _, err := m.AuthenticateFromHeader(context.TODO(), ""); err == nil {
 		t.Fatal("expected unauthenticated request to be rejected when no provider is enabled")
 	} else if !matchesErrNoAuth(err) {
 		t.Fatalf("expected ErrNoAuthProvider, got %v", err)
@@ -68,7 +69,7 @@ func TestNoAuthProviderAllowedWhenOptedIn(t *testing.T) {
 		AllowNoAuth:    true,
 	})
 
-	user, err := m.AuthenticateFromHeader(nil, "")
+	user, err := m.AuthenticateFromHeader(context.TODO(), "")
 	if err != nil {
 		t.Fatalf("expected synthetic admin when allow_no_auth is set, got %v", err)
 	}
@@ -89,7 +90,7 @@ func TestUpdateSettingsRefusesLastProvider(t *testing.T) {
 	})
 
 	disabled := false
-	if err := m.UpdateSettings(nil, &disabled, nil, nil, nil); err == nil {
+	if err := m.UpdateSettings(context.TODO(), &disabled, nil, nil, nil); err == nil {
 		t.Fatal("expected UpdateSettings to refuse disabling the last provider")
 	} else if !matchesErrNoAuth(err) {
 		t.Fatalf("expected ErrNoAuthProvider, got %v", err)

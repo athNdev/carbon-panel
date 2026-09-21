@@ -74,11 +74,22 @@
 							{#if dir.children && getDirs(dir.children).length > 0}
 								<span
 									role="button"
-									tabindex="-1"
+									tabindex="0"
+									aria-expanded={expanded.has(dir.path)}
+									aria-label={expanded.has(dir.path)
+										? `Collapse ${dir.name}`
+										: `Expand ${dir.name}`}
 									class="shrink-0 cursor-pointer p-0"
 									onclick={(e) => {
 										e.stopPropagation();
 										toggleExpand(dir.path);
+									}}
+									onkeydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											e.stopPropagation();
+											toggleExpand(dir.path);
+										}
 									}}
 								>
 									{#if expanded.has(dir.path)}

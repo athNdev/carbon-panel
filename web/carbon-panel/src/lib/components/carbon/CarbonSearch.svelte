@@ -58,6 +58,7 @@
 		{placeholder}
 		{disabled}
 		{onkeydown}
+		aria-label={restProps['aria-label'] ?? placeholder ?? 'Search'}
 		class="w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] text-[#f4f4f4] placeholder-[#6f6f6f] transition-colors focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] focus:outline-none disabled:border-[#393939] disabled:bg-[#161616] disabled:text-[#6f6f6f] {sizeClasses[
 			size
 		]}"
