@@ -1,0 +1,49 @@
+# Local dev config for controld. No secrets required: Clerk/provider keys stay
+# empty and those capabilities report disabled on /readyz.
+server:
+  addr: ":8080"
+  public_url: http://localhost:8080
+  read_timeout: 15s
+  write_timeout: 15s
+  shutdown_timeout: 30s
+  cors_origins: ["http://localhost:5173"]
+database:
+  driver: sqlite
+  url: ./data/cloud.db
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+  auto_migrate: true
+  # Postgres alternative (needs CARBONCLOUD_DATABASE_URL):
+  # driver: postgres
+  # url: postgres://cloud:cloud@localhost:5432/cloud?sslmode=disable
+clerk:
+  issuer: ""
+  jwks_url: ""
+  audience: ""
+  authorized_parties: []
+  webhook_tolerance: 5m
+  jwks_cache_ttl: 10m
+secrets:
+  provider: chain
+  file: ./data/cloud.env
+  prefix: CARBONCLOUD_
+providers:
+  enabled: ["generic"]
+  default_region: ""
+  tenant_credentials: false
+provisioner:
+  terraform_path: tofu
+  work_dir: ./data/terraform
+  state_backend: local
+  state_local_dir: ./data/tfstate
+  plan_timeout: 10m
+  apply_timeout: 30m
+  max_concurrent: 2
+telemetry:
+  log_level: debug
+  log_format: text
+  metrics_addr: ""
+console:
+  base_url: http://localhost:5173
+  allowed_origins: ["http://localhost:5173"]
