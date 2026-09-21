@@ -47,9 +47,25 @@
 	// Pick the first visible tab as default or read from URL
 	let activeTab = $state('');
 	$effect(() => {
-		if (queryTab && ['server-config', 'api-keys', 'routing', 'nodes', 'auth', 'logs', 'support', 'users', 'roles'].includes(queryTab)) {
+		if (
+			queryTab &&
+			[
+				'server-config',
+				'api-keys',
+				'routing',
+				'nodes',
+				'auth',
+				'logs',
+				'support',
+				'users',
+				'roles'
+			].includes(queryTab)
+		) {
 			activeTab = queryTab;
-		} else if (typeof window !== 'undefined' && (window.location.hash === '#cfApiKey' || window.location.hash === '#api-keys')) {
+		} else if (
+			typeof window !== 'undefined' &&
+			(window.location.hash === '#cfApiKey' || window.location.hash === '#api-keys')
+		) {
 			activeTab = 'api-keys';
 		} else if (!activeTab) {
 			if (showSettings) activeTab = 'server-config';
@@ -97,7 +113,7 @@
 	});
 </script>
 
-<div class="min-h-full flex-1 space-y-6 bg-[#161616] text-[#f4f4f4] p-6 lg:p-8">
+<div class="min-h-full flex-1 space-y-6 bg-[#161616] p-6 text-[#f4f4f4] lg:p-8">
 	<div class="flex items-center justify-between border-b border-[#393939] pb-6">
 		<div class="flex items-center gap-4">
 			<div
@@ -106,23 +122,23 @@
 				<Settings class="h-7 w-7 text-[#0f62fe]" />
 			</div>
 			<div class="space-y-1">
-				<h1 class="font-sans text-2xl font-light tracking-tight text-[#f4f4f4]">
-					Settings
-				</h1>
-				<p class="text-xs text-[#a8a8a8]">
-					Configure Carbon Panel and default server settings
-				</p>
+				<h1 class="font-sans text-2xl font-light tracking-tight text-[#f4f4f4]">Settings</h1>
+				<p class="text-xs text-[#a8a8a8]">Configure Carbon Panel and default server settings</p>
 			</div>
 		</div>
 	</div>
 
 	<div class="space-y-6">
-		<CarbonTabs tabs={settingsTabs} bind:selectedTab={activeTab} class="overflow-x-auto overflow-y-hidden" />
+		<CarbonTabs
+			tabs={settingsTabs}
+			bind:selectedTab={activeTab}
+			class="overflow-x-auto overflow-y-hidden"
+		/>
 
 		{#if activeTab === 'server-config' && showSettings}
 			<div class="space-y-4">
 				{#if loading}
-					<div class="border border-[#393939] bg-[#262626] p-16 flex items-center justify-center">
+					<div class="flex items-center justify-center border border-[#393939] bg-[#262626] p-16">
 						<CarbonInlineLoading description="Loading settings..." />
 					</div>
 				{:else}

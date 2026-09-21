@@ -156,7 +156,7 @@
 	{@render children?.()}
 {:else if loading}
 	<div class="flex min-h-screen items-center justify-center bg-[#161616]">
-		<div class="h-10 w-10 border-4 border-[#0f62fe] border-t-transparent animate-spin"></div>
+		<div class="h-10 w-10 animate-spin border-4 border-[#0f62fe] border-t-transparent"></div>
 	</div>
 {:else}
 	<CarbonShell>

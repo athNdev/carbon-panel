@@ -71,7 +71,10 @@
 </script>
 
 {#if showButton}
-	<div class="fixed right-8 bottom-8 z-50" transition:fly={{ y: 8, duration: 200, easing: cubicOut }}>
+	<div
+		class="fixed right-8 bottom-8 z-50"
+		transition:fly={{ y: 8, duration: 200, easing: cubicOut }}
+	>
 		<Button
 			size="icon"
 			onclick={scrollToTop}

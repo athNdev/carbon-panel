@@ -69,11 +69,14 @@
 			data-tab
 			data-testid="tab-{tab.id}"
 			onclick={() => handleTabClick(tab.id)}
-			class="relative z-10 h-10 px-4 flex items-center gap-2 text-sm font-normal transition-colors border-b-2 border-transparent cursor-pointer select-none {selectedTab === tab.id ? 'text-[#f4f4f4] bg-[#262626] font-semibold' : 'text-[#a8a8a8] hover:text-[#f4f4f4] hover:bg-[#262626]'}"
+			class="relative z-10 flex h-10 cursor-pointer items-center gap-2 border-b-2 border-transparent px-4 text-sm font-normal transition-colors select-none {selectedTab ===
+			tab.id
+				? 'bg-[#262626] font-semibold text-[#f4f4f4]'
+				: 'text-[#a8a8a8] hover:bg-[#262626] hover:text-[#f4f4f4]'}"
 		>
 			<span>{tab.label}</span>
 			{#if tab.badge !== undefined}
-				<span class="text-[10px] font-mono px-1.5 py-0.5 bg-[#393939] text-[#c6c6c6]">
+				<span class="bg-[#393939] px-1.5 py-0.5 font-mono text-[10px] text-[#c6c6c6]">
 					{tab.badge}
 				</span>
 			{/if}

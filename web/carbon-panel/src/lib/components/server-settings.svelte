@@ -8,12 +8,25 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { create } from '@bufbuild/protobuf';
 	import { toast } from 'svelte-sonner';
-	import { Loader2, Save, AlertCircle, Network, Server as ServerIcon, ArrowRightLeft, ShieldCheck, CheckCircle2, RefreshCw } from '@lucide/svelte';
+	import {
+		Loader2,
+		Save,
+		AlertCircle,
+		Network,
+		Server as ServerIcon,
+		ArrowRightLeft,
+		ShieldCheck,
+		CheckCircle2,
+		RefreshCw
+	} from '@lucide/svelte';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import * as _ from 'lodash-es';
 	import { ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { UpdateServerRequest } from '$lib/proto/carbonpanel/v1/server_pb';
-	import { UpdateServerRequestSchema, MigrateServerRequestSchema } from '$lib/proto/carbonpanel/v1/server_pb';
+	import {
+		UpdateServerRequestSchema,
+		MigrateServerRequestSchema
+	} from '$lib/proto/carbonpanel/v1/server_pb';
 	import type { Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { NodeStatus } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { Badge } from '$lib/components/ui/badge';
@@ -189,7 +202,9 @@
 		if (!confirm(confirmMsg)) return;
 
 		migrating = true;
-		migrationStep = isLive ? 'Flushing world chunks and migrating container...' : 'Recreating container on target node...';
+		migrationStep = isLive
+			? 'Flushing world chunks and migrating container...'
+			: 'Recreating container on target node...';
 		try {
 			const req = create(MigrateServerRequestSchema, {
 				id: server.id,
@@ -198,7 +213,9 @@
 			});
 			const res = await rpcClient.server.migrateServer(req);
 			if (res.success) {
-				toast.success(res.message || `Server migrated to ${target?.name || targetNodeId} successfully!`);
+				toast.success(
+					res.message || `Server migrated to ${target?.name || targetNodeId} successfully!`
+				);
 				if (onUpdate) onUpdate();
 				await loadNodes();
 			} else {
@@ -505,9 +522,9 @@
 			<div class="space-y-4 pt-2">
 				<h4 class="text-sm font-semibold">Sleep & Deep Sleep</h4>
 				<p class="text-xs text-muted-foreground">
-					Idle servers sip resources instead of burning them. Freeze keeps the server in
-					memory (~0 CPU, instant wake); deep sleep stops it entirely (zero RAM, boots
-					on join). Wakes trigger on player joins only — server-list pings never wake.
+					Idle servers sip resources instead of burning them. Freeze keeps the server in memory (~0
+					CPU, instant wake); deep sleep stops it entirely (zero RAM, boots on join). Wakes trigger
+					on player joins only — server-list pings never wake.
 				</p>
 
 				<div class="flex items-center justify-between rounded-lg bg-muted/50 p-4">
@@ -548,8 +565,7 @@
 							>Deep Sleep on Idle</Label
 						>
 						<p class="text-xs text-muted-foreground">
-							Stop the container after N idle minutes (zero RAM; boots on join, held
-							up to ~25s)
+							Stop the container after N idle minutes (zero RAM; boots on join, held up to ~25s)
 						</p>
 					</div>
 					<Switch
@@ -597,38 +613,49 @@
 	<Separator class="my-6" />
 
 	<!-- Cluster Node Placement & Live Migration Card -->
-	<div class="rounded-xl border border-border/80 bg-linear-to-br from-card to-card/90 p-5 shadow-sm space-y-5">
+	<div
+		class="space-y-5 rounded-xl border border-border/80 bg-linear-to-br from-card to-card/90 p-5 shadow-sm"
+	>
 		<div class="flex items-start justify-between gap-4">
 			<div class="flex items-center gap-3">
-				<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+				<div
+					class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"
+				>
 					<Network class="h-5 w-5" />
 				</div>
 				<div>
-					<h4 class="text-base font-semibold text-foreground">Cluster Node Placement & Live Migration</h4>
+					<h4 class="text-base font-semibold text-foreground">
+						Cluster Node Placement & Live Migration
+					</h4>
 					<p class="text-xs text-muted-foreground">
 						Seamlessly migrate this instance across Docker hosts without player disconnection
 					</p>
 				</div>
 			</div>
-			<Badge variant="outline" class="border-primary/30 bg-primary/5 text-primary text-xs font-mono">
+			<Badge
+				variant="outline"
+				class="border-primary/30 bg-primary/5 font-mono text-xs text-primary"
+			>
 				Live Engine
 			</Badge>
 		</div>
 
 		<!-- Current Placement Info -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-lg bg-muted/40 border border-border/50 text-xs">
+		<div
+			class="grid grid-cols-1 gap-3 rounded-lg border border-border/50 bg-muted/40 p-3.5 text-xs sm:grid-cols-2"
+		>
 			<div>
 				<span class="text-muted-foreground">Current Node:</span>
-				<div class="flex items-center gap-2 mt-1">
-					<span class="font-semibold text-foreground text-sm">{server.nodeId || 'unassigned'}</span>
+				<div class="mt-1 flex items-center gap-2">
+					<span class="text-sm font-semibold text-foreground">{server.nodeId || 'unassigned'}</span>
 					{#if nodes.find((n) => n.id === server.nodeId)?.isLocal}
-						<Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4">Local</Badge>
+						<Badge variant="secondary" class="h-4 px-1.5 py-0 text-[10px]">Local</Badge>
 					{/if}
 				</div>
 			</div>
 			<div>
 				<span class="text-muted-foreground">Container Endpoint:</span>
-				<div class="font-mono text-foreground mt-1 truncate">
+				<div class="mt-1 truncate font-mono text-foreground">
 					{nodes.find((n) => n.id === server.nodeId)?.host || 'local daemon'}
 				</div>
 			</div>
@@ -637,10 +664,10 @@
 		<!-- Target Node Migration Form -->
 		<div class="space-y-3">
 			<Label for="target_node" class="text-sm font-medium">Migrate to Target Node</Label>
-			<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+			<div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
 				<div class="flex-1">
 					<Select type="single" bind:value={targetNodeId} disabled={migrating || loadingNodes}>
-						<SelectTrigger id="target_node" class="w-full h-10">
+						<SelectTrigger id="target_node" class="h-10 w-full">
 							<span>
 								{nodes.find((n) => n.id === targetNodeId)?.name || 'Select destination node...'}
 							</span>
@@ -648,9 +675,9 @@
 						<SelectContent>
 							{#each nodes as node (node.id)}
 								<SelectItem value={node.id} disabled={node.id === server.nodeId || !node.enabled}>
-									<div class="flex items-center justify-between w-full gap-3">
+									<div class="flex w-full items-center justify-between gap-3">
 										<span>{node.name} {node.id === server.nodeId ? '(Current)' : ''}</span>
-										<div class="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+										<div class="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
 											{#if node.status === NodeStatus.ONLINE}
 												<span class="text-emerald-400">Online</span>
 											{:else}
@@ -681,10 +708,11 @@
 			</div>
 
 			<!-- Migration Helper & Force Bypass -->
-			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+			<div class="flex flex-col justify-between gap-2 pt-1 sm:flex-row sm:items-center">
 				<p class="text-[11px] text-muted-foreground">
 					{#if server.status === ServerStatus.RUNNING}
-						âš¡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy rerouting.
+						âš¡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy
+						rerouting.
 					{:else}
 						ðŸ’¤ <b>Offline migration</b>: Container will be initialized on the selected node.
 					{/if}
@@ -696,7 +724,9 @@
 			</div>
 
 			{#if migrating && migrationStep}
-				<div class="flex items-center gap-2 p-3 rounded-md bg-primary/10 border border-primary/20 text-xs text-primary animate-pulse">
+				<div
+					class="flex animate-pulse items-center gap-2 rounded-md border border-primary/20 bg-primary/10 p-3 text-xs text-primary"
+				>
 					<Loader2 class="h-3.5 w-3.5 animate-spin" />
 					<span>{migrationStep}</span>
 				</div>

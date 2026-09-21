@@ -109,27 +109,29 @@
 </script>
 
 <div class="h-full overflow-y-auto">
-	<div class="bg-[#262626] border border-[#393939] p-6 rounded-none">
-		<div class="flex items-center justify-between mb-1">
+	<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
+		<div class="mb-1 flex items-center justify-between">
 			<h3 class="text-base font-semibold text-[#f4f4f4]">Backups</h3>
 			<button
-				class="h-8 px-4 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs items-center rounded-none transition-colors"
+				class="h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c]"
 				onclick={loadBackups}
 				disabled={loading}
 			>
 				{loading ? 'Loading…' : 'Refresh'}
 			</button>
 		</div>
-		<p class="text-xs text-[#a8a8a8] mb-6">Scheduled and on-demand archives with restore and sticky locks</p>
+		<p class="mb-6 text-xs text-[#a8a8a8]">
+			Scheduled and on-demand archives with restore and sticky locks
+		</p>
 
 		{#if backups.length === 0}
-			<p class="text-xs font-mono text-[#6f6f6f] py-8 text-center">
+			<p class="py-8 text-center font-mono text-xs text-[#6f6f6f]">
 				{loading ? 'Loading backups…' : 'No backups yet. Create one from a scheduled backup task.'}
 			</p>
 		{:else}
 			<table class="w-full text-xs" aria-label="Server backups">
 				<thead>
-					<tr class="text-left text-[#a8a8a8] border-b border-[#393939]">
+					<tr class="border-b border-[#393939] text-left text-[#a8a8a8]">
 						<th scope="col" class="py-2 pr-4 font-medium">Name</th>
 						<th scope="col" class="py-2 pr-4 font-medium">Created</th>
 						<th scope="col" class="py-2 pr-4 font-medium">Size</th>
@@ -139,28 +141,28 @@
 				</thead>
 				<tbody>
 					{#each backups as backup (backup.id)}
-						<tr class="border-b border-[#262626] text-[#f4f4f4] font-mono">
+						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
 							<td class="py-2 pr-4">{backup.name}{backup.locked ? ' 🔒' : ''}</td>
 							<td class="py-2 pr-4 whitespace-nowrap">{formatTime(backup.createdAt)}</td>
 							<td class="py-2 pr-4">{formatBytes(backup.sizeBytes)}</td>
 							<td class="py-2 pr-4">{backup.status}</td>
-							<td class="py-2 flex flex-wrap gap-2">
+							<td class="flex flex-wrap gap-2 py-2">
 								<button
-									class="h-7 px-3 bg-[#393939] hover:bg-[#4c4c4c] disabled:opacity-50 text-white rounded-none transition-colors"
+									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null}
 									onclick={() => restoreBackup(backup.id)}
 								>
 									{acting === `restore:${backup.id}` ? '…' : 'Restore'}
 								</button>
 								<button
-									class="h-7 px-3 bg-[#393939] hover:bg-[#4c4c4c] disabled:opacity-50 text-white rounded-none transition-colors"
+									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null}
 									onclick={() => toggleLock(backup.id, !backup.locked)}
 								>
 									{acting === `lock:${backup.id}` ? '…' : backup.locked ? 'Unlock' : 'Lock'}
 								</button>
 								<button
-									class="h-7 px-3 bg-[#393939] hover:bg-[#4c4c4c] disabled:opacity-50 text-white rounded-none transition-colors"
+									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null || backup.locked}
 									onclick={() => deleteBackup(backup.id)}
 								>
