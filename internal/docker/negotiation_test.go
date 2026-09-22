@@ -58,7 +58,7 @@ func TestNewAPIClientNegotiatesVersionEagerly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAPIClient: %v", err)
 	}
-	defer sdk.Close()
+	defer func() { _ = sdk.Close() }()
 
 	if got := sdk.ClientVersion(); got != "1.45" {
 		t.Fatalf("ClientVersion() = %q immediately after NewAPIClient, want 1.45 (negotiation is lazy again)", got)
@@ -108,7 +108,7 @@ func TestConcurrentCallersUseTheirOwnBudgets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAPIClient: %v", err)
 	}
-	defer sdk.Close()
+	defer func() { _ = sdk.Close() }()
 
 	c := &Client{docker: sdk}
 
