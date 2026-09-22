@@ -157,6 +157,38 @@ func GetResolvedAliases(ctx *Context) map[string]string {
 	return resolved
 }
 
+// secretPathMarkers identify alias paths whose values are credential material.
+// They must never be exposed through the alias introspection APIs
+// (GetAvailableAliases / GetResolvedAliases); internal substitution
+// (Substitute) still resolves the real values because modules need them.
+//
+// Markers are matched case-insensitively as substrings of the full alias path.
+var secretPathMarkers = []string{
+	"secret",
+	"password",
+	"passwd",
+	"credential",
+	"access_key",
+	"secret_key",
+	"private_key",
+	"api_key",
+	"jwt",
+	"token",
+	"valkey_url",
+}
+
+// IsSecretPath reports whether an alias path names credential material that
+// must be redacted from API responses.
+func IsSecretPath(path string) bool {
+	lower := strings.ToLower(path)
+	for _, marker := range secretPathMarkers {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 // generateAliasesFromValue walks a value tree and generates aliases for all leaf fields
 func generateAliasesFromValue(val reflect.Value, prefix string, category Category) []Info {
 	var aliases []Info
@@ -206,12 +238,19 @@ func generateAliasesFromValue(val reflect.Value, prefix string, category Categor
 			}
 		}
 	default:
+		example := formatValue(val)
+		// Credential-bearing config values must not be echoed back to API
+		// callers. Internal template substitution does not use this map, so
+		// redacting here is safe.
+		if IsSecretPath(prefix) {
+			example = ""
+		}
 		aliases = append(aliases, Info{
 			Alias:        "{{" + prefix + "}}",
 			Path:         prefix,
 			Description:  generateDescription(prefix, ""),
 			Category:     category,
-			ExampleValue: formatValue(val),
+			ExampleValue: example,
 			FieldType:    val.Type().String(),
 		})
 	}

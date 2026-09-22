@@ -41,6 +41,13 @@ import (
 // Compile-time check that ServerService implements the interface
 var _ carbonpanelv1connect.ServerServiceHandler = (*ServerService)(nil)
 
+// statusRefreshTimeout bounds the live Docker status refresh done by list/get
+// endpoints. It is deliberately far below the panel's HTTP write timeout so a
+// single unresponsive node cannot hold the response open until the server
+// drops the connection; the background metrics collector and reconciler keep
+// the stored status fresh, so falling back to it is safe.
+const statusRefreshTimeout = 5 * time.Second
+
 // ServerService implements the Server service
 type ServerService struct {
 	store            *storage.Store
@@ -354,7 +361,12 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 		}
 	}
 
-	// Update status from Docker and apply cached metrics
+	// Update status from Docker and apply cached metrics. The live refresh runs
+	// under one shared budget so N servers on an unresponsive node cannot sum
+	// up to N times the per-call timeout.
+	statusCtx, cancelStatus := context.WithTimeout(ctx, statusRefreshTimeout)
+	defer cancelStatus()
+
 	for _, server := range servers {
 		// If server uses proxy, ensure ProxyPort is populated from the listener
 		if server.ProxyHostname != "" && server.ProxyListenerID != "" && listeners != nil {
@@ -365,7 +377,7 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 
 		if server.ContainerID != "" {
 			dockerCli := s.getDockerClient(server.NodeID)
-			status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
+			status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
 			if err == nil {
 				server.Status = status
 			}
@@ -420,10 +432,13 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 		}
 	}
 
-	// Update status from Docker
+	// Update status from Docker, bounded so an unresponsive node cannot outlive
+	// the HTTP write timeout (the stored status is the fallback).
 	if server.ContainerID != "" {
 		dockerCli := s.getDockerClient(server.NodeID)
-		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
+		statusCtx, cancelStatus := context.WithTimeout(ctx, statusRefreshTimeout)
+		status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
+		cancelStatus()
 		if err == nil {
 			server.Status = status
 		}

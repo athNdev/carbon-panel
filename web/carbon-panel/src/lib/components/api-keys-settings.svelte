@@ -145,7 +145,7 @@
 
 <div class="space-y-6">
 	<!-- CurseForge API Key Card -->
-	<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+	<div class="space-y-4 rounded-none border border-[#393939] bg-[#262626] p-5 shadow-none">
 		<div class="flex items-start justify-between border-b border-[#393939] pb-4">
 			<div class="space-y-1">
 				<h3 class="flex items-center gap-2 text-base font-normal text-[#f4f4f4]">
@@ -158,12 +158,16 @@
 			</div>
 			<div>
 				{#if cfApiKey.trim()}
-					<span class="inline-flex items-center gap-1 rounded-none border border-[#24a148] bg-[#24a148]/20 px-2 py-0.5 text-xs font-mono text-[#42be65]">
+					<span
+						class="inline-flex items-center gap-1 rounded-none border border-[#24a148] bg-[#24a148]/20 px-2 py-0.5 font-mono text-xs text-[#42be65]"
+					>
 						<CheckCircle2 class="h-3 w-3" />
 						Configured
 					</span>
 				{:else}
-					<span class="inline-flex items-center gap-1 rounded-none border border-[#da1e28] bg-[#da1e28]/20 px-2 py-0.5 text-xs font-mono text-[#ff8389]">
+					<span
+						class="inline-flex items-center gap-1 rounded-none border border-[#da1e28] bg-[#da1e28]/20 px-2 py-0.5 font-mono text-xs text-[#ff8389]"
+					>
 						<AlertCircle class="h-3 w-3" />
 						Not Configured
 					</span>
@@ -200,12 +204,12 @@
 							type={showCfKey ? 'text' : 'password'}
 							placeholder="$2a$10$..."
 							bind:value={cfApiKey}
-							class="pr-10 font-mono text-sm rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
+							class="h-10 rounded-none border border-[#525252] bg-[#161616] pr-10 font-mono text-sm text-[#f4f4f4] placeholder:text-[#6f6f6f]"
 						/>
 						<button
 							type="button"
 							onclick={() => (showCfKey = !showCfKey)}
-							class="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer rounded-none"
+							class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer rounded-none text-[#8d8d8d] hover:text-[#f4f4f4]"
 						>
 							{#if showCfKey}
 								<EyeOff class="h-4 w-4" />
@@ -218,7 +222,7 @@
 						type="button"
 						onclick={testCurseForge}
 						disabled={testingCf || !cfApiKey.trim()}
-						class="h-10 px-4 inline-flex items-center gap-2 rounded-none border border-[#0f62fe] text-[#78a9ff] hover:bg-[#0f62fe] hover:text-white text-xs font-sans font-medium cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+						class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-none border border-[#0f62fe] px-4 font-sans text-xs font-medium text-[#78a9ff] transition-colors hover:bg-[#0f62fe] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 					>
 						{#if testingCf}
 							<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -239,7 +243,10 @@
 						<AlertDescription class="text-xs">{cfTestResult.message}</AlertDescription>
 					</Alert>
 				{:else}
-					<Alert variant="destructive" class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]">
+					<Alert
+						variant="destructive"
+						class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]"
+					>
 						<XCircle class="h-4 w-4 text-[#da1e28]" />
 						<AlertTitle class="text-xs font-medium">Validation Failed</AlertTitle>
 						<AlertDescription class="text-xs">{cfTestResult.message}</AlertDescription>
@@ -250,7 +257,7 @@
 	</div>
 
 	<!-- Modrinth Configuration Card -->
-	<div class="border border-[#393939] bg-[#262626] p-5 rounded-none shadow-none space-y-4">
+	<div class="space-y-4 rounded-none border border-[#393939] bg-[#262626] p-5 shadow-none">
 		<div class="flex items-start justify-between border-b border-[#393939] pb-4">
 			<div class="space-y-1">
 				<h3 class="flex items-center gap-2 text-base font-normal text-[#f4f4f4]">
@@ -263,12 +270,16 @@
 			</div>
 			<div>
 				{#if modrinthToken.trim()}
-					<span class="inline-flex items-center gap-1 rounded-none border border-[#24a148] bg-[#24a148]/20 px-2 py-0.5 text-xs font-mono text-[#42be65]">
+					<span
+						class="inline-flex items-center gap-1 rounded-none border border-[#24a148] bg-[#24a148]/20 px-2 py-0.5 font-mono text-xs text-[#42be65]"
+					>
 						<CheckCircle2 class="h-3 w-3" />
 						Authenticated
 					</span>
 				{:else}
-					<span class="inline-flex items-center gap-1 rounded-none border border-[#525252] bg-transparent px-2 py-0.5 text-xs font-mono text-[#c6c6c6]">
+					<span
+						class="inline-flex items-center gap-1 rounded-none border border-[#525252] bg-transparent px-2 py-0.5 font-mono text-xs text-[#c6c6c6]"
+					>
 						Public Access
 					</span>
 				{/if}
@@ -278,8 +289,9 @@
 		<div class="space-y-4">
 			<div class="rounded-none border border-[#393939] bg-[#1e1e1e] p-4 text-xs text-[#a8a8a8]">
 				<p class="font-medium text-[#f4f4f4]">
-					Modrinth modpack and mod indexing works publicly without authentication. Supplying a Personal
-					Access Token (PAT) unlocks elevated rate limits and enables accessing private or unlisted projects.
+					Modrinth modpack and mod indexing works publicly without authentication. Supplying a
+					Personal Access Token (PAT) unlocks elevated rate limits and enables accessing private or
+					unlisted projects.
 				</p>
 				<p class="mt-1">
 					Generate tokens in your
@@ -295,19 +307,21 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label for="modrinth-token" class="text-xs text-[#c6c6c6]">Personal Access Token (PAT)</Label>
+				<Label for="modrinth-token" class="text-xs text-[#c6c6c6]"
+					>Personal Access Token (PAT)</Label
+				>
 				<div class="relative">
 					<Input
 						id="modrinth-token"
 						type={showModrinthToken ? 'text' : 'password'}
 						placeholder="mrp_..."
 						bind:value={modrinthToken}
-						class="pr-10 font-mono text-sm rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
+						class="h-10 rounded-none border border-[#525252] bg-[#161616] pr-10 font-mono text-sm text-[#f4f4f4] placeholder:text-[#6f6f6f]"
 					/>
 					<button
 						type="button"
 						onclick={() => (showModrinthToken = !showModrinthToken)}
-						class="absolute right-3 top-1/2 -translate-y-1/2 text-[#8d8d8d] hover:text-[#f4f4f4] cursor-pointer rounded-none"
+						class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer rounded-none text-[#8d8d8d] hover:text-[#f4f4f4]"
 					>
 						{#if showModrinthToken}
 							<EyeOff class="h-4 w-4" />
@@ -325,10 +339,11 @@
 					type="text"
 					placeholder="CarbonPanel/1.0 (contact@example.com)"
 					bind:value={modrinthUserAgent}
-					class="font-mono text-sm rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] h-10"
+					class="h-10 rounded-none border border-[#525252] bg-[#161616] font-mono text-sm text-[#f4f4f4] placeholder:text-[#6f6f6f]"
 				/>
 				<p class="text-xs text-[#8d8d8d]">
-					Modrinth API policy encourages client identification including application name and contact info.
+					Modrinth API policy encourages client identification including application name and
+					contact info.
 				</p>
 			</div>
 
@@ -337,7 +352,7 @@
 					type="button"
 					onclick={testModrinth}
 					disabled={testingModrinth}
-					class="h-10 px-4 inline-flex items-center gap-2 rounded-none border border-[#0f62fe] text-[#78a9ff] hover:bg-[#0f62fe] hover:text-white text-xs font-sans font-medium cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					class="inline-flex h-10 cursor-pointer items-center gap-2 rounded-none border border-[#0f62fe] px-4 font-sans text-xs font-medium text-[#78a9ff] transition-colors hover:bg-[#0f62fe] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{#if testingModrinth}
 						<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -357,7 +372,10 @@
 						<AlertDescription class="text-xs">{modrinthTestResult.message}</AlertDescription>
 					</Alert>
 				{:else}
-					<Alert variant="destructive" class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]">
+					<Alert
+						variant="destructive"
+						class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]"
+					>
 						<XCircle class="h-4 w-4 text-[#da1e28]" />
 						<AlertTitle class="text-xs font-medium">Validation Failed</AlertTitle>
 						<AlertDescription class="text-xs">{modrinthTestResult.message}</AlertDescription>

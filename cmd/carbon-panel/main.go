@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/athNdev/carbon-panel/internal/blueprint"
 	"github.com/athNdev/carbon-panel/internal/command"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/athNdev/carbon-panel/internal/blueprint"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
@@ -49,6 +49,14 @@ func main() {
 	}
 	log := logger.NewWithConfig(logConfig)
 	defer log.Close()
+
+	// Refuse to start with no authentication provider unless the operator
+	// explicitly opted in. Without this guard the panel would synthesise an
+	// admin identity for every caller (fail-open).
+	if !cfg.Auth.Local.Enabled && !cfg.Auth.OIDC.Enabled && !cfg.Auth.AllowNoAuth {
+		log.Fatal("No authentication provider is enabled (auth.local.enabled=false, auth.oidc.enabled=false). " +
+			"Enable local auth or OIDC, or set auth.allow_no_auth=true if this panel is intentionally unauthenticated.")
+	}
 
 	// Create required directories
 	dirs := []string{

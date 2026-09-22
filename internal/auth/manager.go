@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/rbac"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -32,6 +32,10 @@ var (
 	ErrAPITokenExpired      = errors.New("api token has expired")
 	ErrAPITokenNotFound     = errors.New("api token not found")
 	ErrInvalidRecoveryKey   = errors.New("invalid recovery key")
+	// ErrNoAuthProvider is returned when the configuration would leave the
+	// panel with no authentication provider and no explicit opt-in to run
+	// without authentication.
+	ErrNoAuthProvider = errors.New("no authentication provider is enabled")
 )
 
 // Auth override keys
@@ -48,6 +52,11 @@ type Manager struct {
 	config      *config.AuthConfig
 	jwtSecret   []byte
 	recoveryKey string
+
+	// allowNoAuth mirrors config.AuthConfig.AllowNoAuth: when false (default)
+	// the panel refuses to operate without a provider instead of granting
+	// every caller admin.
+	allowNoAuth bool
 }
 
 const jwtSecretSettingKey = "jwt_secret"
@@ -92,6 +101,7 @@ func NewManager(store *db.Store, enforcer *rbac.Enforcer, cfg *config.AuthConfig
 		config:      cfg,
 		jwtSecret:   secret,
 		recoveryKey: hex.EncodeToString(recoveryBytes),
+		allowNoAuth: cfg.AllowNoAuth,
 	}
 
 	m.loadSettingOverrides(ctx)
@@ -205,6 +215,10 @@ func (m *Manager) Logout(ctx context.Context, token string) error {
 }
 
 func (m *Manager) CreateLocalUser(ctx context.Context, username, email, password string) (*db.User, error) {
+	if err := ValidatePassword(password); err != nil {
+		return nil, err
+	}
+
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
 		return nil, err
@@ -245,6 +259,10 @@ func (m *Manager) ChangePassword(ctx context.Context, userID, oldPassword, newPa
 		return ErrInvalidCredentials
 	}
 
+	if err := ValidatePassword(newPassword); err != nil {
+		return err
+	}
+
 	hashedPassword, err := hashPassword(newPassword)
 	if err != nil {
 		return err
@@ -252,6 +270,13 @@ func (m *Manager) ChangePassword(ctx context.Context, userID, oldPassword, newPa
 
 	user.PasswordHash = hashedPassword
 	return m.store.UpdateUser(ctx, user)
+}
+
+// InvalidateUserSessions deletes every stored session for userID except the one
+// identified by exceptToken (pass "" to delete all). It is called after a
+// password change so a stolen session cannot outlive the credential rotation.
+func (m *Manager) InvalidateUserSessions(ctx context.Context, userID, exceptToken string) error {
+	return m.store.DeleteUserSessionsExcept(ctx, userID, exceptToken)
 }
 
 func (m *Manager) AnonymousUser() *AuthenticatedUser {
@@ -275,6 +300,13 @@ func (m *Manager) IsAnyAuthEnabled() bool {
 // Handles session tokens, API tokens, no-auth bypass, and anonymous access.
 func (m *Manager) AuthenticateFromHeader(ctx context.Context, authHeader string) (*AuthenticatedUser, error) {
 	if !m.IsAnyAuthEnabled() {
+		// Fail closed unless the operator explicitly opted into running with
+		// no authentication (auth.allow_no_auth). Previously this granted
+		// every caller full admin, so disabling local auth while OIDC was
+		// misconfigured silently opened the panel.
+		if !m.allowNoAuth {
+			return nil, ErrNoAuthProvider
+		}
 		return &AuthenticatedUser{
 			ID: "admin", Username: "admin", Roles: []string{"admin"}, Provider: "none",
 		}, nil
@@ -301,6 +333,12 @@ func (m *Manager) AuthenticateFromHeader(ctx context.Context, authHeader string)
 
 func (m *Manager) IsLocalAuthEnabled() bool {
 	return m.config.Local.Enabled
+}
+
+// NoAuthAllowed reports whether the operator explicitly permitted the panel to
+// run without any authentication provider.
+func (m *Manager) NoAuthAllowed() bool {
+	return m.allowNoAuth
 }
 
 func (m *Manager) IsRegistrationAllowed() bool {
@@ -341,6 +379,12 @@ func (m *Manager) UpdateSettings(ctx context.Context, localEnabled, allowReg, an
 	// Validate session timeout
 	if sessionTimeout != nil && *sessionTimeout < 300 {
 		return ErrSessionTimeoutMin
+	}
+
+	// Refuse to disable the last authentication provider unless the operator
+	// explicitly allowed running without authentication.
+	if localEnabled != nil && !*localEnabled && !m.config.OIDC.Enabled && !m.allowNoAuth {
+		return ErrNoAuthProvider
 	}
 
 	// Persist and apply each provided field
@@ -504,6 +548,10 @@ func (m *Manager) generateJWT(userID, username string, roles []string, expiresAt
 		"roles":    roles,
 		"exp":      expiresAt.Unix(),
 		"iat":      time.Now().Unix(),
+		// jti makes every issued token unique. Without it, two logins by the
+		// same user within the same wall-clock second produced byte-identical
+		// JWTs, and the second CreateSession failed on sessions.token UNIQUE.
+		"jti": uuid.New().String(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

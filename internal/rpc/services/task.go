@@ -7,13 +7,14 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/scheduler"
 	"github.com/athNdev/carbon-panel/internal/webhook"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/utils"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -177,29 +178,29 @@ func dbTaskToProto(task *storage.ScheduledTask) *v1.ScheduledTask {
 	}
 
 	protoTask := &v1.ScheduledTask{
-		Id:            task.ID,
-		ServerId:      task.ServerID,
-		Name:          task.Name,
-		Description:   task.Description,
-		TaskType:      dbTaskTypeToProto(task.TaskType),
-		Status:        dbTaskStatusToProto(task.Status),
-		Schedule:      dbScheduleTypeToProto(task.Schedule),
-		CronExpr:      task.CronExpr,
-		IntervalSecs:  int32(task.IntervalSecs),
-		Timezone:      task.Timezone,
-		Config:        task.Config,
-		Timeout:       int32(task.Timeout),
-		RetryCount:    int32(task.RetryCount),
-		RetryDelay:    int32(task.RetryDelay),
-		RequireOnline: task.RequireOnline,
-		FailureNotify: task.FailureNotify,
-		EventTriggers: task.EventTriggers,
-		ParentTaskId:  task.ParentTaskID,
-		StepOrder:     int32(task.StepOrder),
-		TimeOffsetSecs: int32(task.TimeOffsetSecs),
+		Id:                task.ID,
+		ServerId:          task.ServerID,
+		Name:              task.Name,
+		Description:       task.Description,
+		TaskType:          dbTaskTypeToProto(task.TaskType),
+		Status:            dbTaskStatusToProto(task.Status),
+		Schedule:          dbScheduleTypeToProto(task.Schedule),
+		CronExpr:          task.CronExpr,
+		IntervalSecs:      int32(task.IntervalSecs),
+		Timezone:          task.Timezone,
+		Config:            task.Config,
+		Timeout:           int32(task.Timeout),
+		RetryCount:        int32(task.RetryCount),
+		RetryDelay:        int32(task.RetryDelay),
+		RequireOnline:     task.RequireOnline,
+		FailureNotify:     task.FailureNotify,
+		EventTriggers:     task.EventTriggers,
+		ParentTaskId:      task.ParentTaskID,
+		StepOrder:         int32(task.StepOrder),
+		TimeOffsetSecs:    int32(task.TimeOffsetSecs),
 		ContinueOnFailure: task.ContinueOnFailure,
-		CreatedAt:     timestamppb.New(task.CreatedAt),
-		UpdatedAt:     timestamppb.New(task.UpdatedAt),
+		CreatedAt:         timestamppb.New(task.CreatedAt),
+		UpdatedAt:         timestamppb.New(task.UpdatedAt),
 	}
 
 	if task.RunAt != nil {
@@ -322,25 +323,25 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 
 	// Create task
 	task := &storage.ScheduledTask{
-		ID:            uuid.New().String(),
-		ServerID:      msg.ServerId,
-		Name:          msg.Name,
-		Description:   msg.Description,
-		TaskType:      taskType,
-		Status:        storage.TaskStatusEnabled,
-		Schedule:      scheduleType,
-		CronExpr:      msg.CronExpr,
-		IntervalSecs:  int(msg.IntervalSecs),
-		Timezone:      msg.Timezone,
-		Config:        msg.Config,
-		Timeout:       int(msg.Timeout),
-		RetryCount:    int(msg.RetryCount),
-		RetryDelay:    int(msg.RetryDelay),
-		RequireOnline: msg.RequireOnline,
-		EventTriggers: eventTriggers,
-		ParentTaskID:  msg.ParentTaskId,
-		StepOrder:     int(msg.StepOrder),
-		TimeOffsetSecs: int(msg.TimeOffsetSecs),
+		ID:                uuid.New().String(),
+		ServerID:          msg.ServerId,
+		Name:              msg.Name,
+		Description:       msg.Description,
+		TaskType:          taskType,
+		Status:            storage.TaskStatusEnabled,
+		Schedule:          scheduleType,
+		CronExpr:          msg.CronExpr,
+		IntervalSecs:      int(msg.IntervalSecs),
+		Timezone:          msg.Timezone,
+		Config:            msg.Config,
+		Timeout:           int(msg.Timeout),
+		RetryCount:        int(msg.RetryCount),
+		RetryDelay:        int(msg.RetryDelay),
+		RequireOnline:     msg.RequireOnline,
+		EventTriggers:     eventTriggers,
+		ParentTaskID:      msg.ParentTaskId,
+		StepOrder:         int(msg.StepOrder),
+		TimeOffsetSecs:    int(msg.TimeOffsetSecs),
 		ContinueOnFailure: msg.ContinueOnFailure,
 	}
 
@@ -557,6 +558,9 @@ func (s *TaskService) TriggerTask(ctx context.Context, req *connect.Request[v1.T
 		if errors.Is(err, scheduler.ErrTaskAlreadyRunning) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("task is already running"))
 		}
+		if errors.Is(err, storage.ErrScheduledTaskNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("scheduled task not found"))
+		}
 		s.log.Error("Failed to trigger task: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to trigger task: %v", err))
 	}
@@ -568,10 +572,7 @@ func (s *TaskService) TriggerTask(ctx context.Context, req *connect.Request[v1.T
 
 // ListTaskExecutions gets execution history for a task
 func (s *TaskService) ListTaskExecutions(ctx context.Context, req *connect.Request[v1.ListTaskExecutionsRequest]) (*connect.Response[v1.ListTaskExecutionsResponse], error) {
-	limit := int(req.Msg.Limit)
-	if limit == 0 {
-		limit = 50 // Default limit
-	}
+	limit := clampLimit(int(req.Msg.Limit))
 
 	executions, err := s.store.ListTaskExecutions(ctx, req.Msg.TaskId, limit)
 	if err != nil {
@@ -591,10 +592,7 @@ func (s *TaskService) ListTaskExecutions(ctx context.Context, req *connect.Reque
 
 // ListServerExecutions gets execution history for a server
 func (s *TaskService) ListServerExecutions(ctx context.Context, req *connect.Request[v1.ListServerExecutionsRequest]) (*connect.Response[v1.ListServerExecutionsResponse], error) {
-	limit := int(req.Msg.Limit)
-	if limit == 0 {
-		limit = 50 // Default limit
-	}
+	limit := clampLimit(int(req.Msg.Limit))
 
 	executions, err := s.store.ListServerTaskExecutions(ctx, req.Msg.ServerId, limit)
 	if err != nil {
@@ -670,6 +668,11 @@ func validateWebhookConfig(cfg string) error {
 	}
 	if wcfg.URL == "" {
 		return fmt.Errorf("webhook URL is required")
+	}
+	// Reject loopback / link-local / metadata targets at configuration time so
+	// the operator gets a clear error instead of a silent delivery failure.
+	if _, err := utils.ValidateURLStatic(wcfg.URL, true); err != nil {
+		return fmt.Errorf("invalid webhook URL: %w", err)
 	}
 	if wcfg.PayloadTemplate != "" {
 		if err := webhook.ValidateTemplate(wcfg.PayloadTemplate); err != nil {

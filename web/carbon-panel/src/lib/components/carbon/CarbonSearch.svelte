@@ -41,10 +41,15 @@
 	}
 </script>
 
-<div class="relative w-full font-sans rounded-none {className}">
+<div class="relative w-full rounded-none font-sans {className}">
 	<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#8d8d8d]">
-		<svg class="{iconSizeClasses[size]}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+		<svg class={iconSizeClasses[size]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				stroke-width="2"
+				d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+			/>
 		</svg>
 	</div>
 	<input
@@ -53,7 +58,10 @@
 		{placeholder}
 		{disabled}
 		{onkeydown}
-		class="w-full bg-[#262626] border-b border-[#8d8d8d] text-[#f4f4f4] placeholder-[#6f6f6f] rounded-none transition-colors focus:outline-none focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] disabled:bg-[#161616] disabled:border-[#393939] disabled:text-[#6f6f6f] {sizeClasses[size]}"
+		aria-label={restProps['aria-label'] ?? placeholder ?? 'Search'}
+		class="w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] text-[#f4f4f4] placeholder-[#6f6f6f] transition-colors focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] focus:outline-none disabled:border-[#393939] disabled:bg-[#161616] disabled:text-[#6f6f6f] {sizeClasses[
+			size
+		]}"
 		{...restProps}
 	/>
 	{#if value}
@@ -62,10 +70,14 @@
 			onclick={handleClear}
 			aria-label="Clear search"
 			transition:fade={{ duration: 100 }}
-			class="absolute inset-y-0 right-0 flex items-center px-2.5 text-[#a8a8a8] hover:text-[#f4f4f4] cursor-pointer rounded-none"
+			class="absolute inset-y-0 right-0 flex cursor-pointer items-center rounded-none px-2.5 text-[#a8a8a8] hover:text-[#f4f4f4]"
 		>
 			<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-				<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+				<path
+					fill-rule="evenodd"
+					d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+					clip-rule="evenodd"
+				/>
 			</svg>
 		</button>
 	{/if}

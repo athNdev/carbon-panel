@@ -6,10 +6,12 @@ import (
 	"maps"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	db "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
@@ -52,7 +54,7 @@ func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dock
 		m.dockerClient = dockerCli[0]
 	} else {
 		// Initialize Docker client using configured Docker host/version
-		opts := []client.Opt{client.WithAPIVersionNegotiation()}
+		opts := []client.Opt{}
 		if cfg.Docker.Host != "" {
 			opts = append(opts, client.WithHost(cfg.Docker.Host))
 		} else {
@@ -61,7 +63,7 @@ func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dock
 		if cfg.Docker.Version != "" {
 			opts = append(opts, client.WithVersion(cfg.Docker.Version))
 		}
-		if cli, err := client.NewClientWithOpts(opts...); err == nil {
+		if cli, err := docker.NewAPIClient(opts...); err == nil {
 			m.dockerClient = cli
 			m.ownsDockerClient = true
 		} else if logger != nil {
@@ -860,7 +862,7 @@ func (m *Manager) GetContainerIP(containerID string) (string, error) {
 // GetContainerIP gets the IP address of a container on the specified network using the provided Docker client
 func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName string) (string, error) {
 	if cli == nil {
-		c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		c, err := docker.NewAPIClient(client.FromEnv)
 		if err != nil {
 			return "", err
 		}
@@ -868,7 +870,10 @@ func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName 
 		cli = c
 	}
 
-	ctx := context.Background()
+	// Bound the inspect so an unresponsive daemon cannot stall the caller
+	// (proxy route refresh, wake handlers) past its own budget.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	containerInfo, err := cli.ContainerInspect(ctx, containerID)
 	if err != nil {
 		return "", fmt.Errorf("failed to inspect container: %w", err)

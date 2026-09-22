@@ -7,7 +7,19 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
-	import { Save, RefreshCw, Loader2, Link, CircleDot, Circle, Send, KeyRound, ChevronDown, ChevronRight, Wand2 } from '@lucide/svelte';
+	import {
+		Save,
+		RefreshCw,
+		Loader2,
+		Link,
+		CircleDot,
+		Circle,
+		Send,
+		KeyRound,
+		ChevronDown,
+		ChevronRight,
+		Wand2
+	} from '@lucide/svelte';
 	import { copyToClipboard } from '$lib/utils/clipboard';
 	import { CarbonInlineLoading } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
@@ -59,7 +71,13 @@
 	});
 
 	// CurseForge primary vs advanced fields separation
-	const cfPrimaryKeys = new Set(['cfPageUrl', 'cfSlug', 'cfFileId', 'cfForceSynchronize', 'cfApiKey']);
+	const cfPrimaryKeys = new Set([
+		'cfPageUrl',
+		'cfSlug',
+		'cfFileId',
+		'cfForceSynchronize',
+		'cfApiKey'
+	]);
 	let showAdvancedCurseForge = $state(false);
 
 	let primaryCategoryProps = $derived.by(() => {
@@ -92,7 +110,11 @@
 		);
 		if (slugMatch) {
 			slug = slugMatch[1];
-		} else if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.includes('/')) {
+		} else if (
+			!trimmed.startsWith('http://') &&
+			!trimmed.startsWith('https://') &&
+			!trimmed.includes('/')
+		) {
 			slug = trimmed;
 		}
 
@@ -472,11 +494,13 @@
 	}
 </script>
 
-<div class="flex h-full flex-col gap-0 border border-[#393939] bg-[#262626] rounded-none shadow-none">
+<div
+	class="flex h-full flex-col gap-0 rounded-none border border-[#393939] bg-[#262626] shadow-none"
+>
 	<div class="shrink-0 border-b border-[#393939] bg-[#262626] p-4 sm:p-5">
-		<div class="flex flex-col justify-between sm:flex-row sm:items-center gap-4">
+		<div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 			<div>
-				<h2 class="font-sans text-lg font-light text-[#f4f4f4] tracking-tight">
+				<h2 class="font-sans text-lg font-light tracking-tight text-[#f4f4f4]">
 					{!server ? 'Default Server Configuration' : 'Server Configuration'}
 				</h2>
 				<p class="mt-1 text-xs text-[#a8a8a8]">
@@ -487,7 +511,7 @@
 			</div>
 			<div class="flex items-center gap-3">
 				{#if hasChanges}
-					<span class="text-xs font-mono text-[#ff832b] whitespace-nowrap">
+					<span class="font-mono text-xs whitespace-nowrap text-[#ff832b]">
 						{modifiedFields.size} unsaved {modifiedFields.size === 1 ? 'change' : 'changes'}
 					</span>
 				{/if}
@@ -497,7 +521,7 @@
 						onclick={() => handleSyncToAllServers(true)}
 						disabled={loading || syncing || hasChanges}
 						title="Propagate configured default Ops and Whitelist to all existing servers"
-						class="h-8 px-3 inline-flex items-center gap-2 rounded-none border border-[#393939] bg-[#353535] text-xs font-sans text-[#f4f4f4] hover:bg-[#393939] hover:text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+						class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none border border-[#393939] bg-[#353535] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#393939] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 					>
 						{#if syncing}
 							<Loader2 class="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -511,7 +535,7 @@
 					type="button"
 					onclick={handleReset}
 					disabled={loading || isServerRunning || !hasChanges}
-					class="h-8 px-3 inline-flex items-center gap-2 rounded-none border border-[#393939] bg-[#353535] text-xs font-sans text-[#f4f4f4] hover:bg-[#393939] hover:text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none border border-[#393939] bg-[#353535] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#393939] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<RefreshCw class="mr-2 h-3.5 w-3.5" />
 					<span>Reset</span>
@@ -520,7 +544,7 @@
 					type="button"
 					onclick={handleSave}
 					disabled={loading || isSaving || isServerRunning || !hasChanges}
-					class="h-8 px-4 inline-flex items-center gap-2 rounded-none bg-[#0f62fe] hover:bg-[#0353e9] text-xs font-sans font-medium text-white cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-4 font-sans text-xs font-medium text-white transition-colors hover:bg-[#0353e9] disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{#if isSaving}
 						<Loader2 class="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -553,17 +577,17 @@
 							{@const isActive = activeCategory === categoryId}
 							{@const modCount = modifiedCountByCategory.get(categoryId) ?? 0}
 							<button
-								class="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs transition-colors rounded-none border-b border-[#262626] cursor-pointer
+								class="flex w-full cursor-pointer items-center justify-between rounded-none border-b border-[#262626] px-3 py-2.5 text-left text-xs transition-colors
 									{isActive
-									? 'border-l-4 border-l-[#0f62fe] bg-[#353535] text-white font-medium pl-2.5'
+									? 'border-l-4 border-l-[#0f62fe] bg-[#353535] pl-2.5 font-medium text-white'
 									: 'border-l-4 border-l-transparent text-[#8d8d8d] hover:bg-[#262626] hover:text-white'}"
 								onclick={() => selectCategory(categoryId)}
 							>
 								<span class="truncate">{category.name}</span>
 								{#if modCount > 0}
 									<span
-										class="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-none px-1 text-[10px] font-mono font-medium
-										{isActive ? 'bg-[#ff832b] text-black font-semibold' : 'bg-[#ff832b] text-black'}"
+										class="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-none px-1 font-mono text-[10px] font-medium
+										{isActive ? 'bg-[#ff832b] font-semibold text-black' : 'bg-[#ff832b] text-black'}"
 									>
 										{modCount}
 									</span>
@@ -578,7 +602,7 @@
 					<!-- Category Header -->
 					<div class="shrink-0 border-b border-[#393939] bg-[#262626] px-4 py-3">
 						<h3 class="font-sans text-sm font-normal text-[#f4f4f4]">{currentCategoryName}</h3>
-						<p class="text-xs text-[#a8a8a8] mt-0.5">{currentCategoryProps.length} fields</p>
+						<p class="mt-0.5 text-xs text-[#a8a8a8]">{currentCategoryProps.length} fields</p>
 					</div>
 
 					{#snippet fieldCard(prop: ConfigProperty)}
@@ -592,7 +616,11 @@
 							data-field="true"
 							class="group rounded-none border border-[#393939] p-4 transition-all duration-150
 								{isHighlighted ? 'outline-2 outline-[#0f62fe]' : ''}
-								{isModified ? 'border-l-4 border-l-[#ff832b] bg-[#2d251e]' : !isEnabled ? 'bg-[#1e1e1e] opacity-80' : 'bg-[#262626]'}"
+								{isModified
+								? 'border-l-4 border-l-[#ff832b] bg-[#2d251e]'
+								: !isEnabled
+									? 'bg-[#1e1e1e] opacity-80'
+									: 'bg-[#262626]'}"
 						>
 							<!-- Field Header -->
 							<div class="mb-3 flex items-start justify-between gap-2">
@@ -600,24 +628,40 @@
 									<div class="mb-1 flex flex-wrap items-center gap-2">
 										<Label
 											for={prop.key}
-											class="text-xs font-medium text-[#f4f4f4] {!isEnabled ? 'text-[#8d8d8d]' : ''}"
+											class="text-xs font-medium text-[#f4f4f4] {!isEnabled
+												? 'text-[#8d8d8d]'
+												: ''}"
 										>
 											{prop.label}
 										</Label>
 										{#if prop.required}
-											<span class="text-[10px] font-mono font-medium text-[#ff8389] bg-[#da1e28]/20 border border-[#da1e28]/40 px-1 py-0.5 rounded-none">required</span>
+											<span
+												class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/20 px-1 py-0.5 font-mono text-[10px] font-medium text-[#ff8389]"
+												>required</span
+											>
 										{/if}
 										{#if prop.system}
-											<span class="text-[10px] font-mono font-medium text-[#78a9ff] bg-[#0f62fe]/20 border border-[#0f62fe]/40 px-1 py-0.5 rounded-none">system</span>
+											<span
+												class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-1 py-0.5 font-mono text-[10px] font-medium text-[#78a9ff]"
+												>system</span
+											>
 										{/if}
 										{#if isModified}
-											<span class="text-[10px] font-mono font-medium text-[#ff832b] bg-[#ff832b]/20 border border-[#ff832b]/40 px-1 py-0.5 rounded-none">modified</span>
+											<span
+												class="rounded-none border border-[#ff832b]/40 bg-[#ff832b]/20 px-1 py-0.5 font-mono text-[10px] font-medium text-[#ff832b]"
+												>modified</span
+											>
 										{/if}
 										{#if !isEnabled}
-											<span class="text-[10px] font-mono text-[#8d8d8d] bg-[#353535] border border-[#525252] px-1 py-0.5 rounded-none">(unset)</span>
+											<span
+												class="rounded-none border border-[#525252] bg-[#353535] px-1 py-0.5 font-mono text-[10px] text-[#8d8d8d]"
+												>(unset)</span
+											>
 										{/if}
 										{#if prop.key === 'cfApiKey'}
-											<span class="rounded-none bg-[#0f62fe]/20 border border-[#0f62fe]/40 px-1.5 py-0.5 text-[10px] font-mono font-medium text-[#78a9ff]">
+											<span
+												class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#78a9ff]"
+											>
 												Optional (Keyless Fallback)
 											</span>
 										{/if}
@@ -634,7 +678,7 @@
 										<div class="mt-2">
 											<button
 												type="button"
-												class="h-6 px-2 text-xs font-sans rounded-none border border-[#393939] bg-[#353535] text-[#78a9ff] hover:bg-[#393939] hover:text-white cursor-pointer inline-flex items-center"
+												class="inline-flex h-6 cursor-pointer items-center rounded-none border border-[#393939] bg-[#353535] px-2 font-sans text-xs text-[#78a9ff] hover:bg-[#393939] hover:text-white"
 												onclick={assumeCfSlugFromServerName}
 											>
 												<Wand2 class="mr-1 h-3 w-3" />
@@ -646,7 +690,7 @@
 										<div class="mt-2">
 											<button
 												type="button"
-												class="h-6 px-2 text-xs font-sans rounded-none border border-[#393939] bg-[#353535] text-[#78a9ff] hover:bg-[#393939] hover:text-white cursor-pointer inline-flex items-center"
+												class="inline-flex h-6 cursor-pointer items-center rounded-none border border-[#393939] bg-[#353535] px-2 font-sans text-xs text-[#78a9ff] hover:bg-[#393939] hover:text-white"
 												onclick={() => handleExtractFromPageUrl(getDisplayValue(prop))}
 											>
 												<Wand2 class="mr-1 h-3 w-3" />
@@ -674,7 +718,7 @@
 									</button>
 									<button
 										type="button"
-										class="h-6 w-6 rounded-none flex items-center justify-center hover:bg-[#353535] text-[#8d8d8d] hover:text-white cursor-pointer transition-colors"
+										class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-none text-[#8d8d8d] transition-colors hover:bg-[#353535] hover:text-white"
 										onclick={() => copyLinkToClipboard(prop.key)}
 										title="Copy link to field"
 									>
@@ -703,14 +747,20 @@
 									onValueChange={(value) => updateValue(prop.key, value ?? '')}
 									disabled={prop.system || !isEnabled || isServerRunning}
 								>
-									<SelectTrigger class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {!isEnabled ? 'opacity-60' : ''}">
+									<SelectTrigger
+										class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {!isEnabled
+											? 'opacity-60'
+											: ''}"
+									>
 										<span class="truncate">
 											{getDisplayValue(prop) || 'Select...'}
 										</span>
 									</SelectTrigger>
 									<SelectContent class="rounded-none border border-[#393939] bg-[#262626]">
 										{#each prop.options as option (option)}
-											<SelectItem value={option} class="rounded-none">{option || '(empty)'}</SelectItem>
+											<SelectItem value={option} class="rounded-none"
+												>{option || '(empty)'}</SelectItem
+											>
 										{/each}
 									</SelectContent>
 								</Select>
@@ -722,7 +772,9 @@
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
 									disabled={prop.system || !isEnabled || isServerRunning}
-									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled ? 'opacity-60' : ''}"
+									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
+										? 'opacity-60'
+										: ''}"
 								/>
 							{:else if prop.type === 'password'}
 								<Input
@@ -732,7 +784,9 @@
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
 									disabled={prop.system || !isEnabled || isServerRunning}
-									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled ? 'opacity-60' : ''}"
+									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
+										? 'opacity-60'
+										: ''}"
 								/>
 							{:else}
 								<Input
@@ -742,13 +796,18 @@
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
 									disabled={prop.system || !isEnabled || isServerRunning}
-									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled ? 'opacity-60' : ''}"
+									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
+										? 'opacity-60'
+										: ''}"
 								/>
 							{/if}
 
 							{#if prop.defaultValue !== undefined && prop.defaultValue !== ''}
 								<p class="mt-2 text-xs text-[#8d8d8d]">
-									Default: <code class="rounded-none bg-[#353535] px-1 py-0.5 font-mono text-xs text-[#c6c6c6]">{prop.defaultValue}</code>
+									Default: <code
+										class="rounded-none bg-[#353535] px-1 py-0.5 font-mono text-xs text-[#c6c6c6]"
+										>{prop.defaultValue}</code
+									>
 								</p>
 							{/if}
 						</div>
@@ -763,7 +822,9 @@
 									CurseForge Keyless Mode & Defaults Active
 								</div>
 								<p class="mt-1 text-xs text-[#a8a8a8]">
-									CurseForge modpacks and mods can be downloaded and searched without an API key via community proxies. If provided, slugs and file IDs can be auto-extracted directly from modpack URLs or assumed from the server name.
+									CurseForge modpacks and mods can be downloaded and searched without an API key via
+									community proxies. If provided, slugs and file IDs can be auto-extracted directly
+									from modpack URLs or assumed from the server name.
 								</p>
 							</div>
 						{/if}
@@ -779,7 +840,7 @@
 								<button
 									type="button"
 									onclick={() => (showAdvancedCurseForge = !showAdvancedCurseForge)}
-									class="flex w-full items-center justify-between text-left text-sm font-medium text-[#f4f4f4] hover:text-[#78a9ff] transition-colors cursor-pointer rounded-none"
+									class="flex w-full cursor-pointer items-center justify-between rounded-none text-left text-sm font-medium text-[#f4f4f4] transition-colors hover:text-[#78a9ff]"
 								>
 									<span class="flex items-center gap-2">
 										{#if showAdvancedCurseForge}
@@ -807,10 +868,8 @@
 			</div>
 
 			{#if server && isServerRunning}
-				<div
-					class="border-t border-[#f1c21b]/30 bg-[#f1c21b]/10 p-4 rounded-none"
-				>
-					<p class="text-xs font-mono text-[#f1c21b]">
+				<div class="rounded-none border-t border-[#f1c21b]/30 bg-[#f1c21b]/10 p-4">
+					<p class="font-mono text-xs text-[#f1c21b]">
 						Server must be stopped to modify configuration. Changes will take effect after restart.
 					</p>
 				</div>

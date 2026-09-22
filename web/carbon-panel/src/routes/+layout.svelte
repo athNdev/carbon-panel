@@ -35,7 +35,7 @@
 	import { get } from 'svelte/store';
 	import { serversStore, runningServers, activitySortedServers } from '$lib/stores/servers';
 	import { authStore, currentUser, canAccessSettings, authEnabled } from '$lib/stores/auth';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import GlobalLoading from '$lib/components/global-loading.svelte';
 
@@ -80,59 +80,68 @@
 
 	let statusPollingInterval: ReturnType<typeof setInterval> | null = null;
 
-	onMount(() => {
-		return new Promise((resolve, reject) => {
-			authStore
-				.checkAuthStatus()
-				.then(async (authStatus) => {
-					loading = false;
-					if (authStatus.enabled) {
-						if (authStatus.firstUserSetup) {
+	function stopStatusPolling() {
+		if (statusPollingInterval) {
+			clearInterval(statusPollingInterval);
+			statusPollingInterval = null;
+		}
+	}
+
+	async function initialize() {
+		try {
+			const authStatus = await authStore.checkAuthStatus();
+			loading = false;
+
+			let shouldFetch = true;
+			if (authStatus.enabled) {
+				if (authStatus.firstUserSetup) {
+					goto(resolvePath('/login'));
+					shouldFetch = false;
+				} else {
+					const isValid = await authStore.validateSession();
+					if (!isValid) {
+						// If anonymous access is enabled, allow browsing without login
+						const state = get(authStore);
+						if (!state.anonymousAccessEnabled) {
 							goto(resolvePath('/login'));
-							return false;
-						}
-						const isValid = await authStore.validateSession();
-						if (!isValid) {
-							// If anonymous access is enabled, allow browsing without login
-							const state = get(authStore);
-							if (!state.anonymousAccessEnabled) {
-								goto(resolvePath('/login'));
-								return false;
-							}
+							shouldFetch = false;
 						}
 					}
-					return true;
-				})
-				.then((shouldFetch) => {
-					// Only fetch servers if auth succeeded (not redirecting to login)
-					if (shouldFetch && page.url.pathname !== '/login') {
-						serversStore.fetchServers(false).catch((err) => {
-							console.error('Failed to fetch initial servers:', err);
+				}
+			}
+
+			if (!shouldFetch || page.url.pathname === '/login') {
+				return;
+			}
+
+			serversStore.fetchServers(false).catch((err) => {
+				console.error('Failed to fetch initial servers:', err);
+			});
+
+			// Keep the sidebar status fresh. Each poll swallows its own error so a
+			// transient backend hiccup cannot raise an unhandled rejection every 10s.
+			if (!statusPollingInterval) {
+				statusPollingInterval = setInterval(() => {
+					if (page.url.pathname !== '/login') {
+						serversStore.fetchServers(true).catch((err) => {
+							console.debug('Status poll failed:', err);
 						});
-
-						if (!statusPollingInterval) {
-							statusPollingInterval = setInterval(() => {
-								if (page.url.pathname !== '/login') {
-									serversStore.fetchServers(true);
-								}
-							}, 10000);
-						}
 					}
+				}, 10000);
+			}
+		} catch (err) {
+			// Never reject the mount lifecycle: that would skip cleanup and leak
+			// the polling interval.
+			console.debug(`Carbon Panel caught a polling error: ${err}`);
+			loading = false;
+		}
+	}
 
-					// Clean up on unmount
-					resolve(() => {
-						if (statusPollingInterval) {
-							clearInterval(statusPollingInterval);
-							statusPollingInterval = null;
-						}
-					});
-				})
-				.catch((err) => {
-					console.debug(`Carbon Panel caught a polling error: ${err}`);
-					reject(err);
-				});
-		});
+	onMount(() => {
+		initialize();
 	});
+
+	onDestroy(stopStatusPolling);
 </script>
 
 <svelte:head>
@@ -147,7 +156,7 @@
 	{@render children?.()}
 {:else if loading}
 	<div class="flex min-h-screen items-center justify-center bg-[#161616]">
-		<div class="h-10 w-10 border-4 border-[#0f62fe] border-t-transparent animate-spin"></div>
+		<div class="h-10 w-10 animate-spin border-4 border-[#0f62fe] border-t-transparent"></div>
 	</div>
 {:else}
 	<CarbonShell>

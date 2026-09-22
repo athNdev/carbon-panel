@@ -9,6 +9,6 @@
 	let { class: className = '', children }: Props = $props();
 </script>
 
-<ul class="w-full border-t border-[#393939] list-none p-0 m-0 rounded-none {className}">
+<ul class="m-0 w-full list-none rounded-none border-t border-[#393939] p-0 {className}">
 	{@render children?.()}
 </ul>

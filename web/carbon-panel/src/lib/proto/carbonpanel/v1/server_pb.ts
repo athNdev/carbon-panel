@@ -2,958 +2,995 @@
 // @generated from file carbonpanel/v1/server.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { AdditionalPort, DockerOverrides, ModLoader, Server } from "./common_pb";
-import { file_carbonpanel_v1_common } from "./common_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
+import type { AdditionalPort, DockerOverrides, ModLoader, Server } from './common_pb';
+import { file_carbonpanel_v1_common } from './common_pb';
+import type { Timestamp } from '@bufbuild/protobuf/wkt';
+import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file carbonpanel/v1/server.proto.
  */
-export const file_carbonpanel_v1_server: GenFile = /*@__PURE__*/
-  fileDesc("ChtjYXJib25wYW5lbC92MS9zZXJ2ZXIucHJvdG8SDmNhcmJvbnBhbmVsLnYxIigKEkxpc3RTZXJ2ZXJzUmVxdWVzdBISCgpmdWxsX3N0YXRzGAEgASgIIj4KE0xpc3RTZXJ2ZXJzUmVzcG9uc2USJwoHc2VydmVycxgBIAMoCzIWLmNhcmJvbnBhbmVsLnYxLlNlcnZlciIeChBHZXRTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIjsKEUdldFNlcnZlclJlc3BvbnNlEiYKBnNlcnZlchgBIAEoCzIWLmNhcmJvbnBhbmVsLnYxLlNlcnZlciIwChRHZXRTZXJ2ZXJMb2dzUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR0YWlsGAIgASgFIo8BCghMb2dFbnRyeRItCgl0aW1lc3RhbXAYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg8KB21lc3NhZ2UYAiABKAkSDQoFbGV2ZWwYAyABKAkSDgoGc291cmNlGAQgASgJEhIKCmlzX2NvbW1hbmQYBSABKAgSEAoIaXNfZXJyb3IYBiABKAgiTgoVR2V0U2VydmVyTG9nc1Jlc3BvbnNlEiYKBGxvZ3MYASADKAsyGC5jYXJib25wYW5lbC52MS5Mb2dFbnRyeRINCgV0b3RhbBgCIAEoBSIkChZDbGVhclNlcnZlckxvZ3NSZXF1ZXN0EgoKAmlkGAEgASgJIhkKF0NsZWFyU2VydmVyTG9nc1Jlc3BvbnNlIh0KG0dldE5leHRBdmFpbGFibGVQb3J0UmVxdWVzdCIoCghVc2VkUG9ydBIMCgRwb3J0GAEgASgFEg4KBmluX3VzZRgCIAEoCCJaChxHZXROZXh0QXZhaWxhYmxlUG9ydFJlc3BvbnNlEgwKBHBvcnQYASABKAUSLAoKdXNlZF9wb3J0cxgCIAMoCzIYLmNhcmJvbnBhbmVsLnYxLlVzZWRQb3J0ItEEChNDcmVhdGVTZXJ2ZXJSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSLQoKbW9kX2xvYWRlchgDIAEoDjIZLmNhcmJvbnBhbmVsLnYxLk1vZExvYWRlchISCgptY192ZXJzaW9uGAQgASgJEgwKBHBvcnQYBSABKAUSEwoLbWF4X3BsYXllcnMYBiABKAUSDgoGbWVtb3J5GAcgASgFEhQKDGRvY2tlcl9pbWFnZRgIIAEoCRISCgphdXRvX3N0YXJ0GAkgASgIEhAKCGRldGFjaGVkGAogASgIEhkKEXN0YXJ0X2ltbWVkaWF0ZWx5GAsgASgIEhIKCm1vZHBhY2tfaWQYDCABKAkSGgoSbW9kcGFja192ZXJzaW9uX2lkGA0gASgJEhYKDnByb3h5X2hvc3RuYW1lGA4gASgJEhkKEXByb3h5X2xpc3RlbmVyX2lkGA8gASgJEhQKDHVzZV9iYXNlX3VybBgQIAEoCBI4ChBhZGRpdGlvbmFsX3BvcnRzGBEgAygLMh4uY2FyYm9ucGFuZWwudjEuQWRkaXRpb25hbFBvcnQSOQoQZG9ja2VyX292ZXJyaWRlcxgSIAEoCzIfLmNhcmJvbnBhbmVsLnYxLkRvY2tlck92ZXJyaWRlcxIPCgdub2RlX2lkGBMgASgJEhoKEnBsYWNlbWVudF9zdHJhdGVneRgUIAEoCRIWCg5hdXRvX2hpYmVybmF0ZRgVIAEoCBIXCg9hdXRvX2RlZXBfc2xlZXAYFiABKAgiPgoUQ3JlYXRlU2VydmVyUmVzcG9uc2USJgoGc2VydmVyGAEgASgLMhYuY2FyYm9ucGFuZWwudjEuU2VydmVyIsQFChNVcGRhdGVTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEQoEcG9ydBgEIAEoBUgAiAEBEhMKC21heF9wbGF5ZXJzGAUgASgFEg4KBm1lbW9yeRgGIAEoBRISCgptb2RfbG9hZGVyGAcgASgJEhIKCm1jX3ZlcnNpb24YCCABKAkSFAoMZG9ja2VyX2ltYWdlGAkgASgJEhcKCmF1dG9fc3RhcnQYCiABKAhIAYgBARIVCghkZXRhY2hlZBgLIAEoCEgCiAEBEhgKC3Rwc19jb21tYW5kGAwgASgJSAOIAQESEgoKbW9kcGFja19pZBgNIAEoCRIaChJtb2RwYWNrX3ZlcnNpb25faWQYDiABKAkSOAoQYWRkaXRpb25hbF9wb3J0cxgPIAMoCzIeLmNhcmJvbnBhbmVsLnYxLkFkZGl0aW9uYWxQb3J0EjkKEGRvY2tlcl9vdmVycmlkZXMYECABKAsyHy5jYXJib25wYW5lbC52MS5Eb2NrZXJPdmVycmlkZXMSGwoOYXV0b19oaWJlcm5hdGUYESABKAhIBIgBARIhChRpZGxlX3RpbWVvdXRfbWludXRlcxgSIAEoBUgFiAEBEhwKD2F1dG9fZGVlcF9zbGVlcBgTIAEoCEgGiAEBEicKGmRlZXBfc2xlZXBfdGltZW91dF9taW51dGVzGBQgASgFSAeIAQFCBwoFX3BvcnRCDQoLX2F1dG9fc3RhcnRCCwoJX2RldGFjaGVkQg4KDF90cHNfY29tbWFuZEIRCg9fYXV0b19oaWJlcm5hdGVCFwoVX2lkbGVfdGltZW91dF9taW51dGVzQhIKEF9hdXRvX2RlZXBfc2xlZXBCHQobX2RlZXBfc2xlZXBfdGltZW91dF9taW51dGVzIj4KFFVwZGF0ZVNlcnZlclJlc3BvbnNlEiYKBnNlcnZlchgBIAEoCzIWLmNhcmJvbnBhbmVsLnYxLlNlcnZlciIhChNEZWxldGVTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIhYKFERlbGV0ZVNlcnZlclJlc3BvbnNlIiAKElN0YXJ0U2VydmVyUmVxdWVzdBIKCgJpZBgBIAEoCSIlChNTdGFydFNlcnZlclJlc3BvbnNlEg4KBnN0YXR1cxgBIAEoCSIfChFTdG9wU2VydmVyUmVxdWVzdBIKCgJpZBgBIAEoCSIkChJTdG9wU2VydmVyUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIiIKFFJlc3RhcnRTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIicKFVJlc3RhcnRTZXJ2ZXJSZXNwb25zZRIOCgZzdGF0dXMYASABKAkiIwoVUmVjcmVhdGVTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIigKFlJlY3JlYXRlU2VydmVyUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIlEKElNlbmRDb21tYW5kUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdjb21tYW5kGAIgASgJEhMKBnNpbGVudBgDIAEoCEgAiAEBQgkKB19zaWxlbnQiRQoTU2VuZENvbW1hbmRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg4KBm91dHB1dBgCIAEoCRINCgVlcnJvchgDIAEoCSIjChVVcGxvYWRUb01DTG9nc1JlcXVlc3QSCgoCaWQYASABKAkiJQoWVXBsb2FkVG9NQ0xvZ3NSZXNwb25zZRILCgN1cmwYASABKAkiWAoUTWlncmF0ZVNlcnZlclJlcXVlc3QSCgoCaWQYASABKAkSFgoOdGFyZ2V0X25vZGVfaWQYAiABKAkSEgoFZm9yY2UYAyABKAhIAIgBAUIICgZfZm9yY2UipgEKFU1pZ3JhdGVTZXJ2ZXJSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB21lc3NhZ2UYAiABKAkSFgoOc291cmNlX25vZGVfaWQYAyABKAkSFgoOdGFyZ2V0X25vZGVfaWQYBCABKAkSEwoLZHVyYXRpb25fbXMYBSABKAMSJgoGc2VydmVyGAYgASgLMhYuY2FyYm9ucGFuZWwudjEuU2VydmVyIi0KGExpc3RTZXJ2ZXJQbGF5ZXJzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiQgoZTGlzdFNlcnZlclBsYXllcnNSZXNwb25zZRIPCgdwbGF5ZXJzGAEgAygJEhQKDG9ubGluZV9jb3VudBgCIAEoBTLsCwoNU2VydmVyU2VydmljZRJWCgtMaXN0U2VydmVycxIiLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJzUmVxdWVzdBojLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJzUmVzcG9uc2USUAoJR2V0U2VydmVyEiAuY2FyYm9ucGFuZWwudjEuR2V0U2VydmVyUmVxdWVzdBohLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlclJlc3BvbnNlElwKDUdldFNlcnZlckxvZ3MSJC5jYXJib25wYW5lbC52MS5HZXRTZXJ2ZXJMb2dzUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlckxvZ3NSZXNwb25zZRJiCg9DbGVhclNlcnZlckxvZ3MSJi5jYXJib25wYW5lbC52MS5DbGVhclNlcnZlckxvZ3NSZXF1ZXN0GicuY2FyYm9ucGFuZWwudjEuQ2xlYXJTZXJ2ZXJMb2dzUmVzcG9uc2UScQoUR2V0TmV4dEF2YWlsYWJsZVBvcnQSKy5jYXJib25wYW5lbC52MS5HZXROZXh0QXZhaWxhYmxlUG9ydFJlcXVlc3QaLC5jYXJib25wYW5lbC52MS5HZXROZXh0QXZhaWxhYmxlUG9ydFJlc3BvbnNlElkKDENyZWF0ZVNlcnZlchIjLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVNlcnZlclJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5DcmVhdGVTZXJ2ZXJSZXNwb25zZRJZCgxVcGRhdGVTZXJ2ZXISIy5jYXJib25wYW5lbC52MS5VcGRhdGVTZXJ2ZXJSZXF1ZXN0GiQuY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyUmVzcG9uc2USWQoMRGVsZXRlU2VydmVyEiMuY2FyYm9ucGFuZWwudjEuRGVsZXRlU2VydmVyUmVxdWVzdBokLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVNlcnZlclJlc3BvbnNlElYKC1N0YXJ0U2VydmVyEiIuY2FyYm9ucGFuZWwudjEuU3RhcnRTZXJ2ZXJSZXF1ZXN0GiMuY2FyYm9ucGFuZWwudjEuU3RhcnRTZXJ2ZXJSZXNwb25zZRJTCgpTdG9wU2VydmVyEiEuY2FyYm9ucGFuZWwudjEuU3RvcFNlcnZlclJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5TdG9wU2VydmVyUmVzcG9uc2USXAoNUmVzdGFydFNlcnZlchIkLmNhcmJvbnBhbmVsLnYxLlJlc3RhcnRTZXJ2ZXJSZXF1ZXN0GiUuY2FyYm9ucGFuZWwudjEuUmVzdGFydFNlcnZlclJlc3BvbnNlEl8KDlJlY3JlYXRlU2VydmVyEiUuY2FyYm9ucGFuZWwudjEuUmVjcmVhdGVTZXJ2ZXJSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuUmVjcmVhdGVTZXJ2ZXJSZXNwb25zZRJWCgtTZW5kQ29tbWFuZBIiLmNhcmJvbnBhbmVsLnYxLlNlbmRDb21tYW5kUmVxdWVzdBojLmNhcmJvbnBhbmVsLnYxLlNlbmRDb21tYW5kUmVzcG9uc2USXwoOVXBsb2FkVG9NQ0xvZ3MSJS5jYXJib25wYW5lbC52MS5VcGxvYWRUb01DTG9nc1JlcXVlc3QaJi5jYXJib25wYW5lbC52MS5VcGxvYWRUb01DTG9nc1Jlc3BvbnNlElwKDU1pZ3JhdGVTZXJ2ZXISJC5jYXJib25wYW5lbC52MS5NaWdyYXRlU2VydmVyUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLk1pZ3JhdGVTZXJ2ZXJSZXNwb25zZRJoChFMaXN0U2VydmVyUGxheWVycxIoLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJQbGF5ZXJzUmVxdWVzdBopLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJQbGF5ZXJzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z", [file_carbonpanel_v1_common, file_google_protobuf_timestamp]);
+export const file_carbonpanel_v1_server: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'ChtjYXJib25wYW5lbC92MS9zZXJ2ZXIucHJvdG8SDmNhcmJvbnBhbmVsLnYxIigKEkxpc3RTZXJ2ZXJzUmVxdWVzdBISCgpmdWxsX3N0YXRzGAEgASgIIj4KE0xpc3RTZXJ2ZXJzUmVzcG9uc2USJwoHc2VydmVycxgBIAMoCzIWLmNhcmJvbnBhbmVsLnYxLlNlcnZlciIeChBHZXRTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIjsKEUdldFNlcnZlclJlc3BvbnNlEiYKBnNlcnZlchgBIAEoCzIWLmNhcmJvbnBhbmVsLnYxLlNlcnZlciIwChRHZXRTZXJ2ZXJMb2dzUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR0YWlsGAIgASgFIo8BCghMb2dFbnRyeRItCgl0aW1lc3RhbXAYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg8KB21lc3NhZ2UYAiABKAkSDQoFbGV2ZWwYAyABKAkSDgoGc291cmNlGAQgASgJEhIKCmlzX2NvbW1hbmQYBSABKAgSEAoIaXNfZXJyb3IYBiABKAgiTgoVR2V0U2VydmVyTG9nc1Jlc3BvbnNlEiYKBGxvZ3MYASADKAsyGC5jYXJib25wYW5lbC52MS5Mb2dFbnRyeRINCgV0b3RhbBgCIAEoBSIkChZDbGVhclNlcnZlckxvZ3NSZXF1ZXN0EgoKAmlkGAEgASgJIhkKF0NsZWFyU2VydmVyTG9nc1Jlc3BvbnNlIh0KG0dldE5leHRBdmFpbGFibGVQb3J0UmVxdWVzdCIoCghVc2VkUG9ydBIMCgRwb3J0GAEgASgFEg4KBmluX3VzZRgCIAEoCCJaChxHZXROZXh0QXZhaWxhYmxlUG9ydFJlc3BvbnNlEgwKBHBvcnQYASABKAUSLAoKdXNlZF9wb3J0cxgCIAMoCzIYLmNhcmJvbnBhbmVsLnYxLlVzZWRQb3J0ItEEChNDcmVhdGVTZXJ2ZXJSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSLQoKbW9kX2xvYWRlchgDIAEoDjIZLmNhcmJvbnBhbmVsLnYxLk1vZExvYWRlchISCgptY192ZXJzaW9uGAQgASgJEgwKBHBvcnQYBSABKAUSEwoLbWF4X3BsYXllcnMYBiABKAUSDgoGbWVtb3J5GAcgASgFEhQKDGRvY2tlcl9pbWFnZRgIIAEoCRISCgphdXRvX3N0YXJ0GAkgASgIEhAKCGRldGFjaGVkGAogASgIEhkKEXN0YXJ0X2ltbWVkaWF0ZWx5GAsgASgIEhIKCm1vZHBhY2tfaWQYDCABKAkSGgoSbW9kcGFja192ZXJzaW9uX2lkGA0gASgJEhYKDnByb3h5X2hvc3RuYW1lGA4gASgJEhkKEXByb3h5X2xpc3RlbmVyX2lkGA8gASgJEhQKDHVzZV9iYXNlX3VybBgQIAEoCBI4ChBhZGRpdGlvbmFsX3BvcnRzGBEgAygLMh4uY2FyYm9ucGFuZWwudjEuQWRkaXRpb25hbFBvcnQSOQoQZG9ja2VyX292ZXJyaWRlcxgSIAEoCzIfLmNhcmJvbnBhbmVsLnYxLkRvY2tlck92ZXJyaWRlcxIPCgdub2RlX2lkGBMgASgJEhoKEnBsYWNlbWVudF9zdHJhdGVneRgUIAEoCRIWCg5hdXRvX2hpYmVybmF0ZRgVIAEoCBIXCg9hdXRvX2RlZXBfc2xlZXAYFiABKAgiPgoUQ3JlYXRlU2VydmVyUmVzcG9uc2USJgoGc2VydmVyGAEgASgLMhYuY2FyYm9ucGFuZWwudjEuU2VydmVyIsQFChNVcGRhdGVTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEQoEcG9ydBgEIAEoBUgAiAEBEhMKC21heF9wbGF5ZXJzGAUgASgFEg4KBm1lbW9yeRgGIAEoBRISCgptb2RfbG9hZGVyGAcgASgJEhIKCm1jX3ZlcnNpb24YCCABKAkSFAoMZG9ja2VyX2ltYWdlGAkgASgJEhcKCmF1dG9fc3RhcnQYCiABKAhIAYgBARIVCghkZXRhY2hlZBgLIAEoCEgCiAEBEhgKC3Rwc19jb21tYW5kGAwgASgJSAOIAQESEgoKbW9kcGFja19pZBgNIAEoCRIaChJtb2RwYWNrX3ZlcnNpb25faWQYDiABKAkSOAoQYWRkaXRpb25hbF9wb3J0cxgPIAMoCzIeLmNhcmJvbnBhbmVsLnYxLkFkZGl0aW9uYWxQb3J0EjkKEGRvY2tlcl9vdmVycmlkZXMYECABKAsyHy5jYXJib25wYW5lbC52MS5Eb2NrZXJPdmVycmlkZXMSGwoOYXV0b19oaWJlcm5hdGUYESABKAhIBIgBARIhChRpZGxlX3RpbWVvdXRfbWludXRlcxgSIAEoBUgFiAEBEhwKD2F1dG9fZGVlcF9zbGVlcBgTIAEoCEgGiAEBEicKGmRlZXBfc2xlZXBfdGltZW91dF9taW51dGVzGBQgASgFSAeIAQFCBwoFX3BvcnRCDQoLX2F1dG9fc3RhcnRCCwoJX2RldGFjaGVkQg4KDF90cHNfY29tbWFuZEIRCg9fYXV0b19oaWJlcm5hdGVCFwoVX2lkbGVfdGltZW91dF9taW51dGVzQhIKEF9hdXRvX2RlZXBfc2xlZXBCHQobX2RlZXBfc2xlZXBfdGltZW91dF9taW51dGVzIj4KFFVwZGF0ZVNlcnZlclJlc3BvbnNlEiYKBnNlcnZlchgBIAEoCzIWLmNhcmJvbnBhbmVsLnYxLlNlcnZlciIhChNEZWxldGVTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIhYKFERlbGV0ZVNlcnZlclJlc3BvbnNlIiAKElN0YXJ0U2VydmVyUmVxdWVzdBIKCgJpZBgBIAEoCSIlChNTdGFydFNlcnZlclJlc3BvbnNlEg4KBnN0YXR1cxgBIAEoCSIfChFTdG9wU2VydmVyUmVxdWVzdBIKCgJpZBgBIAEoCSIkChJTdG9wU2VydmVyUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIiIKFFJlc3RhcnRTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIicKFVJlc3RhcnRTZXJ2ZXJSZXNwb25zZRIOCgZzdGF0dXMYASABKAkiIwoVUmVjcmVhdGVTZXJ2ZXJSZXF1ZXN0EgoKAmlkGAEgASgJIigKFlJlY3JlYXRlU2VydmVyUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIlEKElNlbmRDb21tYW5kUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdjb21tYW5kGAIgASgJEhMKBnNpbGVudBgDIAEoCEgAiAEBQgkKB19zaWxlbnQiRQoTU2VuZENvbW1hbmRSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg4KBm91dHB1dBgCIAEoCRINCgVlcnJvchgDIAEoCSIjChVVcGxvYWRUb01DTG9nc1JlcXVlc3QSCgoCaWQYASABKAkiJQoWVXBsb2FkVG9NQ0xvZ3NSZXNwb25zZRILCgN1cmwYASABKAkiWAoUTWlncmF0ZVNlcnZlclJlcXVlc3QSCgoCaWQYASABKAkSFgoOdGFyZ2V0X25vZGVfaWQYAiABKAkSEgoFZm9yY2UYAyABKAhIAIgBAUIICgZfZm9yY2UipgEKFU1pZ3JhdGVTZXJ2ZXJSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB21lc3NhZ2UYAiABKAkSFgoOc291cmNlX25vZGVfaWQYAyABKAkSFgoOdGFyZ2V0X25vZGVfaWQYBCABKAkSEwoLZHVyYXRpb25fbXMYBSABKAMSJgoGc2VydmVyGAYgASgLMhYuY2FyYm9ucGFuZWwudjEuU2VydmVyIi0KGExpc3RTZXJ2ZXJQbGF5ZXJzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiQgoZTGlzdFNlcnZlclBsYXllcnNSZXNwb25zZRIPCgdwbGF5ZXJzGAEgAygJEhQKDG9ubGluZV9jb3VudBgCIAEoBTLsCwoNU2VydmVyU2VydmljZRJWCgtMaXN0U2VydmVycxIiLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJzUmVxdWVzdBojLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJzUmVzcG9uc2USUAoJR2V0U2VydmVyEiAuY2FyYm9ucGFuZWwudjEuR2V0U2VydmVyUmVxdWVzdBohLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlclJlc3BvbnNlElwKDUdldFNlcnZlckxvZ3MSJC5jYXJib25wYW5lbC52MS5HZXRTZXJ2ZXJMb2dzUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlckxvZ3NSZXNwb25zZRJiCg9DbGVhclNlcnZlckxvZ3MSJi5jYXJib25wYW5lbC52MS5DbGVhclNlcnZlckxvZ3NSZXF1ZXN0GicuY2FyYm9ucGFuZWwudjEuQ2xlYXJTZXJ2ZXJMb2dzUmVzcG9uc2UScQoUR2V0TmV4dEF2YWlsYWJsZVBvcnQSKy5jYXJib25wYW5lbC52MS5HZXROZXh0QXZhaWxhYmxlUG9ydFJlcXVlc3QaLC5jYXJib25wYW5lbC52MS5HZXROZXh0QXZhaWxhYmxlUG9ydFJlc3BvbnNlElkKDENyZWF0ZVNlcnZlchIjLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVNlcnZlclJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5DcmVhdGVTZXJ2ZXJSZXNwb25zZRJZCgxVcGRhdGVTZXJ2ZXISIy5jYXJib25wYW5lbC52MS5VcGRhdGVTZXJ2ZXJSZXF1ZXN0GiQuY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyUmVzcG9uc2USWQoMRGVsZXRlU2VydmVyEiMuY2FyYm9ucGFuZWwudjEuRGVsZXRlU2VydmVyUmVxdWVzdBokLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVNlcnZlclJlc3BvbnNlElYKC1N0YXJ0U2VydmVyEiIuY2FyYm9ucGFuZWwudjEuU3RhcnRTZXJ2ZXJSZXF1ZXN0GiMuY2FyYm9ucGFuZWwudjEuU3RhcnRTZXJ2ZXJSZXNwb25zZRJTCgpTdG9wU2VydmVyEiEuY2FyYm9ucGFuZWwudjEuU3RvcFNlcnZlclJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5TdG9wU2VydmVyUmVzcG9uc2USXAoNUmVzdGFydFNlcnZlchIkLmNhcmJvbnBhbmVsLnYxLlJlc3RhcnRTZXJ2ZXJSZXF1ZXN0GiUuY2FyYm9ucGFuZWwudjEuUmVzdGFydFNlcnZlclJlc3BvbnNlEl8KDlJlY3JlYXRlU2VydmVyEiUuY2FyYm9ucGFuZWwudjEuUmVjcmVhdGVTZXJ2ZXJSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuUmVjcmVhdGVTZXJ2ZXJSZXNwb25zZRJWCgtTZW5kQ29tbWFuZBIiLmNhcmJvbnBhbmVsLnYxLlNlbmRDb21tYW5kUmVxdWVzdBojLmNhcmJvbnBhbmVsLnYxLlNlbmRDb21tYW5kUmVzcG9uc2USXwoOVXBsb2FkVG9NQ0xvZ3MSJS5jYXJib25wYW5lbC52MS5VcGxvYWRUb01DTG9nc1JlcXVlc3QaJi5jYXJib25wYW5lbC52MS5VcGxvYWRUb01DTG9nc1Jlc3BvbnNlElwKDU1pZ3JhdGVTZXJ2ZXISJC5jYXJib25wYW5lbC52MS5NaWdyYXRlU2VydmVyUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLk1pZ3JhdGVTZXJ2ZXJSZXNwb25zZRJoChFMaXN0U2VydmVyUGxheWVycxIoLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJQbGF5ZXJzUmVxdWVzdBopLmNhcmJvbnBhbmVsLnYxLkxpc3RTZXJ2ZXJQbGF5ZXJzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z',
+		[file_carbonpanel_v1_common, file_google_protobuf_timestamp]
+	);
 
 /**
  * Server list options
  *
  * @generated from message carbonpanel.v1.ListServersRequest
  */
-export type ListServersRequest = Message<"carbonpanel.v1.ListServersRequest"> & {
-  /**
-   * @generated from field: bool full_stats = 1;
-   */
-  fullStats: boolean;
+export type ListServersRequest = Message<'carbonpanel.v1.ListServersRequest'> & {
+	/**
+	 * @generated from field: bool full_stats = 1;
+	 */
+	fullStats: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListServersRequest.
  * Use `create(ListServersRequestSchema)` to create a new message.
  */
-export const ListServersRequestSchema: GenMessage<ListServersRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 0);
+export const ListServersRequestSchema: GenMessage<ListServersRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 0);
 
 /**
  * All server instances
  *
  * @generated from message carbonpanel.v1.ListServersResponse
  */
-export type ListServersResponse = Message<"carbonpanel.v1.ListServersResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.Server servers = 1;
-   */
-  servers: Server[];
+export type ListServersResponse = Message<'carbonpanel.v1.ListServersResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.Server servers = 1;
+	 */
+	servers: Server[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListServersResponse.
  * Use `create(ListServersResponseSchema)` to create a new message.
  */
-export const ListServersResponseSchema: GenMessage<ListServersResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 1);
+export const ListServersResponseSchema: GenMessage<ListServersResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 1);
 
 /**
  * Server ID lookup
  *
  * @generated from message carbonpanel.v1.GetServerRequest
  */
-export type GetServerRequest = Message<"carbonpanel.v1.GetServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type GetServerRequest = Message<'carbonpanel.v1.GetServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetServerRequest.
  * Use `create(GetServerRequestSchema)` to create a new message.
  */
-export const GetServerRequestSchema: GenMessage<GetServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 2);
+export const GetServerRequestSchema: GenMessage<GetServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 2);
 
 /**
  * Single server details
  *
  * @generated from message carbonpanel.v1.GetServerResponse
  */
-export type GetServerResponse = Message<"carbonpanel.v1.GetServerResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.Server server = 1;
-   */
-  server?: Server | undefined;
+export type GetServerResponse = Message<'carbonpanel.v1.GetServerResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.Server server = 1;
+	 */
+	server?: Server | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetServerResponse.
  * Use `create(GetServerResponseSchema)` to create a new message.
  */
-export const GetServerResponseSchema: GenMessage<GetServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 3);
+export const GetServerResponseSchema: GenMessage<GetServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 3);
 
 /**
  * Log fetch parameters
  *
  * @generated from message carbonpanel.v1.GetServerLogsRequest
  */
-export type GetServerLogsRequest = Message<"carbonpanel.v1.GetServerLogsRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type GetServerLogsRequest = Message<'carbonpanel.v1.GetServerLogsRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: int32 tail = 2;
-   */
-  tail: number;
+	/**
+	 * @generated from field: int32 tail = 2;
+	 */
+	tail: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetServerLogsRequest.
  * Use `create(GetServerLogsRequestSchema)` to create a new message.
  */
-export const GetServerLogsRequestSchema: GenMessage<GetServerLogsRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 4);
+export const GetServerLogsRequestSchema: GenMessage<GetServerLogsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 4);
 
 /**
  * Single log line
  *
  * @generated from message carbonpanel.v1.LogEntry
  */
-export type LogEntry = Message<"carbonpanel.v1.LogEntry"> & {
-  /**
-   * @generated from field: google.protobuf.Timestamp timestamp = 1;
-   */
-  timestamp?: Timestamp | undefined;
+export type LogEntry = Message<'carbonpanel.v1.LogEntry'> & {
+	/**
+	 * @generated from field: google.protobuf.Timestamp timestamp = 1;
+	 */
+	timestamp?: Timestamp | undefined;
 
-  /**
-   * @generated from field: string message = 2;
-   */
-  message: string;
+	/**
+	 * @generated from field: string message = 2;
+	 */
+	message: string;
 
-  /**
-   * @generated from field: string level = 3;
-   */
-  level: string;
+	/**
+	 * @generated from field: string level = 3;
+	 */
+	level: string;
 
-  /**
-   * @generated from field: string source = 4;
-   */
-  source: string;
+	/**
+	 * @generated from field: string source = 4;
+	 */
+	source: string;
 
-  /**
-   * @generated from field: bool is_command = 5;
-   */
-  isCommand: boolean;
+	/**
+	 * @generated from field: bool is_command = 5;
+	 */
+	isCommand: boolean;
 
-  /**
-   * @generated from field: bool is_error = 6;
-   */
-  isError: boolean;
+	/**
+	 * @generated from field: bool is_error = 6;
+	 */
+	isError: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.LogEntry.
  * Use `create(LogEntrySchema)` to create a new message.
  */
-export const LogEntrySchema: GenMessage<LogEntry> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 5);
+export const LogEntrySchema: GenMessage<LogEntry> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 5);
 
 /**
  * Container log lines
  *
  * @generated from message carbonpanel.v1.GetServerLogsResponse
  */
-export type GetServerLogsResponse = Message<"carbonpanel.v1.GetServerLogsResponse"> & {
-  /**
-   * @generated from field: repeated carbonpanel.v1.LogEntry logs = 1;
-   */
-  logs: LogEntry[];
+export type GetServerLogsResponse = Message<'carbonpanel.v1.GetServerLogsResponse'> & {
+	/**
+	 * @generated from field: repeated carbonpanel.v1.LogEntry logs = 1;
+	 */
+	logs: LogEntry[];
 
-  /**
-   * @generated from field: int32 total = 2;
-   */
-  total: number;
+	/**
+	 * @generated from field: int32 total = 2;
+	 */
+	total: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetServerLogsResponse.
  * Use `create(GetServerLogsResponseSchema)` to create a new message.
  */
-export const GetServerLogsResponseSchema: GenMessage<GetServerLogsResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 6);
+export const GetServerLogsResponseSchema: GenMessage<GetServerLogsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 6);
 
 /**
  * Server to clear logs for
  *
  * @generated from message carbonpanel.v1.ClearServerLogsRequest
  */
-export type ClearServerLogsRequest = Message<"carbonpanel.v1.ClearServerLogsRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type ClearServerLogsRequest = Message<'carbonpanel.v1.ClearServerLogsRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ClearServerLogsRequest.
  * Use `create(ClearServerLogsRequestSchema)` to create a new message.
  */
-export const ClearServerLogsRequestSchema: GenMessage<ClearServerLogsRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 7);
+export const ClearServerLogsRequestSchema: GenMessage<ClearServerLogsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 7);
 
 /**
  * Empty log clear response
  *
  * @generated from message carbonpanel.v1.ClearServerLogsResponse
  */
-export type ClearServerLogsResponse = Message<"carbonpanel.v1.ClearServerLogsResponse"> & {
-};
+export type ClearServerLogsResponse = Message<'carbonpanel.v1.ClearServerLogsResponse'> & {};
 
 /**
  * Describes the message carbonpanel.v1.ClearServerLogsResponse.
  * Use `create(ClearServerLogsResponseSchema)` to create a new message.
  */
-export const ClearServerLogsResponseSchema: GenMessage<ClearServerLogsResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 8);
+export const ClearServerLogsResponseSchema: GenMessage<ClearServerLogsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 8);
 
 /**
  * Empty port request
  *
  * @generated from message carbonpanel.v1.GetNextAvailablePortRequest
  */
-export type GetNextAvailablePortRequest = Message<"carbonpanel.v1.GetNextAvailablePortRequest"> & {
-};
+export type GetNextAvailablePortRequest =
+	Message<'carbonpanel.v1.GetNextAvailablePortRequest'> & {};
 
 /**
  * Describes the message carbonpanel.v1.GetNextAvailablePortRequest.
  * Use `create(GetNextAvailablePortRequestSchema)` to create a new message.
  */
-export const GetNextAvailablePortRequestSchema: GenMessage<GetNextAvailablePortRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 9);
+export const GetNextAvailablePortRequestSchema: GenMessage<GetNextAvailablePortRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 9);
 
 /**
  * Port usage entry
  *
  * @generated from message carbonpanel.v1.UsedPort
  */
-export type UsedPort = Message<"carbonpanel.v1.UsedPort"> & {
-  /**
-   * @generated from field: int32 port = 1;
-   */
-  port: number;
+export type UsedPort = Message<'carbonpanel.v1.UsedPort'> & {
+	/**
+	 * @generated from field: int32 port = 1;
+	 */
+	port: number;
 
-  /**
-   * @generated from field: bool in_use = 2;
-   */
-  inUse: boolean;
+	/**
+	 * @generated from field: bool in_use = 2;
+	 */
+	inUse: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.UsedPort.
  * Use `create(UsedPortSchema)` to create a new message.
  */
-export const UsedPortSchema: GenMessage<UsedPort> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 10);
+export const UsedPortSchema: GenMessage<UsedPort> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 10);
 
 /**
  * Available port and usage list
  *
  * @generated from message carbonpanel.v1.GetNextAvailablePortResponse
  */
-export type GetNextAvailablePortResponse = Message<"carbonpanel.v1.GetNextAvailablePortResponse"> & {
-  /**
-   * @generated from field: int32 port = 1;
-   */
-  port: number;
+export type GetNextAvailablePortResponse =
+	Message<'carbonpanel.v1.GetNextAvailablePortResponse'> & {
+		/**
+		 * @generated from field: int32 port = 1;
+		 */
+		port: number;
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.UsedPort used_ports = 2;
-   */
-  usedPorts: UsedPort[];
-};
+		/**
+		 * @generated from field: repeated carbonpanel.v1.UsedPort used_ports = 2;
+		 */
+		usedPorts: UsedPort[];
+	};
 
 /**
  * Describes the message carbonpanel.v1.GetNextAvailablePortResponse.
  * Use `create(GetNextAvailablePortResponseSchema)` to create a new message.
  */
-export const GetNextAvailablePortResponseSchema: GenMessage<GetNextAvailablePortResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 11);
+export const GetNextAvailablePortResponseSchema: GenMessage<GetNextAvailablePortResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 11);
 
 /**
  * New server configuration
  *
  * @generated from message carbonpanel.v1.CreateServerRequest
  */
-export type CreateServerRequest = Message<"carbonpanel.v1.CreateServerRequest"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
+export type CreateServerRequest = Message<'carbonpanel.v1.CreateServerRequest'> & {
+	/**
+	 * @generated from field: string name = 1;
+	 */
+	name: string;
 
-  /**
-   * @generated from field: string description = 2;
-   */
-  description: string;
+	/**
+	 * @generated from field: string description = 2;
+	 */
+	description: string;
 
-  /**
-   * @generated from field: carbonpanel.v1.ModLoader mod_loader = 3;
-   */
-  modLoader: ModLoader;
+	/**
+	 * @generated from field: carbonpanel.v1.ModLoader mod_loader = 3;
+	 */
+	modLoader: ModLoader;
 
-  /**
-   * @generated from field: string mc_version = 4;
-   */
-  mcVersion: string;
+	/**
+	 * @generated from field: string mc_version = 4;
+	 */
+	mcVersion: string;
 
-  /**
-   * @generated from field: int32 port = 5;
-   */
-  port: number;
+	/**
+	 * @generated from field: int32 port = 5;
+	 */
+	port: number;
 
-  /**
-   * @generated from field: int32 max_players = 6;
-   */
-  maxPlayers: number;
+	/**
+	 * @generated from field: int32 max_players = 6;
+	 */
+	maxPlayers: number;
 
-  /**
-   * @generated from field: int32 memory = 7;
-   */
-  memory: number;
+	/**
+	 * @generated from field: int32 memory = 7;
+	 */
+	memory: number;
 
-  /**
-   * @generated from field: string docker_image = 8;
-   */
-  dockerImage: string;
+	/**
+	 * @generated from field: string docker_image = 8;
+	 */
+	dockerImage: string;
 
-  /**
-   * @generated from field: bool auto_start = 9;
-   */
-  autoStart: boolean;
+	/**
+	 * @generated from field: bool auto_start = 9;
+	 */
+	autoStart: boolean;
 
-  /**
-   * @generated from field: bool detached = 10;
-   */
-  detached: boolean;
+	/**
+	 * @generated from field: bool detached = 10;
+	 */
+	detached: boolean;
 
-  /**
-   * @generated from field: bool start_immediately = 11;
-   */
-  startImmediately: boolean;
+	/**
+	 * @generated from field: bool start_immediately = 11;
+	 */
+	startImmediately: boolean;
 
-  /**
-   * @generated from field: string modpack_id = 12;
-   */
-  modpackId: string;
+	/**
+	 * @generated from field: string modpack_id = 12;
+	 */
+	modpackId: string;
 
-  /**
-   * @generated from field: string modpack_version_id = 13;
-   */
-  modpackVersionId: string;
+	/**
+	 * @generated from field: string modpack_version_id = 13;
+	 */
+	modpackVersionId: string;
 
-  /**
-   * @generated from field: string proxy_hostname = 14;
-   */
-  proxyHostname: string;
+	/**
+	 * @generated from field: string proxy_hostname = 14;
+	 */
+	proxyHostname: string;
 
-  /**
-   * @generated from field: string proxy_listener_id = 15;
-   */
-  proxyListenerId: string;
+	/**
+	 * @generated from field: string proxy_listener_id = 15;
+	 */
+	proxyListenerId: string;
 
-  /**
-   * @generated from field: bool use_base_url = 16;
-   */
-  useBaseUrl: boolean;
+	/**
+	 * @generated from field: bool use_base_url = 16;
+	 */
+	useBaseUrl: boolean;
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.AdditionalPort additional_ports = 17;
-   */
-  additionalPorts: AdditionalPort[];
+	/**
+	 * @generated from field: repeated carbonpanel.v1.AdditionalPort additional_ports = 17;
+	 */
+	additionalPorts: AdditionalPort[];
 
-  /**
-   * @generated from field: carbonpanel.v1.DockerOverrides docker_overrides = 18;
-   */
-  dockerOverrides?: DockerOverrides | undefined;
+	/**
+	 * @generated from field: carbonpanel.v1.DockerOverrides docker_overrides = 18;
+	 */
+	dockerOverrides?: DockerOverrides | undefined;
 
-  /**
-   * @generated from field: string node_id = 19;
-   */
-  nodeId: string;
+	/**
+	 * @generated from field: string node_id = 19;
+	 */
+	nodeId: string;
 
-  /**
-   * @generated from field: string placement_strategy = 20;
-   */
-  placementStrategy: string;
+	/**
+	 * @generated from field: string placement_strategy = 20;
+	 */
+	placementStrategy: string;
 
-  /**
-   * @generated from field: bool auto_hibernate = 21;
-   */
-  autoHibernate: boolean;
+	/**
+	 * @generated from field: bool auto_hibernate = 21;
+	 */
+	autoHibernate: boolean;
 
-  /**
-   * @generated from field: bool auto_deep_sleep = 22;
-   */
-  autoDeepSleep: boolean;
+	/**
+	 * @generated from field: bool auto_deep_sleep = 22;
+	 */
+	autoDeepSleep: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateServerRequest.
  * Use `create(CreateServerRequestSchema)` to create a new message.
  */
-export const CreateServerRequestSchema: GenMessage<CreateServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 12);
+export const CreateServerRequestSchema: GenMessage<CreateServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 12);
 
 /**
  * Created server instance
  *
  * @generated from message carbonpanel.v1.CreateServerResponse
  */
-export type CreateServerResponse = Message<"carbonpanel.v1.CreateServerResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.Server server = 1;
-   */
-  server?: Server | undefined;
+export type CreateServerResponse = Message<'carbonpanel.v1.CreateServerResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.Server server = 1;
+	 */
+	server?: Server | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateServerResponse.
  * Use `create(CreateServerResponseSchema)` to create a new message.
  */
-export const CreateServerResponseSchema: GenMessage<CreateServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 13);
+export const CreateServerResponseSchema: GenMessage<CreateServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 13);
 
 /**
  * Server fields to update
  *
  * @generated from message carbonpanel.v1.UpdateServerRequest
  */
-export type UpdateServerRequest = Message<"carbonpanel.v1.UpdateServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type UpdateServerRequest = Message<'carbonpanel.v1.UpdateServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
+	/**
+	 * @generated from field: string name = 2;
+	 */
+	name: string;
 
-  /**
-   * @generated from field: string description = 3;
-   */
-  description: string;
+	/**
+	 * @generated from field: string description = 3;
+	 */
+	description: string;
 
-  /**
-   * @generated from field: optional int32 port = 4;
-   */
-  port?: number | undefined;
+	/**
+	 * @generated from field: optional int32 port = 4;
+	 */
+	port?: number | undefined;
 
-  /**
-   * @generated from field: int32 max_players = 5;
-   */
-  maxPlayers: number;
+	/**
+	 * @generated from field: int32 max_players = 5;
+	 */
+	maxPlayers: number;
 
-  /**
-   * @generated from field: int32 memory = 6;
-   */
-  memory: number;
+	/**
+	 * @generated from field: int32 memory = 6;
+	 */
+	memory: number;
 
-  /**
-   * @generated from field: string mod_loader = 7;
-   */
-  modLoader: string;
+	/**
+	 * @generated from field: string mod_loader = 7;
+	 */
+	modLoader: string;
 
-  /**
-   * @generated from field: string mc_version = 8;
-   */
-  mcVersion: string;
+	/**
+	 * @generated from field: string mc_version = 8;
+	 */
+	mcVersion: string;
 
-  /**
-   * @generated from field: string docker_image = 9;
-   */
-  dockerImage: string;
+	/**
+	 * @generated from field: string docker_image = 9;
+	 */
+	dockerImage: string;
 
-  /**
-   * @generated from field: optional bool auto_start = 10;
-   */
-  autoStart?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool auto_start = 10;
+	 */
+	autoStart?: boolean | undefined;
 
-  /**
-   * @generated from field: optional bool detached = 11;
-   */
-  detached?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool detached = 11;
+	 */
+	detached?: boolean | undefined;
 
-  /**
-   * @generated from field: optional string tps_command = 12;
-   */
-  tpsCommand?: string | undefined;
+	/**
+	 * @generated from field: optional string tps_command = 12;
+	 */
+	tpsCommand?: string | undefined;
 
-  /**
-   * @generated from field: string modpack_id = 13;
-   */
-  modpackId: string;
+	/**
+	 * @generated from field: string modpack_id = 13;
+	 */
+	modpackId: string;
 
-  /**
-   * @generated from field: string modpack_version_id = 14;
-   */
-  modpackVersionId: string;
+	/**
+	 * @generated from field: string modpack_version_id = 14;
+	 */
+	modpackVersionId: string;
 
-  /**
-   * @generated from field: repeated carbonpanel.v1.AdditionalPort additional_ports = 15;
-   */
-  additionalPorts: AdditionalPort[];
+	/**
+	 * @generated from field: repeated carbonpanel.v1.AdditionalPort additional_ports = 15;
+	 */
+	additionalPorts: AdditionalPort[];
 
-  /**
-   * @generated from field: carbonpanel.v1.DockerOverrides docker_overrides = 16;
-   */
-  dockerOverrides?: DockerOverrides | undefined;
+	/**
+	 * @generated from field: carbonpanel.v1.DockerOverrides docker_overrides = 16;
+	 */
+	dockerOverrides?: DockerOverrides | undefined;
 
-  /**
-   * @generated from field: optional bool auto_hibernate = 17;
-   */
-  autoHibernate?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool auto_hibernate = 17;
+	 */
+	autoHibernate?: boolean | undefined;
 
-  /**
-   * @generated from field: optional int32 idle_timeout_minutes = 18;
-   */
-  idleTimeoutMinutes?: number | undefined;
+	/**
+	 * @generated from field: optional int32 idle_timeout_minutes = 18;
+	 */
+	idleTimeoutMinutes?: number | undefined;
 
-  /**
-   * @generated from field: optional bool auto_deep_sleep = 19;
-   */
-  autoDeepSleep?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool auto_deep_sleep = 19;
+	 */
+	autoDeepSleep?: boolean | undefined;
 
-  /**
-   * @generated from field: optional int32 deep_sleep_timeout_minutes = 20;
-   */
-  deepSleepTimeoutMinutes?: number | undefined;
+	/**
+	 * @generated from field: optional int32 deep_sleep_timeout_minutes = 20;
+	 */
+	deepSleepTimeoutMinutes?: number | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateServerRequest.
  * Use `create(UpdateServerRequestSchema)` to create a new message.
  */
-export const UpdateServerRequestSchema: GenMessage<UpdateServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 14);
+export const UpdateServerRequestSchema: GenMessage<UpdateServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 14);
 
 /**
  * Updated server instance
  *
  * @generated from message carbonpanel.v1.UpdateServerResponse
  */
-export type UpdateServerResponse = Message<"carbonpanel.v1.UpdateServerResponse"> & {
-  /**
-   * @generated from field: carbonpanel.v1.Server server = 1;
-   */
-  server?: Server | undefined;
+export type UpdateServerResponse = Message<'carbonpanel.v1.UpdateServerResponse'> & {
+	/**
+	 * @generated from field: carbonpanel.v1.Server server = 1;
+	 */
+	server?: Server | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateServerResponse.
  * Use `create(UpdateServerResponseSchema)` to create a new message.
  */
-export const UpdateServerResponseSchema: GenMessage<UpdateServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 15);
+export const UpdateServerResponseSchema: GenMessage<UpdateServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 15);
 
 /**
  * Server to delete
  *
  * @generated from message carbonpanel.v1.DeleteServerRequest
  */
-export type DeleteServerRequest = Message<"carbonpanel.v1.DeleteServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type DeleteServerRequest = Message<'carbonpanel.v1.DeleteServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteServerRequest.
  * Use `create(DeleteServerRequestSchema)` to create a new message.
  */
-export const DeleteServerRequestSchema: GenMessage<DeleteServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 16);
+export const DeleteServerRequestSchema: GenMessage<DeleteServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 16);
 
 /**
  * Empty deletion response
  *
  * @generated from message carbonpanel.v1.DeleteServerResponse
  */
-export type DeleteServerResponse = Message<"carbonpanel.v1.DeleteServerResponse"> & {
-};
+export type DeleteServerResponse = Message<'carbonpanel.v1.DeleteServerResponse'> & {};
 
 /**
  * Describes the message carbonpanel.v1.DeleteServerResponse.
  * Use `create(DeleteServerResponseSchema)` to create a new message.
  */
-export const DeleteServerResponseSchema: GenMessage<DeleteServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 17);
+export const DeleteServerResponseSchema: GenMessage<DeleteServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 17);
 
 /**
  * Server to start
  *
  * @generated from message carbonpanel.v1.StartServerRequest
  */
-export type StartServerRequest = Message<"carbonpanel.v1.StartServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type StartServerRequest = Message<'carbonpanel.v1.StartServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.StartServerRequest.
  * Use `create(StartServerRequestSchema)` to create a new message.
  */
-export const StartServerRequestSchema: GenMessage<StartServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 18);
+export const StartServerRequestSchema: GenMessage<StartServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 18);
 
 /**
  * Start operation status
  *
  * @generated from message carbonpanel.v1.StartServerResponse
  */
-export type StartServerResponse = Message<"carbonpanel.v1.StartServerResponse"> & {
-  /**
-   * @generated from field: string status = 1;
-   */
-  status: string;
+export type StartServerResponse = Message<'carbonpanel.v1.StartServerResponse'> & {
+	/**
+	 * @generated from field: string status = 1;
+	 */
+	status: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.StartServerResponse.
  * Use `create(StartServerResponseSchema)` to create a new message.
  */
-export const StartServerResponseSchema: GenMessage<StartServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 19);
+export const StartServerResponseSchema: GenMessage<StartServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 19);
 
 /**
  * Server to stop
  *
  * @generated from message carbonpanel.v1.StopServerRequest
  */
-export type StopServerRequest = Message<"carbonpanel.v1.StopServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type StopServerRequest = Message<'carbonpanel.v1.StopServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.StopServerRequest.
  * Use `create(StopServerRequestSchema)` to create a new message.
  */
-export const StopServerRequestSchema: GenMessage<StopServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 20);
+export const StopServerRequestSchema: GenMessage<StopServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 20);
 
 /**
  * Stop operation status
  *
  * @generated from message carbonpanel.v1.StopServerResponse
  */
-export type StopServerResponse = Message<"carbonpanel.v1.StopServerResponse"> & {
-  /**
-   * @generated from field: string status = 1;
-   */
-  status: string;
+export type StopServerResponse = Message<'carbonpanel.v1.StopServerResponse'> & {
+	/**
+	 * @generated from field: string status = 1;
+	 */
+	status: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.StopServerResponse.
  * Use `create(StopServerResponseSchema)` to create a new message.
  */
-export const StopServerResponseSchema: GenMessage<StopServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 21);
+export const StopServerResponseSchema: GenMessage<StopServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 21);
 
 /**
  * Server to restart
  *
  * @generated from message carbonpanel.v1.RestartServerRequest
  */
-export type RestartServerRequest = Message<"carbonpanel.v1.RestartServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type RestartServerRequest = Message<'carbonpanel.v1.RestartServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RestartServerRequest.
  * Use `create(RestartServerRequestSchema)` to create a new message.
  */
-export const RestartServerRequestSchema: GenMessage<RestartServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 22);
+export const RestartServerRequestSchema: GenMessage<RestartServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 22);
 
 /**
  * Restart operation status
  *
  * @generated from message carbonpanel.v1.RestartServerResponse
  */
-export type RestartServerResponse = Message<"carbonpanel.v1.RestartServerResponse"> & {
-  /**
-   * @generated from field: string status = 1;
-   */
-  status: string;
+export type RestartServerResponse = Message<'carbonpanel.v1.RestartServerResponse'> & {
+	/**
+	 * @generated from field: string status = 1;
+	 */
+	status: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RestartServerResponse.
  * Use `create(RestartServerResponseSchema)` to create a new message.
  */
-export const RestartServerResponseSchema: GenMessage<RestartServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 23);
+export const RestartServerResponseSchema: GenMessage<RestartServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 23);
 
 /**
  * Server to recreate
  *
  * @generated from message carbonpanel.v1.RecreateServerRequest
  */
-export type RecreateServerRequest = Message<"carbonpanel.v1.RecreateServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type RecreateServerRequest = Message<'carbonpanel.v1.RecreateServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RecreateServerRequest.
  * Use `create(RecreateServerRequestSchema)` to create a new message.
  */
-export const RecreateServerRequestSchema: GenMessage<RecreateServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 24);
+export const RecreateServerRequestSchema: GenMessage<RecreateServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 24);
 
 /**
  * Recreate operation status
  *
  * @generated from message carbonpanel.v1.RecreateServerResponse
  */
-export type RecreateServerResponse = Message<"carbonpanel.v1.RecreateServerResponse"> & {
-  /**
-   * @generated from field: string status = 1;
-   */
-  status: string;
+export type RecreateServerResponse = Message<'carbonpanel.v1.RecreateServerResponse'> & {
+	/**
+	 * @generated from field: string status = 1;
+	 */
+	status: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RecreateServerResponse.
  * Use `create(RecreateServerResponseSchema)` to create a new message.
  */
-export const RecreateServerResponseSchema: GenMessage<RecreateServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 25);
+export const RecreateServerResponseSchema: GenMessage<RecreateServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 25);
 
 /**
  * Console command to execute
  *
  * @generated from message carbonpanel.v1.SendCommandRequest
  */
-export type SendCommandRequest = Message<"carbonpanel.v1.SendCommandRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type SendCommandRequest = Message<'carbonpanel.v1.SendCommandRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: string command = 2;
-   */
-  command: string;
+	/**
+	 * @generated from field: string command = 2;
+	 */
+	command: string;
 
-  /**
-   * @generated from field: optional bool silent = 3;
-   */
-  silent?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool silent = 3;
+	 */
+	silent?: boolean | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.SendCommandRequest.
  * Use `create(SendCommandRequestSchema)` to create a new message.
  */
-export const SendCommandRequestSchema: GenMessage<SendCommandRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 26);
+export const SendCommandRequestSchema: GenMessage<SendCommandRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 26);
 
 /**
  * Command execution result
  *
  * @generated from message carbonpanel.v1.SendCommandResponse
  */
-export type SendCommandResponse = Message<"carbonpanel.v1.SendCommandResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
+export type SendCommandResponse = Message<'carbonpanel.v1.SendCommandResponse'> & {
+	/**
+	 * @generated from field: bool success = 1;
+	 */
+	success: boolean;
 
-  /**
-   * @generated from field: string output = 2;
-   */
-  output: string;
+	/**
+	 * @generated from field: string output = 2;
+	 */
+	output: string;
 
-  /**
-   * @generated from field: string error = 3;
-   */
-  error: string;
+	/**
+	 * @generated from field: string error = 3;
+	 */
+	error: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.SendCommandResponse.
  * Use `create(SendCommandResponseSchema)` to create a new message.
  */
-export const SendCommandResponseSchema: GenMessage<SendCommandResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 27);
+export const SendCommandResponseSchema: GenMessage<SendCommandResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 27);
 
 /**
  * Server to upload logs for
  *
  * @generated from message carbonpanel.v1.UploadToMCLogsRequest
  */
-export type UploadToMCLogsRequest = Message<"carbonpanel.v1.UploadToMCLogsRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type UploadToMCLogsRequest = Message<'carbonpanel.v1.UploadToMCLogsRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UploadToMCLogsRequest.
  * Use `create(UploadToMCLogsRequestSchema)` to create a new message.
  */
-export const UploadToMCLogsRequestSchema: GenMessage<UploadToMCLogsRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 28);
+export const UploadToMCLogsRequestSchema: GenMessage<UploadToMCLogsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 28);
 
 /**
  * mclo.gs upload result
  *
  * @generated from message carbonpanel.v1.UploadToMCLogsResponse
  */
-export type UploadToMCLogsResponse = Message<"carbonpanel.v1.UploadToMCLogsResponse"> & {
-  /**
-   * @generated from field: string url = 1;
-   */
-  url: string;
+export type UploadToMCLogsResponse = Message<'carbonpanel.v1.UploadToMCLogsResponse'> & {
+	/**
+	 * @generated from field: string url = 1;
+	 */
+	url: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UploadToMCLogsResponse.
  * Use `create(UploadToMCLogsResponseSchema)` to create a new message.
  */
-export const UploadToMCLogsResponseSchema: GenMessage<UploadToMCLogsResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 29);
+export const UploadToMCLogsResponseSchema: GenMessage<UploadToMCLogsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 29);
 
 /**
  * Migrate server request
  *
  * @generated from message carbonpanel.v1.MigrateServerRequest
  */
-export type MigrateServerRequest = Message<"carbonpanel.v1.MigrateServerRequest"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
+export type MigrateServerRequest = Message<'carbonpanel.v1.MigrateServerRequest'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
 
-  /**
-   * @generated from field: string target_node_id = 2;
-   */
-  targetNodeId: string;
+	/**
+	 * @generated from field: string target_node_id = 2;
+	 */
+	targetNodeId: string;
 
-  /**
-   * @generated from field: optional bool force = 3;
-   */
-  force?: boolean | undefined;
+	/**
+	 * @generated from field: optional bool force = 3;
+	 */
+	force?: boolean | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.MigrateServerRequest.
  * Use `create(MigrateServerRequestSchema)` to create a new message.
  */
-export const MigrateServerRequestSchema: GenMessage<MigrateServerRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 30);
+export const MigrateServerRequestSchema: GenMessage<MigrateServerRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 30);
 
 /**
  * Migrate server response
  *
  * @generated from message carbonpanel.v1.MigrateServerResponse
  */
-export type MigrateServerResponse = Message<"carbonpanel.v1.MigrateServerResponse"> & {
-  /**
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
+export type MigrateServerResponse = Message<'carbonpanel.v1.MigrateServerResponse'> & {
+	/**
+	 * @generated from field: bool success = 1;
+	 */
+	success: boolean;
 
-  /**
-   * @generated from field: string message = 2;
-   */
-  message: string;
+	/**
+	 * @generated from field: string message = 2;
+	 */
+	message: string;
 
-  /**
-   * @generated from field: string source_node_id = 3;
-   */
-  sourceNodeId: string;
+	/**
+	 * @generated from field: string source_node_id = 3;
+	 */
+	sourceNodeId: string;
 
-  /**
-   * @generated from field: string target_node_id = 4;
-   */
-  targetNodeId: string;
+	/**
+	 * @generated from field: string target_node_id = 4;
+	 */
+	targetNodeId: string;
 
-  /**
-   * @generated from field: int64 duration_ms = 5;
-   */
-  durationMs: bigint;
+	/**
+	 * @generated from field: int64 duration_ms = 5;
+	 */
+	durationMs: bigint;
 
-  /**
-   * @generated from field: carbonpanel.v1.Server server = 6;
-   */
-  server?: Server | undefined;
+	/**
+	 * @generated from field: carbonpanel.v1.Server server = 6;
+	 */
+	server?: Server | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.MigrateServerResponse.
  * Use `create(MigrateServerResponseSchema)` to create a new message.
  */
-export const MigrateServerResponseSchema: GenMessage<MigrateServerResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 31);
+export const MigrateServerResponseSchema: GenMessage<MigrateServerResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 31);
 
 /**
  * Live player list request
  *
  * @generated from message carbonpanel.v1.ListServerPlayersRequest
  */
-export type ListServerPlayersRequest = Message<"carbonpanel.v1.ListServerPlayersRequest"> & {
-  /**
-   * @generated from field: string server_id = 1;
-   */
-  serverId: string;
+export type ListServerPlayersRequest = Message<'carbonpanel.v1.ListServerPlayersRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListServerPlayersRequest.
  * Use `create(ListServerPlayersRequestSchema)` to create a new message.
  */
-export const ListServerPlayersRequestSchema: GenMessage<ListServerPlayersRequest> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 32);
+export const ListServerPlayersRequestSchema: GenMessage<ListServerPlayersRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 32);
 
 /**
  * Live player list response
  *
  * @generated from message carbonpanel.v1.ListServerPlayersResponse
  */
-export type ListServerPlayersResponse = Message<"carbonpanel.v1.ListServerPlayersResponse"> & {
-  /**
-   * @generated from field: repeated string players = 1;
-   */
-  players: string[];
+export type ListServerPlayersResponse = Message<'carbonpanel.v1.ListServerPlayersResponse'> & {
+	/**
+	 * @generated from field: repeated string players = 1;
+	 */
+	players: string[];
 
-  /**
-   * @generated from field: int32 online_count = 2;
-   */
-  onlineCount: number;
+	/**
+	 * @generated from field: int32 online_count = 2;
+	 */
+	onlineCount: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListServerPlayersResponse.
  * Use `create(ListServerPlayersResponseSchema)` to create a new message.
  */
-export const ListServerPlayersResponseSchema: GenMessage<ListServerPlayersResponse> = /*@__PURE__*/
-  messageDesc(file_carbonpanel_v1_server, 33);
+export const ListServerPlayersResponseSchema: GenMessage<ListServerPlayersResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_server, 33);
 
 /**
  * Minecraft server management
@@ -961,166 +998,164 @@ export const ListServerPlayersResponseSchema: GenMessage<ListServerPlayersRespon
  * @generated from service carbonpanel.v1.ServerService
  */
 export const ServerService: GenService<{
-  /**
-   * Get all servers with optional stats
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.ListServers
-   */
-  listServers: {
-    methodKind: "unary";
-    input: typeof ListServersRequestSchema;
-    output: typeof ListServersResponseSchema;
-  },
-  /**
-   * Get single server details
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.GetServer
-   */
-  getServer: {
-    methodKind: "unary";
-    input: typeof GetServerRequestSchema;
-    output: typeof GetServerResponseSchema;
-  },
-  /**
-   * Fetch container logs
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.GetServerLogs
-   */
-  getServerLogs: {
-    methodKind: "unary";
-    input: typeof GetServerLogsRequestSchema;
-    output: typeof GetServerLogsResponseSchema;
-  },
-  /**
-   * Delete container logs
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.ClearServerLogs
-   */
-  clearServerLogs: {
-    methodKind: "unary";
-    input: typeof ClearServerLogsRequestSchema;
-    output: typeof ClearServerLogsResponseSchema;
-  },
-  /**
-   * Find unused port
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.GetNextAvailablePort
-   */
-  getNextAvailablePort: {
-    methodKind: "unary";
-    input: typeof GetNextAvailablePortRequestSchema;
-    output: typeof GetNextAvailablePortResponseSchema;
-  },
-  /**
-   * Create new server instance
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.CreateServer
-   */
-  createServer: {
-    methodKind: "unary";
-    input: typeof CreateServerRequestSchema;
-    output: typeof CreateServerResponseSchema;
-  },
-  /**
-   * Modify server settings
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.UpdateServer
-   */
-  updateServer: {
-    methodKind: "unary";
-    input: typeof UpdateServerRequestSchema;
-    output: typeof UpdateServerResponseSchema;
-  },
-  /**
-   * Remove server and data
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.DeleteServer
-   */
-  deleteServer: {
-    methodKind: "unary";
-    input: typeof DeleteServerRequestSchema;
-    output: typeof DeleteServerResponseSchema;
-  },
-  /**
-   * Start server container
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.StartServer
-   */
-  startServer: {
-    methodKind: "unary";
-    input: typeof StartServerRequestSchema;
-    output: typeof StartServerResponseSchema;
-  },
-  /**
-   * Stop server container
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.StopServer
-   */
-  stopServer: {
-    methodKind: "unary";
-    input: typeof StopServerRequestSchema;
-    output: typeof StopServerResponseSchema;
-  },
-  /**
-   * Stop and start container
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.RestartServer
-   */
-  restartServer: {
-    methodKind: "unary";
-    input: typeof RestartServerRequestSchema;
-    output: typeof RestartServerResponseSchema;
-  },
-  /**
-   * Destroy and recreate container from scratch
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.RecreateServer
-   */
-  recreateServer: {
-    methodKind: "unary";
-    input: typeof RecreateServerRequestSchema;
-    output: typeof RecreateServerResponseSchema;
-  },
-  /**
-   * Execute console command
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.SendCommand
-   */
-  sendCommand: {
-    methodKind: "unary";
-    input: typeof SendCommandRequestSchema;
-    output: typeof SendCommandResponseSchema;
-  },
-  /**
-   * Upload server logs to mclo.gs
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.UploadToMCLogs
-   */
-  uploadToMCLogs: {
-    methodKind: "unary";
-    input: typeof UploadToMCLogsRequestSchema;
-    output: typeof UploadToMCLogsResponseSchema;
-  },
-  /**
-   * Migrate server instance to a target Docker node
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.MigrateServer
-   */
-  migrateServer: {
-    methodKind: "unary";
-    input: typeof MigrateServerRequestSchema;
-    output: typeof MigrateServerResponseSchema;
-  },
-  /**
-   * Live online players from metrics collector (RCON/SLP)
-   *
-   * @generated from rpc carbonpanel.v1.ServerService.ListServerPlayers
-   */
-  listServerPlayers: {
-    methodKind: "unary";
-    input: typeof ListServerPlayersRequestSchema;
-    output: typeof ListServerPlayersResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_carbonpanel_v1_server, 0);
-
+	/**
+	 * Get all servers with optional stats
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.ListServers
+	 */
+	listServers: {
+		methodKind: 'unary';
+		input: typeof ListServersRequestSchema;
+		output: typeof ListServersResponseSchema;
+	};
+	/**
+	 * Get single server details
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.GetServer
+	 */
+	getServer: {
+		methodKind: 'unary';
+		input: typeof GetServerRequestSchema;
+		output: typeof GetServerResponseSchema;
+	};
+	/**
+	 * Fetch container logs
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.GetServerLogs
+	 */
+	getServerLogs: {
+		methodKind: 'unary';
+		input: typeof GetServerLogsRequestSchema;
+		output: typeof GetServerLogsResponseSchema;
+	};
+	/**
+	 * Delete container logs
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.ClearServerLogs
+	 */
+	clearServerLogs: {
+		methodKind: 'unary';
+		input: typeof ClearServerLogsRequestSchema;
+		output: typeof ClearServerLogsResponseSchema;
+	};
+	/**
+	 * Find unused port
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.GetNextAvailablePort
+	 */
+	getNextAvailablePort: {
+		methodKind: 'unary';
+		input: typeof GetNextAvailablePortRequestSchema;
+		output: typeof GetNextAvailablePortResponseSchema;
+	};
+	/**
+	 * Create new server instance
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.CreateServer
+	 */
+	createServer: {
+		methodKind: 'unary';
+		input: typeof CreateServerRequestSchema;
+		output: typeof CreateServerResponseSchema;
+	};
+	/**
+	 * Modify server settings
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.UpdateServer
+	 */
+	updateServer: {
+		methodKind: 'unary';
+		input: typeof UpdateServerRequestSchema;
+		output: typeof UpdateServerResponseSchema;
+	};
+	/**
+	 * Remove server and data
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.DeleteServer
+	 */
+	deleteServer: {
+		methodKind: 'unary';
+		input: typeof DeleteServerRequestSchema;
+		output: typeof DeleteServerResponseSchema;
+	};
+	/**
+	 * Start server container
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.StartServer
+	 */
+	startServer: {
+		methodKind: 'unary';
+		input: typeof StartServerRequestSchema;
+		output: typeof StartServerResponseSchema;
+	};
+	/**
+	 * Stop server container
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.StopServer
+	 */
+	stopServer: {
+		methodKind: 'unary';
+		input: typeof StopServerRequestSchema;
+		output: typeof StopServerResponseSchema;
+	};
+	/**
+	 * Stop and start container
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.RestartServer
+	 */
+	restartServer: {
+		methodKind: 'unary';
+		input: typeof RestartServerRequestSchema;
+		output: typeof RestartServerResponseSchema;
+	};
+	/**
+	 * Destroy and recreate container from scratch
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.RecreateServer
+	 */
+	recreateServer: {
+		methodKind: 'unary';
+		input: typeof RecreateServerRequestSchema;
+		output: typeof RecreateServerResponseSchema;
+	};
+	/**
+	 * Execute console command
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.SendCommand
+	 */
+	sendCommand: {
+		methodKind: 'unary';
+		input: typeof SendCommandRequestSchema;
+		output: typeof SendCommandResponseSchema;
+	};
+	/**
+	 * Upload server logs to mclo.gs
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.UploadToMCLogs
+	 */
+	uploadToMCLogs: {
+		methodKind: 'unary';
+		input: typeof UploadToMCLogsRequestSchema;
+		output: typeof UploadToMCLogsResponseSchema;
+	};
+	/**
+	 * Migrate server instance to a target Docker node
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.MigrateServer
+	 */
+	migrateServer: {
+		methodKind: 'unary';
+		input: typeof MigrateServerRequestSchema;
+		output: typeof MigrateServerResponseSchema;
+	};
+	/**
+	 * Live online players from metrics collector (RCON/SLP)
+	 *
+	 * @generated from rpc carbonpanel.v1.ServerService.ListServerPlayers
+	 */
+	listServerPlayers: {
+		methodKind: 'unary';
+		input: typeof ListServerPlayersRequestSchema;
+		output: typeof ListServerPlayersResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_server, 0);

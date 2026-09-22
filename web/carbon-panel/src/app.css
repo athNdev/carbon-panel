@@ -116,12 +116,22 @@
 		@apply border-border outline-ring/50;
 		border-radius: 0px !important;
 	}
-	html, body {
-		font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	html,
+	body {
+		font-family:
+			'IBM Plex Sans',
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			Roboto,
+			sans-serif;
 		@apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
 		font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 	}
-	code, kbd, samp, pre {
+	code,
+	kbd,
+	samp,
+	pre {
 		font-family: 'IBM Plex Mono', 'Courier New', Courier, monospace;
 	}
 }
@@ -368,4 +378,3 @@
 		scroll-behavior: auto !important;
 	}
 }
-
