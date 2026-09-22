@@ -69,6 +69,9 @@ func decideReconcile(cont managedContainer, dbRecordExists bool, dbContainerID s
 // listManagedContainers lists all containers Carbon Panel manages and reduces them to the
 // decoupled managedContainer view used by decideReconcile.
 func (c *Client) listManagedContainers(ctx context.Context) ([]managedContainer, error) {
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
 	filterArgs := filters.NewArgs()
 	filterArgs.Add("label", "carbon-panel.managed=true")
 
