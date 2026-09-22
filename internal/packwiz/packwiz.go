@@ -495,14 +495,15 @@ func (m *Manager) writePackFiles(p *Pack) error {
 			},
 		}
 
-		if mod.Platform == "curseforge" {
+		switch mod.Platform {
+		case "curseforge":
 			pID, _ := strconv.Atoi(mod.ProjectID)
 			fID, _ := strconv.Atoi(mod.VersionID)
 			tm.Update.Curseforge = &tomlModUpdateCurseforge{
 				ProjectID: pID,
 				FileID:    fID,
 			}
-		} else if mod.Platform == "modrinth" {
+		case "modrinth":
 			// Only true Modrinth mods carry update metadata. Direct-URL
 			// ("url") mods are download-only entries: emitting a fabricated
 			// modrinth block would make them round-trip as tracked mods.
@@ -613,7 +614,7 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 	}
 
 	zw := zip.NewWriter(w)
-	defer zw.Close()
+	defer func() { _ = zw.Close() }()
 
 	type mrpackFile struct {
 		Path      string            `json:"path"`
@@ -627,9 +628,10 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 	for _, mod := range pack.Mods {
 		clientEnv := "required"
 		serverEnv := "required"
-		if mod.Side == "client" {
+		switch mod.Side {
+		case "client":
 			serverEnv = "unsupported"
-		} else if mod.Side == "server" {
+		case "server":
 			clientEnv = "unsupported"
 		}
 
@@ -651,13 +653,14 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 		"minecraft": pack.MCVersion,
 	}
 	loaderKey := strings.ToLower(pack.ModLoader)
-	if loaderKey == "fabric" {
+	switch loaderKey {
+	case "fabric":
 		deps["fabric-loader"] = pack.LoaderVersion
-	} else if loaderKey == "forge" {
+	case "forge":
 		deps["forge"] = pack.LoaderVersion
-	} else if loaderKey == "neoforge" {
+	case "neoforge":
 		deps["neoforge"] = pack.LoaderVersion
-	} else if loaderKey == "quilt" {
+	case "quilt":
 		deps["quilt-loader"] = pack.LoaderVersion
 	}
 
@@ -697,7 +700,7 @@ func (m *Manager) ExportCurseForge(packID string, w io.Writer) error {
 	}
 
 	zw := zip.NewWriter(w)
-	defer zw.Close()
+	defer func() { _ = zw.Close() }()
 
 	type cfFile struct {
 		ProjectID int  `json:"projectID"`
@@ -788,20 +791,20 @@ func (m *Manager) BakeToServer(packID, modsDir string) (int, error) {
 		resp, err := m.httpClient.Get(mod.DownloadURL)
 		if err != nil || resp.StatusCode != http.StatusOK {
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 			continue
 		}
 
 		out, err := os.Create(targetFile)
 		if err != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			continue
 		}
 
 		_, copyErr := io.Copy(out, resp.Body)
-		resp.Body.Close()
-		out.Close()
+		_ = resp.Body.Close()
+		_ = out.Close()
 
 		if copyErr == nil {
 			installed++
@@ -895,7 +898,7 @@ func (m *Manager) ExportPackwizZip(packID string, w io.Writer) error {
 	}
 
 	zw := zip.NewWriter(w)
-	defer zw.Close()
+	defer func() { _ = zw.Close() }()
 
 	return filepath.Walk(pDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -920,7 +923,7 @@ func (m *Manager) ExportPackwizZip(packID string, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		_, err = io.Copy(zf, f)
 		return err
@@ -1303,7 +1306,7 @@ func (m *Manager) SavePackFile(packID, relPath string, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := io.Copy(f, r); err != nil {
 		return err
