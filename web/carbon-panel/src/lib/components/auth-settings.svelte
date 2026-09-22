@@ -412,7 +412,8 @@ one at https://mozilla.org/MPL/2.0/.
 							<AccordionContent>
 								<div class="space-y-1.5 font-mono text-xs">
 									<p>
-										<code class="rounded bg-muted px-1.5 py-0.5">CARBONPANEL_AUTH_OIDC_ENABLED</code>
+										<code class="rounded bg-muted px-1.5 py-0.5">CARBONPANEL_AUTH_OIDC_ENABLED</code
+										>
 									</p>
 									<p>
 										<code class="rounded bg-muted px-1.5 py-0.5"

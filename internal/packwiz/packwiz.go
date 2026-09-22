@@ -12,6 +12,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 	toml "github.com/pelletier/go-toml/v2"
 )
 
@@ -66,12 +67,12 @@ type Pack struct {
 
 // PackTOML format
 type tomlPack struct {
-	Name       string                 `toml:"name"`
-	Author     string                 `toml:"author"`
-	Version    string                 `toml:"version"`
-	PackFormat string                 `toml:"pack-format"`
-	Index      tomlPackIndex          `toml:"index"`
-	Versions   map[string]string      `toml:"versions"`
+	Name       string            `toml:"name"`
+	Author     string            `toml:"author"`
+	Version    string            `toml:"version"`
+	PackFormat string            `toml:"pack-format"`
+	Index      tomlPackIndex     `toml:"index"`
+	Versions   map[string]string `toml:"versions"`
 }
 
 type tomlPackIndex struct {
@@ -139,7 +140,36 @@ func NewManager(baseDir string, log *logger.Logger) *Manager {
 	}
 }
 
+// validPackID rejects ids that are not a single safe path element. A pack id is
+// a directory name under the packwiz base dir, so a separator or a "." / ".."
+// segment would let a caller escape it (e.g. the pack id arrives from a request
+// body in POST /api/v1/packwiz/packs).
+func validPackID(id string) error {
+	if id == "" {
+		return errors.New("pack id is required")
+	}
+	if id == "." || id == ".." {
+		return fmt.Errorf("invalid pack id %q", id)
+	}
+	if strings.ContainsAny(id, `/\\`) {
+		return fmt.Errorf("invalid pack id %q", id)
+	}
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+		default:
+			return fmt.Errorf("invalid pack id %q", id)
+		}
+	}
+	return nil
+}
+
 func (m *Manager) packDir(id string) string {
+	// Defence in depth: even if a caller forgets to validate, the id must never
+	// contribute a separator or a dot segment.
+	if validPackID(id) != nil {
+		id = "invalid-pack-id"
+	}
 	return filepath.Join(m.baseDir, id)
 }
 
@@ -181,12 +211,20 @@ func (m *Manager) ListPacks() ([]PackSummary, error) {
 }
 
 func (m *Manager) GetPack(id string) (*Pack, error) {
+	if err := validPackID(id); err != nil {
+		return nil, err
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.readPack(id)
 }
 
 func (m *Manager) CreatePack(p *Pack) (*Pack, error) {
+	if p.ID != "" {
+		if err := validPackID(p.ID); err != nil {
+			return nil, err
+		}
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -224,6 +262,9 @@ func (m *Manager) CreatePack(p *Pack) (*Pack, error) {
 }
 
 func (m *Manager) UpdatePack(p *Pack) error {
+	if err := validPackID(p.ID); err != nil {
+		return err
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -237,6 +278,9 @@ func (m *Manager) UpdatePack(p *Pack) error {
 }
 
 func (m *Manager) DeletePack(id string) error {
+	if err := validPackID(id); err != nil {
+		return err
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return os.RemoveAll(m.packDir(id))
@@ -328,6 +372,9 @@ func (m *Manager) DeleteMod(packID, slug string) error {
 }
 
 func (m *Manager) readPack(id string) (*Pack, error) {
+	if err := validPackID(id); err != nil {
+		return nil, err
+	}
 	pDir := m.packDir(id)
 	packPath := filepath.Join(pDir, "pack.toml")
 	data, err := os.ReadFile(packPath)
@@ -533,6 +580,9 @@ func (m *Manager) writePackFiles(p *Pack) error {
 }
 
 func (m *Manager) ServePackFile(packID, relativePath string) ([]byte, string, error) {
+	if err := validPackID(packID); err != nil {
+		return nil, "", err
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -777,7 +827,6 @@ func sanitizeSlug(name string) string {
 	}
 	return res
 }
-
 
 // DirectURLModRequest defines parameters for adding a mod from external URL
 type DirectURLModRequest struct {
@@ -1064,9 +1113,9 @@ func (m *Manager) CheckModUpdates(packID string) ([]ModUpdateInfo, error) {
 			resp, err := m.httpClient.Get(url)
 			if err == nil && resp.StatusCode == http.StatusOK {
 				var versions []struct {
-					ID       string `json:"id"`
-					Name     string `json:"name"`
-					Files    []struct {
+					ID    string `json:"id"`
+					Name  string `json:"name"`
+					Files []struct {
 						URL      string `json:"url"`
 						FileName string `json:"filename"`
 						Primary  bool   `json:"primary"`
