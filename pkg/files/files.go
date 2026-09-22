@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 package files
 
 import (
@@ -147,11 +156,20 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 	// Extract and walk while recursively extracting
 	filesExtracted := 0
 	err = extractor.Extract(ctx, stream, func(ctx context.Context, f archives.FileInfo) error {
+		// Reject entries that are not regular files or directories. A symlink
+		// (or device/fifo) entry would let the archive point outside the
+		// destination on later reads even though we never create it as a link.
+		if mode := f.Mode(); !f.IsDir() && !mode.IsRegular() {
+			return fmt.Errorf("illegal archive entry type %s: %s", mode.Type(), f.NameInArchive)
+		}
+
 		// Build path
 		targetPath := filepath.Join(destPath, f.NameInArchive)
 
-		// No sneaky traversals
-		if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Clean(destPath)) {
+		// No sneaky traversals. A filepath.Rel-based containment check is
+		// required: a string HasPrefix would accept a sibling directory whose
+		// name merely starts with destPath (e.g. ../dest-evil).
+		if !Within(destPath, targetPath) {
 			return fmt.Errorf("illegal file path in archive: %s", f.NameInArchive)
 		}
 
@@ -422,4 +440,35 @@ func CopyFile(src, dst string) error {
 	}
 
 	return dstFile.Sync()
+}
+
+// Within reports whether target resolves to root itself or a path inside root.
+//
+// It is a boundary check, not a string prefix check: a sibling directory whose
+// name merely shares root's prefix (root=/data/srv, target=/data/srv-evil/x) is
+// NOT within root. Absolute targets outside root and targets that escape via
+// ".." are rejected.
+func Within(root, target string) bool {
+	if root == "" || target == "" {
+		return false
+	}
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	targetAbs, err := filepath.Abs(target)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(rootAbs, targetAbs)
+	if err != nil {
+		return false
+	}
+	if rel == "." {
+		return true
+	}
+	if rel == ".." {
+		return false
+	}
+	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
