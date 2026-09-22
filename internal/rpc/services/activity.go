@@ -28,7 +28,7 @@ func NewActivityService(store *storage.Store, log *logger.Logger) *ActivityServi
 
 func (s *ActivityService) ListActivityLogs(ctx context.Context, req *connect.Request[v1.ListActivityLogsRequest]) (*connect.Response[v1.ListActivityLogsResponse], error) {
 	msg := req.Msg
-	entries, err := activity.List(s.store.DB().WithContext(ctx), msg.ServerId, msg.Actor, msg.Since.AsTime(), int(msg.Limit))
+	entries, err := activity.List(s.store.DB().WithContext(ctx), msg.ServerId, msg.Actor, msg.Since.AsTime(), clampLimit(int(msg.Limit)))
 	if err != nil {
 		s.log.Error("Failed to list activity logs: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list activity logs"))

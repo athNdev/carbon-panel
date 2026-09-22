@@ -14,8 +14,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/utils"
+	"github.com/google/uuid"
 )
 
 // Builds, signs, and delivers HTTP webhooks for server events
@@ -137,7 +138,12 @@ func deliverOnce(ctx context.Context, cfg Config, payload *Payload) Result {
 		req.Header.Set(k, v)
 	}
 
-	client := &http.Client{Timeout: timeout}
+	// Use the SSRF-guarded client: loopback, link-local (cloud metadata) and
+	// unspecified targets are always refused, while RFC1918 LAN webhooks stay
+	// usable for homelab receivers like Home Assistant. This closes a
+	// post-auth SSRF where an arbitrary webhook URL could reach panel-internal
+	// or metadata endpoints.
+	client := utils.NewSafeHTTPClient(timeout, true)
 	resp, err := client.Do(req)
 	result.DurationMs = time.Since(start).Milliseconds()
 	if err != nil {

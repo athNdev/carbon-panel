@@ -2,14 +2,17 @@
 // @generated from file carbonpanel/v1/event.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile } from '@bufbuild/protobuf/codegenv2';
+import { enumDesc, fileDesc } from '@bufbuild/protobuf/codegenv2';
 
 /**
  * Describes the file carbonpanel/v1/event.proto.
  */
-export const file_carbonpanel_v1_event: GenFile = /*@__PURE__*/
-  fileDesc("ChpjYXJib25wYW5lbC92MS9ldmVudC5wcm90bxIOY2FyYm9ucGFuZWwudjEqpgIKElRyaWdnZXJlZEV2ZW50VHlwZRIkCiBUUklHR0VSRURfRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEiUKIVRSSUdHRVJFRF9FVkVOVF9UWVBFX1NFUlZFUl9TVEFSVBABEiQKIFRSSUdHRVJFRF9FVkVOVF9UWVBFX1NFUlZFUl9TVE9QEAISJwojVFJJR0dFUkVEX0VWRU5UX1RZUEVfU0VSVkVSX0hFQUxUSFkQAxIkCiBUUklHR0VSRURfRVZFTlRfVFlQRV9QTEFZRVJfSk9JThAEEiUKIVRSSUdHRVJFRF9FVkVOVF9UWVBFX1BMQVlFUl9MRUFWRRAFEicKI1RSSUdHRVJFRF9FVkVOVF9UWVBFX1NFUlZFUl9SRVNUQVJUEAZCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z");
+export const file_carbonpanel_v1_event: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		'ChpjYXJib25wYW5lbC92MS9ldmVudC5wcm90bxIOY2FyYm9ucGFuZWwudjEqpgIKElRyaWdnZXJlZEV2ZW50VHlwZRIkCiBUUklHR0VSRURfRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEiUKIVRSSUdHRVJFRF9FVkVOVF9UWVBFX1NFUlZFUl9TVEFSVBABEiQKIFRSSUdHRVJFRF9FVkVOVF9UWVBFX1NFUlZFUl9TVE9QEAISJwojVFJJR0dFUkVEX0VWRU5UX1RZUEVfU0VSVkVSX0hFQUxUSFkQAxIkCiBUUklHR0VSRURfRVZFTlRfVFlQRV9QTEFZRVJfSk9JThAEEiUKIVRSSUdHRVJFRF9FVkVOVF9UWVBFX1BMQVlFUl9MRUFWRRAFEicKI1RSSUdHRVJFRF9FVkVOVF9UWVBFX1NFUlZFUl9SRVNUQVJUEAZCSFpGZ2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2FyYm9ucGFuZWwvdjE7Y2FyYm9ucGFuZWx2MWIGcHJvdG8z'
+	);
 
 /**
  * All-encompassing catalog of events
@@ -17,57 +20,57 @@ export const file_carbonpanel_v1_event: GenFile = /*@__PURE__*/
  * @generated from enum carbonpanel.v1.TriggeredEventType
  */
 export enum TriggeredEventType {
-  /**
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * The parent server container started
-   *
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_START = 1;
-   */
-  SERVER_START = 1,
+	/**
+	 * The parent server container started
+	 *
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_START = 1;
+	 */
+	SERVER_START = 1,
 
-  /**
-   * The parent server container stopped
-   *
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_STOP = 2;
-   */
-  SERVER_STOP = 2,
+	/**
+	 * The parent server container stopped
+	 *
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_STOP = 2;
+	 */
+	SERVER_STOP = 2,
 
-  /**
-   * The parent server passed its health check
-   *
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_HEALTHY = 3;
-   */
-  SERVER_HEALTHY = 3,
+	/**
+	 * The parent server passed its health check
+	 *
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_HEALTHY = 3;
+	 */
+	SERVER_HEALTHY = 3,
 
-  /**
-   * A player joined the server
-   *
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_PLAYER_JOIN = 4;
-   */
-  PLAYER_JOIN = 4,
+	/**
+	 * A player joined the server
+	 *
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_PLAYER_JOIN = 4;
+	 */
+	PLAYER_JOIN = 4,
 
-  /**
-   * A player left the server
-   *
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_PLAYER_LEAVE = 5;
-   */
-  PLAYER_LEAVE = 5,
+	/**
+	 * A player left the server
+	 *
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_PLAYER_LEAVE = 5;
+	 */
+	PLAYER_LEAVE = 5,
 
-  /**
-   * The parent server was restarted
-   *
-   * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_RESTART = 6;
-   */
-  SERVER_RESTART = 6,
+	/**
+	 * The parent server was restarted
+	 *
+	 * @generated from enum value: TRIGGERED_EVENT_TYPE_SERVER_RESTART = 6;
+	 */
+	SERVER_RESTART = 6
 }
 
 /**
  * Describes the enum carbonpanel.v1.TriggeredEventType.
  */
-export const TriggeredEventTypeSchema: GenEnum<TriggeredEventType> = /*@__PURE__*/
-  enumDesc(file_carbonpanel_v1_event, 0);
-
+export const TriggeredEventTypeSchema: GenEnum<TriggeredEventType> =
+	/*@__PURE__*/
+	enumDesc(file_carbonpanel_v1_event, 0);

@@ -7,6 +7,7 @@ import (
 	"context"
 	"debug/buildinfo"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -17,13 +18,13 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -73,10 +74,9 @@ func NewSupportService(store *storage.Store, docker *docker.Client, config *conf
 func (s *SupportService) GenerateSupportBundle(ctx context.Context, req *connect.Request[v1.GenerateSupportBundleRequest]) (*connect.Response[v1.GenerateSupportBundleResponse], error) {
 	msg := req.Msg
 
-	// Default all options to true if not specified
-	includeLogs := msg.IncludeLogs
-	includeConfigs := msg.IncludeConfigs
-	includeSystemInfo := msg.IncludeSystemInfo
+	// Default all options to true if not specified.
+	includeLogs, includeConfigs, includeSystemInfo := supportBundleSelection(
+		msg.IncludeLogs, msg.IncludeConfigs, msg.IncludeSystemInfo)
 
 	s.log.Info("Generating support bundle (logs=%v, configs=%v, system=%v)", includeLogs, includeConfigs, includeSystemInfo)
 
@@ -207,10 +207,16 @@ func (s *SupportService) DownloadSupportBundle(ctx context.Context, req *connect
 func (s *SupportService) UploadSupportBundle(ctx context.Context, req *connect.Request[v1.UploadSupportBundleRequest]) (*connect.Response[v1.UploadSupportBundleResponse], error) {
 	msg := req.Msg
 
-	// Default all options to true if not specified
-	includeLogs := msg.IncludeLogs
-	includeConfigs := msg.IncludeConfigs
-	includeSystemInfo := msg.IncludeSystemInfo
+	// Refuse rather than silently uploading a bundle (logs, database snapshot,
+	// system info) to a hard-coded third party. Operators must opt in by
+	// setting SUPPORT_BASE_URL.
+	if s.getUploadSupportUrl() == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("support upload is not configured; set SUPPORT_BASE_URL to the destination base URL"))
+	}
+	// Default all options to true if not specified.
+	includeLogs, includeConfigs, includeSystemInfo := supportBundleSelection(
+		msg.IncludeLogs, msg.IncludeConfigs, msg.IncludeSystemInfo)
 
 	s.log.Info("Generating support bundle for upload (logs=%v, configs=%v, system=%v)", includeLogs, includeConfigs, includeSystemInfo)
 
@@ -407,18 +413,30 @@ func (s *SupportService) uploadBundleToServer(bundlePath, fileName string, userI
 	return uploadResp.URL, nil
 }
 
-// Helper method to get the support server URL
-func (s *SupportService) getSupportUrl() string {
-	url := os.Getenv("SUPPORT_BASE_URL")
-	if url == "" {
-		url = "https://support.carbon-panel.app"
+// supportBundleSelection applies the documented default: when the caller
+// specifies none of the include flags, include everything. Without this a
+// no-argument request produced an empty (29 byte) archive.
+func supportBundleSelection(logs, configs, system bool) (bool, bool, bool) {
+	if !logs && !configs && !system {
+		return true, true, true
 	}
-	return url
+	return logs, configs, system
+}
+
+// Helper method to get the support server URL. It returns "" when
+// SUPPORT_BASE_URL is not configured so callers never silently POST a bundle
+// (which can contain logs and configuration) to a third party.
+func (s *SupportService) getSupportUrl() string {
+	return strings.TrimRight(os.Getenv("SUPPORT_BASE_URL"), "/")
 }
 
 // Helper method to get the upload support URL
 func (s *SupportService) getUploadSupportUrl() string {
-	return s.getSupportUrl() + "/api/v1/uploads"
+	base := s.getSupportUrl()
+	if base == "" {
+		return ""
+	}
+	return base + "/api/v1/uploads"
 }
 
 // cleanupBundle removes a bundle from memory and disk

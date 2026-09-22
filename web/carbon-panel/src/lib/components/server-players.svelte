@@ -16,9 +16,7 @@
 	let search = $state('');
 	let acting = $state<string | null>(null);
 
-	const filtered = $derived(
-		players.filter((p) => p.toLowerCase().includes(search.toLowerCase()))
-	);
+	const filtered = $derived(players.filter((p) => p.toLowerCase().includes(search.toLowerCase())));
 
 	async function loadPlayers() {
 		loading = true;
@@ -83,49 +81,52 @@
 </script>
 
 <div class="h-full overflow-y-auto">
-	<div class="bg-[#262626] border border-[#393939] p-6 rounded-none">
-		<div class="flex items-center justify-between mb-1">
+	<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
+		<div class="mb-1 flex items-center justify-between">
 			<h3 class="text-base font-semibold text-[#f4f4f4]">
-				Players{#if onlineCount > 0} ({onlineCount} online){/if}
+				Players{#if onlineCount > 0}
+					({onlineCount} online){/if}
 			</h3>
 			<button
-				class="h-8 px-4 bg-[#393939] hover:bg-[#4c4c4c] text-white text-xs items-center rounded-none transition-colors"
+				class="h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c]"
 				onclick={loadPlayers}
 				disabled={loading}
 			>
 				{loading ? 'Loading…' : 'Refresh'}
 			</button>
 		</div>
-		<p class="text-xs text-[#a8a8a8] mb-6">Live roster with moderation actions (console commands)</p>
+		<p class="mb-6 text-xs text-[#a8a8a8]">
+			Live roster with moderation actions (console commands)
+		</p>
 
 		<input
 			type="text"
 			placeholder="Search players…"
 			aria-label="Search players"
 			bind:value={search}
-			class="mb-4 h-9 w-full max-w-xs bg-[#161616] border border-[#393939] px-3 text-xs text-[#f4f4f4] rounded-none"
+			class="mb-4 h-9 w-full max-w-xs rounded-none border border-[#393939] bg-[#161616] px-3 text-xs text-[#f4f4f4]"
 		/>
 
 		{#if filtered.length === 0}
-			<p class="text-xs font-mono text-[#6f6f6f] py-8 text-center">
+			<p class="py-8 text-center font-mono text-xs text-[#6f6f6f]">
 				{loading ? 'Loading players…' : 'No players online.'}
 			</p>
 		{:else}
 			<table class="w-full text-xs" aria-label="Online players">
 				<thead>
-					<tr class="text-left text-[#a8a8a8] border-b border-[#393939]">
+					<tr class="border-b border-[#393939] text-left text-[#a8a8a8]">
 						<th scope="col" class="py-2 pr-4 font-medium">Player</th>
 						<th scope="col" class="py-2 font-medium">Actions</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each filtered as player (player)}
-						<tr class="border-b border-[#262626] text-[#f4f4f4] font-mono">
+						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
 							<td class="py-2 pr-4">{player}</td>
-							<td class="py-2 flex flex-wrap gap-2">
+							<td class="flex flex-wrap gap-2 py-2">
 								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label]}
 									<button
-										class="h-7 px-3 bg-[#393939] hover:bg-[#4c4c4c] disabled:opacity-50 text-white rounded-none transition-colors"
+										class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 										disabled={acting !== null}
 										onclick={() => runPlayerCommand(player, cmd)}
 									>
@@ -140,8 +141,8 @@
 		{/if}
 
 		{#if banned.length > 0}
-			<h4 class="text-sm font-semibold text-[#f4f4f4] mt-6 mb-2">Banned ({banned.length})</h4>
-			<p class="text-xs font-mono text-[#a8a8a8]">{banned.join(', ')}</p>
+			<h4 class="mt-6 mb-2 text-sm font-semibold text-[#f4f4f4]">Banned ({banned.length})</h4>
+			<p class="font-mono text-xs text-[#a8a8a8]">{banned.join(', ')}</p>
 		{/if}
 	</div>
 </div>

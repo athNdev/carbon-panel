@@ -13,6 +13,8 @@ import (
 
 	"github.com/google/uuid"
 	toml "github.com/pelletier/go-toml/v2"
+
+	"github.com/athNdev/carbon-panel/pkg/files"
 )
 
 // ImportOptions defines settings for modpack import
@@ -142,6 +144,9 @@ func (m *Manager) ImportMrpack(r io.ReaderAt, size int64, opts ImportOptions) (*
 		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
 			rel := strings.TrimPrefix(f.Name, "overrides/")
 			targetPath := filepath.Join(pDir, rel)
+			if !files.Within(pDir, targetPath) {
+				continue
+			}
 			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 				continue
 			}
@@ -381,6 +386,9 @@ func (m *Manager) ImportCurseForge(r io.ReaderAt, size int64, opts ImportOptions
 		if strings.HasPrefix(f.Name, prefix) && !f.FileInfo().IsDir() {
 			rel := strings.TrimPrefix(f.Name, prefix)
 			targetPath := filepath.Join(pDir, rel)
+			if !files.Within(pDir, targetPath) {
+				continue
+			}
 			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 				continue
 			}
@@ -519,6 +527,12 @@ func (m *Manager) ImportPackwizZip(r io.ReaderAt, size int64, opts ImportOptions
 		}
 
 		targetPath := filepath.Join(pDir, rel)
+
+		if !files.Within(pDir, targetPath) {
+
+			continue
+
+		}
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			continue
 		}

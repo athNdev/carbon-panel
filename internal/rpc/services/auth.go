@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,15 +32,24 @@ type AuthService struct {
 	enforcer    *rbac.Enforcer
 	oidcHandler *auth.OIDCHandler
 	log         *logger.Logger
+
+	// userThrottle keys on the attempted username (tight ceiling: targeted
+	// guessing). ipThrottle keys on the client IP with a looser ceiling, so a
+	// spray from one address cannot lock out every user sharing a NAT or the
+	// reverse proxy.
+	userThrottle *auth.LoginThrottle
+	ipThrottle   *auth.LoginThrottle
 }
 
 func NewAuthService(store *storage.Store, authManager *auth.Manager, enforcer *rbac.Enforcer, oidcHandler *auth.OIDCHandler, log *logger.Logger) *AuthService {
 	return &AuthService{
-		store:       store,
-		authManager: authManager,
-		enforcer:    enforcer,
-		oidcHandler: oidcHandler,
-		log:         log,
+		store:        store,
+		authManager:  authManager,
+		enforcer:     enforcer,
+		oidcHandler:  oidcHandler,
+		log:          log,
+		userThrottle: auth.NewLoginThrottleWithLimits(5, 5*time.Minute, 15*time.Minute),
+		ipThrottle:   auth.NewLoginThrottleWithLimits(30, 5*time.Minute, 15*time.Minute),
 	}
 }
 
@@ -66,9 +78,23 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username and password are required"))
 	}
 
+	// Throttle online password guessing: tight per-username, looser per-IP.
+	ipKey := "ip:" + realClientIP(req.Header(), req.Peer().Addr)
+	userKey := "user:" + strings.ToLower(msg.Username)
+	if allowed, retryAfter := s.userThrottle.Allow(userKey); !allowed {
+		return nil, throttledError(retryAfter)
+	}
+	if allowed, retryAfter := s.ipThrottle.Allow(ipKey); !allowed {
+		return nil, throttledError(retryAfter)
+	}
+
 	user, roles, token, expiresAt, err := s.authManager.Login(ctx, msg.Username, msg.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) || errors.Is(err, auth.ErrUserNotActive) {
+			// Record the failure against both keys before answering, so a
+			// single attacker cannot rotate usernames or source ports for free.
+			s.userThrottle.Failure(userKey)
+			s.ipThrottle.Failure(ipKey)
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 		}
 		if errors.Is(err, auth.ErrLocalAuthDisabled) {
@@ -77,6 +103,9 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		s.log.Error("Login failed: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("login failed"))
 	}
+
+	s.userThrottle.Reset(userKey)
+	s.ipThrottle.Reset(ipKey)
 
 	// Audit trail (MINE-141): never break login on audit failure.
 	if aerr := activity.Log(s.store.DB(), activity.Entry{
@@ -91,6 +120,46 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		User:      dbUserToProto(user, roles),
 		ExpiresAt: timestamppb.New(expiresAt),
 	}), nil
+}
+
+// clientIP strips the port from a peer address so throttle keys are stable per
+// client rather than per connection.
+func clientIP(peerAddr string) string {
+	if host, _, err := net.SplitHostPort(peerAddr); err == nil {
+		return host
+	}
+	return peerAddr
+}
+
+// realClientIP resolves the client address for throttling. When the direct peer
+// is a trusted (loopback or private) proxy it honours X-Forwarded-For /
+// X-Real-IP, otherwise it uses the peer address. A LAN client can therefore
+// spoof the IP key, but the per-username limiter still applies.
+func realClientIP(hdr http.Header, peerAddr string) string {
+	peer := clientIP(peerAddr)
+	if ip := net.ParseIP(peer); ip != nil && (ip.IsLoopback() || ip.IsPrivate()) {
+		if xff := hdr.Get("X-Forwarded-For"); xff != "" {
+			if first := strings.TrimSpace(strings.Split(xff, ",")[0]); first != "" {
+				return first
+			}
+		}
+		if xri := strings.TrimSpace(hdr.Get("X-Real-IP")); xri != "" {
+			return xri
+		}
+	}
+	return peer
+}
+
+// throttledError builds a resource_exhausted error and advertises the retry
+// window via the standard Retry-After header.
+func throttledError(retryAfter time.Duration) error {
+	seconds := int(retryAfter / time.Second)
+	if seconds < 1 {
+		seconds = 1
+	}
+	err := connect.NewError(connect.CodeResourceExhausted, errors.New("too many failed login attempts; try again later"))
+	err.Meta().Set("Retry-After", strconv.Itoa(seconds))
+	return err
 }
 
 func (s *AuthService) Logout(ctx context.Context, req *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
@@ -151,6 +220,9 @@ func (s *AuthService) Register(ctx context.Context, req *connect.Request[v1.Regi
 
 	user, err := s.authManager.CreateLocalUser(ctx, msg.Username, msg.Email, msg.Password)
 	if err != nil {
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		s.log.Error("Registration failed: %v", err)
 		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("registration failed"))
 	}
@@ -269,8 +341,23 @@ func (s *AuthService) ChangePassword(ctx context.Context, req *connect.Request[v
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("incorrect current password"))
 		}
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		s.log.Error("Change password failed: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to change password"))
+	}
+
+	// Invalidate every other session for this user so a stolen token cannot
+	// outlive the credential rotation. The caller's own token is kept so their
+	// current session is not logged out.
+	currentToken := ""
+	if authHeader := req.Header().Get("Authorization"); authHeader != "" {
+		currentToken, _ = strings.CutPrefix(authHeader, "Bearer ")
+		currentToken, _ = strings.CutPrefix(currentToken, "bearer ")
+	}
+	if err := s.authManager.InvalidateUserSessions(ctx, user.ID, currentToken); err != nil {
+		s.log.Error("Failed to invalidate sessions after password change for %s: %v", user.ID, err)
 	}
 
 	return connect.NewResponse(&v1.ChangePasswordResponse{
@@ -324,6 +411,9 @@ func (s *AuthService) UpdateAuthSettings(ctx context.Context, req *connect.Reque
 	if err := s.authManager.UpdateSettings(ctx, msg.LocalAuthEnabled, msg.AllowRegistration, msg.AnonymousAccess, msg.SessionTimeout); err != nil {
 		if errors.Is(err, auth.ErrSessionTimeoutMin) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		if errors.Is(err, auth.ErrNoAuthProvider) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 		}
 		s.log.Error("Failed to update auth settings: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update auth settings"))

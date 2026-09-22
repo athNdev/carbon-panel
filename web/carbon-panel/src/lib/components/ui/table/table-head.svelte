@@ -15,7 +15,7 @@
 	data-slot="table-head"
 	scope="col"
 	class={cn(
-		'h-11 bg-[#393939] px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-[#f4f4f4] border-b border-[#525252] [&:has([role=checkbox])]:pr-0',
+		'h-11 border-b border-[#525252] bg-[#393939] px-4 text-left align-middle text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase [&:has([role=checkbox])]:pr-0',
 		className
 	)}
 	{...restProps}

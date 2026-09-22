@@ -51,7 +51,7 @@ func dbBackupToProto(b *storage.BackupRecord) *v1.BackupRecord {
 }
 
 func (s *BackupService) ListBackups(ctx context.Context, req *connect.Request[v1.ListBackupsRequest]) (*connect.Response[v1.ListBackupsResponse], error) {
-	recs, err := s.store.ListBackupRecords(ctx, req.Msg.ServerId, int(req.Msg.Limit))
+	recs, err := s.store.ListBackupRecords(ctx, req.Msg.ServerId, clampLimit(int(req.Msg.Limit)))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list backups"))
 	}

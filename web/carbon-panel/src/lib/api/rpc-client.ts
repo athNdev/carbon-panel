@@ -16,7 +16,8 @@ let loggingOut = false;
 // SERVICES
 import { AuthService } from '$lib/proto/carbonpanel/v1/auth_pb';
 import { ActivityService } from '$lib/proto/carbonpanel/v1/activity_pb';
-import { BackupService } from '$lib/proto/carbonpanel/v1/backup_pb';import { ConfigService } from '$lib/proto/carbonpanel/v1/config_pb';
+import { BackupService } from '$lib/proto/carbonpanel/v1/backup_pb';
+import { ConfigService } from '$lib/proto/carbonpanel/v1/config_pb';
 import { FileService } from '$lib/proto/carbonpanel/v1/file_pb';
 import { MinecraftService } from '$lib/proto/carbonpanel/v1/minecraft_pb';
 import { ModService } from '$lib/proto/carbonpanel/v1/mod_pb';
@@ -35,6 +36,18 @@ import { NodeService } from '$lib/proto/carbonpanel/v1/node_pb';
 const SILENT_HEADER = 'X-Silent-Request';
 
 export const silentCallOptions = { headers: new Headers({ [SILENT_HEADER]: 'true' }) };
+
+/**
+ * True when the RPC interceptor already showed a toast for this error.
+ * Callers with their own failure UI should check this to avoid a duplicate.
+ */
+export function wasRpcErrorToasted(error: unknown): boolean {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		(error as { __rpcToasted?: boolean }).__rpcToasted === true
+	);
+}
 
 // Login auth interception
 const authInterceptor: Interceptor = (next) => async (req) => {
@@ -77,6 +90,11 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 		if (!isSilent && !onLoginPage) {
 			const message = error instanceof Error ? error.message : 'An error occurred';
 			toast.error(message);
+			// Tag the error so a caller that also reports failures does not show
+			// the same problem twice.
+			if (typeof error === 'object' && error !== null) {
+				(error as { __rpcToasted?: boolean }).__rpcToasted = true;
+			}
 		}
 		throw error;
 	} finally {

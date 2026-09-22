@@ -134,16 +134,48 @@
 		{ method: 'GET', path: '/api/v1/packwiz/packs', blurb: 'Modpack Studio: list packs' },
 		{ method: 'POST', path: '/api/v1/packwiz/packs', blurb: 'Modpack Studio: create pack' },
 		{ method: 'POST', path: '/api/v1/packwiz/packs/import', blurb: 'Modpack Studio: import pack' },
-		{ method: 'GET', path: '/api/v1/packwiz/packs/{id}', blurb: 'Modpack Studio: read / update / delete, clone, refresh' },
-		{ method: 'POST', path: '/api/v1/packwiz/packs/{id}/deploy', blurb: 'Modpack Studio: deploy pack to a server' },
-		{ method: 'POST', path: '/api/v1/packwiz/packs/{id}/migrate', blurb: 'Modpack Studio: migrate pack across loaders/versions' },
-		{ method: 'GET', path: '/api/v1/packwiz/loaders/{loader}/versions', blurb: 'Loader + game-version matrix' },
-		{ method: 'GET', path: '/api/v1/packwiz/{id}/{file}', blurb: 'pack.toml serving for container bootstrap (no auth)' },
-		{ method: 'GET', path: '/api/v1/servers/{id}/mods/search', blurb: 'Online mod search (Modrinth / CurseForge)' },
-		{ method: 'POST', path: '/api/v1/servers/{id}/mods/install', blurb: 'One-click mod install to a server' },
+		{
+			method: 'GET',
+			path: '/api/v1/packwiz/packs/{id}',
+			blurb: 'Modpack Studio: read / update / delete, clone, refresh'
+		},
+		{
+			method: 'POST',
+			path: '/api/v1/packwiz/packs/{id}/deploy',
+			blurb: 'Modpack Studio: deploy pack to a server'
+		},
+		{
+			method: 'POST',
+			path: '/api/v1/packwiz/packs/{id}/migrate',
+			blurb: 'Modpack Studio: migrate pack across loaders/versions'
+		},
+		{
+			method: 'GET',
+			path: '/api/v1/packwiz/loaders/{loader}/versions',
+			blurb: 'Loader + game-version matrix'
+		},
+		{
+			method: 'GET',
+			path: '/api/v1/packwiz/{id}/{file}',
+			blurb: 'pack.toml serving for container bootstrap (no auth)'
+		},
+		{
+			method: 'GET',
+			path: '/api/v1/servers/{id}/mods/search',
+			blurb: 'Online mod search (Modrinth / CurseForge)'
+		},
+		{
+			method: 'POST',
+			path: '/api/v1/servers/{id}/mods/install',
+			blurb: 'One-click mod install to a server'
+		},
 		{ method: 'GET', path: '/api/v1/upload/{session}', blurb: 'Streaming file upload session' },
 		{ method: 'GET', path: '/api/v1/download/{session}', blurb: 'Streaming file download session' },
-		{ method: 'POST', path: '/api/v1/settings/validate-key', blurb: 'API key / credential validation' },
+		{
+			method: 'POST',
+			path: '/api/v1/settings/validate-key',
+			blurb: 'API key / credential validation'
+		},
 		{ method: 'GET', path: '/api/v1/auth/oidc/callback', blurb: 'OIDC sign-in callback' }
 	];
 
@@ -159,7 +191,9 @@
 	<CarbonBreadcrumbs items={[{ label: 'Docs' }, { label: 'API Reference' }]} />
 
 	<!-- Carbon Page Header -->
-	<div class="flex flex-col gap-4 border-b border-[#393939] pb-4 sm:flex-row sm:items-center sm:justify-between">
+	<div
+		class="flex flex-col gap-4 border-b border-[#393939] pb-4 sm:flex-row sm:items-center sm:justify-between"
+	>
 		<div>
 			<div class="flex items-center gap-2">
 				<h1 class="font-sans text-2xl font-light tracking-tight text-[#f4f4f4]">API Reference</h1>
@@ -168,14 +202,16 @@
 			</div>
 			<p class="mt-1 font-sans text-xs text-[#8d8d8d]">
 				Live ConnectRPC + OpenAPI reference. Spec served from
-				<a href="/api/v1/openapi.yaml" class="font-mono text-[#78a9ff] hover:text-white">/api/v1/openapi.yaml</a>
+				<a href="/api/v1/openapi.yaml" class="font-mono text-[#78a9ff] hover:text-white"
+					>/api/v1/openapi.yaml</a
+				>
 				(regenerated via <span class="font-mono">make gen</span>)
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
 			<a
 				href="/api/v1/openapi.yaml"
-				class="inline-flex h-8 items-center px-3 text-xs font-mono uppercase tracking-wider text-[#78a9ff] hover:bg-[#353535] hover:text-white"
+				class="inline-flex h-8 items-center px-3 font-mono text-xs tracking-wider text-[#78a9ff] uppercase hover:bg-[#353535] hover:text-white"
 			>
 				Open raw spec
 			</a>
@@ -186,8 +222,12 @@
 	<div class="flex flex-col border border-[#393939] bg-[#262626]">
 		<div class="flex items-center justify-between border-b border-[#393939] bg-[#262626] p-4">
 			<div>
-				<h2 class="font-sans text-sm font-semibold uppercase tracking-wider text-[#f4f4f4]">Interactive Reference</h2>
-				<p class="mt-0.5 font-sans text-xs text-[#8d8d8d]">Scalar viewer · servers, modpacks, nodes, migration, Packwiz</p>
+				<h2 class="font-sans text-sm font-semibold tracking-wider text-[#f4f4f4] uppercase">
+					Interactive Reference
+				</h2>
+				<p class="mt-0.5 font-sans text-xs text-[#8d8d8d]">
+					Scalar viewer · servers, modpacks, nodes, migration, Packwiz
+				</p>
 			</div>
 			<CarbonTag type={isLoading ? 'gray' : 'green'} size="sm">
 				{isLoading ? 'Loading' : 'Live'}
@@ -206,10 +246,15 @@
 				<div class="absolute inset-0 z-10 flex items-center justify-center bg-[#161616]">
 					<div class="w-full max-w-md px-8">
 						<div class="mb-4 text-center">
-							<p class="font-mono text-xs uppercase tracking-wider text-[#8d8d8d]">Loading API Documentation...</p>
+							<p class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase">
+								Loading API Documentation...
+							</p>
 						</div>
 						<div class="h-1.5 w-full overflow-hidden bg-[#393939]">
-							<div class="h-full bg-[#0f62fe] transition-all duration-300" style="width: {loadingProgress}%"></div>
+							<div
+								class="h-full bg-[#0f62fe] transition-all duration-300"
+								style="width: {loadingProgress}%"
+							></div>
 						</div>
 					</div>
 				</div>
@@ -229,7 +274,9 @@
 	<!-- Carbon Structured List: ConnectRPC service catalog -->
 	<div class="flex flex-col border border-[#393939] bg-[#262626]">
 		<div class="border-b border-[#393939] bg-[#262626] p-4">
-			<h2 class="font-sans text-sm font-semibold uppercase tracking-wider text-[#f4f4f4]">Service Catalog</h2>
+			<h2 class="font-sans text-sm font-semibold tracking-wider text-[#f4f4f4] uppercase">
+				Service Catalog
+			</h2>
 			<p class="mt-0.5 font-sans text-xs text-[#8d8d8d]">
 				All ConnectRPC services in the live spec · procedure root
 				<span class="font-mono text-[#c6c6c6]">/carbonpanel.v1.&lt;Service&gt;/&lt;Method&gt;</span>
@@ -242,7 +289,9 @@
 						<span class="truncate font-mono text-sm text-[#f4f4f4]">{service.name}</span>
 						<CarbonTag type="cyan" size="sm">{service.methods} methods</CarbonTag>
 					</div>
-					<p class="mt-1 truncate font-mono text-xs text-[#8d8d8d]">/carbonpanel.v1.{service.name}/…</p>
+					<p class="mt-1 truncate font-mono text-xs text-[#8d8d8d]">
+						/carbonpanel.v1.{service.name}/…
+					</p>
 					<p class="mt-1 text-xs text-[#c6c6c6]">{service.blurb}</p>
 				</div>
 			{/each}
@@ -252,27 +301,40 @@
 	<!-- Carbon DataTable: plain-REST endpoints outside the Connect spec -->
 	<div class="flex flex-col border border-[#393939] bg-[#262626]">
 		<div class="border-b border-[#393939] bg-[#262626] p-4">
-			<h2 class="font-sans text-sm font-semibold uppercase tracking-wider text-[#f4f4f4]">Additional REST Endpoints</h2>
+			<h2 class="font-sans text-sm font-semibold tracking-wider text-[#f4f4f4] uppercase">
+				Additional REST Endpoints
+			</h2>
 			<p class="mt-0.5 font-sans text-xs text-[#8d8d8d]">
-				Packwiz Studio, mod search, streaming transfers — served outside ConnectRPC, not in the generated spec
+				Packwiz Studio, mod search, streaming transfers — served outside ConnectRPC, not in the
+				generated spec
 			</p>
 		</div>
 		<div class="overflow-x-auto">
 			<table class="w-full border-collapse text-left font-sans text-sm">
 				<thead class="border-b border-[#525252] bg-[#393939] text-[#f4f4f4]">
 					<tr>
-						<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Method</th>
-						<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Path</th>
-						<th scope="col" class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Description</th>
+						<th scope="col" class="px-4 py-2.5 text-xs font-semibold tracking-wider uppercase"
+							>Method</th
+						>
+						<th scope="col" class="px-4 py-2.5 text-xs font-semibold tracking-wider uppercase"
+							>Path</th
+						>
+						<th scope="col" class="px-4 py-2.5 text-xs font-semibold tracking-wider uppercase"
+							>Description</th
+						>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
 					{#each restEndpoints as endpoint (endpoint.method + endpoint.path)}
 						<tr class="transition-colors hover:bg-[#353535]">
 							<td class="px-4 py-3 align-middle">
-								<CarbonTag type={restTagType(endpoint.method)} size="sm">{endpoint.method}</CarbonTag>
+								<CarbonTag type={restTagType(endpoint.method)} size="sm"
+									>{endpoint.method}</CarbonTag
+								>
 							</td>
-							<td class="px-4 py-3 align-middle font-mono text-xs text-[#c6c6c6]">{endpoint.path}</td>
+							<td class="px-4 py-3 align-middle font-mono text-xs text-[#c6c6c6]"
+								>{endpoint.path}</td
+							>
 							<td class="px-4 py-3 align-middle text-xs text-[#8d8d8d]">{endpoint.blurb}</td>
 						</tr>
 					{/each}
