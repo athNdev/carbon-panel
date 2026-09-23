@@ -53,7 +53,7 @@ cloud-terraform-validate:
 	@if [ -z "$(TF)" ]; then echo "SKIP cloud-terraform-validate: neither terraform nor tofu on PATH"; exit 0; fi
 	@for stack in $(ROOT)/cloud/terraform/stacks/*/; do \
 		echo "== validate $$stack"; \
-		$(TF) -chdir="$$stack" init -backend=false -input=false >/dev/null && $(TF) -chdir="$$stack" validate || exit 1; \
+		TMPDIR=/tmp $(TF) -chdir="$$stack" init -backend=false -input=false >/dev/null && TMPDIR=/tmp $(TF) -chdir="$$stack" validate || exit 1; \
 	done
 	@echo "cloud-terraform-validate: green"
 

@@ -40,7 +40,7 @@ locals {
 
 module "control_plane_host" {
   source            = "../../modules/node/generic"
-  for_each          = { for h in var.control_plane_hosts : h.host => h }
+  for_each          = { for h in nonsensitive(var.control_plane_hosts) : h.host => h }
   org_id            = "control-plane"
   node_id           = "control-plane-${each.key}"
   node_name         = "control-plane-${each.key}"

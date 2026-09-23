@@ -140,7 +140,7 @@ func (i *authInterceptor) bySession(ctx context.Context, raw string) (principal.
 	if i.opts.Store != nil && strings.TrimSpace(claims.OrgID) != "" {
 		var org db.Org
 		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("clerk_org_id = ?", claims.OrgID).First(&org).Error; err == nil {
+			Where("clerk_org_id = ? OR id = ?", claims.OrgID, claims.OrgID).First(&org).Error; err == nil {
 			p.OrgID = org.ID
 			var member db.Member
 			if err := i.opts.Store.Unscoped().WithContext(ctx).

@@ -93,15 +93,19 @@ func (s *APIKeyService) CreateApiKey(ctx context.Context, req *connect.Request[v
 
 // RevokeApiKey marks a key revoked; it stops authenticating immediately.
 func (s *APIKeyService) RevokeApiKey(ctx context.Context, req *connect.Request[v1.RevokeApiKeyRequest]) (*connect.Response[v1.RevokeApiKeyResponse], error) {
-	q, err := s.deps.Store.Org(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
-	}
 	if strings.TrimSpace(req.Msg.Id) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errKeyNoID)
 	}
+	var k db.ApiKey
+	if q, err := s.deps.Store.Org(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
+	} else if err := q.Where("id = ?", req.Msg.Id).First(&k).Error; err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errKeyNotFound)
+	}
 	now := time.Now().UTC()
-	if err := q.Model(&db.ApiKey{}).Where("id = ?", req.Msg.Id).Update("revoked_at", now).Error; err != nil {
+	if q, err := s.deps.Store.Org(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
+	} else if err := q.Model(&db.ApiKey{}).Where("id = ?", k.ID).Update("revoked_at", now).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errKeyRevoke)
 	}
 	return connect.NewResponse(&v1.RevokeApiKeyResponse{}), nil

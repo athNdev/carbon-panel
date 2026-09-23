@@ -2,10 +2,12 @@ package svc
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
@@ -58,6 +60,24 @@ func (s *ProvisionService) createRequestFor(ctx context.Context, providerName, r
 	if it, ok := s.deps.Catalog.InstanceType(ctx, nodeTypeID, providerName); ok {
 		instance = it
 	}
+	var sshKey, joinToken string
+	if vars != nil {
+		sshKey = vars["ssh_public_key"]
+		if sshKey == "" {
+			sshKey = vars["ssh_key"]
+		}
+		joinToken = vars["join_token"]
+	}
+	if joinToken == "" && s.deps.JoinTokens != nil {
+		secret, _, err := s.deps.JoinTokens.Issue(ctx, node.IssueRequest{
+			Name:       "provision-" + providerName + "-" + region,
+			NodeTypeID: nodeTypeID,
+			Origin:     "managed",
+		})
+		if err == nil {
+			joinToken = secret
+		}
+	}
 	return provision.CreateRequest{
 		Provider:      providerName,
 		Region:        region,
@@ -66,6 +86,8 @@ func (s *ProvisionService) createRequestFor(ctx context.Context, providerName, r
 		RAMMB:         t.RAMMB,
 		DiskGB:        t.DiskGB,
 		InstanceType:  instance,
+		SSHPublicKey:  sshKey,
+		JoinToken:     joinToken,
 		ProviderExtra: vars,
 		CreatedBy:     p.UserID,
 	}, nil
@@ -154,6 +176,9 @@ func (s *ProvisionService) DestroyProvision(ctx context.Context, req *connect.Re
 	}
 	p, err := s.deps.Provision.Destroy(ctx, req.Msg.Id)
 	if err != nil {
+		if errors.Is(err, provision.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errProvisionNotFound)
+		}
 		return nil, connect.NewError(connect.CodeInternal, errProvisionDestroy)
 	}
 	return connect.NewResponse(&v1.DestroyProvisionResponse{Provision: provisionToProto(p)}), nil
@@ -229,10 +254,8 @@ func (s *ProvisionService) StreamProvisionLogs(ctx context.Context, req *connect
 			if !ok {
 				return nil
 			}
-			if seq >= req.Msg.FromSequence {
-				if err := stream.Send(&v1.ProvisionLogLine{Sequence: seq, Line: line}); err != nil {
-					return err
-				}
+			if err := stream.Send(&v1.ProvisionLogLine{Sequence: seq, Line: line}); err != nil {
+				return err
 			}
 			seq++
 		}

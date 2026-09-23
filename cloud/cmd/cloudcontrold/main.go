@@ -22,6 +22,9 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/config"
@@ -88,7 +91,8 @@ func healthcheckURL() string {
 		return "http://127.0.0.1:8080/healthz"
 	}
 	if host == "" || host == "0.0.0.0" || host == "::" {
-		host = "127.0.0.1"
+		h := "127.0.0.1"
+		host = h
 	}
 	return "http://" + net.JoinHostPort(host, port) + "/healthz"
 }
@@ -210,6 +214,10 @@ func serve(configPath string, stderr io.Writer) error {
 		return fmt.Errorf("services: %w", err)
 	}
 
+	rateLimiter := auth.NewRateLimiter(auth.DefaultRateLimitConfig())
+	defer rateLimiter.Close()
+	httpapi.RateLimit = rateLimiter.Middleware
+
 	srv, err := httpapi.New(httpapi.Options{
 		Store:    store,
 		Services: services,
@@ -226,7 +234,7 @@ func serve(configPath string, stderr io.Writer) error {
 
 	httpSrv := &http.Server{
 		Addr:         cfg.Server.Addr,
-		Handler:      srv.Handler(),
+		Handler:      h2c.NewHandler(srv.Handler(), &http2.Server{}),
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
