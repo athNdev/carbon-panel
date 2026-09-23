@@ -116,12 +116,12 @@ func (s *WorkloadService) ListWorkloads(ctx context.Context, req *connect.Reques
 	}
 	var total int64
 	if err := fq.Count(&total).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
 	}
 	limit, offset := page(m.Page, 50)
 	var rows []db.Workload
 	if err := fq.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
 	}
 	out := make([]*v1.Workload, 0, len(rows))
 	for i := range rows {

@@ -2,6 +2,7 @@ package e2e_test
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -19,8 +20,6 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 func TestCrossOrgIsolationRPCs(t *testing.T) {
@@ -90,7 +89,12 @@ func TestCrossOrgIsolationRPCs(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	srv := httptest.NewServer(h2c.NewHandler(apiServer.Handler(), &http2.Server{}))
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+	srv := httptest.NewUnstartedServer(apiServer.Handler())
+	srv.Config.Protocols = protocols
+	srv.Start()
 	t.Cleanup(srv.Close)
 
 	clientHttpClient := srv.Client()
