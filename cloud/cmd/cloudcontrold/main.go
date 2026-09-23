@@ -89,7 +89,7 @@ func probeHealth(url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GET %s: status %d", url, resp.StatusCode)
 	}
@@ -225,7 +225,7 @@ func serve(configPath string, stderr io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	// Connect-RPC needs HTTP/2 (gRPC wire). When TLS terminates at an
 	// upstream edge (Traefik, Cloudflare) we speak h2c so standard HTTP/2

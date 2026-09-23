@@ -320,8 +320,8 @@ Commands:
   audit              View audit trail (list, get)
   orgs               Manage organizations (list, get)
 `
-	fmt.Fprint(c.Stdout, help)
-	return nil
+	_, err := fmt.Fprint(c.Stdout, help)
+	return err
 }
 
 func (c *CLI) printOutput(v any, formatFunc func(io.Writer) error) error {
@@ -347,7 +347,7 @@ func (c *CLI) runStatus(ctx context.Context) error {
 		"build":        build.Msg,
 		"capabilities": caps.Msg,
 	}, func(w io.Writer) error {
-		fmt.Fprintf(w, "Carbon Cloud Control Plane Status\n")
+		_, _ = fmt.Fprintf(w, "Carbon Cloud Control Plane Status\n")
 		if b := build.Msg.Build; b != nil {
 			fmt.Fprintf(w, "  Version:    %s\n", b.Version)
 			fmt.Fprintf(w, "  Commit:     %s\n", b.Commit)
@@ -433,7 +433,7 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Nodes, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			fmt.Fprintln(tw, "ID\tNAME\tSTATUS\tORIGIN\tADDRESS\tALLOCATIONS")
+			_, _ = fmt.Fprintln(tw, "ID\tNAME\tSTATUS\tORIGIN\tADDRESS\tALLOCATIONS")
 			for _, n := range resp.Msg.Nodes {
 				alloc := ""
 				if n.Capacity != nil && n.Allocation != nil {
@@ -508,7 +508,7 @@ func (c *CLI) runTokens(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Tokens, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			fmt.Fprintln(tw, "ID\tNAME\tORIGIN\tSTATUS\tEXPIRES")
+			_, _ = fmt.Fprintln(tw, "ID\tNAME\tORIGIN\tSTATUS\tEXPIRES")
 			for _, t := range resp.Msg.Tokens {
 				status := "active"
 				if t.RevokedAt != nil {
@@ -575,7 +575,7 @@ func (c *CLI) runNodeTypes(ctx context.Context, args []string) error {
 	}
 	return c.printOutput(resp.Msg.NodeTypes, func(w io.Writer) error {
 		tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(tw, "ID\tNAME\tvCPU\tRAM\tDISK\tPRICE/MO\tENABLED")
+		_, _ = fmt.Fprintln(tw, "ID\tNAME\tvCPU\tRAM\tDISK\tPRICE/MO\tENABLED")
 		for _, nt := range resp.Msg.NodeTypes {
 			fmt.Fprintf(tw, "%s\t%s\t%d\t%d MB\t%d GB\t$%.2f\t%t\n",
 				nt.Id, nt.Name, nt.Vcpu, nt.RamMb, nt.DiskGb, nt.MonthlyPriceUsd, nt.Enabled)
@@ -611,7 +611,7 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Provisions, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			fmt.Fprintln(tw, "ID\tPROVIDER\tREGION\tSTATUS\tNODE ID\tERROR")
+			_, _ = fmt.Fprintln(tw, "ID\tPROVIDER\tREGION\tSTATUS\tNODE ID\tERROR")
 			for _, p := range resp.Msg.Provisions {
 				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					p.Id, p.Provider, p.Region, p.Status, p.NodeId, p.Error)
@@ -723,7 +723,7 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Workloads, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			fmt.Fprintln(tw, "ID\tNAME\tSTATUS\tNODE ID\tVERSION\tALLOCATIONS")
+			_, _ = fmt.Fprintln(tw, "ID\tNAME\tSTATUS\tNODE ID\tVERSION\tALLOCATIONS")
 			for _, wl := range resp.Msg.Workloads {
 				alloc := ""
 				version := ""

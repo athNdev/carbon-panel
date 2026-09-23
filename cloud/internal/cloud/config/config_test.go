@@ -182,9 +182,9 @@ func TestValidateS3BackendNeedsKeys(t *testing.T) {
 	t.Setenv("CARBONCLOUD_STATE_S3_BUCKET", "")
 	t.Setenv("CARBONCLOUD_STATE_S3_ACCESS_KEY_ID", "")
 	t.Setenv("CARBONCLOUD_STATE_S3_SECRET_ACCESS_KEY", "")
-	os.Unsetenv("CARBONCLOUD_STATE_S3_BUCKET")
-	os.Unsetenv("CARBONCLOUD_STATE_S3_ACCESS_KEY_ID")
-	os.Unsetenv("CARBONCLOUD_STATE_S3_SECRET_ACCESS_KEY")
+	_ = os.Unsetenv("CARBONCLOUD_STATE_S3_BUCKET")
+	_ = os.Unsetenv("CARBONCLOUD_STATE_S3_ACCESS_KEY_ID")
+	_ = os.Unsetenv("CARBONCLOUD_STATE_S3_SECRET_ACCESS_KEY")
 
 	c := Default()
 	c.Provisioner.StateBackend = "s3"
