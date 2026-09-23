@@ -2,23 +2,29 @@ package svc
 
 import (
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 )
 
 const testOrg = "org-test-1"
 
-// testBundle opens an in-memory store and builds every service. No Docker,
-// no Postgres, no network.
-func testBundle(t *testing.T) *Services {
+// testBundleCustom opens an in-memory store and builds services with custom deps.
+func testBundleCustom(t *testing.T, mut func(deps *Deps)) (*Services, *db.Store) {
 	t.Helper()
 	store, err := db.Open(db.Options{Driver: "sqlite", DSN: ":memory:", AutoMigrate: true})
 	if err != nil {
@@ -33,16 +39,27 @@ func testBundle(t *testing.T) *Services {
 	if err := catalog.EnsureSeeded(ctx); err != nil {
 		t.Fatalf("seed catalog: %v", err)
 	}
-	svcs, err := New(Deps{
+	deps := Deps{
 		Store:      store,
 		Nodes:      node.NewService(ndeps),
 		JoinTokens: node.NewJoinTokenService(ndeps),
 		Catalog:    catalog,
 		Audits:     audit.NewGormStore(store),
-	})
+	}
+	if mut != nil {
+		mut(&deps)
+	}
+	svcs, err := New(deps)
 	if err != nil {
 		t.Fatalf("new services: %v", err)
 	}
+	return svcs, store
+}
+
+// testBundle opens an in-memory store and builds every service. No Docker,
+// no Postgres, no network.
+func testBundle(t *testing.T) *Services {
+	svcs, _ := testBundleCustom(t, nil)
 	return svcs
 }
 
@@ -425,5 +442,248 @@ func TestSessionAndAuditReads(t *testing.T) {
 	}
 	if _, err := svcs.Audit.ListAuditEvents(ctx, connect.NewRequest(&v1.ListAuditEventsRequest{ActionPrefix: "nodes.*"})); err == nil {
 		t.Fatal("expected wildcard prefix rejection")
+	}
+}
+
+func TestWorkloadQuotaEnforcement(t *testing.T) {
+	t.Parallel()
+	enforcer := billing.NewQuotaEnforcer(billing.NewCatalog())
+	svcs, store := testBundleCustom(t, func(d *Deps) {
+		d.Billing = enforcer
+	})
+	ctx := orgCtx()
+
+	// Seed testOrg in db with plan "free" (MaxWorkloads: 2)
+	err := store.Unscoped().Create(&db.Org{
+		ID:   testOrg,
+		Name: "Test Org",
+		Slug: "test-org",
+		Plan: "free",
+	}).Error
+	if err != nil {
+		t.Fatalf("create test org: %v", err)
+	}
+
+	// 1st workload -> success
+	_, err = svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: "node-1",
+		Name:   "mc-1",
+		Spec:   &v1.WorkloadSpec{MemoryMb: 1024},
+	}))
+	if err != nil {
+		t.Fatalf("create workload 1: %v", err)
+	}
+
+	// 2nd workload -> success
+	_, err = svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: "node-1",
+		Name:   "mc-2",
+		Spec:   &v1.WorkloadSpec{MemoryMb: 1024},
+	}))
+	if err != nil {
+		t.Fatalf("create workload 2: %v", err)
+	}
+
+	// 3rd workload -> exceeds free plan (max 2), must return CodeResourceExhausted
+	_, err = svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: "node-1",
+		Name:   "mc-3",
+		Spec:   &v1.WorkloadSpec{MemoryMb: 1024},
+	}))
+	if err == nil {
+		t.Fatal("expected error on 3rd workload for free plan, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeResourceExhausted {
+		t.Fatalf("expected CodeResourceExhausted, got %v", err)
+	}
+
+	// Upgrade org to "pro" (max 15 workloads)
+	if err := store.Unscoped().Model(&db.Org{}).Where("id = ?", testOrg).Update("plan", "pro").Error; err != nil {
+		t.Fatalf("upgrade org: %v", err)
+	}
+
+	// 3rd workload retry -> success
+	_, err = svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: "node-1",
+		Name:   "mc-3",
+		Spec:   &v1.WorkloadSpec{MemoryMb: 1024},
+	}))
+	if err != nil {
+		t.Fatalf("expected success after upgrade, got: %v", err)
+	}
+}
+
+func TestNodeQuotaEnforcement(t *testing.T) {
+	t.Parallel()
+	enforcer := billing.NewQuotaEnforcer(billing.NewCatalog())
+	svcs, store := testBundleCustom(t, func(d *Deps) {
+		d.Billing = enforcer
+	})
+	ctx := orgCtx()
+
+	// Seed testOrg in db with plan "free" (MaxNodes: 1)
+	err := store.Unscoped().Create(&db.Org{
+		ID:   testOrg,
+		Name: "Test Org Free Nodes",
+		Slug: "test-org-free-nodes",
+		Plan: "free",
+	}).Error
+	if err != nil {
+		t.Fatalf("create test org: %v", err)
+	}
+
+	// Issue join token
+	tokenResp, err := svcs.Node.CreateJoinToken(ctx, connect.NewRequest(&v1.CreateJoinTokenRequest{
+		Name:       "token-1",
+		TtlSeconds: 3600,
+	}))
+	if err != nil {
+		t.Fatalf("issue join token: %v", err)
+	}
+
+	// First node join -> success
+	joinResp, err := svcs.Agent.JoinNode(context.Background(), connect.NewRequest(&v1.JoinNodeRequest{
+		Token: tokenResp.Msg.Secret,
+		Capacity: &v1.NodeCapacity{
+			Vcpu:   2,
+			RamMb:  4096,
+			DiskGb: 50,
+		},
+		Hostname:     "node-box-1",
+		AgentVersion: "v1.0.0",
+	}))
+	if err != nil {
+		t.Fatalf("node 1 join: %v", err)
+	}
+	if joinResp.Msg.Identity.NodeId == "" {
+		t.Fatal("expected joined node id")
+	}
+
+	// Issue another token
+	tokenResp2, err := svcs.Node.CreateJoinToken(ctx, connect.NewRequest(&v1.CreateJoinTokenRequest{
+		Name:       "token-2",
+		TtlSeconds: 3600,
+	}))
+	if err != nil {
+		t.Fatalf("issue join token 2: %v", err)
+	}
+
+	// Second node join -> exceeds free plan (max 1 node)
+	_, err = svcs.Agent.JoinNode(context.Background(), connect.NewRequest(&v1.JoinNodeRequest{
+		Token: tokenResp2.Msg.Secret,
+		Capacity: &v1.NodeCapacity{
+			Vcpu:   2,
+			RamMb:  4096,
+			DiskGb: 50,
+		},
+		Hostname:     "node-box-2",
+		AgentVersion: "v1.0.0",
+	}))
+	if err == nil {
+		t.Fatal("expected error on 2nd node join, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeResourceExhausted {
+		t.Fatalf("expected CodeResourceExhausted, got %v", err)
+	}
+}
+
+func TestWebhookDispatchLifecycle(t *testing.T) {
+	t.Parallel()
+
+	var receivedEvents []string
+	var mu sync.Mutex
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var p notify.WebhookPayload
+		_ = json.Unmarshal(body, &p)
+		mu.Lock()
+		receivedEvents = append(receivedEvents, p.EventType)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	dispatcher := notify.NewDispatcher(ts.Client())
+	dispatcher.Register(&notify.WebhookSubscription{
+		ID:        "sub-1",
+		OrgID:     testOrg,
+		TargetURL: ts.URL,
+		Secret:    "secret-123",
+		Events:    []string{"*"},
+		Enabled:   true,
+	})
+
+	svcs, store := testBundleCustom(t, func(d *Deps) {
+		d.Notifier = dispatcher
+	})
+	ctx := orgCtx()
+
+	// Seed testOrg in db
+	_ = store.Unscoped().Create(&db.Org{
+		ID:   testOrg,
+		Name: "Webhook Org",
+		Slug: "webhook-org",
+		Plan: "team",
+	}).Error
+
+	// Create Workload -> should dispatch workload.created
+	createResp, err := svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: "node-wh-1",
+		Name:   "mc-wh",
+	}))
+	if err != nil {
+		t.Fatalf("create workload: %v", err)
+	}
+	wID := createResp.Msg.Workload.Id
+
+	// Start Workload -> should dispatch workload.started
+	_, err = svcs.Workload.StartWorkload(ctx, connect.NewRequest(&v1.StartWorkloadRequest{Id: wID}))
+	if err != nil {
+		t.Fatalf("start workload: %v", err)
+	}
+
+	// Stop Workload -> should dispatch workload.stopped
+	_, err = svcs.Workload.StopWorkload(ctx, connect.NewRequest(&v1.StopWorkloadRequest{Id: wID}))
+	if err != nil {
+		t.Fatalf("stop workload: %v", err)
+	}
+
+	// Delete Workload -> should dispatch workload.deleted
+	_, err = svcs.Workload.DeleteWorkload(ctx, connect.NewRequest(&v1.DeleteWorkloadRequest{Id: wID}))
+	if err != nil {
+		t.Fatalf("delete workload: %v", err)
+	}
+
+	// Invite member -> should dispatch org.invite.created
+	_, err = svcs.Org.InviteMember(ctx, connect.NewRequest(&v1.InviteMemberRequest{
+		Email: "newguy@example.com",
+		Role:  v1.Role_ROLE_VIEWER,
+	}))
+	if err != nil {
+		t.Fatalf("invite member: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	expected := []string{
+		"workload.created",
+		"workload.started",
+		"workload.stopped",
+		"workload.deleted",
+		"org.invite.created",
+	}
+
+	for _, exp := range expected {
+		found := false
+		for _, rec := range receivedEvents {
+			if rec == exp {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected dispatched event %q, received: %v", exp, receivedEvents)
+		}
 	}
 }

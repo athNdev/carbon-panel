@@ -1,0 +1,253 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"connectrpc.com/connect"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
+	"github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+type mockSystemServer struct {
+	cloudv1connect.UnimplementedSystemServiceHandler
+}
+
+func (m *mockSystemServer) GetBuildInfo(context.Context, *connect.Request[v1.GetBuildInfoRequest]) (*connect.Response[v1.GetBuildInfoResponse], error) {
+	return connect.NewResponse(&v1.GetBuildInfoResponse{
+		Build: &v1.BuildInfo{
+			Version:        "v1.0.0-test",
+			Commit:         "abc1234",
+			BuildTime:      "2026-09-23T12:00:00Z",
+			GoVersion:      "go1.25.13",
+			DatabaseDriver: "sqlite",
+		},
+	}), nil
+}
+
+func (m *mockSystemServer) GetCapabilities(context.Context, *connect.Request[v1.GetCapabilitiesRequest]) (*connect.Response[v1.GetCapabilitiesResponse], error) {
+	return connect.NewResponse(&v1.GetCapabilitiesResponse{
+		Capabilities: []*v1.Capability{
+			{Id: "multi_tenant", Enabled: true},
+			{Id: "provisioning", Enabled: true},
+		},
+	}), nil
+}
+
+type mockNodeServer struct {
+	cloudv1connect.UnimplementedNodeServiceHandler
+}
+
+func (m *mockNodeServer) ListNodes(context.Context, *connect.Request[v1.ListNodesRequest]) (*connect.Response[v1.ListNodesResponse], error) {
+	return connect.NewResponse(&v1.ListNodesResponse{
+		Nodes: []*v1.Node{
+			{
+				Id:       "node_123",
+				Name:     "test-node-1",
+				Status:   v1.NodeStatus_NODE_STATUS_ONLINE,
+				Origin:   v1.NodeOrigin_NODE_ORIGIN_BYO,
+				PublicIp: "192.0.2.1",
+				Capacity: &v1.NodeCapacity{
+					RamMb: 4096,
+					Vcpu:  2,
+				},
+				Allocation: &v1.NodeAllocation{
+					RamMb:         1024,
+					CpuMillicores: 500,
+				},
+			},
+		},
+	}), nil
+}
+
+func (m *mockNodeServer) GetNode(ctx context.Context, req *connect.Request[v1.GetNodeRequest]) (*connect.Response[v1.GetNodeResponse], error) {
+	if req.Msg.Id != "node_123" {
+		return nil, connect.NewError(connect.CodeNotFound, os.ErrNotExist)
+	}
+	return connect.NewResponse(&v1.GetNodeResponse{
+		Node: &v1.Node{
+			Id:       "node_123",
+			Name:     "test-node-1",
+			Status:   v1.NodeStatus_NODE_STATUS_ONLINE,
+			Origin:   v1.NodeOrigin_NODE_ORIGIN_BYO,
+			PublicIp: "192.0.2.1",
+		},
+	}), nil
+}
+
+func (m *mockNodeServer) DrainNode(ctx context.Context, req *connect.Request[v1.DrainNodeRequest]) (*connect.Response[v1.DrainNodeResponse], error) {
+	return connect.NewResponse(&v1.DrainNodeResponse{
+		Node: &v1.Node{
+			Id:     req.Msg.Id,
+			Status: v1.NodeStatus_NODE_STATUS_DRAINING,
+		},
+	}), nil
+}
+
+func (m *mockNodeServer) CreateJoinToken(ctx context.Context, req *connect.Request[v1.CreateJoinTokenRequest]) (*connect.Response[v1.CreateJoinTokenResponse], error) {
+	return connect.NewResponse(&v1.CreateJoinTokenResponse{
+		Token: &v1.JoinToken{
+			Id:        "tok_abc",
+			Name:      req.Msg.Name,
+			ExpiresAt: timestamppb.Now(),
+		},
+		Secret: "ccj_secret_12345",
+	}), nil
+}
+
+func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
+	t.Helper()
+	mux := http.NewServeMux()
+	sysPath, sysHandler := cloudv1connect.NewSystemServiceHandler(&mockSystemServer{})
+	nodePath, nodeHandler := cloudv1connect.NewNodeServiceHandler(&mockNodeServer{})
+
+	mux.Handle(sysPath, sysHandler)
+	mux.Handle(nodePath, nodeHandler)
+
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	client := NewClient(srv.URL, "test-token", "org_test", srv.Client())
+	return srv, client
+}
+
+func TestCLI_HelpAndStatus(t *testing.T) {
+	_, client := setupTestServer(t)
+
+	t.Run("help", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"help"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "cloudctl - Carbon Cloud management CLI")
+	})
+
+	t.Run("status table", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"status"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "Version:    v1.0.0-test")
+		require.Contains(t, out, "multi_tenant: enabled")
+	})
+
+	t.Run("status json", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"--json", "status"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, `"version": "v1.0.0-test"`)
+		require.Contains(t, out, `"multi_tenant"`)
+	})
+}
+
+func TestCLI_NodesAndTokens(t *testing.T) {
+	_, client := setupTestServer(t)
+
+	t.Run("nodes list", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"nodes", "list"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "node_123")
+		require.Contains(t, stdout.String(), "test-node-1")
+	})
+
+	t.Run("nodes get", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"nodes", "get", "node_123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Node: test-node-1 (node_123)")
+	})
+
+	t.Run("nodes drain", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"nodes", "drain", "node_123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "is now draining")
+	})
+
+	t.Run("tokens create", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"tokens", "create", "-name=edge-node"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Join Token Created:")
+		require.Contains(t, stdout.String(), "ccj_secret_12345")
+		require.Contains(t, stdout.String(), "curl -fsSL")
+	})
+}
+
+func TestCLI_Config(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfgPath := filepath.Join(tmpDir, "config.json")
+
+	var stdout, stderr bytes.Buffer
+	cli := &CLI{
+		Stdout:     &stdout,
+		Stderr:     &stderr,
+		ConfigPath: cfgPath,
+	}
+
+	// View initial default config
+	err := cli.Run(context.Background(), []string{"config", "view"})
+	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "Endpoint: http://127.0.0.1:8080")
+
+	// Set endpoint
+	stdout.Reset()
+	err = cli.Run(context.Background(), []string{"config", "set", "endpoint", "https://cloud.carbon.dev"})
+	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "Config updated: endpoint = https://cloud.carbon.dev")
+
+	// Set API key
+	stdout.Reset()
+	err = cli.Run(context.Background(), []string{"config", "set", "api_key", "cca_live_1234567890"})
+	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "Config updated: api_key = cca_live_1234567890")
+
+	// Read saved config
+	cfg, err := loadConfig(cfgPath)
+	require.NoError(t, err)
+	require.Equal(t, "https://cloud.carbon.dev", cfg.Endpoint)
+	require.Equal(t, "cca_live_1234567890", cfg.APIKey)
+}

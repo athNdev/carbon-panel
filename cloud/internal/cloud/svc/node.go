@@ -8,8 +8,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
+	"github.com/google/uuid"
 )
 
 // NodeService implements NodeServiceHandler over node.Service (registry) and
@@ -147,6 +149,17 @@ func (s *NodeService) DrainNode(ctx context.Context, req *connect.Request[v1.Dra
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errNodeNotFound)
 	}
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "node.drained",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"node_id": req.Msg.Id,
+			},
+		})
+	}
 	return connect.NewResponse(&v1.DrainNodeResponse{Node: s.nodeToProto(ctx, &n)}), nil
 }
 
@@ -156,6 +169,17 @@ func (s *NodeService) ResumeNode(ctx context.Context, req *connect.Request[v1.Re
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errNodeNotFound)
 	}
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "node.resumed",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"node_id": req.Msg.Id,
+			},
+		})
+	}
 	return connect.NewResponse(&v1.ResumeNodeResponse{Node: s.nodeToProto(ctx, &n)}), nil
 }
 
@@ -163,6 +187,17 @@ func (s *NodeService) ResumeNode(ctx context.Context, req *connect.Request[v1.Re
 func (s *NodeService) DeleteNode(ctx context.Context, req *connect.Request[v1.DeleteNodeRequest]) (*connect.Response[v1.DeleteNodeResponse], error) {
 	if err := s.deps.Nodes.Delete(ctx, req.Msg.Id); err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errNodeNotFound)
+	}
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "node.deleted",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"node_id": req.Msg.Id,
+			},
+		})
 	}
 	return connect.NewResponse(&v1.DeleteNodeResponse{}), nil
 }

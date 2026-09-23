@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
@@ -26,37 +29,38 @@ type WorkloadService struct {
 }
 
 func workloadToProto(w *db.Workload) *v1.Workload {
-	var spec *v1.WorkloadSpec
-	if m := w.SpecMap(); len(m) > 0 {
-		spec = &v1.WorkloadSpec{Hostname: w.Hostname}
-		if v, ok := m["loader"].(string); ok {
-			spec.Loader = v
-		}
-		if v, ok := m["minecraft_version"].(string); ok {
-			spec.MinecraftVersion = v
-		}
-		if v, ok := m["memory_mb"].(float64); ok {
-			spec.MemoryMb = int64(v)
-		}
-	}
-	return &v1.Workload{
+	out := &v1.Workload{
 		Id:           w.ID,
 		OrgId:        w.OrgID,
 		NodeId:       w.NodeID,
 		Name:         w.Name,
-		Spec:         spec,
 		Status:       workloadStatusToProto(w.Status),
-		ContainerId:  w.ContainerID,
-		HostPort:     int32(w.HostPort),
-		Hostname:     w.Hostname,
 		StatusDetail: w.StatusDetail,
+		Hostname:     w.Hostname,
 		CreatedBy:    w.CreatedBy,
 		CreatedAt:    ts(w.CreatedAt),
 		UpdatedAt:    ts(w.UpdatedAt),
 	}
+	if w.Spec != "" {
+		var s struct {
+			Loader           string `json:"loader"`
+			MinecraftVersion string `json:"minecraft_version"`
+			MemoryMB         int    `json:"memory_mb"`
+			Hostname         string `json:"hostname"`
+		}
+		if json.Unmarshal([]byte(w.Spec), &s) == nil {
+			out.Spec = &v1.WorkloadSpec{
+				Loader:           s.Loader,
+				MinecraftVersion: s.MinecraftVersion,
+				MemoryMb:         int64(s.MemoryMB),
+				Hostname:         s.Hostname,
+			}
+		}
+	}
+	return out
 }
 
-func workloadEventToProto(e *db.WorkloadEvent) *v1.WorkloadEvent {
+func eventToProto(e *db.WorkloadEvent) *v1.WorkloadEvent {
 	return &v1.WorkloadEvent{
 		Id:         e.ID,
 		WorkloadId: e.WorkloadID,
@@ -152,9 +156,30 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 	if strings.TrimSpace(m.NodeId) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errWorkloadNode)
 	}
+
+	orgID := principal.OrgID(ctx)
+
+	// Enforce quota if billing is active
+	if s.deps.Billing != nil {
+		var org db.Org
+		if err := s.deps.Store.Unscoped().WithContext(ctx).Where("id = ?", orgID).First(&org).Error; err == nil {
+			plan := s.deps.Billing.Catalog().GetOrDefault(org.Plan)
+			var count int64
+			_ = q.Model(&db.Workload{}).Where("status NOT IN ('terminated', 'deleted')").Count(&count).Error
+
+			reqRAM := int64(0)
+			if m.Spec != nil && m.Spec.MemoryMb > 0 {
+				reqRAM = m.Spec.MemoryMb
+			}
+			if err := s.deps.Billing.Check(plan, billing.Usage{WorkloadCount: int(count)}, billing.Usage{WorkloadCount: 1, AllocatedRAMMB: reqRAM}); err != nil {
+				return nil, connect.NewError(connect.CodeResourceExhausted, err)
+			}
+		}
+	}
+
 	p, _ := principal.From(ctx)
 	w := &db.Workload{
-		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: principal.OrgID(ctx)},
+		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: orgID},
 		NodeID:     strings.TrimSpace(m.NodeId),
 		Name:       strings.TrimSpace(m.Name),
 		Status:     "pending",
@@ -174,6 +199,21 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeInternal, errWorkloadCreate)
 	}
 	s.recordEvent(ctx, w.ID, "created", "workload created, pending placement")
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "workload.created",
+			OrgID:     orgID,
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"workload_id": w.ID,
+				"name":        w.Name,
+				"node_id":     w.NodeID,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.CreateWorkloadResponse{Workload: workloadToProto(w)}), nil
 }
 
@@ -226,6 +266,19 @@ func (s *WorkloadService) DeleteWorkload(ctx context.Context, req *connect.Reque
 	if err := q.Where("id = ?", req.Msg.Id).Delete(&db.Workload{}).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errWorkloadDelete)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "workload.deleted",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"workload_id": req.Msg.Id,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.DeleteWorkloadResponse{}), nil
 }
 
@@ -254,6 +307,19 @@ func (s *WorkloadService) StartWorkload(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "workload.started",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"workload_id": w.ID,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.StartWorkloadResponse{Workload: workloadToProto(w)}), nil
 }
 
@@ -263,6 +329,19 @@ func (s *WorkloadService) StopWorkload(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "workload.stopped",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"workload_id": w.ID,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.StopWorkloadResponse{Workload: workloadToProto(w)}), nil
 }
 
@@ -287,28 +366,28 @@ func (s *WorkloadService) SendWorkloadCommand(ctx context.Context, req *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errNodeExecutes)
 }
 
-// ListWorkloadEvents lists status breadcrumbs for one workload.
+// ListWorkloadEvents returns the breadcrumb history of a workload.
 func (s *WorkloadService) ListWorkloadEvents(ctx context.Context, req *connect.Request[v1.ListWorkloadEventsRequest]) (*connect.Response[v1.ListWorkloadEventsResponse], error) {
+	if _, err := s.load(ctx, req.Msg.Id); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
+	}
 	q, err := s.deps.Store.Org(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
-	}
-	if _, err := s.load(ctx, req.Msg.Id); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
 	}
 	limit, offset := page(req.Msg.Page, 50)
 	var total int64
 	fq := q.Model(&db.WorkloadEvent{}).Where("workload_id = ?", req.Msg.Id)
 	if err := fq.Count(&total).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
 	}
 	var rows []db.WorkloadEvent
-	if err := fq.Order("created_at ASC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
+	if err := fq.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
 	}
 	out := make([]*v1.WorkloadEvent, 0, len(rows))
 	for i := range rows {
-		out = append(out, workloadEventToProto(&rows[i]))
+		out = append(out, eventToProto(&rows[i]))
 	}
 	return connect.NewResponse(&v1.ListWorkloadEventsResponse{Events: out, Page: pageResp(int(total), limit, offset)}), nil
 }

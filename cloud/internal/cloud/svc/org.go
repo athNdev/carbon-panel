@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
@@ -258,6 +259,21 @@ func (s *OrgService) InviteMember(ctx context.Context, req *connect.Request[v1.I
 	if err := q.Create(m).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errOrgInvite)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "org.invite.created",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"invitation_id": m.ID,
+				"email":         m.Email,
+				"role":          m.Role,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.InviteMemberResponse{Invitation: invitedToProto(m)}), nil
 }
 
@@ -283,17 +299,18 @@ func (s *OrgService) ListInvitations(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(&v1.ListInvitationsResponse{Invitations: out, Page: pageResp(int(total), limit, offset)}), nil
 }
 
-// RevokeInvitation deletes a pending invitation by member-row id.
+// RevokeInvitation cancels a pending invitation by invitation id.
 func (s *OrgService) RevokeInvitation(ctx context.Context, req *connect.Request[v1.RevokeInvitationRequest]) (*connect.Response[v1.RevokeInvitationResponse], error) {
 	q, err := s.deps.Store.Org(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
 	}
-	if strings.TrimSpace(req.Msg.Id) == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errOrgNoInvite)
-	}
-	if err := q.Where("id = ? AND status = ?", req.Msg.Id, memberStatusInvited).Delete(&db.Member{}).Error; err != nil {
+	res := q.Where("id = ? AND status = ?", req.Msg.Id, memberStatusInvited).Delete(&db.Member{})
+	if res.Error != nil {
 		return nil, connect.NewError(connect.CodeInternal, errOrgUpdate)
+	}
+	if res.RowsAffected == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, errOrgInviteNotFound)
 	}
 	return connect.NewResponse(&v1.RevokeInvitationResponse{}), nil
 }

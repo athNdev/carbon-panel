@@ -31,6 +31,7 @@ var (
 	errOrgBadEmail       = errors.New("svc: valid email is required")
 	errOrgInvite         = errors.New("svc: could not create invitation")
 	errOrgNoInvite       = errors.New("svc: invitation id is required")
+	errOrgInviteNotFound = errors.New("svc: invitation not found")
 
 	errRoleBindings    = errors.New("svc: could not list role bindings")
 	errRoleSubject     = errors.New("svc: subject_type and subject_id are required")

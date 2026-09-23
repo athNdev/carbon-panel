@@ -27,11 +27,13 @@ import (
 
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/config"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/httpapi"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/obs"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/rbac"
@@ -53,48 +55,29 @@ func main() {
 
 func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "healthcheck" {
-		url := healthcheckURL()
-		if len(args) > 1 && strings.TrimSpace(args[1]) != "" {
-			url = strings.TrimSpace(args[1])
+		url := "http://127.0.0.1:8080/healthz"
+		if len(args) > 1 && args[1] != "" {
+			url = args[1]
 		}
 		if err := probeHealth(url); err != nil {
-			fmt.Fprintf(stderr, "healthcheck: %v\n", err)
+			fmt.Fprintf(stderr, "healthcheck failed: %v\n", err)
 			return 1
 		}
-		fmt.Fprintln(stdout, "ok")
 		return 0
 	}
 
-	fs := flag.NewFlagSet("cloudcontrold", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	configPath := fs.String("config", "", "path to YAML config file (optional; env CARBONCLOUD_* overrides apply)")
-	if err := fs.Parse(args); err != nil {
+	flags := flag.NewFlagSet("cloudcontrold", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	configPath := flags.String("config", "config.yaml", "path to configuration file")
+	if err := flags.Parse(args); err != nil {
 		return 2
 	}
 
 	if err := serve(*configPath, stderr); err != nil {
-		fmt.Fprintf(stderr, "cloudcontrold: %v\n", err)
+		fmt.Fprintf(stderr, "cloudcontrold fatal: %v\n", err)
 		return 1
 	}
 	return 0
-}
-
-// healthcheckURL resolves the probe target from the server addr env/config.
-// Compose runs the binary without flags, so env-only resolution is required.
-func healthcheckURL() string {
-	addr := strings.TrimSpace(os.Getenv("CARBONCLOUD_SERVER_ADDR"))
-	if addr == "" {
-		addr = config.Default().Server.Addr
-	}
-	host, port, err := net.SplitHostPort(strings.TrimSpace(addr))
-	if err != nil {
-		return "http://127.0.0.1:8080/healthz"
-	}
-	if host == "" || host == "0.0.0.0" || host == "::" {
-		h := "127.0.0.1"
-		host = h
-	}
-	return "http://" + net.JoinHostPort(host, port) + "/healthz"
 }
 
 // probeHealth GETs url and requires HTTP 200 with a body naming status ok.
@@ -200,6 +183,9 @@ func serve(configPath string, stderr io.Writer) error {
 		return fmt.Errorf("rbac engine: %w", err)
 	}
 
+	billingEnforcer := billing.NewQuotaEnforcer(billing.NewCatalog())
+	notifier := notify.NewDispatcher(nil)
+
 	svc.Version, svc.Commit, svc.BuildTime = version, commit, buildTime
 	services, err := svc.New(svc.Deps{
 		Store:           store,
@@ -208,6 +194,8 @@ func serve(configPath string, stderr io.Writer) error {
 		Catalog:         catalog,
 		Provision:       provSvc,
 		Audits:          audits,
+		Billing:         billingEnforcer,
+		Notifier:        notifier,
 		ControlPlaneURL: cfg.Server.PublicURL,
 	})
 	if err != nil {
@@ -232,39 +220,53 @@ func serve(configPath string, stderr io.Writer) error {
 		return fmt.Errorf("httpapi: %w", err)
 	}
 
-	httpSrv := &http.Server{
-		Addr:         cfg.Server.Addr,
-		Handler:      h2c.NewHandler(srv.Handler(), &http2.Server{}),
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
+	addr := cfg.Server.Addr
+	if addr == "" {
+		addr = ":8080"
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("listen %s: %w", addr, err)
+	}
+	defer ln.Close()
+
+	// Connect-RPC needs HTTP/2 (gRPC wire). When TLS terminates at an
+	// upstream edge (Traefik, Cloudflare) we speak h2c so standard HTTP/2
+	// clients work without TLS on the loopback.
+	h2s := &http2.Server{}
+	readTimeout := cfg.Server.ReadTimeout
+	if readTimeout <= 0 {
+		readTimeout = 10 * time.Second
+	}
+	httpServer := &http.Server{
+		Handler:           h2c.NewHandler(srv.Handler(), h2s),
+		ReadHeaderTimeout: readTimeout,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
-	serveErr := make(chan error, 1)
+
+	errCh := make(chan error, 1)
 	go func() {
-		logger.Info("listening", "addr", cfg.Server.Addr)
-		serveErr <- httpSrv.ListenAndServe()
+		logger.Info("cloudcontrold listening", "addr", addr)
+		if err := httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
 	}()
 
 	select {
 	case sig := <-stop:
-		logger.Info("shutdown on signal", "signal", sig.String())
-	case err := <-serveErr:
-		if err != nil && err != http.ErrServerClosed {
-			return fmt.Errorf("serve: %w", err)
-		}
-		return nil
+		logger.Info("shutting down on signal", "signal", sig.String())
+	case err := <-errCh:
+		return fmt.Errorf("serve: %w", err)
 	}
 
-	timeout := cfg.Server.ShutdownTimeout
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
-	shutCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	shutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := httpSrv.Shutdown(shutCtx); err != nil {
+	if err := httpServer.Shutdown(shutCtx); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
+	logger.Info("cloudcontrold stopped cleanly")
 	return nil
 }

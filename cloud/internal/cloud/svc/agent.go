@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
@@ -27,8 +29,7 @@ type AgentService struct {
 	deps Deps
 }
 
-// JoinNode redeems a join token and registers the node. Public procedure;
-// the token is the credential.
+// JoinNode redeems a single-use token and writes the node row.
 func (s *AgentService) JoinNode(ctx context.Context, req *connect.Request[v1.JoinNodeRequest]) (*connect.Response[v1.JoinNodeResponse], error) {
 	m := req.Msg
 	if strings.TrimSpace(m.Token) == "" {
@@ -38,6 +39,20 @@ func (s *AgentService) JoinNode(ctx context.Context, req *connect.Request[v1.Joi
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errAgentJoin)
 	}
+
+	// Enforce node quota if billing is active
+	if s.deps.Billing != nil {
+		var org db.Org
+		if err := s.deps.Store.Unscoped().WithContext(ctx).Where("id = ?", tok.OrgID).First(&org).Error; err == nil {
+			plan := s.deps.Billing.Catalog().GetOrDefault(org.Plan)
+			var count int64
+			_ = s.deps.Store.Unscoped().WithContext(ctx).Model(&db.Node{}).Where("org_id = ?", tok.OrgID).Count(&count).Error
+			if err := s.deps.Billing.Check(plan, billing.Usage{NodeCount: int(count)}, billing.Usage{NodeCount: 1}); err != nil {
+				return nil, connect.NewError(connect.CodeResourceExhausted, err)
+			}
+		}
+	}
+
 	// The caller has no org yet: the token carries it. Scope all writes to
 	// the token's org so a token can never create rows elsewhere.
 	orgCtx := principal.WithPrincipal(ctx, principal.Principal{Kind: principal.KindNode, OrgID: tok.OrgID})
@@ -63,6 +78,21 @@ func (s *AgentService) JoinNode(ctx context.Context, req *connect.Request[v1.Joi
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errAgentJoin)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(orgCtx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "node.joined",
+			OrgID:     tok.OrgID,
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"node_id":  n.ID,
+				"hostname": n.Hostname,
+				"origin":   n.Origin,
+			},
+		})
+	}
+
 	nodeSvc := &NodeService{deps: s.deps}
 	return connect.NewResponse(&v1.JoinNodeResponse{
 		Identity: &v1.NodeIdentity{
@@ -131,6 +161,11 @@ func (s *AgentService) onHeartbeat(ctx context.Context, hb *v1.AgentHeartbeat) {
 	if hb == nil || hb.NodeId == "" {
 		return
 	}
+	p, ok := principal.From(ctx)
+	if !ok || p.Kind != principal.KindNode {
+		return
+	}
+	// Heartbeats refresh last_seen and reconcile capacity if reported.
 	_, _ = s.deps.Nodes.Heartbeat(ctx, hb.NodeId)
 }
 
@@ -138,24 +173,24 @@ func (s *AgentService) onWorkloadStatus(ctx context.Context, st *v1.AgentWorkloa
 	if st == nil || st.WorkloadId == "" {
 		return
 	}
+	p, ok := principal.From(ctx)
+	if !ok || p.Kind != principal.KindNode {
+		return
+	}
 	q, err := s.deps.Store.Org(ctx)
 	if err != nil {
 		return
 	}
-	status := "running"
-	detail := st.Detail
-	switch st.Status {
-	case v1.WorkloadStatus_WORKLOAD_STATUS_RUNNING:
-		status = "running"
-	case v1.WorkloadStatus_WORKLOAD_STATUS_STOPPED:
-		status = "stopped"
-	case v1.WorkloadStatus_WORKLOAD_STATUS_ERROR:
-		status = "error"
-	case v1.WorkloadStatus_WORKLOAD_STATUS_PENDING:
-		status = "pending"
+	updates := map[string]any{
+		"status":        workloadStatusToString(st.Status),
+		"status_detail": st.Detail,
 	}
-	_ = q.Model(&db.Workload{}).Where("id = ?", st.WorkloadId).Updates(map[string]any{
-		"status": status, "status_detail": detail, "container_id": st.ContainerId,
+	_ = q.Model(&db.Workload{}).Where("id = ?", st.WorkloadId).Updates(updates).Error
+	_ = q.Create(&db.WorkloadEvent{
+		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
+		WorkloadID: st.WorkloadId,
+		Kind:       "status_transition",
+		Message:    st.Detail,
 	}).Error
 }
 
@@ -163,12 +198,16 @@ func (s *AgentService) onCommandResult(ctx context.Context, res *v1.AgentCommand
 	if res == nil || res.CommandId == "" {
 		return
 	}
+	p, ok := principal.From(ctx)
+	if !ok || p.Kind != principal.KindNode {
+		return
+	}
 	q, err := s.deps.Store.Org(ctx)
 	if err != nil {
 		return
 	}
 	_ = q.Create(&db.WorkloadEvent{
-		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: principal.OrgID(ctx)},
+		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
 		Kind:       "command_result",
 		Message:    res.CommandId + ": " + res.Output + res.Error,
 	}).Error

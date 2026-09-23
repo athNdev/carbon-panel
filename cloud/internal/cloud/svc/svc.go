@@ -1,10 +1,3 @@
-// Package svc implements the Connect-RPC services served by cloudcontrold.
-//
-// Every handler delegates to an existing domain package (node, provision,
-// nodetype, provider, audit, db) and never reimplements domain logic. Where
-// no domain logic exists yet (orgs, members, API keys, workloads, agent
-// command fan-out) the handler works directly against db.Store with
-// org scoping via Store.Org(ctx).
 package svc
 
 import (
@@ -14,24 +7,26 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Build metadata, assigned by cloudcontrold at startup (ldflags or direct
-// assignment). Defaults keep local builds and tests working.
+// assignment). Defaults keep local builds and tests working operations.
 var (
 	Version   = "dev"
 	Commit    = "unknown"
 	BuildTime = "unknown"
 )
 
-// Deps wires every Connect service to the domain layer. Provision may be nil
-// in tests; provision RPCs then fail with CodeUnavailable.
+// Deps wires every Connect service to the domain layer. Provision, Billing,
+// and Notifier may be nil in tests or standalone configurations.
 type Deps struct {
 	Store      *db.Store
 	Nodes      *node.Service
@@ -39,6 +34,8 @@ type Deps struct {
 	Catalog    *nodetype.Catalog
 	Provision  *provision.Service
 	Audits     audit.Store
+	Billing    *billing.QuotaEnforcer
+	Notifier   *notify.Dispatcher
 	// ControlPlaneURL is advertised to agents (join command, endpoints).
 	// Empty means join commands use a relative reference.
 	ControlPlaneURL string
@@ -153,7 +150,7 @@ func slugify(name string) string {
 		s = strings.ReplaceAll(s, "--", "-")
 	}
 	if s == "" {
-		s = "org"
+		return "org"
 	}
 	return s
 }

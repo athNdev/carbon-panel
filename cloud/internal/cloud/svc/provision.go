@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
+	"github.com/google/uuid"
 )
 
 // ProvisionService implements ProvisionServiceHandler over
@@ -107,6 +111,22 @@ func (s *ProvisionService) CreateProvision(ctx context.Context, req *connect.Req
 	if strings.TrimSpace(m.Name) == "" || strings.TrimSpace(m.Region) == "" || strings.TrimSpace(m.NodeTypeId) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errProvisionFields)
 	}
+
+	// Enforce managed node quota if billing is active
+	if s.deps.Billing != nil {
+		orgID := principal.OrgID(ctx)
+		var org db.Org
+		if err := s.deps.Store.Unscoped().WithContext(ctx).Where("id = ?", orgID).First(&org).Error; err == nil {
+			plan := s.deps.Billing.Catalog().GetOrDefault(org.Plan)
+			var count int64
+			_ = s.deps.Store.Unscoped().WithContext(ctx).Model(&db.Provision{}).
+				Where("org_id = ? AND status NOT IN ('failed', 'destroyed')", orgID).Count(&count).Error
+			if err := s.deps.Billing.Check(plan, billing.Usage{ManagedNodeCount: int(count)}, billing.Usage{ManagedNodeCount: 1}); err != nil {
+				return nil, connect.NewError(connect.CodeResourceExhausted, err)
+			}
+		}
+	}
+
 	creq, err := s.createRequestFor(ctx, providerName, m.Region, m.NodeTypeId, m.ProviderVars)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -121,6 +141,22 @@ func (s *ProvisionService) CreateProvision(ctx context.Context, req *connect.Req
 			return nil, connect.NewError(connect.CodeInternal, errProvisionPlan)
 		}
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "provision.created",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"provision_id": p.ID,
+				"name":         p.Name,
+				"provider":     providerName,
+				"region":       m.Region,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.CreateProvisionResponse{Provision: provisionToProto(p)}), nil
 }
 
@@ -162,6 +198,19 @@ func (s *ProvisionService) ApplyProvision(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errProvisionApply)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "provision.applied",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"provision_id": p.ID,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.ApplyProvisionResponse{Provision: provisionToProto(p)}), nil
 }
 
@@ -181,6 +230,19 @@ func (s *ProvisionService) DestroyProvision(ctx context.Context, req *connect.Re
 		}
 		return nil, connect.NewError(connect.CodeInternal, errProvisionDestroy)
 	}
+
+	if s.deps.Notifier != nil {
+		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+			EventID:   uuid.NewString(),
+			EventType: "provision.destroyed",
+			OrgID:     principal.OrgID(ctx),
+			Timestamp: time.Now().Unix(),
+			Data: map[string]any{
+				"provision_id": p.ID,
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.DestroyProvisionResponse{Provision: provisionToProto(p)}), nil
 }
 
@@ -203,23 +265,19 @@ func (s *ProvisionService) GetProvision(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(&v1.GetProvisionResponse{Provision: provisionToProto(&row)}), nil
 }
 
-// ListProvisions lists provisions with an optional status filter.
+// ListProvisions lists provision history, most recent first.
 func (s *ProvisionService) ListProvisions(ctx context.Context, req *connect.Request[v1.ListProvisionsRequest]) (*connect.Response[v1.ListProvisionsResponse], error) {
 	q, err := s.deps.Store.Org(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
 	}
-	fq := q.Model(&db.Provision{})
-	if v := provisionStatusToString(req.Msg.Status); v != "" {
-		fq = fq.Where("status = ?", v)
-	}
+	limit, offset := page(req.Msg.Page, 50)
 	var total int64
-	if err := fq.Count(&total).Error; err != nil {
+	if err := q.Model(&db.Provision{}).Count(&total).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errProvisionList)
 	}
-	limit, offset := page(req.Msg.Page, 50)
 	var rows []db.Provision
-	if err := fq.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+	if err := q.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errProvisionList)
 	}
 	out := make([]*v1.Provision, 0, len(rows))
@@ -229,35 +287,7 @@ func (s *ProvisionService) ListProvisions(ctx context.Context, req *connect.Requ
 	return connect.NewResponse(&v1.ListProvisionsResponse{Provisions: out, Page: pageResp(int(total), limit, offset)}), nil
 }
 
-// StreamProvisionLogs replays buffered log lines then streams live output
-// until the client goes away.
+// StreamProvisionLogs streams terraform output as it is produced.
 func (s *ProvisionService) StreamProvisionLogs(ctx context.Context, req *connect.Request[v1.StreamProvisionLogsRequest], stream *connect.ServerStream[v1.ProvisionLogLine]) error {
-	if err := s.requireProvisioner(); err != nil {
-		return err
-	}
-	replay, ch, cancel := s.deps.Provision.StreamLogs(req.Msg.Id)
-	defer cancel()
-	var seq int64
-	for _, line := range replay {
-		if seq >= req.Msg.FromSequence {
-			if err := stream.Send(&v1.ProvisionLogLine{Sequence: seq, Line: line}); err != nil {
-				return err
-			}
-		}
-		seq++
-	}
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case line, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(&v1.ProvisionLogLine{Sequence: seq, Line: line}); err != nil {
-				return err
-			}
-			seq++
-		}
-	}
+	return connect.NewError(connect.CodeUnimplemented, errors.New("svc: provision log streaming not implemented"))
 }
