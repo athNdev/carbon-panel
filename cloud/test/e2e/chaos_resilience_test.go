@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"sync"
 	"sync/atomic"
@@ -24,8 +25,6 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 func TestChaosAndConcurrencyResilience(t *testing.T) {
@@ -100,7 +99,12 @@ func TestChaosAndConcurrencyResilience(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	srv := httptest.NewServer(h2c.NewHandler(apiServer.Handler(), &http2.Server{}))
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+	srv := httptest.NewUnstartedServer(apiServer.Handler())
+	srv.Config.Protocols = protocols
+	srv.Start()
 	defer srv.Close()
 
 	orgClient := cloudv1connect.NewOrgServiceClient(srv.Client(), srv.URL)

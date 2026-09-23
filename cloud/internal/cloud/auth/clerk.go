@@ -197,7 +197,7 @@ func (v *ClerkVerifier) Verify(ctx context.Context, rawToken string) (Claims, er
 		return Claims{}, ErrTokenMalformed
 	}
 	now := v.now()
-	if p.ExpiresAt == nil || now.After(p.ExpiresAt.Time.Add(leeway)) {
+	if p.ExpiresAt == nil || now.After(p.ExpiresAt.Add(leeway)) {
 		return Claims{}, ErrTokenExpired
 	}
 	if p.NotBefore != nil && now.Add(leeway).Before(p.NotBefore.Time) {

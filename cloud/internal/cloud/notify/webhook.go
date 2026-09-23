@@ -71,7 +71,7 @@ type DeliveryAttempt struct {
 // SignPayload generates the HMAC-SHA256 signature string: "t=<timestamp>,v1=<hex_signature>".
 func SignPayload(secret string, timestamp int64, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(fmt.Sprintf("%d.", timestamp)))
+	fmt.Fprintf(mac, "%d.", timestamp)
 	mac.Write(body)
 	sig := hex.EncodeToString(mac.Sum(nil))
 	return fmt.Sprintf("t=%d,v1=%s", timestamp, sig)
@@ -111,7 +111,7 @@ func VerifySignature(secret, header string, body []byte, maxAge time.Duration) b
 	}
 
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(fmt.Sprintf("%d.", ts)))
+	fmt.Fprintf(mac, "%d.", ts)
 	mac.Write(body)
 	expectedSig := hex.EncodeToString(mac.Sum(nil))
 

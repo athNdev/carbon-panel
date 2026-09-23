@@ -12,9 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"connectrpc.com/connect"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
@@ -121,7 +118,12 @@ func TestAgentLoop_JoinAndConnect(t *testing.T) {
 	path, h := cloudv1connect.NewAgentServiceHandler(fake)
 	mux.Handle(path, h)
 
-	ts := httptest.NewServer(h2c.NewHandler(mux, &http2.Server{}))
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+	ts := httptest.NewUnstartedServer(mux)
+	ts.Config.Protocols = protocols
+	ts.Start()
 	defer ts.Close()
 
 	tmpDir := t.TempDir()

@@ -116,12 +116,12 @@ func (s *WorkloadService) ListWorkloads(ctx context.Context, req *connect.Reques
 	}
 	var total int64
 	if err := fq.Count(&total).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
 	}
 	limit, offset := page(m.Page, 50)
 	var rows []db.Workload
 	if err := fq.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
 	}
 	out := make([]*v1.Workload, 0, len(rows))
 	for i := range rows {
@@ -379,11 +379,11 @@ func (s *WorkloadService) ListWorkloadEvents(ctx context.Context, req *connect.R
 	var total int64
 	fq := q.Model(&db.WorkloadEvent{}).Where("workload_id = ?", req.Msg.Id)
 	if err := fq.Count(&total).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
 	}
 	var rows []db.WorkloadEvent
 	if err := fq.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errWorkloadList)
+		return nil, connect.NewError(connect.CodeInternal, errWorkloadEvents)
 	}
 	out := make([]*v1.WorkloadEvent, 0, len(rows))
 	for i := range rows {

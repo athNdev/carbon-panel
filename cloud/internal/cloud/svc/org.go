@@ -305,6 +305,9 @@ func (s *OrgService) RevokeInvitation(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
 	}
+	if strings.TrimSpace(req.Msg.Id) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errOrgNoInvite)
+	}
 	res := q.Where("id = ? AND status = ?", req.Msg.Id, memberStatusInvited).Delete(&db.Member{})
 	if res.Error != nil {
 		return nil, connect.NewError(connect.CodeInternal, errOrgUpdate)

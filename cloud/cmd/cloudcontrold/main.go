@@ -22,9 +22,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
@@ -233,13 +230,17 @@ func serve(configPath string, stderr io.Writer) error {
 	// Connect-RPC needs HTTP/2 (gRPC wire). When TLS terminates at an
 	// upstream edge (Traefik, Cloudflare) we speak h2c so standard HTTP/2
 	// clients work without TLS on the loopback.
-	h2s := &http2.Server{}
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
+
 	readTimeout := cfg.Server.ReadTimeout
 	if readTimeout <= 0 {
 		readTimeout = 10 * time.Second
 	}
 	httpServer := &http.Server{
-		Handler:           h2c.NewHandler(srv.Handler(), h2s),
+		Handler:           srv.Handler(),
+		Protocols:         protocols,
 		ReadHeaderTimeout: readTimeout,
 		IdleTimeout:       120 * time.Second,
 	}

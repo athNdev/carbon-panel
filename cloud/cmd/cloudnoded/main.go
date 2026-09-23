@@ -176,7 +176,7 @@ func startAgent(configPath, controlPlaneOverride, joinTokenOverride, dataDirOver
 	}
 
 	logger := obs.NewLogger(cfg.Telemetry)
-	logger.Info("starting cloudnoded", "version", version, "commit", commit, "addr", cfg.Server.Addr)
+	logger.Info("starting cloudnoded", "version", version, "commit", commit, "build_time", buildTime, "addr", cfg.Server.Addr)
 
 	state := &AgentState{
 		started: time.Now().UTC(),

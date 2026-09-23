@@ -271,13 +271,17 @@ func (s *ProvisionService) ListProvisions(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
 	}
+	fq := q.Model(&db.Provision{})
+	if v := provisionStatusToString(req.Msg.Status); v != "" {
+		fq = fq.Where("status = ?", v)
+	}
 	limit, offset := page(req.Msg.Page, 50)
 	var total int64
-	if err := q.Model(&db.Provision{}).Count(&total).Error; err != nil {
+	if err := fq.Count(&total).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errProvisionList)
 	}
 	var rows []db.Provision
-	if err := q.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+	if err := fq.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errProvisionList)
 	}
 	out := make([]*v1.Provision, 0, len(rows))
