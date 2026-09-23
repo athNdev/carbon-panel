@@ -13,11 +13,11 @@ type Plan struct {
 	Name                string `json:"name"`
 	Description         string `json:"description"`
 	PriceCentsMonth     int64  `json:"price_cents_month"`
-	MaxNodes            int    `json:"max_nodes"`             // -1 = unlimited
-	MaxManagedNodes     int    `json:"max_managed_nodes"`     // -1 = unlimited
-	MaxWorkloads        int    `json:"max_workloads"`         // -1 = unlimited
-	MaxRAMMB            int64  `json:"max_ram_mb"`            // -1 = unlimited
-	MaxCPUMillicores    int64  `json:"max_cpu_millicores"`    // -1 = unlimited
+	MaxNodes            int    `json:"max_nodes"`          // -1 = unlimited
+	MaxManagedNodes     int    `json:"max_managed_nodes"`  // -1 = unlimited
+	MaxWorkloads        int    `json:"max_workloads"`      // -1 = unlimited
+	MaxRAMMB            int64  `json:"max_ram_mb"`         // -1 = unlimited
+	MaxCPUMillicores    int64  `json:"max_cpu_millicores"` // -1 = unlimited
 	AllowsCustomDomain  bool   `json:"allows_custom_domain"`
 	AllowsPriorityQueue bool   `json:"allows_priority_queue"`
 }
