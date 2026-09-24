@@ -126,28 +126,25 @@
 	{:else}
 		{#if pageState.data}
 			{#if pageState.data.capabilities.some((c) => !c.enabled)}
-				<div class="flex flex-col gap-2">
-					{#each pageState.data.capabilities.filter((c) => !c.enabled) as cap (cap.id)}
-						<div
-							class="flex flex-wrap items-center gap-2 border border-warning/50 bg-card px-3 py-2 text-sm"
-							role="status"
-						>
-							<span class="font-medium text-foreground">Capability “{cap.id}” is disabled.</span>
-							{#if cap.missingKeys.length > 0}
-								<span class="text-muted-foreground">
-									Missing env keys:
-									{#each cap.missingKeys as k, i (k)}
-										<code class="font-mono text-xs text-warning">{k}</code
-										>{i < cap.missingKeys.length - 1 ? ', ' : ''}
-									{/each}
-								</span>
-							{/if}
-							{#if cap.detail}
-								<span class="w-full text-xs text-muted-foreground">{cap.detail}</span>
-							{/if}
-						</div>
-					{/each}
-				</div>
+				<details class="group border border-border bg-card/50 px-3 py-2 text-xs text-muted-foreground">
+					<summary class="cursor-pointer select-none font-medium text-foreground hover:text-primary list-none flex items-center justify-between">
+						<span>Optional cloud capabilities: {pageState.data.capabilities.filter((c) => !c.enabled).length} unconfigured (click to expand)</span>
+						<span class="text-[10px] text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+					</summary>
+					<div class="mt-2 flex flex-col gap-1.5 pt-2 border-t border-border">
+						{#each pageState.data.capabilities.filter((c) => !c.enabled) as cap (cap.id)}
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="font-mono text-foreground">{cap.id}</span>
+								<span>— disabled</span>
+								{#if cap.missingKeys.length > 0}
+									<span class="text-muted-foreground/80 font-mono text-[11px]">
+										({cap.missingKeys.join(', ')})
+									</span>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</details>
 			{/if}
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
