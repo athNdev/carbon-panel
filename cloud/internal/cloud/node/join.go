@@ -142,7 +142,7 @@ func (s *JoinTokenService) Redeem(ctx context.Context, secret string) (db.JoinTo
 	if err != nil {
 		return db.JoinToken{}, err
 	}
-	id, mac, ok := parseSecret(secret)
+	id, enc, mac, ok := parseSecret(secret)
 	if !ok {
 		return db.JoinToken{}, ErrTokenUnknown
 	}
@@ -158,7 +158,7 @@ func (s *JoinTokenService) Redeem(ctx context.Context, secret string) (db.JoinTo
 	}
 	want := tokenMAC(pepper, tok.OrgID, tok.ID, *tok.ExpiresAt)
 	if subtle.ConstantTimeCompare(want, mac) != 1 ||
-		subtle.ConstantTimeCompare([]byte(tok.SecretHash), []byte(b64(mac))) != 1 {
+		subtle.ConstantTimeCompare([]byte(tok.SecretHash), []byte(enc)) != 1 {
 		return db.JoinToken{}, ErrTokenUnknown
 	}
 	if ctxOrg := principal.OrgID(ctx); ctxOrg != "" && ctxOrg != tok.OrgID {
@@ -198,9 +198,10 @@ func (s *JoinTokenService) claim(ctx context.Context, id string, now time.Time) 
 		if attempt > 0 {
 			time.Sleep(time.Duration(attempt) * time.Millisecond)
 		}
-		res := s.deps.Store.Unscoped().WithContext(ctx).Model(&db.JoinToken{}).
-			Where("id = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?", id, now).
-			Updates(map[string]any{"used_at": now, "updated_at": now})
+		res := s.deps.Store.Unscoped().WithContext(ctx).
+			Model(&db.JoinToken{}).
+			Where("id = ? AND used_at IS NULL AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)", id, now).
+			Update("used_at", now)
 		if res.Error == nil {
 			return res.RowsAffected == 1, nil
 		}
@@ -262,18 +263,18 @@ func b64(b []byte) string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func parseSecret(secret string) (id string, mac []byte, ok bool) {
+func parseSecret(secret string) (id, enc string, mac []byte, ok bool) {
 	rest, found := strings.CutPrefix(secret, secretPrefix)
 	if !found {
-		return "", nil, false
+		return "", "", nil, false
 	}
-	id, enc, found := strings.Cut(rest, ".")
+	id, enc, found = strings.Cut(rest, ".")
 	if !found || id == "" || enc == "" {
-		return "", nil, false
+		return "", "", nil, false
 	}
-	mac, err := base64.RawURLEncoding.DecodeString(enc)
+	mac, err := base64.RawURLEncoding.Strict().DecodeString(enc)
 	if err != nil || len(mac) != sha256.Size {
-		return "", nil, false
+		return "", "", nil, false
 	}
-	return id, mac, true
+	return id, enc, mac, true
 }

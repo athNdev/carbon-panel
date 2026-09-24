@@ -322,7 +322,31 @@ func TestEndToEndHappyPath(t *testing.T) {
 	require.NotEmpty(t, eventsResp.Msg.Events)
 
 	// -------------------------------------------------------------
-	// STEP G: Audit Log Records Every State Change
+	// STEP G: Node Drain, Eviction & Resume Lifecycle
+	// -------------------------------------------------------------
+	drainReq := connect.NewRequest(&v1.DrainNodeRequest{Id: byoNodeID})
+	drainReq.Header().Set("Authorization", "Bearer valid-clerk-token")
+	drainResp, err := nodeClient.DrainNode(ctx, drainReq)
+	require.NoError(t, err)
+	require.Equal(t, v1.NodeStatus_NODE_STATUS_DRAINING, drainResp.Msg.Node.Status)
+
+	// Capacity checker immediately rejects placement on draining node
+	err = capacityChecker.Check(orgScopedCtx, byoNodeID, db.NodeCapacity{VCPU: 1, RAMMB: 1024, DiskGB: 10})
+	require.ErrorIs(t, err, node.ErrNodeDraining)
+
+	// Resume node from drain
+	resumeReq := connect.NewRequest(&v1.ResumeNodeRequest{Id: byoNodeID})
+	resumeReq.Header().Set("Authorization", "Bearer valid-clerk-token")
+	resumeResp, err := nodeClient.ResumeNode(ctx, resumeReq)
+	require.NoError(t, err)
+	require.Equal(t, v1.NodeStatus_NODE_STATUS_ONLINE, resumeResp.Msg.Node.Status)
+
+	// Node now accepts capacity placement again
+	err = capacityChecker.Check(orgScopedCtx, byoNodeID, db.NodeCapacity{VCPU: 1, RAMMB: 1024, DiskGB: 10})
+	require.NoError(t, err)
+
+	// -------------------------------------------------------------
+	// STEP H: Audit Log Records Every State Change
 	// -------------------------------------------------------------
 	auditReq := connect.NewRequest(&v1.ListAuditEventsRequest{})
 	auditReq.Header().Set("Authorization", "Bearer valid-clerk-token")
@@ -339,6 +363,8 @@ func TestEndToEndHappyPath(t *testing.T) {
 
 	// Verify mutating actions were captured
 	require.True(t, actionsRecorded["nodes.create_join_token"], "expected nodes.create_join_token in audit log")
+	require.True(t, actionsRecorded["nodes.drain"], "expected nodes.drain in audit log")
+	require.True(t, actionsRecorded["nodes.resume"], "expected nodes.resume in audit log")
 	require.True(t, actionsRecorded["provisions.create"], "expected provisions.create in audit log")
 	require.True(t, actionsRecorded["workloads.create"], "expected workloads.create in audit log")
 	require.True(t, actionsRecorded["workloads.start"], "expected workloads.start in audit log")
