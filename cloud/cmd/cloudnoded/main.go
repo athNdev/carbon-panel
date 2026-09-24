@@ -88,7 +88,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if err := startAgent(*configPath, *controlPlaneFlag, *joinTokenFlag, *dataDirFlag, stderr); err != nil {
-		fmt.Fprintf(stderr, "cloudnoded: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "cloudnoded: %v\n", err)
 		return 1
 	}
 	return 0
