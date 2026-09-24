@@ -2,6 +2,7 @@
 // - Reads the publishable key from $env/dynamic/public; a missing key puts the
 //   app into a "not configured" state instead of crashing.
 // - Exposes the session token and active organization for API calls.
+import '../crypto-polyfill';
 import { Clerk } from '@clerk/clerk-js';
 import { dark } from '@clerk/themes';
 import { env } from '$env/dynamic/public';
@@ -272,11 +273,32 @@ function createAuth() {
 		get state() {
 			return state;
 		},
-		get memberships() {
-			return memberships;
+		get ready() {
+			return state.ready;
+		},
+		get signedIn() {
+			return state.signedIn;
+		},
+		get notConfigured() {
+			return state.notConfigured;
+		},
+		get initFailed() {
+			return state.initFailed;
 		},
 		get initError() {
 			return initError;
+		},
+		get user() {
+			return state.user;
+		},
+		get org() {
+			return state.org;
+		},
+		get orgRole() {
+			return state.orgRole;
+		},
+		get memberships() {
+			return memberships;
 		},
 		init,
 		token,
