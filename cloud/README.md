@@ -44,9 +44,9 @@ The OSS product keeps building and shipping unchanged: `cloud/` is additive and
 
 ```sh
 # 1. Postgres
-docker compose -f cloud/deploy/docker/docker-compose.dev.yaml up -d postgres
+docker compose -f cloud/deploy/compose/docker-compose.yml up -d postgres
 
-# 2. Control plane (needs cloud/deploy/docker/.env — see .env.example)
+# 2. Control plane (needs configuration or env vars — see cloud/deploy/compose/.env.example)
 go run ./cloud/cmd/cloudcontrold --config cloud/deploy/docker/controld.dev.yaml
 
 # 3. Node agent against a local Docker socket

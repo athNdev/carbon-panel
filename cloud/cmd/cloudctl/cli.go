@@ -314,8 +314,8 @@ Commands:
   nodes              Manage nodes (list, get, drain, resume, delete)
   tokens             Manage node join tokens (create, list, revoke)
   nodetypes          List node types catalog
-  provisions         Manage cloud provisions (list, get, plan, create, destroy, logs)
-  workloads          Manage workloads (list, get, start, stop, delete)
+  provisions         Manage cloud provisions (list, get, plan, apply, create, destroy, logs)
+  workloads          Manage workloads (list, get, create, start, stop, restart, delete, logs, exec, events)
   apikeys            Manage organization API keys (list, create, revoke)
   audit              View audit trail (list, get)
   orgs               Manage organizations (list, get)
@@ -659,6 +659,25 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 			_, _ = fmt.Fprintf(w, "\nTerraform Plan Diff:\n%s\n", p.PlanDiff)
 			return nil
 		})
+	case "apply":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl provisions apply <id> [--plan-hash <hash>]")
+		}
+		id := args[1]
+		fs := flag.NewFlagSet("provisions apply", flag.ContinueOnError)
+		planHash := fs.String("plan-hash", "", "Confirm plan hash")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		resp, err := c.Client.Provision.ApplyProvision(ctx, connect.NewRequest(&v1.ApplyProvisionRequest{
+			Id:              id,
+			ConfirmPlanHash: *planHash,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Provision applied: ID %s (status: %s)\n", resp.Msg.Provision.Id, resp.Msg.Provision.Status)
+		return nil
 	case "create":
 		fs := flag.NewFlagSet("provisions create", flag.ContinueOnError)
 		name := fs.String("name", "managed-node", "Node display name")
@@ -757,6 +776,35 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 			}
 			return nil
 		})
+	case "create":
+		fs := flag.NewFlagSet("workloads create", flag.ContinueOnError)
+		name := fs.String("name", "", "Workload display name (required)")
+		nodeID := fs.String("node", "", "Node ID to pin workload to (optional)")
+		version := fs.String("version", "1.20.4", "Minecraft version")
+		loader := fs.String("loader", "paper", "Loader type (e.g. paper, fabric, vanilla)")
+		mem := fs.Int64("memory", 2048, "Memory in MB")
+		cpu := fs.Int64("cpu", 1000, "CPU millicores")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if *name == "" {
+			return errors.New("flag -name is required")
+		}
+		resp, err := c.Client.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+			Name:   *name,
+			NodeId: *nodeID,
+			Spec: &v1.WorkloadSpec{
+				MinecraftVersion: *version,
+				Loader:           *loader,
+				MemoryMb:         *mem,
+				CpuMillicores:    *cpu,
+			},
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Workload created: ID %s (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
+		return nil
 	case "start":
 		if len(args) < 2 {
 			return errors.New("usage: cloudctl workloads start <id>")
@@ -777,6 +825,16 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		}
 		_, _ = fmt.Fprintf(c.Stdout, "Workload %s stopped (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
 		return nil
+	case "restart":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads restart <id>")
+		}
+		resp, err := c.Client.Workload.RestartWorkload(ctx, connect.NewRequest(&v1.RestartWorkloadRequest{Id: args[1]}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Workload %s restarted (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
+		return nil
 	case "delete":
 		if len(args) < 2 {
 			return errors.New("usage: cloudctl workloads delete <id>")
@@ -787,6 +845,71 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		}
 		_, _ = fmt.Fprintf(c.Stdout, "Workload %s deleted\n", args[1])
 		return nil
+	case "logs":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads logs <id> [--tail <lines>]")
+		}
+		id := args[1]
+		fs := flag.NewFlagSet("workloads logs", flag.ContinueOnError)
+		tail := fs.Int("tail", 100, "Number of trailing lines to view")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		stream, err := c.Client.Workload.StreamWorkloadLogs(ctx, connect.NewRequest(&v1.StreamWorkloadLogsRequest{
+			Id:        id,
+			TailLines: int32(*tail),
+		}))
+		if err != nil {
+			return err
+		}
+		for stream.Receive() {
+			msg := stream.Msg()
+			if msg.Stderr {
+				_, _ = fmt.Fprintf(c.Stderr, "[stderr] %s\n", msg.Line)
+			} else {
+				_, _ = fmt.Fprintln(c.Stdout, msg.Line)
+			}
+		}
+		return stream.Err()
+	case "exec":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl workloads exec <id> <command...>")
+		}
+		id := args[1]
+		cmd := strings.Join(args[2:], " ")
+		resp, err := c.Client.Workload.SendWorkloadCommand(ctx, connect.NewRequest(&v1.SendWorkloadCommandRequest{
+			Id:      id,
+			Command: cmd,
+		}))
+		if err != nil {
+			return err
+		}
+		if resp.Msg.Output != "" {
+			_, _ = fmt.Fprintln(c.Stdout, resp.Msg.Output)
+		}
+		return nil
+	case "events":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads events <id>")
+		}
+		resp, err := c.Client.Workload.ListWorkloadEvents(ctx, connect.NewRequest(&v1.ListWorkloadEventsRequest{
+			Id: args[1],
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Events, func(w io.Writer) error {
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "ID\tKIND\tMESSAGE\tCREATED_AT")
+			for _, ev := range resp.Msg.Events {
+				created := ""
+				if ev.CreatedAt != nil {
+					created = ev.CreatedAt.AsTime().Format(time.RFC3339)
+				}
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", ev.Id, ev.Kind, ev.Message, created)
+			}
+			return tw.Flush()
+		})
 	default:
 		return fmt.Errorf("unknown workloads command: %s", args[0])
 	}

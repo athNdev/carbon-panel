@@ -130,6 +130,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (db.Node, e
 }
 
 // Heartbeat marks the node live now, assigning a fingerprint when missing.
+// If the node was offline, it reactivates it back to active status.
 func (s *Service) Heartbeat(ctx context.Context, id string) (db.Node, error) {
 	q, err := s.scope(ctx)
 	if err != nil {
@@ -144,6 +145,9 @@ func (s *Service) Heartbeat(ctx context.Context, id string) (db.Node, error) {
 	if n.AgentFingerprint == nil || *n.AgentFingerprint == "" {
 		fp := newFingerprint()
 		patch["agent_fingerprint"] = &fp
+	}
+	if n.Status == "offline" {
+		patch["status"] = "active"
 	}
 	uq, err := s.scope(ctx)
 	if err != nil {

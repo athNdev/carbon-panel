@@ -165,8 +165,66 @@ func (s *AgentService) onHeartbeat(ctx context.Context, hb *v1.AgentHeartbeat) {
 	if !ok || p.Kind != principal.KindNode {
 		return
 	}
+	// Check previous node status to detect recovery from offline
+	prevNode, _ := s.deps.Nodes.Get(ctx, hb.NodeId)
+
 	// Heartbeats refresh last_seen and reconcile capacity if reported.
-	_, _ = s.deps.Nodes.Heartbeat(ctx, hb.NodeId)
+	n, err := s.deps.Nodes.Heartbeat(ctx, hb.NodeId)
+	if err != nil {
+		return
+	}
+
+	// If node was offline and recovered back to active
+	if prevNode.Status == "offline" && n.Status == "active" {
+		if s.deps.Notifier != nil {
+			s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+				EventID:   uuid.NewString(),
+				EventType: "node.online",
+				OrgID:     p.OrgID,
+				Timestamp: time.Now().Unix(),
+				Data: map[string]any{
+					"node_id":  n.ID,
+					"hostname": n.Hostname,
+				},
+			})
+		}
+
+		// Reconcile degraded workloads on this node back to running
+		if q, err := s.deps.Store.Org(ctx); err == nil {
+			var degraded []db.Workload
+			if err := q.Where("node_id = ? AND status = ?", n.ID, "degraded").Find(&degraded).Error; err == nil {
+				for _, wl := range degraded {
+					if uq, err := s.deps.Store.Org(ctx); err == nil {
+						_ = uq.Model(&db.Workload{}).Where("id = ?", wl.ID).Updates(map[string]any{
+							"status":        "running",
+							"status_detail": "node reconnected; heartbeat recovered",
+						}).Error
+					}
+					if eq, err := s.deps.Store.Org(ctx); err == nil {
+						_ = eq.Create(&db.WorkloadEvent{
+							TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
+							WorkloadID: wl.ID,
+							Kind:       "recovery",
+							Message:    "node heartbeats resumed; workload restored to running",
+						}).Error
+					}
+					if s.deps.Notifier != nil {
+						s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
+							EventID:   uuid.NewString(),
+							EventType: "workload.restored",
+							OrgID:     p.OrgID,
+							Timestamp: time.Now().Unix(),
+							Data: map[string]any{
+								"workload_id": wl.ID,
+								"node_id":     n.ID,
+								"status":      "running",
+							},
+						})
+					}
+				}
+			}
+		}
+	}
 }
 
 func (s *AgentService) onWorkloadStatus(ctx context.Context, st *v1.AgentWorkloadStatus) {

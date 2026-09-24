@@ -102,14 +102,88 @@ func (m *mockNodeServer) CreateJoinToken(ctx context.Context, req *connect.Reque
 	}), nil
 }
 
+type mockWorkloadServer struct {
+	cloudv1connect.UnimplementedWorkloadServiceHandler
+}
+
+func (m *mockWorkloadServer) CreateWorkload(ctx context.Context, req *connect.Request[v1.CreateWorkloadRequest]) (*connect.Response[v1.CreateWorkloadResponse], error) {
+	return connect.NewResponse(&v1.CreateWorkloadResponse{
+		Workload: &v1.Workload{
+			Id:     "wl_created_123",
+			Name:   req.Msg.Name,
+			Status: v1.WorkloadStatus_WORKLOAD_STATUS_PENDING,
+			Spec:   req.Msg.Spec,
+		},
+	}), nil
+}
+
+func (m *mockWorkloadServer) RestartWorkload(ctx context.Context, req *connect.Request[v1.RestartWorkloadRequest]) (*connect.Response[v1.RestartWorkloadResponse], error) {
+	return connect.NewResponse(&v1.RestartWorkloadResponse{
+		Workload: &v1.Workload{
+			Id:     req.Msg.Id,
+			Status: v1.WorkloadStatus_WORKLOAD_STATUS_RUNNING,
+		},
+	}), nil
+}
+
+func (m *mockWorkloadServer) SendWorkloadCommand(ctx context.Context, req *connect.Request[v1.SendWorkloadCommandRequest]) (*connect.Response[v1.SendWorkloadCommandResponse], error) {
+	return connect.NewResponse(&v1.SendWorkloadCommandResponse{
+		Output: "Command output for: " + req.Msg.Command,
+	}), nil
+}
+
+func (m *mockWorkloadServer) ListWorkloadEvents(ctx context.Context, req *connect.Request[v1.ListWorkloadEventsRequest]) (*connect.Response[v1.ListWorkloadEventsResponse], error) {
+	return connect.NewResponse(&v1.ListWorkloadEventsResponse{
+		Events: []*v1.WorkloadEvent{
+			{
+				Id:         "ev_1",
+				WorkloadId: req.Msg.Id,
+				Kind:       "restart",
+				Message:    "Restarted successfully",
+				CreatedAt:  timestamppb.Now(),
+			},
+		},
+	}), nil
+}
+
+func (m *mockWorkloadServer) StreamWorkloadLogs(ctx context.Context, req *connect.Request[v1.StreamWorkloadLogsRequest], stream *connect.ServerStream[v1.WorkloadLogLine]) error {
+	_ = stream.Send(&v1.WorkloadLogLine{
+		Line:      "Starting minecraft server",
+		Timestamp: timestamppb.Now(),
+	})
+	_ = stream.Send(&v1.WorkloadLogLine{
+		Line:      "Server warning on startup",
+		Stderr:    true,
+		Timestamp: timestamppb.Now(),
+	})
+	return nil
+}
+
+type mockProvisionServer struct {
+	cloudv1connect.UnimplementedProvisionServiceHandler
+}
+
+func (m *mockProvisionServer) ApplyProvision(ctx context.Context, req *connect.Request[v1.ApplyProvisionRequest]) (*connect.Response[v1.ApplyProvisionResponse], error) {
+	return connect.NewResponse(&v1.ApplyProvisionResponse{
+		Provision: &v1.Provision{
+			Id:     req.Msg.Id,
+			Status: v1.ProvisionStatus_PROVISION_STATUS_APPLYING,
+		},
+	}), nil
+}
+
 func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	t.Helper()
 	mux := http.NewServeMux()
 	sysPath, sysHandler := cloudv1connect.NewSystemServiceHandler(&mockSystemServer{})
 	nodePath, nodeHandler := cloudv1connect.NewNodeServiceHandler(&mockNodeServer{})
+	workloadPath, workloadHandler := cloudv1connect.NewWorkloadServiceHandler(&mockWorkloadServer{})
+	provisionPath, provisionHandler := cloudv1connect.NewProvisionServiceHandler(&mockProvisionServer{})
 
 	mux.Handle(sysPath, sysHandler)
 	mux.Handle(nodePath, nodeHandler)
+	mux.Handle(workloadPath, workloadHandler)
+	mux.Handle(provisionPath, provisionHandler)
 
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -214,6 +288,85 @@ func TestCLI_NodesAndTokens(t *testing.T) {
 		require.Contains(t, stdout.String(), "Join Token Created:")
 		require.Contains(t, stdout.String(), "ccj_secret_12345")
 		require.Contains(t, stdout.String(), "curl -fsSL")
+	})
+}
+
+func TestCLI_WorkloadsAndProvisions(t *testing.T) {
+	_, client := setupTestServer(t)
+
+	t.Run("workloads create", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"workloads", "create", "-name=survival-world", "-version=1.20.4", "-loader=paper"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Workload created: ID wl_created_123")
+	})
+
+	t.Run("workloads restart", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"workloads", "restart", "wl_123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Workload wl_123 restarted")
+	})
+
+	t.Run("workloads exec", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"workloads", "exec", "wl_123", "say", "hello"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Command output for: say hello")
+	})
+
+	t.Run("workloads events", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"workloads", "events", "wl_123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "ev_1")
+		require.Contains(t, stdout.String(), "restart")
+		require.Contains(t, stdout.String(), "Restarted successfully")
+	})
+
+	t.Run("workloads logs", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"workloads", "logs", "wl_123", "--tail=50"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Starting minecraft server")
+		require.Contains(t, stderr.String(), "[stderr] Server warning on startup")
+	})
+
+	t.Run("provisions apply", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"provisions", "apply", "prov_999", "--plan-hash=abc"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Provision applied: ID prov_999")
 	})
 }
 

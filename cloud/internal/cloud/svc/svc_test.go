@@ -689,3 +689,147 @@ func TestWebhookDispatchLifecycle(t *testing.T) {
 		}
 	}
 }
+
+func TestNodeReconnectionSelfHealing(t *testing.T) {
+	t.Parallel()
+
+	var receivedEvents []string
+	var mu sync.Mutex
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var p notify.WebhookPayload
+		_ = json.Unmarshal(body, &p)
+		mu.Lock()
+		receivedEvents = append(receivedEvents, p.EventType)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	dispatcher := notify.NewDispatcher(ts.Client())
+	dispatcher.Register(&notify.WebhookSubscription{
+		ID:        "sub-healing",
+		OrgID:     testOrg,
+		TargetURL: ts.URL,
+		Secret:    "secret-123",
+		Events:    []string{"*"},
+		Enabled:   true,
+	})
+
+	svcs, store := testBundleCustom(t, func(d *Deps) {
+		d.Notifier = dispatcher
+	})
+	ctx := orgCtx()
+
+	// 1. Seed org
+	_ = store.Unscoped().Create(&db.Org{
+		ID:   testOrg,
+		Name: "Healing Org",
+		Slug: "healing-org",
+	}).Error
+
+	// 2. Register node
+	tokenResp, err := svcs.Node.CreateJoinToken(ctx, connect.NewRequest(&v1.CreateJoinTokenRequest{
+		Name:       "node-heal-tok",
+		TtlSeconds: 3600,
+	}))
+	if err != nil {
+		t.Fatalf("issue join token: %v", err)
+	}
+	joinResp, err := svcs.Agent.JoinNode(context.Background(), connect.NewRequest(&v1.JoinNodeRequest{
+		Token:        tokenResp.Msg.Secret,
+		Hostname:     "box-heal-1",
+		AgentVersion: "v1.0.0",
+	}))
+	if err != nil {
+		t.Fatalf("join node: %v", err)
+	}
+	nodeID := joinResp.Msg.Identity.NodeId
+
+	// 3. Create a workload on that node
+	createWl, err := svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: nodeID,
+		Name:   "mc-heal",
+	}))
+	if err != nil {
+		t.Fatalf("create workload: %v", err)
+	}
+	wlID := createWl.Msg.Workload.Id
+
+	// 4. Simulate node going offline & workload degrading
+	err = store.Unscoped().Model(&db.Node{}).Where("id = ?", nodeID).Update("status", "offline").Error
+	if err != nil {
+		t.Fatalf("update node offline: %v", err)
+	}
+	err = store.Unscoped().Model(&db.Workload{}).Where("id = ?", wlID).Update("status", "degraded").Error
+	if err != nil {
+		t.Fatalf("update workload degraded: %v", err)
+	}
+
+	// Verify node reads back as offline and workload in DB is degraded
+	nodeGet, err := svcs.Node.GetNode(ctx, connect.NewRequest(&v1.GetNodeRequest{Id: nodeID}))
+	if err != nil {
+		t.Fatalf("get node: %v", err)
+	}
+	if nodeGet.Msg.Node.Status != v1.NodeStatus_NODE_STATUS_OFFLINE {
+		t.Fatalf("expected node offline, got %v", nodeGet.Msg.Node.Status)
+	}
+	var wlPre db.Workload
+	if err := store.Unscoped().Where("id = ?", wlID).First(&wlPre).Error; err != nil {
+		t.Fatalf("find pre-healing workload: %v", err)
+	}
+	if wlPre.Status != "degraded" {
+		t.Fatalf("expected workload degraded, got %s", wlPre.Status)
+	}
+
+	// 5. Node reconnects and streams heartbeat
+	nodeCtx := principal.WithPrincipal(context.Background(), principal.Principal{
+		Kind:  principal.KindNode,
+		OrgID: testOrg,
+	})
+	svcs.Agent.onHeartbeat(nodeCtx, &v1.AgentHeartbeat{
+		NodeId: nodeID,
+	})
+
+	// 6. Verify self-healing:
+	// - Node is back online
+	nodeAfter, err := svcs.Node.GetNode(ctx, connect.NewRequest(&v1.GetNodeRequest{Id: nodeID}))
+	if err != nil {
+		t.Fatalf("get node after heartbeat: %v", err)
+	}
+	if nodeAfter.Msg.Node.Status != v1.NodeStatus_NODE_STATUS_ONLINE {
+		t.Fatalf("expected node online after recovery, got %v", nodeAfter.Msg.Node.Status)
+	}
+
+	// - Workload is restored to running
+	wlAfter, err := svcs.Workload.GetWorkload(ctx, connect.NewRequest(&v1.GetWorkloadRequest{Id: wlID}))
+	if err != nil {
+		t.Fatalf("get workload after recovery: %v", err)
+	}
+	if wlAfter.Msg.Workload.Status != v1.WorkloadStatus_WORKLOAD_STATUS_RUNNING {
+		t.Fatalf("expected workload restored to running, got %v", wlAfter.Msg.Workload.Status)
+	}
+
+	// - WorkloadEvent has recovery entry
+	var evts []db.WorkloadEvent
+	err = store.Unscoped().Where("workload_id = ? AND kind = ?", wlID, "recovery").Find(&evts).Error
+	if err != nil || len(evts) == 0 {
+		t.Fatalf("expected recovery workload event, got err=%v count=%d", err, len(evts))
+	}
+
+	// - Webhooks dispatched: node.online and workload.restored
+	mu.Lock()
+	defer mu.Unlock()
+	for _, expectedEvt := range []string{"node.online", "workload.restored"} {
+		found := false
+		for _, rec := range receivedEvents {
+			if rec == expectedEvt {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected webhook event %q, received: %v", expectedEvt, receivedEvents)
+		}
+	}
+}
