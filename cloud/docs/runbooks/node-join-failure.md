@@ -16,9 +16,9 @@ docker compose -f cloud/deploy/compose/docker-compose.yml logs --tail=200 noded 
 
 | Error | Meaning | Fix |
 |---|---|---|
-| `token unknown` | Typo, or token issued by another org/control plane | Re-copy from `cloudctl nodes join-token issue` |
-| `token expired` | Past TTL | Issue a fresh token (tokens are short-lived by design) |
-| `token revoked` | Revoked after issue | Issue a fresh token; audit who revoked it |
+| `token unknown` | Typo, or token issued by another org/control plane | Re-copy from `cloudctl tokens create -name <node-name>` |
+| `token expired` | Past TTL | Issue a fresh token via `cloudctl tokens create` (tokens are short-lived by design) |
+| `token revoked` | Revoked after issue | Issue a fresh token; audit who revoked it (`cloudctl audit list`) |
 | `token redeemed` | Single-use already consumed | Tokens are single-use: issue one token per node, never reuse |
 | signature invalid | Wrong `CARBONCLOUD_NODE_JOIN_TOKEN_SECRET` on controld vs issuer | Rotate per `key-rotation.md`; all join paths share one pepper |
 | org mismatch | Token's org ≠ target org | Issue the token in the correct org context |
