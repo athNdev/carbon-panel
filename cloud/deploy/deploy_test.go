@@ -58,6 +58,9 @@ func TestRequiredArtifactsExist(t *testing.T) {
 		"cloud/docs/runbooks/node-join-failure.md",
 		"cloud/docs/runbooks/key-rotation.md",
 		"cloud/docs/runbooks/provisioning.md",
+		"cloud/docs/runbooks/incident-response.md",
+		"cloud/docs/runbooks/billing-reconciliation.md",
+		"cloud/docs/runbooks/disaster-recovery.md",
 	} {
 		require.FileExists(t, filepath.Join(root, rel), "missing deploy artifact")
 	}
@@ -158,21 +161,20 @@ func TestNoLiteralSecretsInDeploy(t *testing.T) {
 		if err != nil || info.IsDir() {
 			return err
 		}
-		if strings.HasSuffix(path, "_test.go") {
-			return nil // this file names the patterns it guards against
+		// Skip binary files and this test itself.
+		if strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".ico") || strings.HasSuffix(path, "deploy_test.go") {
+			return nil
 		}
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return err
+		data, rerr := os.ReadFile(path)
+		if rerr != nil {
+			return rerr
 		}
-		lower := strings.ToLower(string(b))
-		// Obvious fakes (CHANGEME / changeme-fake) are allowed; anything that
-		// looks like a real embedded credential is not.
-		for _, hit := range credPattern.FindAllString(lower, -1) {
-			offenders = append(offenders, path+": "+hit)
+		if credPattern.Match(data) {
+			rel, _ := filepath.Rel(root, path)
+			offenders = append(offenders, rel)
 		}
 		return nil
 	})
 	require.NoError(t, err)
-	require.Empty(t, offenders, "deploy artifacts must not contain credential material")
+	require.Empty(t, offenders, "literal credentials found in deploy tree: %v", offenders)
 }
