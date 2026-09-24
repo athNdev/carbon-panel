@@ -213,7 +213,11 @@
 						size="lg"
 						class="w-1/2 justify-center rounded-none"
 						onclick={() => {
-							onsecondary ? onsecondary() : handleClose();
+							if (onsecondary) {
+								onsecondary();
+							} else {
+								handleClose();
+							}
 						}}
 					>
 						{secondaryButtonText}
