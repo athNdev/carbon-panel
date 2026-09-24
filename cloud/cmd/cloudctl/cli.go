@@ -349,13 +349,13 @@ func (c *CLI) runStatus(ctx context.Context) error {
 	}, func(w io.Writer) error {
 		_, _ = fmt.Fprintf(w, "Carbon Cloud Control Plane Status\n")
 		if b := build.Msg.Build; b != nil {
-			fmt.Fprintf(w, "  Version:    %s\n", b.Version)
-			fmt.Fprintf(w, "  Commit:     %s\n", b.Commit)
-			fmt.Fprintf(w, "  Build Time: %s\n", b.BuildTime)
-			fmt.Fprintf(w, "  Go Version: %s\n", b.GoVersion)
-			fmt.Fprintf(w, "  DB Driver:  %s\n", b.DatabaseDriver)
+			_, _ = fmt.Fprintf(w, "  Version:    %s\n", b.Version)
+			_, _ = fmt.Fprintf(w, "  Commit:     %s\n", b.Commit)
+			_, _ = fmt.Fprintf(w, "  Build Time: %s\n", b.BuildTime)
+			_, _ = fmt.Fprintf(w, "  Go Version: %s\n", b.GoVersion)
+			_, _ = fmt.Fprintf(w, "  DB Driver:  %s\n", b.DatabaseDriver)
 		}
-		fmt.Fprintf(w, "Capabilities (%d):\n", len(caps.Msg.Capabilities))
+		_, _ = fmt.Fprintf(w, "Capabilities (%d):\n", len(caps.Msg.Capabilities))
 		for _, cap := range caps.Msg.Capabilities {
 			status := "enabled"
 			if !cap.Enabled {
@@ -364,7 +364,7 @@ func (c *CLI) runStatus(ctx context.Context) error {
 					status = fmt.Sprintf("disabled (missing keys: %s)", strings.Join(cap.MissingKeys, ", "))
 				}
 			}
-			fmt.Fprintf(w, "  - %s: %s\n", cap.Id, status)
+			_, _ = fmt.Fprintf(w, "  - %s: %s\n", cap.Id, status)
 		}
 		return nil
 	})
@@ -376,13 +376,13 @@ func (c *CLI) runWhoami(ctx context.Context) error {
 		return fmt.Errorf("whoami failed (ensure --token or --api-key is valid): %w", err)
 	}
 	return c.printOutput(resp.Msg, func(w io.Writer) error {
-		fmt.Fprintf(w, "Authenticated organizations (%d):\n", len(resp.Msg.Orgs))
+		_, _ = fmt.Fprintf(w, "Authenticated organizations (%d):\n", len(resp.Msg.Orgs))
 		for _, org := range resp.Msg.Orgs {
 			active := ""
 			if c.Client.OrgID == org.Id {
 				active = " [active]"
 			}
-			fmt.Fprintf(w, "  - ID: %s | Name: %s | Slug: %s%s\n", org.Id, org.Name, org.Slug, active)
+			_, _ = fmt.Fprintf(w, "  - ID: %s | Name: %s | Slug: %s%s\n", org.Id, org.Name, org.Slug, active)
 		}
 		return nil
 	})
@@ -391,11 +391,11 @@ func (c *CLI) runWhoami(ctx context.Context) error {
 func (c *CLI) runConfig(cfg *Config, args []string) error {
 	if len(args) == 0 || args[0] == "view" {
 		return c.printOutput(cfg, func(w io.Writer) error {
-			fmt.Fprintf(w, "Current CLI Configuration:\n")
-			fmt.Fprintf(w, "  Endpoint: %s\n", cfg.Endpoint)
-			fmt.Fprintf(w, "  Org ID:   %s\n", cfg.OrgID)
-			fmt.Fprintf(w, "  API Key:  %s\n", maskKey(cfg.APIKey))
-			fmt.Fprintf(w, "  Token:    %s\n", maskKey(cfg.Token))
+			_, _ = fmt.Fprintf(w, "Current CLI Configuration:\n")
+			_, _ = fmt.Fprintf(w, "  Endpoint: %s\n", cfg.Endpoint)
+			_, _ = fmt.Fprintf(w, "  Org ID:   %s\n", cfg.OrgID)
+			_, _ = fmt.Fprintf(w, "  API Key:  %s\n", maskKey(cfg.APIKey))
+			_, _ = fmt.Fprintf(w, "  Token:    %s\n", maskKey(cfg.Token))
 			return nil
 		})
 	}
@@ -418,7 +418,7 @@ func (c *CLI) runConfig(cfg *Config, args []string) error {
 		if err := saveConfig(c.ConfigPath, cfg); err != nil {
 			return fmt.Errorf("save config: %w", err)
 		}
-		fmt.Fprintf(c.Stdout, "Config updated: %s = %s\n", key, val)
+		_, _ = fmt.Fprintf(c.Stdout, "Config updated: %s = %s\n", key, val)
 		return nil
 	}
 
@@ -459,10 +459,10 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Node, func(w io.Writer) error {
 			n := resp.Msg.Node
-			fmt.Fprintf(w, "Node: %s (%s)\n", n.Name, n.Id)
-			fmt.Fprintf(w, "  Status:    %s\n", n.Status)
-			fmt.Fprintf(w, "  Origin:    %s\n", n.Origin)
-			fmt.Fprintf(w, "  Public IP: %s\n", n.PublicIp)
+			_, _ = fmt.Fprintf(w, "Node: %s (%s)\n", n.Name, n.Id)
+			_, _ = fmt.Fprintf(w, "  Status:    %s\n", n.Status)
+			_, _ = fmt.Fprintf(w, "  Origin:    %s\n", n.Origin)
+			_, _ = fmt.Fprintf(w, "  Public IP: %s\n", n.PublicIp)
 			return nil
 		})
 	case "drain":
@@ -473,7 +473,7 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Node %s is now draining (status: %s)\n", resp.Msg.Node.Id, resp.Msg.Node.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Node %s is now draining (status: %s)\n", resp.Msg.Node.Id, resp.Msg.Node.Status)
 		return nil
 	case "resume":
 		if len(args) < 2 {
@@ -483,7 +483,7 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Node %s resumed (status: %s)\n", resp.Msg.Node.Id, resp.Msg.Node.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Node %s resumed (status: %s)\n", resp.Msg.Node.Id, resp.Msg.Node.Status)
 		return nil
 	case "delete":
 		if len(args) < 2 {
@@ -493,7 +493,7 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Node %s deleted\n", args[1])
+		_, _ = fmt.Fprintf(c.Stdout, "Node %s deleted\n", args[1])
 		return nil
 	default:
 		return fmt.Errorf("unknown nodes command: %s", args[0])
@@ -545,11 +545,11 @@ func (c *CLI) runTokens(ctx context.Context, args []string) error {
 			return err
 		}
 		return c.printOutput(resp.Msg, func(w io.Writer) error {
-			fmt.Fprintf(w, "Join Token Created:\n")
-			fmt.Fprintf(w, "  Token ID: %s\n", resp.Msg.Token.Id)
-			fmt.Fprintf(w, "  Secret:   %s\n", resp.Msg.Secret)
-			fmt.Fprintf(w, "\nBootstrap command:\n")
-			fmt.Fprintf(w, "  curl -fsSL %s/bootstrap | sudo bash -s -- --token %s\n",
+			_, _ = fmt.Fprintf(w, "Join Token Created:\n")
+			_, _ = fmt.Fprintf(w, "  Token ID: %s\n", resp.Msg.Token.Id)
+			_, _ = fmt.Fprintf(w, "  Secret:   %s\n", resp.Msg.Secret)
+			_, _ = fmt.Fprintf(w, "\nBootstrap command:\n")
+			_, _ = fmt.Fprintf(w, "  curl -fsSL %s/bootstrap | sudo bash -s -- --token %s\n",
 				c.Client.Endpoint, resp.Msg.Secret)
 			return nil
 		})
@@ -561,7 +561,7 @@ func (c *CLI) runTokens(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Join token %s revoked\n", args[1])
+		_, _ = fmt.Fprintf(c.Stdout, "Join token %s revoked\n", args[1])
 		return nil
 	default:
 		return fmt.Errorf("unknown tokens command: %s", args[0])
@@ -631,14 +631,14 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Provision, func(w io.Writer) error {
 			p := resp.Msg.Provision
-			fmt.Fprintf(w, "Provision: %s\n", p.Id)
-			fmt.Fprintf(w, "  Provider: %s (region: %s)\n", p.Provider, p.Region)
-			fmt.Fprintf(w, "  Status:   %s\n", p.Status)
+			_, _ = fmt.Fprintf(w, "Provision: %s\n", p.Id)
+			_, _ = fmt.Fprintf(w, "  Provider: %s (region: %s)\n", p.Provider, p.Region)
+			_, _ = fmt.Fprintf(w, "  Status:   %s\n", p.Status)
 			if p.NodeId != "" {
-				fmt.Fprintf(w, "  Node ID:  %s\n", p.NodeId)
+				_, _ = fmt.Fprintf(w, "  Node ID:  %s\n", p.NodeId)
 			}
 			if p.Error != "" {
-				fmt.Fprintf(w, "  Error:    %s\n", p.Error)
+				_, _ = fmt.Fprintf(w, "  Error:    %s\n", p.Error)
 			}
 			return nil
 		})
@@ -654,9 +654,9 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg, func(w io.Writer) error {
 			p := resp.Msg.Provision
-			fmt.Fprintf(w, "Provision Planned: %s\n", p.Id)
-			fmt.Fprintf(w, "  Summary: %s\n", p.PlanSummary)
-			fmt.Fprintf(w, "\nTerraform Plan Diff:\n%s\n", p.PlanDiff)
+			_, _ = fmt.Fprintf(w, "Provision Planned: %s\n", p.Id)
+			_, _ = fmt.Fprintf(w, "  Summary: %s\n", p.PlanSummary)
+			_, _ = fmt.Fprintf(w, "\nTerraform Plan Diff:\n%s\n", p.PlanDiff)
 			return nil
 		})
 	case "create":
@@ -679,7 +679,7 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Provision started: ID %s (status: %s)\n", resp.Msg.Provision.Id, resp.Msg.Provision.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Provision started: ID %s (status: %s)\n", resp.Msg.Provision.Id, resp.Msg.Provision.Status)
 		return nil
 	case "destroy":
 		if len(args) < 2 {
@@ -693,7 +693,7 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Destroying provision: %s (status: %s)\n", resp.Msg.Provision.Id, resp.Msg.Provision.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Destroying provision: %s (status: %s)\n", resp.Msg.Provision.Id, resp.Msg.Provision.Status)
 		return nil
 	case "logs":
 		if len(args) < 2 {
@@ -707,7 +707,7 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 		}
 		for stream.Receive() {
 			msg := stream.Msg()
-			fmt.Fprintf(c.Stdout, "[%d] %s\n", msg.Sequence, msg.Line)
+			_, _ = fmt.Fprintf(c.Stdout, "[%d] %s\n", msg.Sequence, msg.Line)
 		}
 		return stream.Err()
 	default:
@@ -749,11 +749,11 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Workload, func(w io.Writer) error {
 			wl := resp.Msg.Workload
-			fmt.Fprintf(w, "Workload: %s (%s)\n", wl.Name, wl.Id)
-			fmt.Fprintf(w, "  Status:  %s\n", wl.Status)
-			fmt.Fprintf(w, "  Node ID: %s\n", wl.NodeId)
+			_, _ = fmt.Fprintf(w, "Workload: %s (%s)\n", wl.Name, wl.Id)
+			_, _ = fmt.Fprintf(w, "  Status:  %s\n", wl.Status)
+			_, _ = fmt.Fprintf(w, "  Node ID: %s\n", wl.NodeId)
 			if wl.Spec != nil {
-				fmt.Fprintf(w, "  Version: %s (%s)\n", wl.Spec.MinecraftVersion, wl.Spec.Loader)
+				_, _ = fmt.Fprintf(w, "  Version: %s (%s)\n", wl.Spec.MinecraftVersion, wl.Spec.Loader)
 			}
 			return nil
 		})
@@ -765,7 +765,7 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Workload %s started (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Workload %s started (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
 		return nil
 	case "stop":
 		if len(args) < 2 {
@@ -775,7 +775,7 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Workload %s stopped (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Workload %s stopped (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
 		return nil
 	case "delete":
 		if len(args) < 2 {
@@ -785,7 +785,7 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "Workload %s deleted\n", args[1])
+		_, _ = fmt.Fprintf(c.Stdout, "Workload %s deleted\n", args[1])
 		return nil
 	default:
 		return fmt.Errorf("unknown workloads command: %s", args[0])
@@ -847,11 +847,11 @@ func (c *CLI) runAPIKeys(ctx context.Context, args []string) error {
 			return err
 		}
 		return c.printOutput(resp.Msg, func(w io.Writer) error {
-			fmt.Fprintf(w, "API Key Created:\n")
-			fmt.Fprintf(w, "  ID:     %s\n", resp.Msg.ApiKey.Id)
-			fmt.Fprintf(w, "  Name:   %s\n", resp.Msg.ApiKey.Name)
-			fmt.Fprintf(w, "  Secret: %s\n", resp.Msg.Secret)
-			fmt.Fprintf(w, "\nImportant: Save this secret key now. It will not be shown again.\n")
+			_, _ = fmt.Fprintf(w, "API Key Created:\n")
+			_, _ = fmt.Fprintf(w, "  ID:     %s\n", resp.Msg.ApiKey.Id)
+			_, _ = fmt.Fprintf(w, "  Name:   %s\n", resp.Msg.ApiKey.Name)
+			_, _ = fmt.Fprintf(w, "  Secret: %s\n", resp.Msg.Secret)
+			_, _ = fmt.Fprintf(w, "\nImportant: Save this secret key now. It will not be shown again.\n")
 			return nil
 		})
 	case "revoke":
@@ -862,7 +862,7 @@ func (c *CLI) runAPIKeys(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.Stdout, "API key %s revoked\n", args[1])
+		_, _ = fmt.Fprintf(c.Stdout, "API key %s revoked\n", args[1])
 		return nil
 	default:
 		return fmt.Errorf("unknown apikeys command: %s", args[0])
@@ -917,13 +917,13 @@ func (c *CLI) runAudit(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Event, func(w io.Writer) error {
 			e := resp.Msg.Event
-			fmt.Fprintf(w, "Audit Event: %s\n", e.Id)
-			fmt.Fprintf(w, "  Action:    %s\n", e.Action)
-			fmt.Fprintf(w, "  Actor:     %s\n", e.ActorUserId)
-			fmt.Fprintf(w, "  Result:    %s\n", e.Result)
-			fmt.Fprintf(w, "  Resource:  %s (%s)\n", e.ResourceId, e.ResourceType)
+			_, _ = fmt.Fprintf(w, "Audit Event: %s\n", e.Id)
+			_, _ = fmt.Fprintf(w, "  Action:    %s\n", e.Action)
+			_, _ = fmt.Fprintf(w, "  Actor:     %s\n", e.ActorUserId)
+			_, _ = fmt.Fprintf(w, "  Result:    %s\n", e.Result)
+			_, _ = fmt.Fprintf(w, "  Resource:  %s (%s)\n", e.ResourceId, e.ResourceType)
 			if e.DetailJson != "" {
-				fmt.Fprintf(w, "  Detail:    %s\n", e.DetailJson)
+				_, _ = fmt.Fprintf(w, "  Detail:    %s\n", e.DetailJson)
 			}
 			return nil
 		})
