@@ -11,14 +11,14 @@
 
 	auth.init();
 
-	const PUBLIC_PATHS = new Set(['/sign-in', '/not-configured']);
+	const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/not-configured']);
 
 	const pathname = $derived(page.url.pathname);
 
 	$effect(() => {
 		const path = pathname;
 		if (PUBLIC_PATHS.has(path)) {
-			if (auth.signedIn && path === '/sign-in') {
+			if (auth.signedIn && (path === '/sign-in' || path === '/sign-up')) {
 				void goto('/', { replaceState: true });
 			}
 			return;

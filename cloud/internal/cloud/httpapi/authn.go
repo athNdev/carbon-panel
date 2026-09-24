@@ -9,6 +9,7 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
+	"github.com/google/uuid"
 )
 
 // AuthOptions wires the authentication interceptor. A nil Verifier disables
@@ -167,15 +168,48 @@ func (i *authInterceptor) bySession(ctx context.Context, raw string) (principal.
 		if err := i.opts.Store.Unscoped().WithContext(ctx).
 			Where("clerk_org_id = ? OR id = ?", claims.OrgID, claims.OrgID).First(&org).Error; err == nil {
 			p.OrgID = org.ID
+		} else {
+			// Auto-link unlinked default organization if present
+			var defOrg db.Org
+			if err := i.opts.Store.Unscoped().WithContext(ctx).
+				Where("slug = ? AND (clerk_org_id IS NULL OR clerk_org_id = '')", "default").First(&defOrg).Error; err == nil {
+				clerkID := claims.OrgID
+				defOrg.ClerkOrgID = &clerkID
+				_ = i.opts.Store.Unscoped().WithContext(ctx).Save(&defOrg)
+				org = defOrg
+				p.OrgID = org.ID
+			}
+		}
+
+		if p.OrgID != "" {
 			var member db.Member
 			if err := i.opts.Store.Unscoped().WithContext(ctx).
-				Where("org_id = ? AND user_id = ?", org.ID, claims.Subject).
+				Where("org_id = ? AND user_id = ?", p.OrgID, claims.Subject).
 				First(&member).Error; err == nil {
 				if member.Role != "" {
 					p.Role = member.Role
 				}
 				if member.Email != "" {
 					p.Email = member.Email
+				}
+			} else {
+				var count int64
+				_ = i.opts.Store.Unscoped().WithContext(ctx).Model(&db.Member{}).Where("org_id = ?", p.OrgID).Count(&count).Error
+				if count == 0 {
+					m := db.Member{
+						TenantBase:  db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
+						UserID:      claims.Subject,
+						Email:       claims.Email,
+						DisplayName: claims.Email,
+						Role:        "owner",
+						Status:      "active",
+					}
+					if err := i.opts.Store.Unscoped().WithContext(ctx).Create(&m).Error; err == nil {
+						p.Role = m.Role
+						if m.Email != "" {
+							p.Email = m.Email
+						}
+					}
 				}
 			}
 		}

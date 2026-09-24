@@ -237,6 +237,19 @@ func serve(configPath string, stderr io.Writer) error {
 		return fmt.Errorf("seed: %w", err)
 	}
 
+	// Ensure default organization exists
+	var orgCount int64
+	if err := store.DB().Model(&db.Org{}).Count(&orgCount).Error; err == nil && orgCount == 0 {
+		defOrg := db.Org{
+			ID:   uuid.NewString(),
+			Name: "Default Organization",
+			Slug: "default",
+		}
+		if err := store.DB().Create(&defOrg).Error; err == nil {
+			logger.Info("seeded bootstrap default organization", "org_id", defOrg.ID)
+		}
+	}
+
 	secProvider, err := secrets.FromConfig(cfg.Secrets)
 	if err != nil {
 		return fmt.Errorf("secrets: %w", err)
@@ -312,6 +325,7 @@ func serve(configPath string, stderr io.Writer) error {
 		Billing:         billingEnforcer,
 		Notifier:        notifier,
 		Outbox:          outbox,
+		Secrets:         secProvider,
 		ControlPlaneURL: cfg.Server.PublicURL,
 		Version:         version,
 		Commit:          commit,

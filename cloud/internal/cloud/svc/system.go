@@ -20,10 +20,21 @@ type SystemService struct {
 func (s *SystemService) GetCapabilities(ctx context.Context, req *connect.Request[v1.GetCapabilitiesRequest]) (*connect.Response[v1.GetCapabilitiesResponse], error) {
 	caps := make([]*v1.Capability, 0, len(keys.Capabilities()))
 	for _, c := range keys.Capabilities() {
+		reqKeys := keys.RequiredFor(c)
+		enabled := len(reqKeys) > 0 && s.deps.Secrets != nil
+		if enabled {
+			for _, k := range reqKeys {
+				val, err := s.deps.Secrets.Get(ctx, k)
+				if err != nil || val == "" || keys.LooksLikePlaceholder(val) {
+					enabled = false
+					break
+				}
+			}
+		}
 		caps = append(caps, &v1.Capability{
 			Id:           c,
-			Enabled:      false,
-			RequiredKeys: keys.RequiredFor(c),
+			Enabled:      enabled,
+			RequiredKeys: reqKeys,
 		})
 	}
 	return connect.NewResponse(&v1.GetCapabilitiesResponse{Capabilities: caps}), nil

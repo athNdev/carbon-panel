@@ -1,11 +1,11 @@
 package svc
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
@@ -13,13 +13,13 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/secrets"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Build metadata, assigned by cloudcontrold at startup (ldflags or direct
-// assignment). Defaults keep local builds and tests working operations.
 var (
+	// Version, Commit, BuildTime are set via -ldflags during build.
 	Version   = "dev"
 	Commit    = "unknown"
 	BuildTime = "unknown"
@@ -37,6 +37,7 @@ type Deps struct {
 	Billing    *billing.QuotaEnforcer
 	Notifier   *notify.Dispatcher
 	Outbox     *notify.Outbox
+	Secrets    secrets.Provider
 	// ControlPlaneURL is advertised to agents (join command, endpoints).
 	// Empty means join commands use a relative reference.
 	ControlPlaneURL string
@@ -61,34 +62,43 @@ type Services struct {
 	Agent     *AgentService
 }
 
-// New builds every service implementation from deps. It fails when required
-// deps are missing so miswiring is a boot error, never a runtime nil panic.
-func New(d Deps) (*Services, error) {
-	if d.Store == nil {
-		return nil, connect.NewError(connect.CodeInternal, errNoStore)
+// New constructs the service suite from its dependencies. Store and Nodes are
+// mandatory; catalog, joins, audits, billing, and notifier fall back to
+// harmless no-ops or empty stores where applicable.
+func New(deps Deps) (*Services, error) {
+	if deps.Store == nil {
+		return nil, errors.New("svc: store is required")
 	}
-	if d.Nodes == nil || d.JoinTokens == nil {
-		return nil, connect.NewError(connect.CodeInternal, errNoNode)
+	if deps.Nodes == nil {
+		return nil, errors.New("svc: nodes service is required")
 	}
-	if d.Catalog == nil {
-		return nil, connect.NewError(connect.CodeInternal, errNoCatalog)
+	if deps.Catalog == nil {
+		deps.Catalog = nodetype.NewCatalog(deps.Store)
 	}
-	if d.Audits == nil {
-		return nil, connect.NewError(connect.CodeInternal, errNoAudit)
+	if deps.JoinTokens == nil {
+		deps.JoinTokens = node.NewJoinTokenService(node.Deps{Store: deps.Store})
 	}
+	if deps.Audits == nil {
+		deps.Audits = audit.NewGormStore(deps.Store)
+	}
+
 	return &Services{
-		System:    &SystemService{deps: d},
-		Org:       &OrgService{deps: d},
-		Role:      &RoleService{deps: d},
-		NodeType:  &NodeTypeService{deps: d},
-		Node:      &NodeService{deps: d},
-		APIKey:    &APIKeyService{deps: d},
-		Session:   &SessionService{deps: d},
-		Audit:     &AuditService{deps: d},
-		Provision: &ProvisionService{deps: d},
-		Workload:  &WorkloadService{deps: d},
-		Agent:     &AgentService{deps: d},
+		System:    &SystemService{deps: deps},
+		Org:       &OrgService{deps: deps},
+		Role:      &RoleService{deps: deps},
+		NodeType:  &NodeTypeService{deps: deps},
+		Node:      &NodeService{deps: deps},
+		APIKey:    &APIKeyService{deps: deps},
+		Session:   &SessionService{deps: deps},
+		Audit:     &AuditService{deps: deps},
+		Provision: &ProvisionService{deps: deps},
+		Workload:  &WorkloadService{deps: deps},
+		Agent:     &AgentService{deps: deps},
 	}, nil
+}
+
+func (s *Services) Close() error {
+	return nil
 }
 
 // --- shared helpers ---
@@ -155,7 +165,7 @@ func slugify(name string) string {
 		s = strings.ReplaceAll(s, "--", "-")
 	}
 	if s == "" {
-		return "org"
+		s = "org"
 	}
 	return s
 }

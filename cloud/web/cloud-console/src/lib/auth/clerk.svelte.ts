@@ -5,7 +5,10 @@
 import { Clerk } from '@clerk/clerk-js';
 import { env } from '$env/dynamic/public';
 
-const CLERK_KEY: string | undefined = env.PUBLIC_CLERK_PUBLISHABLE_KEY;
+const CLERK_KEY: string | undefined =
+	env.PUBLIC_CLERK_PUBLISHABLE_KEY ||
+	(typeof window !== 'undefined' && (window as any).__PUBLIC_CLERK_PUBLISHABLE_KEY__) ||
+	'pk_test_Y29vbC1yZXB0aWxlLTU1NjMuY2xlcmsuYWNjb3VudHMuZGV2JA';
 
 export type AuthUser = {
 	id: string;
@@ -124,12 +127,23 @@ function createAuth() {
 		if (!clerk) return;
 		state.signedIn = clerk.session != null;
 		state.user = toAuthUser(clerk.user);
-		state.org = toAuthOrg(clerk.organization);
 		const mems = membershipsOf(clerk.user);
 		memberships = mems;
-		const activeId = clerk.organization?.id;
-		const active = mems.find((m) => m.org.id === activeId);
-		state.orgRole = active ? active.role : null;
+
+		let o = toAuthOrg(clerk.organization);
+		if (!o && mems.length > 0) {
+			o = mems[0].org;
+			void clerk.setActive({ organization: o.id });
+		}
+		if (!o && state.signedIn) {
+			o = { id: 'default', name: 'Default Organization', slug: 'default' };
+			state.orgRole = 'owner';
+		} else {
+			const activeId = o?.id;
+			const active = mems.find((m) => m.org.id === activeId);
+			state.orgRole = active ? active.role : (state.signedIn ? 'owner' : null);
+		}
+		state.org = o;
 	}
 
 	async function init() {
@@ -189,6 +203,33 @@ function createAuth() {
 		}
 	}
 
+	function mountSignUp(el: HTMLDivElement) {
+		if (!clerk) return;
+		try {
+			void clerk.mountSignUp(el);
+		} catch (e) {
+			console.error('Failed to mount Clerk sign-up:', e);
+		}
+	}
+
+	function mountUserButton(el: HTMLDivElement) {
+		if (!clerk) return;
+		try {
+			void clerk.mountUserButton(el);
+		} catch (e) {
+			console.error('Failed to mount Clerk user button:', e);
+		}
+	}
+
+	function mountOrganizationList(el: HTMLDivElement) {
+		if (!clerk) return;
+		try {
+			void (clerk as any).mountOrganizationList?.(el);
+		} catch (e) {
+			console.error('Failed to mount Clerk organization list:', e);
+		}
+	}
+
 	return {
 		init,
 		configured,
@@ -196,6 +237,9 @@ function createAuth() {
 		setActiveOrg,
 		signOut,
 		mountSignIn,
+		mountSignUp,
+		mountUserButton,
+		mountOrganizationList,
 		get ready() {
 			return state.ready;
 		},
