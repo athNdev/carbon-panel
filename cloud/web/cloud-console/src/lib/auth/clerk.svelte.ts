@@ -3,6 +3,7 @@
 //   app into a "not configured" state instead of crashing.
 // - Exposes the session token and active organization for API calls.
 import { Clerk } from '@clerk/clerk-js';
+import { dark } from '@clerk/themes';
 import { env } from '$env/dynamic/public';
 
 const CLERK_KEY: string | undefined =
@@ -60,57 +61,72 @@ export function normalizeRole(role: string | null | undefined): string {
 		case 'org:billing':
 		case 'billing':
 			return 'billing';
+		case 'viewer':
 		default:
 			return 'viewer';
 	}
 }
 
-function toAuthUser(clerkUser: unknown): AuthUser | null {
-	const u = clerkUser as {
-		id?: string;
-		primaryEmailAddress?: { emailAddress?: string } | null;
-		fullName?: string | null;
-		username?: string | null;
-		imageUrl?: string;
-	} | null;
-	if (!u) return null;
+function toAuthUser(raw: any): AuthUser | null {
+	if (!raw) return null;
+	const email =
+		raw.primaryEmailAddress?.emailAddress ??
+		(Array.isArray(raw.emailAddresses) && raw.emailAddresses[0]?.emailAddress) ??
+		null;
+	const name =
+		raw.fullName ||
+		[raw.firstName, raw.lastName].filter(Boolean).join(' ') ||
+		email ||
+		raw.id;
 	return {
-		id: u.id ?? '',
-		email: u.primaryEmailAddress?.emailAddress ?? null,
-		name: u.fullName || u.username || null,
-		imageUrl: u.imageUrl ?? null
+		id: raw.id,
+		email,
+		name,
+		imageUrl: raw.imageUrl ?? null
 	};
 }
 
-function toAuthOrg(org: unknown): AuthOrg | null {
-	const o = org as { id?: string; name?: string; slug?: string | null } | null;
-	if (!o) return null;
-	return { id: o.id ?? '', name: o.name ?? '', slug: o.slug ?? null };
+function toAuthOrg(raw: any): AuthOrg | null {
+	if (!raw) return null;
+	return {
+		id: raw.id,
+		name: raw.name ?? 'Organization',
+		slug: raw.slug ?? null
+	};
 }
 
-function membershipsOf(clerkUser: unknown): Array<{ org: AuthOrg; role: string }> {
-	const u = clerkUser as {
-		organizationMemberships?: Array<{
-			role?: string;
-			organization?: { id?: string; name?: string; slug?: string | null };
-		}>;
-	} | null;
-	const raw = u?.organizationMemberships ?? [];
-	const out: Array<{ org: AuthOrg; role: string }> = [];
-	for (const m of raw) {
-		const org = toAuthOrg(m.organization);
-		if (org) out.push({ org, role: normalizeRole(m.role) });
-	}
-	return out;
+function membershipsOf(user: any): AuthMembership[] {
+	if (!user || !Array.isArray(user.organizationMemberships)) return [];
+	return user.organizationMemberships
+		.map((m: any) => {
+			if (!m || !m.organization) return null;
+			return {
+				org: toAuthOrg(m.organization)!,
+				role: normalizeRole(m.role)
+			};
+		})
+		.filter((m: any): m is AuthMembership => m !== null);
 }
+
+const clerkAppearance = {
+	baseTheme: dark,
+	variables: {
+		colorPrimary: '#0f62fe',
+		colorBackground: '#161616',
+		colorInputBackground: '#262626',
+		colorInputText: '#f4f4f4',
+		colorText: '#f4f4f4',
+		borderRadius: '0px'
+	}
+};
 
 function createAuth() {
-	const configured = Boolean(CLERK_KEY);
+	const configured = Boolean(CLERK_KEY && CLERK_KEY.length > 0);
 	let clerk: Clerk | null = null;
-	let initStarted = false;
+	let initPromise: Promise<void> | null = null;
 
 	const state = $state<AuthState>({
-		ready: !configured,
+		ready: false,
 		signedIn: false,
 		configured,
 		notConfigured: !configured,
@@ -146,28 +162,36 @@ function createAuth() {
 		state.org = o;
 	}
 
-	async function init() {
-		if (initStarted) return;
-		initStarted = true;
-		if (!configured) return;
-		try {
-			const c = new Clerk(CLERK_KEY as string);
-			await c.load();
-			clerk = c;
-			c.addListener(() => syncFromClerk());
-			syncFromClerk();
-			state.initFailed = false;
-		} catch (e) {
-			console.error('Clerk failed to initialize:', e);
-			state.initFailed = true;
-			initError = e instanceof Error ? e.message : String(e);
-		} finally {
+	async function init(): Promise<void> {
+		if (initPromise) return initPromise;
+		if (!configured) {
 			state.ready = true;
+			return;
 		}
+		initPromise = (async () => {
+			try {
+				const c = new Clerk(CLERK_KEY as string);
+				await c.load({
+					appearance: clerkAppearance
+				});
+				clerk = c;
+				c.addListener(() => syncFromClerk());
+				syncFromClerk();
+				state.initFailed = false;
+			} catch (e) {
+				console.error('Clerk failed to initialize:', e);
+				state.initFailed = true;
+				initError = e instanceof Error ? e.message : String(e);
+			} finally {
+				state.ready = true;
+			}
+		})();
+		return initPromise;
 	}
 
 	async function token(): Promise<string | null> {
 		try {
+			await init();
 			const t = await clerk?.session?.getToken();
 			return t ?? null;
 		} catch {
@@ -176,6 +200,7 @@ function createAuth() {
 	}
 
 	async function setActiveOrg(id: string) {
+		await init();
 		if (!clerk) return;
 		try {
 			await clerk.setActive({ organization: id });
@@ -186,6 +211,7 @@ function createAuth() {
 	}
 
 	async function signOut() {
+		await init();
 		try {
 			await clerk?.signOut();
 			syncFromClerk();
@@ -194,79 +220,72 @@ function createAuth() {
 		}
 	}
 
-	function mountSignIn(el: HTMLDivElement) {
-		if (!clerk) return;
+	async function mountSignIn(el: HTMLDivElement) {
+		await init();
+		if (!clerk || !el) return;
 		try {
-			void clerk.mountSignIn(el);
+			void clerk.mountSignIn(el, {
+				appearance: clerkAppearance
+			});
 		} catch (e) {
 			console.error('Failed to mount Clerk sign-in:', e);
 		}
 	}
 
-	function mountSignUp(el: HTMLDivElement) {
-		if (!clerk) return;
+	async function mountSignUp(el: HTMLDivElement) {
+		await init();
+		if (!clerk || !el) return;
 		try {
-			void clerk.mountSignUp(el);
+			void clerk.mountSignUp(el, {
+				appearance: clerkAppearance
+			});
 		} catch (e) {
 			console.error('Failed to mount Clerk sign-up:', e);
 		}
 	}
 
-	function mountUserButton(el: HTMLDivElement) {
-		if (!clerk) return;
+	async function mountUserButton(el: HTMLDivElement) {
+		await init();
+		if (!clerk || !el) return;
 		try {
-			void clerk.mountUserButton(el);
+			void clerk.mountUserButton(el, {
+				appearance: clerkAppearance
+			});
 		} catch (e) {
 			console.error('Failed to mount Clerk user button:', e);
 		}
 	}
 
-	function mountOrganizationList(el: HTMLDivElement) {
-		if (!clerk) return;
+	async function mountOrganizationSwitcher(el: HTMLDivElement) {
+		await init();
+		if (!clerk || !el) return;
 		try {
-			void (clerk as any).mountOrganizationList?.(el);
+			void clerk.mountOrganizationSwitcher(el, {
+				appearance: clerkAppearance
+			});
 		} catch (e) {
-			console.error('Failed to mount Clerk organization list:', e);
+			console.error('Failed to mount Clerk org switcher:', e);
 		}
 	}
 
 	return {
+		get state() {
+			return state;
+		},
+		get memberships() {
+			return memberships;
+		},
+		get initError() {
+			return initError;
+		},
 		init,
-		configured,
 		token,
 		setActiveOrg,
 		signOut,
 		mountSignIn,
 		mountSignUp,
 		mountUserButton,
-		mountOrganizationList,
-		get ready() {
-			return state.ready;
-		},
-		get signedIn() {
-			return state.signedIn;
-		},
-		get notConfigured() {
-			return state.notConfigured;
-		},
-		get initFailed() {
-			return state.initFailed;
-		},
-		get initError() {
-			return initError;
-		},
-		get user() {
-			return state.user;
-		},
-		get org() {
-			return state.org;
-		},
-		get orgRole() {
-			return state.orgRole;
-		},
-		get memberships() {
-			return memberships;
-		}
+		mountOrganizationSwitcher
 	};
 }
 

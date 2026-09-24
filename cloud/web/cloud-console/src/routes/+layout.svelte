@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -14,6 +15,7 @@
 	const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/not-configured']);
 
 	const pathname = $derived(page.url.pathname);
+	const isPublic = $derived(PUBLIC_PATHS.has(pathname));
 
 	$effect(() => {
 		const path = pathname;
@@ -35,7 +37,9 @@
 	<AppShell>{@render inner()}</AppShell>
 {/snippet}
 
-{#if !auth.ready && !auth.notConfigured}
+{#if isPublic}
+	{@render children()}
+{:else if !auth.ready && !auth.notConfigured}
 	<div class="flex min-h-screen items-center justify-center bg-background text-foreground">
 		<p class="animate-pulse text-sm text-muted-foreground">Loading…</p>
 	</div>

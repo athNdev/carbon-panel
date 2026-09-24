@@ -26,6 +26,7 @@
 	"dependencies": {
 		"@bufbuild/protobuf": "^2.10.0",
 		"@clerk/clerk-js": "^5.0.0",
+		"@clerk/themes": "^2.4.57",
 		"@connectrpc/connect": "^2.1.0",
 		"@connectrpc/connect-web": "^2.1.0"
 	}
