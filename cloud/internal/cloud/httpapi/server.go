@@ -69,11 +69,7 @@ func New(o Options) (*Server, error) {
 	if o.Logger == nil {
 		o.Logger = slog.Default()
 	}
-	if o.Version != "" {
-		// The build-info RPC reads the same package vars the binary sets
-		// via ldflags; the served version is the source of truth.
-		svc.Version = o.Version
-	}
+
 	s := &Server{opts: o, mux: http.NewServeMux(), started: time.Now().UTC(), metrics: o.Metrics}
 	s.routes()
 	return s, nil

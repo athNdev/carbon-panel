@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -272,6 +273,16 @@ func (s *OrgService) InviteMember(ctx context.Context, req *connect.Request[v1.I
 				"role":          m.Role,
 			},
 		})
+	}
+
+	if s.deps.Outbox != nil {
+		s.deps.Outbox.Enqueue(
+			m.OrgID,
+			m.Email,
+			"Invitation to join organization",
+			fmt.Sprintf("You have been invited to join organization %s as a %s.", m.OrgID, m.Role),
+			fmt.Sprintf("<p>You have been invited to join organization <strong>%s</strong> as a <strong>%s</strong>.</p>", m.OrgID, m.Role),
+		)
 	}
 
 	return connect.NewResponse(&v1.InviteMemberResponse{Invitation: invitedToProto(m)}), nil

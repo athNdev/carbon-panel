@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -69,12 +70,21 @@ func TestIdentityPersistence(t *testing.T) {
 
 type fakeAgentHandler struct {
 	cloudv1connect.UnimplementedAgentServiceHandler
+	mu         sync.Mutex
 	joined     bool
 	heartbeats int
 }
 
+func (f *fakeAgentHandler) getHeartbeats() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.heartbeats
+}
+
 func (f *fakeAgentHandler) JoinNode(ctx context.Context, req *connect.Request[v1.JoinNodeRequest]) (*connect.Response[v1.JoinNodeResponse], error) {
+	f.mu.Lock()
 	f.joined = true
+	f.mu.Unlock()
 	return connect.NewResponse(&v1.JoinNodeResponse{
 		Identity: &v1.NodeIdentity{
 			NodeId:                   "node_test_01",
@@ -106,7 +116,9 @@ func (f *fakeAgentHandler) Connect(ctx context.Context, stream *connect.BidiStre
 			})
 		case *v1.AgentMessage_Heartbeat:
 			if payload.Heartbeat.NodeId == "node_test_01" {
+				f.mu.Lock()
 				f.heartbeats++
+				f.mu.Unlock()
 			}
 		}
 	}
@@ -144,7 +156,7 @@ func TestAgentLoop_JoinAndConnect(t *testing.T) {
 		connected := state.connected
 		joined := state.identity != nil
 		state.mu.RUnlock()
-		if joined && connected && fake.heartbeats > 0 {
+		if joined && connected && fake.getHeartbeats() > 0 {
 			break
 		}
 		time.Sleep(50 * time.Millisecond)

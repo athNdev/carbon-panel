@@ -34,6 +34,7 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/obs"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/provision"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/rbac"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/reconcile"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/secrets"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/svc"
 )
@@ -182,8 +183,19 @@ func serve(configPath string, stderr io.Writer) error {
 
 	billingEnforcer := billing.NewQuotaEnforcer(billing.NewCatalog())
 	notifier := notify.NewDispatcher(nil)
+	outbox := notify.NewOutbox(nil)
 
-	svc.Version, svc.Commit, svc.BuildTime = version, commit, buildTime
+	reconciler := reconcile.New(reconcile.Options{
+		Store:    store,
+		Notifier: notifier,
+		Outbox:   outbox,
+		Logger:   logger,
+	})
+
+	recCtx, stopRec := context.WithCancel(context.Background())
+	defer stopRec()
+	go reconciler.Run(recCtx, 15*time.Second)
+
 	services, err := svc.New(svc.Deps{
 		Store:           store,
 		Nodes:           nodes,
@@ -193,7 +205,11 @@ func serve(configPath string, stderr io.Writer) error {
 		Audits:          audits,
 		Billing:         billingEnforcer,
 		Notifier:        notifier,
+		Outbox:          outbox,
 		ControlPlaneURL: cfg.Server.PublicURL,
+		Version:         version,
+		Commit:          commit,
+		BuildTime:       buildTime,
 	})
 	if err != nil {
 		return fmt.Errorf("services: %w", err)

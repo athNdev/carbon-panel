@@ -40,6 +40,7 @@ func testServer(t *testing.T) (*Server, *db.Store) {
 		JoinTokens: node.NewJoinTokenService(ndeps),
 		Catalog:    catalog,
 		Audits:     audit.NewGormStore(store),
+		Version:    "test-9.9.9",
 	})
 	if err != nil {
 		t.Fatalf("services: %v", err)

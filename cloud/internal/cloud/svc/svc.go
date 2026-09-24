@@ -36,9 +36,14 @@ type Deps struct {
 	Audits     audit.Store
 	Billing    *billing.QuotaEnforcer
 	Notifier   *notify.Dispatcher
+	Outbox     *notify.Outbox
 	// ControlPlaneURL is advertised to agents (join command, endpoints).
 	// Empty means join commands use a relative reference.
 	ControlPlaneURL string
+	// Version, Commit, and BuildTime override the package-level build metadata.
+	Version   string
+	Commit    string
+	BuildTime string
 }
 
 // Services holds one implementation per Connect service.

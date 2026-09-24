@@ -29,13 +29,25 @@ func (s *SystemService) GetCapabilities(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(&v1.GetCapabilitiesResponse{Capabilities: caps}), nil
 }
 
-// GetBuildInfo returns build and runtime metadata from package vars.
+// GetBuildInfo returns build and runtime metadata from deps (or package vars fallback).
 func (s *SystemService) GetBuildInfo(ctx context.Context, req *connect.Request[v1.GetBuildInfoRequest]) (*connect.Response[v1.GetBuildInfoResponse], error) {
+	ver := s.deps.Version
+	if ver == "" {
+		ver = Version
+	}
+	com := s.deps.Commit
+	if com == "" {
+		com = Commit
+	}
+	bt := s.deps.BuildTime
+	if bt == "" {
+		bt = BuildTime
+	}
 	return connect.NewResponse(&v1.GetBuildInfoResponse{
 		Build: &v1.BuildInfo{
-			Version:   Version,
-			Commit:    Commit,
-			BuildTime: BuildTime,
+			Version:   ver,
+			Commit:    com,
+			BuildTime: bt,
 			GoVersion: runtime.Version(),
 		},
 	}), nil

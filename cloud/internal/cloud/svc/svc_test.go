@@ -75,8 +75,10 @@ func orgCtx() context.Context {
 
 func TestSystemBuildInfo(t *testing.T) {
 	t.Parallel()
-	svcs := testBundle(t)
-	Version, Commit = "test-1.2.3", "abc123"
+	svcs, _ := testBundleCustom(t, func(d *Deps) {
+		d.Version = "test-1.2.3"
+		d.Commit = "abc123"
+	})
 	resp, err := svcs.System.GetBuildInfo(sysCtx(), connect.NewRequest(&v1.GetBuildInfoRequest{}))
 	if err != nil {
 		t.Fatalf("GetBuildInfo: %v", err)
