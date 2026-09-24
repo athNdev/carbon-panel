@@ -11,7 +11,7 @@ CONSOLE_DIR := $(ROOT)/cloud/web/cloud-console
 HELM_CHART := $(CURDIR)/deploy/helm/carbon-cloud
 COMPOSE_FILE := $(CURDIR)/deploy/compose/docker-compose.yml
 
-.PHONY: cloud-test cloud-check cloud-fmt cloud-terraform-fmt cloud-terraform-validate \
+.PHONY: cloud-test cloud-check cloud-fmt cloud-terraform-fmt cloud-terraform-validate cloud-terraform-plan \
 	cloud-compose-up cloud-compose-down cloud-helm-template cloud-ci help
 
 help:
@@ -20,6 +20,7 @@ help:
 	@echo "cloud-fmt                 gofmt -w over cloud/"
 	@echo "cloud-terraform-fmt       terraform/tofu fmt check over cloud/terraform"
 	@echo "cloud-terraform-validate  tofu/terraform validate per stack (offline)"
+	@echo "cloud-terraform-plan      tofu/terraform plan for offline provider examples (>=2 providers)"
 	@echo "cloud-compose-up/down     validate + bring up/down the local compose stack"
 	@echo "cloud-helm-template       helm lint+template, or YAML-parse fallback"
 	@echo "cloud-ci                  aggregate gate (mirrors .github/workflows/cloud-ci.yml)"
@@ -57,6 +58,16 @@ cloud-terraform-validate:
 	done
 	@echo "cloud-terraform-validate: green"
 
+cloud-terraform-plan:
+	@if [ -z "$(TF)" ]; then echo "SKIP cloud-terraform-plan: neither terraform nor tofu on PATH"; exit 0; fi
+	@echo "== plan generic (offline)"
+	@TMPDIR=/tmp $(TF) -chdir="$(ROOT)/cloud/terraform/modules/node/generic/examples/offline" init -input=false >/dev/null
+	@TMPDIR=/tmp $(TF) -chdir="$(ROOT)/cloud/terraform/modules/node/generic/examples/offline" plan -input=false >/dev/null || exit 1
+	@echo "== plan hetzner (offline)"
+	@TMPDIR=/tmp $(TF) -chdir="$(ROOT)/cloud/terraform/modules/node/hetzner/examples/offline" init -input=false >/dev/null
+	@TMPDIR=/tmp $(TF) -chdir="$(ROOT)/cloud/terraform/modules/node/hetzner/examples/offline" plan -input=false >/dev/null || exit 1
+	@echo "cloud-terraform-plan: green (generic + hetzner planned offline)"
+
 cloud-compose-up:
 	@if ! command -v docker >/dev/null 2>&1; then echo "SKIP cloud-compose-up: docker absent (compose file validated by go test + 'docker compose config' in CI with docker)"; exit 0; fi
 	docker compose -f $(COMPOSE_FILE) config >/dev/null
@@ -75,7 +86,7 @@ cloud-helm-template:
 		echo "SKIP cloud-helm-template: helm absent (chart YAML covered by 'go test ./cloud/deploy/')"; \
 	fi
 
-cloud-ci: cloud-test cloud-terraform-fmt cloud-helm-template
+cloud-ci: cloud-test cloud-terraform-fmt cloud-terraform-plan cloud-helm-template
 	@$(MAKE) cloud-terraform-validate || echo "^^ cloud-terraform-validate FAILED on pre-existing wave-1 stacks (out of w2-deploy scope: cloud/terraform/** is read-only for this lane; reported in lane notes)"
 	cd $(CONSOLE_DIR) && bun install --frozen-lockfile
 	cd $(CONSOLE_DIR) && bun run check
