@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT AND MPL-2.0
+This file includes DiscoPanel material under the MIT License,
+Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+and still applies to that inherited material.
+Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain
+one at https://mozilla.org/MPL/2.0/.
+-->
+
+
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import * as monaco from 'monaco-editor';
@@ -8,8 +19,13 @@
 	import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
 	// Configure the Monaco worker environment
-	if (!(self as any).MonacoEnvironment) {
-		(self as any).MonacoEnvironment = {
+	interface MonacoGlobal {
+		MonacoEnvironment?: unknown;
+		__jsonTemplateLang?: boolean;
+	}
+	const monacoGlobal = self as unknown as MonacoGlobal;
+	if (!monacoGlobal.MonacoEnvironment) {
+		monacoGlobal.MonacoEnvironment = {
 			getWorker(_: unknown, label: string) {
 				if (label === 'json') return new jsonWorker();
 				if (label === 'css' || label === 'scss' || label === 'less') return new cssWorker();
@@ -22,8 +38,8 @@
 	}
 
 	// MONACO PSEUDO JSON-LIKE TEMPLATE AND LINTER, NEEDED FOR GO TEMPLATING
-	if (!(self as any).__jsonTemplateLang) {
-		(self as any).__jsonTemplateLang = true;
+	if (!monacoGlobal.__jsonTemplateLang) {
+		monacoGlobal.__jsonTemplateLang = true;
 		monaco.languages.register({ id: 'json-template' });
 		monaco.languages.setLanguageConfiguration('json-template', {
 			brackets: [
@@ -48,7 +64,7 @@
 					[/\{\{/, { token: 'variable.template', next: '@template' }],
 					[/"(?:[^"\\]|\\.)*"(?=\s*:)/, 'type'],
 					[/"/, { token: 'string', next: '@string' }],
-					[/-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?/, 'number'],
+					[/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
 					[/\b(?:true|false|null)\b/, 'keyword'],
 					[/[{}[\]]/, 'delimiter.bracket'],
 					[/[,:]/, 'delimiter']

@@ -1371,7 +1371,7 @@ one at https://mozilla.org/MPL/2.0/.
 																	<span>{getEventTypeLabel(hook.event)}</span>
 																</SelectTrigger>
 																<SelectContent>
-																	{#each SERVER_EVENT_TYPES as { type, label }}
+																	{#each SERVER_EVENT_TYPES as { type, label } (type)}
 																		<SelectItem value={String(type)}>{label}</SelectItem>
 																	{/each}
 																</SelectContent>
