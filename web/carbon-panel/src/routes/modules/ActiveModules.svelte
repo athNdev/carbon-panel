@@ -28,7 +28,6 @@ one at https://mozilla.org/MPL/2.0/.
 		Settings,
 		Trash2,
 		Terminal,
-		Cpu,
 		Server,
 		Package,
 		RefreshCw

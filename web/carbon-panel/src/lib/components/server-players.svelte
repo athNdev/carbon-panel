@@ -132,7 +132,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
 							<td class="py-2 pr-4">{player}</td>
 							<td class="flex flex-wrap gap-2 py-2">
-								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label]}
+								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label] (cmd)}
 									<button
 										class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 										disabled={acting !== null}
