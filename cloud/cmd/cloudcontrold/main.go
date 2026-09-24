@@ -57,7 +57,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			url = args[1]
 		}
 		if err := probeHealth(url); err != nil {
-			fmt.Fprintf(stderr, "healthcheck failed: %v\n", err)
+			_, _ = fmt.Fprintf(stderr, "healthcheck failed: %v\n", err)
 			return 1
 		}
 		return 0
@@ -71,7 +71,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if err := serve(*configPath, stderr); err != nil {
-		fmt.Fprintf(stderr, "cloudcontrold fatal: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "cloudcontrold fatal: %v\n", err)
 		return 1
 	}
 	return 0

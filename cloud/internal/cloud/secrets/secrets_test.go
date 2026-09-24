@@ -22,7 +22,7 @@ func TestEnvLookup(t *testing.T) {
 }
 
 func TestEnvMissingIsNotFound(t *testing.T) {
-	os.Unsetenv("CARBONCLOUD_CLERK_SECRET_KEY")
+	_ = os.Unsetenv("CARBONCLOUD_CLERK_SECRET_KEY")
 	p := NewEnv("CARBONCLOUD_")
 	_, err := p.Get(context.Background(), keys.ClerkSecretKey)
 	require.ErrorIs(t, err, ErrNotFound)
@@ -127,7 +127,7 @@ func TestChainPrecedence(t *testing.T) {
 
 func TestResolverMissingRequire(t *testing.T) {
 	t.Setenv("CARBONCLOUD_CLERK_ISSUER", "https://issuer.example")
-	os.Unsetenv("CARBONCLOUD_NODE_CA_KEY")
+	_ = os.Unsetenv("CARBONCLOUD_NODE_CA_KEY")
 	r := NewResolver(NewEnv(""))
 
 	assert.True(t, r.Has(context.Background(), keys.ClerkIssuer))
@@ -144,7 +144,7 @@ func TestResolverMissingRequire(t *testing.T) {
 }
 
 func TestCapabilitiesClerkDisabledThenEnabled(t *testing.T) {
-	os.Unsetenv("CARBONCLOUD_CLERK_ISSUER")
+	_ = os.Unsetenv("CARBONCLOUD_CLERK_ISSUER")
 	r := NewResolver(NewEnv(""))
 	cap := r.Capability(context.Background(), keys.CapClerk)
 	assert.False(t, cap.Enabled)

@@ -69,10 +69,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 			url = strings.TrimSpace(args[1])
 		}
 		if err := probeHealth(url); err != nil {
-			fmt.Fprintf(stderr, "healthcheck: %v\n", err)
+			_, _ = fmt.Fprintf(stderr, "healthcheck: %v\n", err)
 			return 1
 		}
-		fmt.Fprintln(stdout, "ok")
+		_, _ = fmt.Fprintln(stdout, "ok")
 		return 0
 	}
 

@@ -441,7 +441,7 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 						n.Allocation.RamMb, n.Capacity.RamMb,
 						n.Allocation.CpuMillicores, int64(n.Capacity.Vcpu)*1000)
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					n.Id, n.Name, n.Status, n.Origin, n.PublicIp, alloc)
 			}
 			return tw.Flush()
@@ -520,7 +520,7 @@ func (c *CLI) runTokens(ctx context.Context, args []string) error {
 				if t.ExpiresAt != nil {
 					expires = t.ExpiresAt.AsTime().Format(time.RFC3339)
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", t.Id, t.Name, t.Origin, status, expires)
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", t.Id, t.Name, t.Origin, status, expires)
 			}
 			return tw.Flush()
 		})
@@ -577,7 +577,7 @@ func (c *CLI) runNodeTypes(ctx context.Context, args []string) error {
 		tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
 		_, _ = fmt.Fprintln(tw, "ID\tNAME\tvCPU\tRAM\tDISK\tPRICE/MO\tENABLED")
 		for _, nt := range resp.Msg.NodeTypes {
-			fmt.Fprintf(tw, "%s\t%s\t%d\t%d MB\t%d GB\t$%.2f\t%t\n",
+			_, _ = fmt.Fprintf(tw, "%s\t%s\t%d\t%d MB\t%d GB\t$%.2f\t%t\n",
 				nt.Id, nt.Name, nt.Vcpu, nt.RamMb, nt.DiskGb, nt.MonthlyPriceUsd, nt.Enabled)
 		}
 		return tw.Flush()
@@ -613,7 +613,7 @@ func (c *CLI) runProvisions(ctx context.Context, args []string) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
 			_, _ = fmt.Fprintln(tw, "ID\tPROVIDER\tREGION\tSTATUS\tNODE ID\tERROR")
 			for _, p := range resp.Msg.Provisions {
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					p.Id, p.Provider, p.Region, p.Status, p.NodeId, p.Error)
 			}
 			return tw.Flush()
@@ -731,7 +731,7 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 					alloc = fmt.Sprintf("%d MB, %d mCPU", req.MemoryMb, req.CpuMillicores)
 					version = req.MinecraftVersion
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					wl.Id, wl.Name, wl.Status, wl.NodeId, version, alloc)
 			}
 			return tw.Flush()
@@ -800,7 +800,7 @@ func (c *CLI) runAPIKeys(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.ApiKeys, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			fmt.Fprintln(tw, "ID\tNAME\tPREFIX\tPERMISSIONS\tSTATUS\tCREATED")
+			_, _ = fmt.Fprintln(tw, "ID\tNAME\tPREFIX\tPERMISSIONS\tSTATUS\tCREATED")
 			for _, k := range resp.Msg.ApiKeys {
 				status := "active"
 				if k.RevokedAt != nil {
@@ -814,7 +814,7 @@ func (c *CLI) runAPIKeys(ctx context.Context, args []string) error {
 				if perms == "" {
 					perms = "*"
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					k.Id, k.Name, k.Prefix, perms, status, created)
 			}
 			return tw.Flush()
@@ -887,7 +887,7 @@ func (c *CLI) runAudit(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Events, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			fmt.Fprintln(tw, "ID\tTIMESTAMP\tACTION\tACTOR\tSTATUS\tRESOURCE")
+			_, _ = fmt.Fprintln(tw, "ID\tTIMESTAMP\tACTION\tACTOR\tSTATUS\tRESOURCE")
 			for _, e := range resp.Msg.Events {
 				ts := ""
 				if e.CreatedAt != nil {
@@ -900,7 +900,7 @@ func (c *CLI) runAudit(ctx context.Context, args []string) error {
 				if actor == "" {
 					actor = "system"
 				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 					e.Id, ts, e.Action, actor, e.Result, e.ResourceType+":"+e.ResourceId)
 			}
 			return tw.Flush()
@@ -939,9 +939,9 @@ func (c *CLI) runOrgs(ctx context.Context, args []string) error {
 	}
 	return c.printOutput(resp.Msg.Orgs, func(w io.Writer) error {
 		tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(tw, "ID\tNAME\tSLUG\tPLAN")
+		_, _ = fmt.Fprintln(tw, "ID\tNAME\tSLUG\tPLAN")
 		for _, o := range resp.Msg.Orgs {
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
 				o.Id, o.Name, o.Slug, o.Plan)
 		}
 		return tw.Flush()
