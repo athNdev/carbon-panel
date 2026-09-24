@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,10 +11,12 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/obs"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/rbac"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/svc"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
@@ -185,5 +188,63 @@ func TestServicesRegistered(t *testing.T) {
 	}
 	if resp.Msg.Build.Version != "test-9.9.9" {
 		t.Fatalf("version must flow through the mux: %+v", resp.Msg.Build)
+	}
+}
+
+type mockVerifier struct {
+	claims auth.Claims
+}
+
+func (m *mockVerifier) Verify(ctx context.Context, raw string) (auth.Claims, error) {
+	return m.claims, nil
+}
+
+func TestPersonalUserClerkSessionAuth(t *testing.T) {
+	t.Parallel()
+	srv, store := testServer(t)
+	defOrg := db.Org{ID: "def-org-123", Name: "Default Organization", Slug: "default"}
+	if err := store.DB().Create(&defOrg).Error; err != nil {
+		t.Fatalf("create defOrg: %v", err)
+	}
+
+	mv := &mockVerifier{
+		claims: auth.Claims{
+			Subject: "user_google_123",
+			Email:   "googleuser@example.com",
+			OrgID:   "", // empty personal Clerk session
+		},
+	}
+	chain := connect.WithInterceptors(
+		AuthInterceptor(AuthOptions{Store: store, Verifier: mv}),
+		rbac.Interceptor(srv.opts.Engine, rbac.Options{}),
+	)
+	mux := http.NewServeMux()
+	mux.Handle("/cloud.v1.NodeService/ListNodes", connect.NewUnaryHandler(
+		"/cloud.v1.NodeService/ListNodes",
+		func(ctx context.Context, req *connect.Request[v1.ListNodesRequest]) (*connect.Response[v1.ListNodesResponse], error) {
+			p, ok := principal.From(ctx)
+			if !ok {
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no principal"))
+			}
+			if p.Role != "owner" || p.OrgID != "def-org-123" {
+				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("bad principal: %+v", p))
+			}
+			return connect.NewResponse(&v1.ListNodesResponse{}), nil
+		},
+		chain,
+	))
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	client := connect.NewClient[v1.ListNodesRequest, v1.ListNodesResponse](http.DefaultClient, ts.URL+"/cloud.v1.NodeService/ListNodes")
+	req := connect.NewRequest(&v1.ListNodesRequest{})
+	req.Header().Set("Authorization", "Bearer dummy-jwt")
+	req.Header().Set("X-Carbon-Org", "default")
+	res, err := client.CallUnary(context.Background(), req)
+	if err != nil {
+		t.Fatalf("expected call to succeed, got %v", err)
+	}
+	if res == nil {
+		t.Fatal("expected non-nil response")
 	}
 }

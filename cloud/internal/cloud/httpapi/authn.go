@@ -34,7 +34,7 @@ type authInterceptor struct {
 
 func (i *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		ctx, err := i.authenticate(ctx, req.Header().Get("Authorization"), req.Header().Get("X-Carbon-Node-ID"))
+		ctx, err := i.authenticate(ctx, req.Header().Get("Authorization"), req.Header().Get("X-Carbon-Node-ID"), req.Header().Get("X-Carbon-Org"))
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func (i *authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 func (i *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		var err error
-		ctx, err = i.authenticate(ctx, conn.RequestHeader().Get("Authorization"), conn.RequestHeader().Get("X-Carbon-Node-ID"))
+		ctx, err = i.authenticate(ctx, conn.RequestHeader().Get("Authorization"), conn.RequestHeader().Get("X-Carbon-Node-ID"), conn.RequestHeader().Get("X-Carbon-Org"))
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func bearerToken(header string) string {
 	return strings.TrimSpace(header)
 }
 
-func (i *authInterceptor) authenticate(ctx context.Context, header, nodeIDHeader string) (context.Context, error) {
+func (i *authInterceptor) authenticate(ctx context.Context, header, nodeIDHeader, orgHeader string) (context.Context, error) {
 	raw := bearerToken(header)
 	if strings.HasPrefix(raw, "ccn_") {
 		return i.byNode(ctx, strings.TrimPrefix(raw, "ccn_"))
@@ -90,7 +90,7 @@ func (i *authInterceptor) authenticate(ctx context.Context, header, nodeIDHeader
 		}
 		return principal.WithPrincipal(ctx, p), nil
 	}
-	p, err := i.bySession(ctx, raw)
+	p, err := i.bySession(ctx, raw, orgHeader)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errAuthFailed)
 	}
@@ -154,65 +154,124 @@ func (i *authInterceptor) byAPIKey(ctx context.Context, secret string) (principa
 	return p, nil
 }
 
-// bySession verifies a Clerk session JWT and maps the caller's Clerk org
-// onto the control-plane org. Unknown Clerk orgs leave OrgID empty so only
-// org-optional bootstrap RPCs can proceed.
-func (i *authInterceptor) bySession(ctx context.Context, raw string) (principal.Principal, error) {
+// bySession verifies a Clerk session JWT and maps the caller onto the control-plane
+// org and permissions. Unknown Clerk orgs fall back to X-Carbon-Org, existing
+// user memberships, or the bootstrap default org so single-tenant and dev sessions
+// succeed smoothly.
+func (i *authInterceptor) bySession(ctx context.Context, raw, orgHeader string) (principal.Principal, error) {
 	claims, err := i.opts.Verifier.Verify(ctx, raw)
 	if err != nil {
 		return principal.Principal{}, errAuthFailed
 	}
 	p := auth.SessionPrincipal(claims)
-	if i.opts.Store != nil && strings.TrimSpace(claims.OrgID) != "" {
-		var org db.Org
+	if i.opts.Store == nil {
+		return p, nil
+	}
+
+	var org db.Org
+	var foundOrg bool
+
+	targetOrg := strings.TrimSpace(claims.OrgID)
+	if targetOrg != "" {
 		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("clerk_org_id = ? OR id = ?", claims.OrgID, claims.OrgID).First(&org).Error; err == nil {
-			p.OrgID = org.ID
+			Where("clerk_org_id = ? OR id = ?", targetOrg, targetOrg).First(&org).Error; err == nil {
+			foundOrg = true
 		} else {
 			// Auto-link unlinked default organization if present
 			var defOrg db.Org
 			if err := i.opts.Store.Unscoped().WithContext(ctx).
 				Where("slug = ? AND (clerk_org_id IS NULL OR clerk_org_id = '')", "default").First(&defOrg).Error; err == nil {
-				clerkID := claims.OrgID
+				clerkID := targetOrg
 				defOrg.ClerkOrgID = &clerkID
 				_ = i.opts.Store.Unscoped().WithContext(ctx).Save(&defOrg)
 				org = defOrg
-				p.OrgID = org.ID
+				foundOrg = true
 			}
 		}
+	}
 
-		if p.OrgID != "" {
-			var member db.Member
+	if !foundOrg && strings.TrimSpace(orgHeader) != "" {
+		h := strings.TrimSpace(orgHeader)
+		if err := i.opts.Store.Unscoped().WithContext(ctx).
+			Where("id = ? OR slug = ? OR clerk_org_id = ?", h, h, h).First(&org).Error; err == nil {
+			foundOrg = true
+		}
+	}
+
+	if !foundOrg {
+		// Check if user has an existing membership in any org
+		var mem db.Member
+		if err := i.opts.Store.Unscoped().WithContext(ctx).
+			Where("user_id = ?", claims.Subject).First(&mem).Error; err == nil {
 			if err := i.opts.Store.Unscoped().WithContext(ctx).
-				Where("org_id = ? AND user_id = ?", p.OrgID, claims.Subject).
-				First(&member).Error; err == nil {
-				if member.Role != "" {
-					p.Role = member.Role
-				}
-				if member.Email != "" {
-					p.Email = member.Email
-				}
-			} else {
-				var count int64
-				_ = i.opts.Store.Unscoped().WithContext(ctx).Model(&db.Member{}).Where("org_id = ?", p.OrgID).Count(&count).Error
-				if count == 0 {
-					m := db.Member{
-						TenantBase:  db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
-						UserID:      claims.Subject,
-						Email:       claims.Email,
-						DisplayName: claims.Email,
-						Role:        "owner",
-						Status:      "active",
-					}
-					if err := i.opts.Store.Unscoped().WithContext(ctx).Create(&m).Error; err == nil {
-						p.Role = m.Role
-						if m.Email != "" {
-							p.Email = m.Email
-						}
-					}
+				Where("id = ?", mem.OrgID).First(&org).Error; err == nil {
+				foundOrg = true
+			}
+		}
+	}
+
+	if !foundOrg {
+		// Fallback to the default organization if it exists
+		if err := i.opts.Store.Unscoped().WithContext(ctx).
+			Where("slug = ?", "default").First(&org).Error; err == nil {
+			foundOrg = true
+		} else {
+			// Or any first organization in the system
+			if err := i.opts.Store.Unscoped().WithContext(ctx).First(&org).Error; err == nil {
+				foundOrg = true
+			}
+		}
+	}
+
+	if foundOrg {
+		p.OrgID = org.ID
+	}
+
+	if p.OrgID != "" {
+		var member db.Member
+		if err := i.opts.Store.Unscoped().WithContext(ctx).
+			Where("org_id = ? AND user_id = ?", p.OrgID, claims.Subject).
+			First(&member).Error; err == nil {
+			if member.Role != "" {
+				p.Role = member.Role
+			}
+			if member.Email != "" {
+				p.Email = member.Email
+			}
+		} else {
+			// Count existing non-bootstrap members in this organization:
+			var humanCount int64
+			_ = i.opts.Store.Unscoped().WithContext(ctx).Model(&db.Member{}).
+				Where("org_id = ? AND user_id != 'usr_bootstrap_owner'", p.OrgID).Count(&humanCount).Error
+
+			role := "operator"
+			if humanCount == 0 {
+				role = "owner"
+			}
+			if p.Role != "" && (p.Role == "owner" || p.Role == "admin") {
+				role = p.Role
+			}
+
+			displayName := claims.Email
+			if displayName == "" {
+				displayName = claims.Subject
+			}
+			m := db.Member{
+				TenantBase:  db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
+				UserID:      claims.Subject,
+				Email:       claims.Email,
+				DisplayName: displayName,
+				Role:        role,
+				Status:      "active",
+			}
+			if err := i.opts.Store.Unscoped().WithContext(ctx).Create(&m).Error; err == nil {
+				p.Role = m.Role
+				if m.Email != "" {
+					p.Email = m.Email
 				}
 			}
 		}
 	}
+
 	return p, nil
 }
