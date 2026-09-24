@@ -6,7 +6,7 @@
 		label?: string;
 		helperText?: string;
 		error?: string;
-		value?: any;
+		value?: string | number;
 		class?: string;
 		children?: Snippet;
 	}
