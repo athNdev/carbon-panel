@@ -207,6 +207,7 @@ func (d *Dispatcher) DispatchWithRetries(ctx context.Context, payload WebhookPay
 		var lastAttempt DeliveryAttempt
 		currentBackoff := initialBackoff
 
+	retryLoop:
 		for {
 			attemptCount++
 			start := time.Now()
@@ -263,7 +264,7 @@ func (d *Dispatcher) DispatchWithRetries(ctx context.Context, payload WebhookPay
 			case <-ctx.Done():
 				lastAttempt.Error = ctx.Err().Error()
 				lastAttempt.Success = false
-				break
+				break retryLoop
 			case <-time.After(currentBackoff):
 				currentBackoff *= 2
 				if currentBackoff > 2*time.Second {
