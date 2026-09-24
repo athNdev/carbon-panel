@@ -33,7 +33,7 @@ type authInterceptor struct {
 
 func (i *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		ctx, err := i.authenticate(ctx, req.Header().Get("Authorization"))
+		ctx, err := i.authenticate(ctx, req.Header().Get("Authorization"), req.Header().Get("X-Carbon-Node-ID"))
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func (i *authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 func (i *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		var err error
-		ctx, err = i.authenticate(ctx, conn.RequestHeader().Get("Authorization"))
+		ctx, err = i.authenticate(ctx, conn.RequestHeader().Get("Authorization"), conn.RequestHeader().Get("X-Carbon-Node-ID"))
 		if err != nil {
 			return err
 		}
@@ -66,8 +66,17 @@ func bearerToken(header string) string {
 	return strings.TrimSpace(header)
 }
 
-func (i *authInterceptor) authenticate(ctx context.Context, header string) (context.Context, error) {
+func (i *authInterceptor) authenticate(ctx context.Context, header, nodeIDHeader string) (context.Context, error) {
 	raw := bearerToken(header)
+	if strings.HasPrefix(raw, "ccn_") {
+		return i.byNode(ctx, strings.TrimPrefix(raw, "ccn_"))
+	}
+	if strings.HasPrefix(raw, "node:") {
+		return i.byNode(ctx, strings.TrimPrefix(raw, "node:"))
+	}
+	if nodeIDHeader != "" && raw == "" {
+		return i.byNode(ctx, nodeIDHeader)
+	}
 	if raw == "" {
 		return ctx, nil
 	}
@@ -83,6 +92,22 @@ func (i *authInterceptor) authenticate(ctx context.Context, header string) (cont
 	p, err := i.bySession(ctx, raw)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errAuthFailed)
+	}
+	return principal.WithPrincipal(ctx, p), nil
+}
+
+func (i *authInterceptor) byNode(ctx context.Context, nodeID string) (context.Context, error) {
+	if i.opts.Store == nil || strings.TrimSpace(nodeID) == "" {
+		return ctx, nil
+	}
+	var n db.Node
+	if err := i.opts.Store.Unscoped().WithContext(ctx).Where("id = ?", strings.TrimSpace(nodeID)).First(&n).Error; err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errAuthFailed)
+	}
+	p := principal.Principal{
+		Kind:   principal.KindNode,
+		NodeID: n.ID,
+		OrgID:  n.OrgID,
 	}
 	return principal.WithPrincipal(ctx, p), nil
 }

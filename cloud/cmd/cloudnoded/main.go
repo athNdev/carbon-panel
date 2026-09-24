@@ -11,7 +11,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -27,7 +27,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/net/http2"
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/config"
@@ -283,6 +282,19 @@ func saveIdentity(path string, id *PersistedIdentity) error {
 	return os.WriteFile(path, data, 0600)
 }
 
+func detectDockerVersion() string {
+	if out, err := exec.Command("docker", "version", "--format", "{{.Server.Version}}").Output(); err == nil {
+		v := strings.TrimSpace(string(out))
+		if v != "" {
+			return v
+		}
+	}
+	if out, err := exec.Command("docker", "-v").Output(); err == nil {
+		return strings.TrimSpace(string(out))
+	}
+	return "unknown"
+}
+
 func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, controlPlaneURL, joinToken, identityPath string) {
 	if controlPlaneURL == "" {
 		logger.Warn("control plane URL is empty; agent loop inactive")
@@ -347,11 +359,19 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 
 		// Connect bidirectional stream
 		stream := client.Connect(ctx)
+		stream.RequestHeader().Set("Authorization", "Bearer ccn_"+id.NodeID)
+		stream.RequestHeader().Set("X-Carbon-Node-ID", id.NodeID)
+		stream.RequestHeader().Set("X-Carbon-Org-ID", id.OrgID)
+
+		dockerVer := detectDockerVersion()
+		hostname, _ := os.Hostname()
 		hello := &v1.AgentMessage{
 			Payload: &v1.AgentMessage_Hello{
 				Hello: &v1.AgentHello{
-					NodeId:       id.NodeID,
-					AgentVersion: version,
+					NodeId:        id.NodeID,
+					AgentVersion:  version,
+					DockerVersion: dockerVer,
+					Hostname:      hostname,
 				},
 			},
 		}
@@ -368,15 +388,24 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		logger.Debug("stream welcome received", "payload", welcome.Payload)
+		logger.Info("stream welcome received", "payload", welcome.Payload)
+
+		// Send initial heartbeat immediately
+		_ = stream.Send(&v1.AgentMessage{
+			Payload: &v1.AgentMessage_Heartbeat{
+				Heartbeat: &v1.AgentHeartbeat{
+					NodeId: id.NodeID,
+				},
+			},
+		})
 
 		state.mu.Lock()
 		state.connected = true
 		state.mu.Unlock()
 
 		interval := time.Duration(id.HeartbeatIntervalSeconds) * time.Second
-		if interval <= 0 {
-			interval = 30 * time.Second
+		if interval <= 0 || interval > 10*time.Second {
+			interval = 10 * time.Second
 		}
 		ticker := time.NewTicker(interval)
 
@@ -386,6 +415,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 			for {
 				msg, err := stream.Receive()
 				if err != nil {
+					logger.Warn("stream receive closed/error", "err", err)
 					return
 				}
 				logger.Debug("received control envelope", "msg", msg)
@@ -415,6 +445,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 					ticker.Stop()
 					break streamLoop
 				}
+				logger.Info("heartbeat sent", "node_id", id.NodeID)
 			}
 		}
 
@@ -428,12 +459,11 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 }
 
 func newAgentHTTPClient() *http.Client {
+	protocols := new(http.Protocols)
+	protocols.SetUnencryptedHTTP2(true)
 	return &http.Client{
-		Transport: &http2.Transport{
-			AllowHTTP: true,
-			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-				return (&net.Dialer{}).DialContext(ctx, network, addr)
-			},
+		Transport: &http.Transport{
+			Protocols: protocols,
 		},
 	}
 }

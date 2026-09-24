@@ -4,9 +4,10 @@
 // migrations plus seeds, builds the auth verifier, RBAC engine and audit
 // store, then serves the Connect-RPC API until SIGTERM/SIGINT.
 //
-// Subcommand:
+// Subcommands:
 //
 //	cloudcontrold healthcheck [url]   probe /healthz, exit 0/1 (compose healthcheck)
+//	cloudcontrold bootstrap           seed default organization and admin API key
 package main
 
 import (
@@ -21,6 +22,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
@@ -64,6 +67,21 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
+	if len(args) > 0 && args[0] == "bootstrap" {
+		flags := flag.NewFlagSet("cloudcontrold bootstrap", flag.ContinueOnError)
+		flags.SetOutput(stderr)
+		configPath := flags.String("config", "config.yaml", "path to configuration file")
+		orgName := flags.String("org", "Default Org", "name of the default organization")
+		if err := flags.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if err := bootstrapDB(*configPath, *orgName, stdout, stderr); err != nil {
+			_, _ = fmt.Fprintf(stderr, "cloudcontrold bootstrap fatal: %v\n", err)
+			return 1
+		}
+		return 0
+	}
+
 	flags := flag.NewFlagSet("cloudcontrold", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	configPath := flags.String("config", "config.yaml", "path to configuration file")
@@ -76,6 +94,94 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// bootstrapDB initializes the database with a default organization and full-permission API key.
+func bootstrapDB(configPath, orgName string, stdout, stderr io.Writer) error {
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	store, err := db.Open(db.Options{
+		Driver:          cfg.Database.Driver,
+		DSN:             cfg.Database.URL,
+		MaxOpenConns:    cfg.Database.MaxOpenConns,
+		MaxIdleConns:    cfg.Database.MaxIdleConns,
+		ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
+	})
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	if err := store.Migrate(); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	ctx := context.Background()
+	if err := store.SeedDefaults(ctx); err != nil {
+		return fmt.Errorf("seed: %w", err)
+	}
+
+	// 1. Check or create Org
+	var org db.Org
+	slug := "default"
+	if err := store.DB().Where("slug = ?", slug).First(&org).Error; err != nil {
+		org = db.Org{
+			ID:   uuid.NewString(),
+			Name: orgName,
+			Slug: slug,
+		}
+		if err := store.DB().Create(&org).Error; err != nil {
+			return fmt.Errorf("create org: %w", err)
+		}
+	}
+
+	// 2. Check or create Owner Member
+	var member db.Member
+	userID := "usr_bootstrap_owner"
+	if err := store.DB().Where("org_id = ? AND user_id = ?", org.ID, userID).First(&member).Error; err != nil {
+		member = db.Member{
+			TenantBase:  db.TenantBase{ID: uuid.NewString(), OrgID: org.ID},
+			UserID:      userID,
+			Email:       "admin@carbon.local",
+			DisplayName: "Default Admin",
+			Role:        "owner",
+			Status:      "active",
+		}
+		if err := store.DB().Create(&member).Error; err != nil {
+			return fmt.Errorf("create member: %w", err)
+		}
+	}
+
+	// 3. Generate API Key
+	secret, prefix, hash, err := auth.NewAPIKey()
+	if err != nil {
+		return fmt.Errorf("generate api key: %w", err)
+	}
+
+	var allPerms []string
+	for _, p := range rbac.Permissions() {
+		allPerms = append(allPerms, string(p))
+	}
+
+	apiKey := &db.ApiKey{
+		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: org.ID},
+		Name:       "bootstrap-admin-key",
+		Prefix:     prefix,
+		Hash:       hash,
+		CreatedBy:  member.UserID,
+	}
+	apiKey.SetPermissions(allPerms)
+
+	if err := store.DB().Create(apiKey).Error; err != nil {
+		return fmt.Errorf("create api key: %w", err)
+	}
+
+	fmt.Fprintf(stdout, "Organization ID:   %s\n", org.ID)
+	fmt.Fprintf(stdout, "Organization Name: %s\n", org.Name)
+	fmt.Fprintf(stdout, "Organization Slug: %s\n", org.Slug)
+	fmt.Fprintf(stdout, "Owner Email:       %s\n", member.Email)
+	fmt.Fprintf(stdout, "API Key:           %s\n", secret)
+	return nil
 }
 
 // probeHealth GETs url and requires HTTP 200 with a body naming status ok.
@@ -250,15 +356,10 @@ func serve(configPath string, stderr io.Writer) error {
 	protocols.SetHTTP1(true)
 	protocols.SetUnencryptedHTTP2(true)
 
-	readTimeout := cfg.Server.ReadTimeout
-	if readTimeout <= 0 {
-		readTimeout = 10 * time.Second
-	}
 	httpServer := &http.Server{
-		Handler:           srv.Handler(),
-		Protocols:         protocols,
-		ReadHeaderTimeout: readTimeout,
-		IdleTimeout:       120 * time.Second,
+		Handler:     srv.Handler(),
+		Protocols:   protocols,
+		IdleTimeout: 120 * time.Second,
 	}
 
 	stop := make(chan os.Signal, 1)

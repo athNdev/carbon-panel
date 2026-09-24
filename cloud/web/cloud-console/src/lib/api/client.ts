@@ -22,7 +22,11 @@ import { RoleService } from '$lib/proto/cloud/v1/rbac_pb';
 import { AuditService } from '$lib/proto/cloud/v1/audit_pb';
 import { SystemService } from '$lib/proto/cloud/v1/system_pb';
 
-export const API_URL: string = env.PUBLIC_API_URL || 'http://localhost:8080';
+export const API_URL: string =
+	env.PUBLIC_API_URL ||
+	(typeof window !== 'undefined'
+		? `${window.location.protocol}//${window.location.hostname}:8088`
+		: 'http://localhost:8088');
 
 /** Attach the Clerk session token and active org id to every request. */
 async function withHeaders(req: UnaryRequest | StreamRequest) {
@@ -66,39 +70,46 @@ export class ApiError extends Error {
 }
 
 /**
- * Run a client call and translate ConnectError codes into readable messages.
- * Server-provided detail is preserved for codes we do not special-case.
+ * Execute an RPC and map transport/protocol errors into human-readable ApiErrors.
+ *
+ * Special-cases:
+ *  - Unauthenticated -> "Your session has expired. Please sign in again and retry."
+ *  - PermissionDenied -> "You do not have permission for this action."
+ *  - Unavailable      -> "The Carbon Cloud API is currently unavailable..."
+ *  - NotFound         -> "The requested resource was not found."
  */
 export async function call<T>(fn: () => Promise<T>): Promise<T> {
 	try {
 		return await fn();
-	} catch (e) {
-		if (e instanceof ConnectError) {
-			switch (e.code) {
+	} catch (err: unknown) {
+		if (err instanceof ConnectError) {
+			switch (err.code) {
 				case Code.PermissionDenied:
-					throw new ApiError('You do not have permission for this action.', e.code);
+					throw new ApiError('You do not have permission for this action.', err.code);
 				case Code.Unauthenticated:
 					throw new ApiError(
 						'Your session has expired. Please sign in again and retry.',
-						e.code
+						err.code
 					);
 				case Code.Unavailable:
 					throw new ApiError(
 						'The Carbon Cloud API is currently unavailable. Please try again in a moment.',
-						e.code
+						err.code
 					);
 				case Code.NotFound:
-					throw new ApiError('The requested resource was not found.', e.code);
+					throw new ApiError('The requested resource was not found.', err.code);
 				case Code.FailedPrecondition:
 					throw new ApiError(
-						e.rawMessage || 'The request could not be completed in the current state.',
-						e.code
+						err.rawMessage || 'The request could not be completed in the current state.',
+						err.code
 					);
 				default:
-					throw new ApiError(e.rawMessage || e.message, e.code);
+					throw new ApiError(err.rawMessage || err.message, err.code);
 			}
 		}
-		if (e instanceof Error) throw e;
-		throw new ApiError(String(e));
+		if (err instanceof Error) {
+			throw new ApiError(err.message);
+		}
+		throw new ApiError(String(err));
 	}
 }

@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -114,17 +115,23 @@ func (s *AgentService) RenewCredentials(ctx context.Context, req *connect.Reques
 // Connect serves the agent bidi stream: hello→welcome, heartbeats applied
 // to the registry, workload transitions recorded, command results logged.
 func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v1.AgentMessage, v1.ControlMessage]) error {
+	slog.Info("AgentService.Connect: stream opened")
+	defer slog.Info("AgentService.Connect: stream returned")
 	for {
 		msg, err := stream.Receive()
 		if err != nil {
+			slog.Warn("AgentService.Connect: receive error", "err", err, "ctx_err", ctx.Err())
 			return err
 		}
 		switch payload := msg.Payload.(type) {
 		case *v1.AgentMessage_Hello:
+			slog.Info("AgentService.Connect: received Hello", "node_id", payload.Hello.GetNodeId())
 			if err := stream.Send(welcomeMsg(ctx, s, payload.Hello)); err != nil {
+				slog.Warn("AgentService.Connect: send welcome error", "err", err)
 				return err
 			}
 		case *v1.AgentMessage_Heartbeat:
+			slog.Info("AgentService.Connect: received Heartbeat", "node_id", payload.Heartbeat.GetNodeId())
 			s.onHeartbeat(ctx, payload.Heartbeat)
 		case *v1.AgentMessage_WorkloadStatus:
 			s.onWorkloadStatus(ctx, payload.WorkloadStatus)
@@ -144,6 +151,19 @@ func welcomeMsg(ctx context.Context, s *AgentService, hello *v1.AgentHello) *v1.
 	if hello != nil && hello.NodeId != "" {
 		if n, err := s.deps.Nodes.Get(ctx, hello.NodeId); err == nil {
 			draining = n.Draining
+		}
+		if _, err := s.deps.Nodes.Heartbeat(ctx, hello.NodeId); err == nil {
+			if n, err := s.deps.Nodes.Get(ctx, hello.NodeId); err == nil {
+				labels := n.LabelMap()
+				if hello.DockerVersion != "" {
+					labels["docker_version"] = hello.DockerVersion
+				}
+				patch := node.NodePatch{Labels: &labels}
+				if hello.Hostname != "" {
+					patch.Hostname = &hello.Hostname
+				}
+				_, _ = s.deps.Nodes.Update(ctx, hello.NodeId, patch)
+			}
 		}
 	}
 	return &v1.ControlMessage{

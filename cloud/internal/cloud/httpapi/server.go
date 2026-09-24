@@ -31,14 +31,15 @@ var RateLimit func(http.Handler) http.Handler
 // required; New fails otherwise. A nil Verifier disables Clerk session
 // JWTs (API keys still work when Store is set).
 type Options struct {
-	Store    *db.Store
-	Services *svc.Services
-	Verifier auth.Verifier
-	Engine   *rbac.Engine
-	Audits   audit.Store
-	Metrics  *obs.Metrics
-	Logger   *slog.Logger
-	Version  string
+	Store     *db.Store
+	Services  *svc.Services
+	Verifier  auth.Verifier
+	Engine    *rbac.Engine
+	Audits    audit.Store
+	Metrics   *obs.Metrics
+	Logger    *slog.Logger
+	Version   string
+	StaticDir string
 }
 
 // Server serves health, readiness, metrics and all Connect-RPC services.
@@ -75,13 +76,28 @@ func New(o Options) (*Server, error) {
 	return s, nil
 }
 
-// Handler returns the fully-wrapped mux (rate limiter outermost when set).
+// corsMiddleware sets CORS headers so web consoles can interact with the API across origins.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Expose-Headers", "*")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Handler returns the fully-wrapped mux (rate limiter outermost when set, with CORS support).
 func (s *Server) Handler() http.Handler {
 	var h http.Handler = s.mux
 	if RateLimit != nil {
 		h = RateLimit(h)
 	}
-	return h
+	return corsMiddleware(h)
 }
 
 func writeJSON(w http.ResponseWriter, code int, body string) {
