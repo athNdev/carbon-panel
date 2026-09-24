@@ -151,3 +151,97 @@ func TestWebhook_Dispatcher(t *testing.T) {
 		require.Empty(t, attempts)
 	})
 }
+
+func TestWebhook_RetriesAndDeadLetter(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if callCount <= 2 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	dispatcher := NewDispatcher(server.Client())
+	sub := &WebhookSubscription{
+		ID:        "sub_retry",
+		OrgID:     "org_1",
+		TargetURL: server.URL,
+		Secret:    "secret_123",
+		Events:    []string{"node.*"},
+		Enabled:   true,
+	}
+	dispatcher.Register(sub)
+
+	t.Run("retries transient 500 error and eventually succeeds", func(t *testing.T) {
+		callCount = 0
+		payload := WebhookPayload{
+			EventID:   "evt_retry_1",
+			EventType: "node.online",
+			OrgID:     "org_1",
+		}
+		attempts := dispatcher.DispatchWithRetries(context.Background(), payload, 3, 5*time.Millisecond)
+		require.Len(t, attempts, 1)
+		require.True(t, attempts[0].Success)
+		require.Equal(t, 200, attempts[0].StatusCode)
+		require.Equal(t, 3, callCount)
+		require.Empty(t, dispatcher.DeadLetters())
+	})
+
+	t.Run("exhausts retries on persistent failure and routes to dead letter queue", func(t *testing.T) {
+		callCount = 0
+		payload := WebhookPayload{
+			EventID:   "evt_retry_fail",
+			EventType: "node.online",
+			OrgID:     "org_1",
+		}
+		attempts := dispatcher.DispatchWithRetries(context.Background(), payload, 1, 5*time.Millisecond)
+		require.Len(t, attempts, 1)
+		require.False(t, attempts[0].Success)
+		require.Equal(t, 500, attempts[0].StatusCode)
+		require.Equal(t, 2, callCount)
+
+		dlq := dispatcher.DeadLetters()
+		require.Len(t, dlq, 1)
+		require.Equal(t, "sub_retry", dlq[0].SubscriptionID)
+		require.Equal(t, "evt_retry_fail", dlq[0].EventID)
+		require.Equal(t, 2, dlq[0].Attempts)
+		require.Contains(t, dlq[0].LastError, "HTTP status 500")
+
+		dispatcher.ClearDeadLetters()
+		require.Empty(t, dispatcher.DeadLetters())
+	})
+
+	t.Run("non-retryable client error does not retry", func(t *testing.T) {
+		clientErrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusBadRequest)
+		}))
+		defer clientErrServer.Close()
+
+		subBad := &WebhookSubscription{
+			ID:        "sub_bad",
+			OrgID:     "org_bad",
+			TargetURL: clientErrServer.URL,
+			Secret:    "secret_123",
+			Events:    []string{"node.*"},
+			Enabled:   true,
+		}
+		dispatcher.Register(subBad)
+
+		callCount = 0
+		payload := WebhookPayload{
+			EventID:   "evt_bad_req",
+			EventType: "node.online",
+			OrgID:     "org_bad",
+		}
+		attempts := dispatcher.DispatchWithRetries(context.Background(), payload, 3, 5*time.Millisecond)
+		require.Len(t, attempts, 1)
+		require.False(t, attempts[0].Success)
+		require.Equal(t, 400, attempts[0].StatusCode)
+		require.Equal(t, 1, callCount)
+		require.Len(t, dispatcher.DeadLetters(), 1)
+	})
+}

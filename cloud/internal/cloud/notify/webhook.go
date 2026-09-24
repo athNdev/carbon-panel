@@ -68,6 +68,17 @@ type DeliveryAttempt struct {
 	AttemptedAt    time.Time     `json:"attempted_at"`
 }
 
+// DeadLetter records an event delivery that permanently failed after all retry attempts.
+type DeadLetter struct {
+	SubscriptionID string    `json:"subscription_id"`
+	EventID        string    `json:"event_id"`
+	EventType      string    `json:"event_type"`
+	TargetURL      string    `json:"target_url"`
+	Attempts       int       `json:"attempts"`
+	LastError      string    `json:"last_error"`
+	FailedAt       time.Time `json:"failed_at"`
+}
+
 // SignPayload generates the HMAC-SHA256 signature string: "t=<timestamp>,v1=<hex_signature>".
 func SignPayload(secret string, timestamp int64, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -124,6 +135,7 @@ type Dispatcher struct {
 	httpClient    *http.Client
 	subscriptions map[string]*WebhookSubscription // keyed by subscription ID
 	attempts      []DeliveryAttempt
+	deadLetters   []DeadLetter
 }
 
 // NewDispatcher initializes a webhook dispatcher.
@@ -151,8 +163,15 @@ func (d *Dispatcher) Unregister(id string) {
 	delete(d.subscriptions, id)
 }
 
-// Dispatch sends an event to all matching subscriptions for the event's org.
+// Dispatch sends an event to all matching subscriptions for the event's org with a single attempt.
 func (d *Dispatcher) Dispatch(ctx context.Context, payload WebhookPayload) []DeliveryAttempt {
+	return d.DispatchWithRetries(ctx, payload, 0, 0)
+}
+
+// DispatchWithRetries sends an event to all matching subscriptions for the event's org,
+// retrying transient errors (network errors, 429 Too Many Requests, and HTTP >= 500)
+// up to maxRetries times with exponential backoff. Permanently failed deliveries are recorded in DLQ.
+func (d *Dispatcher) DispatchWithRetries(ctx context.Context, payload WebhookPayload, maxRetries int, initialBackoff time.Duration) []DeliveryAttempt {
 	d.mu.RLock()
 	var targets []*WebhookSubscription
 	for _, sub := range d.subscriptions {
@@ -175,53 +194,104 @@ func (d *Dispatcher) Dispatch(ctx context.Context, payload WebhookPayload) []Del
 		return nil
 	}
 
+	if initialBackoff <= 0 {
+		initialBackoff = 20 * time.Millisecond
+	}
+
 	var results []DeliveryAttempt
+	var deadLetters []DeadLetter
+
 	for _, target := range targets {
-		start := time.Now()
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, target.TargetURL, bytes.NewReader(body))
-		if err != nil {
-			results = append(results, DeliveryAttempt{
+		sig := SignPayload(target.Secret, payload.Timestamp, body)
+		attemptCount := 0
+		var lastAttempt DeliveryAttempt
+		currentBackoff := initialBackoff
+
+		for {
+			attemptCount++
+			start := time.Now()
+			req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, target.TargetURL, bytes.NewReader(body))
+			if reqErr != nil {
+				lastAttempt = DeliveryAttempt{
+					SubscriptionID: target.ID,
+					EventID:        payload.EventID,
+					Error:          reqErr.Error(),
+					AttemptedAt:    start,
+					Success:        false,
+				}
+				break
+			}
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("User-Agent", "CarbonCloud-Webhook/1.0")
+			req.Header.Set("X-Carbon-Signature-256", sig)
+
+			resp, doErr := d.httpClient.Do(req)
+			dur := time.Since(start)
+
+			lastAttempt = DeliveryAttempt{
 				SubscriptionID: target.ID,
 				EventID:        payload.EventID,
-				Error:          err.Error(),
+				Duration:       dur,
 				AttemptedAt:    start,
-			})
-			continue
-		}
+			}
 
-		sig := SignPayload(target.Secret, payload.Timestamp, body)
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", "CarbonCloud-Webhook/1.0")
-		req.Header.Set("X-Carbon-Signature-256", sig)
+			retryable := false
+			if doErr != nil {
+				lastAttempt.Error = doErr.Error()
+				lastAttempt.Success = false
+				retryable = true
+			} else {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				_ = resp.Body.Close()
+				lastAttempt.StatusCode = resp.StatusCode
+				lastAttempt.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
+				if !lastAttempt.Success {
+					lastAttempt.Error = fmt.Sprintf("HTTP status %d", resp.StatusCode)
+					if resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests {
+						retryable = true
+					}
+				}
+			}
 
-		resp, err := d.httpClient.Do(req)
-		dur := time.Since(start)
+			if lastAttempt.Success || !retryable || attemptCount > maxRetries {
+				break
+			}
 
-		attempt := DeliveryAttempt{
-			SubscriptionID: target.ID,
-			EventID:        payload.EventID,
-			Duration:       dur,
-			AttemptedAt:    start,
-		}
-
-		if err != nil {
-			attempt.Error = err.Error()
-			attempt.Success = false
-		} else {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-			attempt.StatusCode = resp.StatusCode
-			attempt.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
-			if !attempt.Success {
-				attempt.Error = fmt.Sprintf("HTTP status %d", resp.StatusCode)
+			// Backoff before retry
+			select {
+			case <-ctx.Done():
+				lastAttempt.Error = ctx.Err().Error()
+				lastAttempt.Success = false
+				break
+			case <-time.After(currentBackoff):
+				currentBackoff *= 2
+				if currentBackoff > 2*time.Second {
+					currentBackoff = 2 * time.Second
+				}
 			}
 		}
 
-		results = append(results, attempt)
+		results = append(results, lastAttempt)
+
+		if !lastAttempt.Success {
+			deadLetters = append(deadLetters, DeadLetter{
+				SubscriptionID: target.ID,
+				EventID:        payload.EventID,
+				EventType:      payload.EventType,
+				TargetURL:      target.TargetURL,
+				Attempts:       attemptCount,
+				LastError:      lastAttempt.Error,
+				FailedAt:       time.Now().UTC(),
+			})
+		}
 	}
 
 	d.mu.Lock()
 	d.attempts = append(d.attempts, results...)
+	if len(deadLetters) > 0 {
+		d.deadLetters = append(d.deadLetters, deadLetters...)
+	}
 	d.mu.Unlock()
 
 	return results
@@ -234,4 +304,20 @@ func (d *Dispatcher) RecentAttempts() []DeliveryAttempt {
 	res := make([]DeliveryAttempt, len(d.attempts))
 	copy(res, d.attempts)
 	return res
+}
+
+// DeadLetters returns recorded dead-letter deliveries that failed permanently.
+func (d *Dispatcher) DeadLetters() []DeadLetter {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	res := make([]DeadLetter, len(d.deadLetters))
+	copy(res, d.deadLetters)
+	return res
+}
+
+// ClearDeadLetters clears the dead-letter list.
+func (d *Dispatcher) ClearDeadLetters() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.deadLetters = nil
 }
