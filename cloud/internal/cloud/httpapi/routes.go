@@ -9,7 +9,7 @@ import (
 	cloudv1connect "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
 )
 
-// routes registers health, readiness, metrics and all 11 Connect services.
+// routes registers health, readiness, metrics and all 12 Connect services.
 // The interceptor chain is auth -> rbac -> audit -> handler: connect runs
 // interceptors outermost-first, so auth resolves the principal before rbac
 // evaluates policy, and the audit interceptor records mutating RPCs.
@@ -48,5 +48,7 @@ func (s *Server) routes() {
 	path, h = cloudv1connect.NewWorkloadServiceHandler(svcs.Workload, chain)
 	mount(path, h)
 	path, h = cloudv1connect.NewAgentServiceHandler(svcs.Agent, chain)
+	mount(path, h)
+	path, h = cloudv1connect.NewFileServiceHandler(svcs.File, chain)
 	mount(path, h)
 }

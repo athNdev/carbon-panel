@@ -166,10 +166,38 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 		case *v1.AgentMessage_WorkloadStatus:
 			s.onWorkloadStatus(ctx, payload.WorkloadStatus)
 		case *v1.AgentMessage_Logs:
-			// Log shipping is buffered node-side and tailed via the
-			// workload RPCs; chunks here are acknowledged by receipt.
+			if s.dispatcher != nil {
+				s.dispatcher.BroadcastLogs(payload.Logs)
+			}
 		case *v1.AgentMessage_CommandResult:
 			s.onCommandResult(ctx, payload.CommandResult)
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveCommand(payload.CommandResult)
+			}
+		case *v1.AgentMessage_FileListResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveFileList(payload.FileListResult)
+			}
+		case *v1.AgentMessage_FileReadChunk:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveFileChunk(payload.FileReadChunk)
+			}
+		case *v1.AgentMessage_FileWriteResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveFileWrite(payload.FileWriteResult)
+			}
+		case *v1.AgentMessage_FileDeleteResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveFileDelete(payload.FileDeleteResult)
+			}
+		case *v1.AgentMessage_DirCreateResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveDirCreate(payload.DirCreateResult)
+			}
+		case *v1.AgentMessage_FileStatResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveFileStat(payload.FileStatResult)
+			}
 		default:
 			// Unknown envelopes are ignored: old agents keep working.
 		}

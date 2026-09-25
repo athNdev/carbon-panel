@@ -1,8 +1,10 @@
 package nodeagent
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -12,6 +14,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -20,6 +23,8 @@ type Runner interface {
 	Assign(ctx context.Context, w *v1.Workload, start bool) (containerID string, assignedPort int32, err error)
 	Stop(ctx context.Context, workloadID string, timeoutSec int) error
 	Delete(ctx context.Context, workloadID string, deleteData bool) error
+	RunCommand(ctx context.Context, workloadID, command string) (string, error)
+	Logs(ctx context.Context, workloadID string, tail int, follow bool) (io.ReadCloser, error)
 }
 
 // DockerRunner interacts directly with Docker Engine on the local node.
@@ -201,9 +206,68 @@ func (r *DockerRunner) Delete(ctx context.Context, workloadID string, deleteData
 	return nil
 }
 
+// RunCommand executes a command via rcon-cli inside the workload container.
+func (r *DockerRunner) RunCommand(ctx context.Context, workloadID, command string) (string, error) {
+	containerName := "carbon-workload-" + workloadID
+	execCfg := container.ExecOptions{
+		Cmd:          []string{"rcon-cli", command},
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+	execResp, err := r.cli.ContainerExecCreate(ctx, containerName, execCfg)
+	if err != nil {
+		return "", fmt.Errorf("create exec: %w", err)
+	}
+
+	attachResp, err := r.cli.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{})
+	if err != nil {
+		return "", fmt.Errorf("attach exec: %w", err)
+	}
+	defer attachResp.Close()
+
+	var stdout, stderr bytes.Buffer
+	_, err = stdcopy.StdCopy(&stdout, &stderr, attachResp.Reader)
+	if err != nil {
+		raw, _ := io.ReadAll(attachResp.Reader)
+		stdout.Write(raw)
+	}
+
+	insp, err := r.cli.ContainerExecInspect(ctx, execResp.ID)
+	out := strings.TrimSpace(stdout.String())
+	errOut := strings.TrimSpace(stderr.String())
+	if err == nil && insp.ExitCode != 0 {
+		if errOut != "" {
+			return out, fmt.Errorf("exit code %d: %s", insp.ExitCode, errOut)
+		}
+		return out, fmt.Errorf("exit code %d", insp.ExitCode)
+	}
+
+	if out == "" && errOut != "" {
+		out = errOut
+	}
+	return out, nil
+}
+
+// Logs returns an io.ReadCloser streaming container logs multiplexed via Docker.
+func (r *DockerRunner) Logs(ctx context.Context, workloadID string, tail int, follow bool) (io.ReadCloser, error) {
+	containerName := "carbon-workload-" + workloadID
+	tailStr := "100"
+	if tail > 0 {
+		tailStr = fmt.Sprintf("%d", tail)
+	}
+	opts := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     follow,
+		Tail:       tailStr,
+	}
+	return r.cli.ContainerLogs(ctx, containerName, opts)
+}
+
 // MockRunner is an in-memory test runner that simulates container lifecycle.
 type MockRunner struct {
 	Containers map[string]string
+	LogsOutput string
 }
 
 func NewMockRunner() *MockRunner {
@@ -211,16 +275,9 @@ func NewMockRunner() *MockRunner {
 }
 
 func (m *MockRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (string, int32, error) {
-	if w == nil || w.Id == "" {
-		return "", 0, fmt.Errorf("invalid workload")
-	}
 	cid := "mock-container-" + w.Id
 	m.Containers[w.Id] = cid
-	port := int32(25565)
-	if w.HostPort > 0 {
-		port = w.HostPort
-	}
-	return cid, port, nil
+	return cid, 25565, nil
 }
 
 func (m *MockRunner) Stop(ctx context.Context, workloadID string, timeoutSec int) error {
@@ -231,6 +288,21 @@ func (m *MockRunner) Stop(ctx context.Context, workloadID string, timeoutSec int
 func (m *MockRunner) Delete(ctx context.Context, workloadID string, deleteData bool) error {
 	delete(m.Containers, workloadID)
 	return nil
+}
+
+func (m *MockRunner) RunCommand(ctx context.Context, workloadID, command string) (string, error) {
+	if _, ok := m.Containers[workloadID]; !ok {
+		return "", fmt.Errorf("workload %s not running", workloadID)
+	}
+	return "mock response for " + command, nil
+}
+
+func (m *MockRunner) Logs(ctx context.Context, workloadID string, tail int, follow bool) (io.ReadCloser, error) {
+	out := m.LogsOutput
+	if out == "" {
+		out = "mock server log line\n"
+	}
+	return io.NopCloser(strings.NewReader(out)), nil
 }
 
 func isPortAvailable(port int) bool {

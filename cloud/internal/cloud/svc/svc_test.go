@@ -307,7 +307,7 @@ func TestWorkloadIntents(t *testing.T) {
 	}
 
 	// Live execution belongs to the node agent.
-	if _, err := svcs.Workload.SendWorkloadCommand(ctx, connect.NewRequest(&v1.SendWorkloadCommandRequest{Id: wid, Command: "list"})); connect.CodeOf(err) != connect.CodeUnimplemented {
+	if _, err := svcs.Workload.SendWorkloadCommand(ctx, connect.NewRequest(&v1.SendWorkloadCommandRequest{Id: wid, Command: "list"})); connect.CodeOf(err) != connect.CodeUnavailable {
 		t.Fatalf("expected Unimplemented for console commands, got %v", err)
 	}
 
@@ -831,5 +831,86 @@ func TestNodeReconnectionSelfHealing(t *testing.T) {
 		if !found {
 			t.Errorf("expected webhook event %q, received: %v", expectedEvt, receivedEvents)
 		}
+	}
+}
+
+func TestWorkloadConsoleAndStreamingLogs(t *testing.T) {
+	t.Parallel()
+	svcs := testBundle(t)
+	ctx := orgCtx()
+
+	tok, err := svcs.Node.CreateJoinToken(ctx, connect.NewRequest(&v1.CreateJoinTokenRequest{
+		Name:       "node-console-tok",
+		TtlSeconds: 3600,
+	}))
+	if err != nil {
+		t.Fatalf("issue join token: %v", err)
+	}
+	joined, err := svcs.Agent.JoinNode(context.Background(), connect.NewRequest(&v1.JoinNodeRequest{
+		Token: tok.Msg.Secret,
+		Capacity: &v1.NodeCapacity{
+			Vcpu: 4, RamMb: 8192, DiskGb: 100,
+		},
+		Hostname:     "console-node-1",
+		AgentVersion: "0.1.0",
+	}))
+	if err != nil {
+		t.Fatalf("JoinNode: %v", err)
+	}
+	nodeID := joined.Msg.Identity.NodeId
+
+	sess := svcs.Dispatcher.Register(nodeID)
+	defer svcs.Dispatcher.Unregister(nodeID)
+
+	wResp, err := svcs.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
+		NodeId: nodeID,
+		Name:   "survival-mc",
+	}))
+	if err != nil {
+		t.Fatalf("CreateWorkload: %v", err)
+	}
+	workloadID := wResp.Msg.Workload.Id
+
+	go func() {
+		for msg := range sess.NextMessage() {
+			if cmd := msg.GetRunCommand(); cmd != nil {
+				svcs.Dispatcher.ResolveCommand(&v1.AgentCommandResult{
+					CommandId: cmd.CommandId,
+					Success:   true,
+					Output:    "There are 0 of a max of 20 players online",
+				})
+				return
+			}
+		}
+	}()
+
+	cmdResp, err := svcs.Workload.SendWorkloadCommand(ctx, connect.NewRequest(&v1.SendWorkloadCommandRequest{
+		Id:      workloadID,
+		Command: "list",
+	}))
+	if err != nil {
+		t.Fatalf("SendWorkloadCommand: %v", err)
+	}
+	if !strings.Contains(cmdResp.Msg.Output, "20 players online") {
+		t.Fatalf("unexpected command output: %s", cmdResp.Msg.Output)
+	}
+
+	logCh, cancel := svcs.Dispatcher.SubscribeLogs(workloadID)
+	defer cancel()
+
+	svcs.Dispatcher.BroadcastLogs(&v1.AgentLogChunk{
+		WorkloadId: workloadID,
+		Lines: []*v1.WorkloadLogLine{
+			{Line: "[Server thread/INFO]: Server started on port 25565"},
+		},
+	})
+
+	select {
+	case line := <-logCh:
+		if !strings.Contains(line.Line, "Server started") {
+			t.Fatalf("unexpected line: %s", line.Line)
+		}
+	default:
+		t.Fatal("expected log line on subscribed channel")
 	}
 }

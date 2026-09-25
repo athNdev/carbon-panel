@@ -3,6 +3,7 @@ syntax = "proto3";
 package cloud.v1;
 
 import "cloud/v1/common.proto";
+import "cloud/v1/file.proto";
 import "cloud/v1/node.proto";
 import "cloud/v1/workload.proto";
 import "google/protobuf/timestamp.proto";
@@ -91,6 +92,78 @@ message AgentCommandResult {
   string output = 4;
 }
 
+// AgentFileListResult returns directory contents.
+message AgentFileListResult {
+  // Correlation id.
+  string command_id = 1;
+  // Whether the operation succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+  // Directory entries.
+  repeated FileInfo files = 4;
+}
+
+// AgentReadFileChunk is a chunk of a file streamed from the node.
+message AgentReadFileChunk {
+  // Correlation id.
+  string command_id = 1;
+  // Whether reading succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+  // Chunk payload (max 64KB).
+  bytes chunk = 4;
+  // Whether this is the final chunk.
+  bool is_last = 5;
+  // Total size of the file in bytes.
+  int64 total_size = 6;
+}
+
+// AgentWriteFileResult acknowledges a file write.
+message AgentWriteFileResult {
+  // Correlation id.
+  string command_id = 1;
+  // Whether writing succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+  // Bytes written.
+  int64 bytes_written = 4;
+}
+
+// AgentDeleteFileResult acknowledges file deletion.
+message AgentDeleteFileResult {
+  // Correlation id.
+  string command_id = 1;
+  // Whether deletion succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+}
+
+// AgentCreateDirectoryResult acknowledges directory creation.
+message AgentCreateDirectoryResult {
+  // Correlation id.
+  string command_id = 1;
+  // Whether directory creation succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+}
+
+// AgentStatFileResult returns file metadata.
+message AgentStatFileResult {
+  // Correlation id.
+  string command_id = 1;
+  // Whether stat succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+  // File metadata.
+  FileInfo info = 4;
+}
+
 // AgentMessage is anything the agent sends to the control plane.
 message AgentMessage {
   // Exactly one payload per message.
@@ -105,6 +178,18 @@ message AgentMessage {
     AgentLogChunk logs = 4;
     // Result of a previously issued control command.
     AgentCommandResult command_result = 5;
+    // Directory listing result.
+    AgentFileListResult file_list_result = 6;
+    // File read chunk.
+    AgentReadFileChunk file_read_chunk = 7;
+    // File write result.
+    AgentWriteFileResult file_write_result = 8;
+    // File deletion result.
+    AgentDeleteFileResult file_delete_result = 9;
+    // Directory creation result.
+    AgentCreateDirectoryResult dir_create_result = 10;
+    // File stat result.
+    AgentStatFileResult file_stat_result = 11;
   }
 }
 
@@ -173,6 +258,74 @@ message ControlDisconnect {
   string reason = 2;
 }
 
+// ControlFileList requests directory contents from a workload on the node.
+message ControlFileList {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Path relative to workload root.
+  string path = 3;
+}
+
+// ControlReadFile requests chunks of a file on the node.
+message ControlReadFile {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Path relative to workload root.
+  string path = 3;
+}
+
+// ControlWriteFileChunk writes a chunk (max 64KB) of a file on the node.
+message ControlWriteFileChunk {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Path relative to workload root.
+  string path = 3;
+  // Data bytes.
+  bytes chunk = 4;
+  // Whether this is the final chunk.
+  bool is_last = 5;
+  // Unix file mode bits (optional).
+  uint32 mode = 6;
+}
+
+// ControlDeleteFile deletes a file or directory on the node.
+message ControlDeleteFile {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Path relative to workload root.
+  string path = 3;
+  // Whether to delete recursively.
+  bool recursive = 4;
+}
+
+// ControlCreateDirectory creates a directory on the node.
+message ControlCreateDirectory {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Path relative to workload root.
+  string path = 3;
+}
+
+// ControlStatFile queries metadata for a path on the node.
+message ControlStatFile {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Path relative to workload root.
+  string path = 3;
+}
+
 // ControlMessage is anything the control plane sends to an agent.
 message ControlMessage {
   // Exactly one payload per message.
@@ -191,6 +344,18 @@ message ControlMessage {
     ControlProbe probe = 6;
     // Ask the agent to reconnect.
     ControlDisconnect disconnect = 7;
+    // Directory listing request.
+    ControlFileList file_list = 8;
+    // File read request.
+    ControlReadFile file_read = 9;
+    // File write chunk.
+    ControlWriteFileChunk file_write = 10;
+    // File deletion request.
+    ControlDeleteFile file_delete = 11;
+    // Directory creation request.
+    ControlCreateDirectory dir_create = 12;
+    // File stat request.
+    ControlStatFile file_stat = 13;
   }
 }
 

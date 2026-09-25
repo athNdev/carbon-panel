@@ -15,7 +15,7 @@ func TestActionNameExample(t *testing.T) {
 func TestEveryProcedureHasAction(t *testing.T) {
 	t.Parallel()
 	procs := AllProcedures()
-	require.Len(t, procs, 59)
+	require.Len(t, procs, 65)
 	for _, p := range procs {
 		a := ActionName(p)
 		require.NotEmpty(t, a, "procedure %s has no action", p)
@@ -66,8 +66,15 @@ func TestMutatingTable(t *testing.T) {
 
 func TestDefaultResourceType(t *testing.T) {
 	t.Parallel()
-	require.Equal(t, "nodes", defaultResourceType(cloudv1connect.NodeServiceDeleteNodeProcedure))
+	require.Equal(t, "nodes", defaultResourceType(cloudv1connect.NodeServiceListNodesProcedure))
 	require.Equal(t, "workloads", defaultResourceType(cloudv1connect.WorkloadServiceStartWorkloadProcedure))
+	require.Equal(t, "apikeys", defaultResourceType(cloudv1connect.ApiKeyServiceCreateApiKeyProcedure))
 	require.Equal(t, "audit", defaultResourceType(cloudv1connect.AuditServiceListAuditEventsProcedure))
-	require.Equal(t, "", defaultResourceType("/cloud.v1.NopeService/Nope"))
+	require.Equal(t, "orgs", defaultResourceType(cloudv1connect.OrgServiceGetOrgProcedure))
+	require.Equal(t, "provisions", defaultResourceType(cloudv1connect.ProvisionServiceApplyProvisionProcedure))
+	require.Equal(t, "rolebindings", defaultResourceType(cloudv1connect.RoleServiceListRolesProcedure))
+	require.Equal(t, "sessions", defaultResourceType(cloudv1connect.SessionServiceGetSessionProcedure))
+	require.Equal(t, "system", defaultResourceType(cloudv1connect.SystemServiceGetBuildInfoProcedure))
+	require.Equal(t, "files", defaultResourceType(cloudv1connect.FileServiceListFilesProcedure))
+	require.Empty(t, defaultResourceType("/cloud.v1.NopeService/Nope"))
 }

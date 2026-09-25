@@ -95,6 +95,7 @@ type Client struct {
 	APIKey    cloudv1connect.ApiKeyServiceClient
 	Audit     cloudv1connect.AuditServiceClient
 	Org       cloudv1connect.OrgServiceClient
+	File      cloudv1connect.FileServiceClient
 }
 
 type authInterceptor struct {
@@ -155,6 +156,7 @@ func NewClient(endpoint, token, orgID string, httpClient *http.Client) *Client {
 		APIKey:    cloudv1connect.NewApiKeyServiceClient(httpClient, endpoint, opts),
 		Audit:     cloudv1connect.NewAuditServiceClient(httpClient, endpoint, opts),
 		Org:       cloudv1connect.NewOrgServiceClient(httpClient, endpoint, opts),
+		File:      cloudv1connect.NewFileServiceClient(httpClient, endpoint, opts),
 	}
 }
 
@@ -289,6 +291,8 @@ func (c *CLI) Run(ctx context.Context, args []string) error {
 		return c.runAudit(ctx, subArgs)
 	case "orgs":
 		return c.runOrgs(ctx, subArgs)
+	case "files":
+		return c.runFiles(ctx, subArgs)
 	default:
 		return fmt.Errorf("unknown command: %s (run 'cloudctl help' for usage)", cmd)
 	}
@@ -319,6 +323,7 @@ Commands:
   apikeys            Manage organization API keys (list, create, revoke)
   audit              View audit trail (list, get)
   orgs               Manage organizations (list, get)
+  files              Manage workload files (list, cat, put, rm, mkdir, stat)
 `
 	_, err := fmt.Fprint(c.Stdout, help)
 	return err
@@ -1069,6 +1074,213 @@ func (c *CLI) runOrgs(ctx context.Context, args []string) error {
 		}
 		return tw.Flush()
 	})
+}
+
+
+func (c *CLI) runFiles(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: cloudctl files <list|cat|put|rm|mkdir|stat> <workload-id> [args...]")
+	}
+
+	switch args[0] {
+	case "list", "ls":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl files list <workload-id> [path]")
+		}
+		workloadID := args[1]
+		path := ""
+		if len(args) > 2 {
+			path = args[2]
+		}
+		resp, err := c.Client.File.ListFiles(ctx, connect.NewRequest(&v1.ListFilesRequest{
+			WorkloadId: workloadID,
+			Path:       path,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Files, func(w io.Writer) error {
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "NAME\tTYPE\tSIZE\tMODE\tMODIFIED")
+			for _, f := range resp.Msg.Files {
+				fileType := "FILE"
+				if f.IsDir {
+					fileType = "DIR"
+				}
+				modTime := time.Unix(f.ModifiedAtUnix, 0).Format(time.RFC3339)
+				modeStr := fmt.Sprintf("%#o", f.Mode)
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%d B\t%s\t%s\n", f.Name, fileType, f.Size, modeStr, modTime)
+			}
+			return tw.Flush()
+		})
+
+	case "stat":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl files stat <workload-id> <path>")
+		}
+		resp, err := c.Client.File.StatFile(ctx, connect.NewRequest(&v1.StatFileRequest{
+			WorkloadId: args[1],
+			Path:       args[2],
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Info, func(w io.Writer) error {
+			f := resp.Msg.Info
+			if f == nil {
+				_, _ = fmt.Fprintln(w, "not found")
+				return nil
+			}
+			fileType := "FILE"
+			if f.IsDir {
+				fileType = "DIR"
+			}
+			modTime := time.Unix(f.ModifiedAtUnix, 0).Format(time.RFC3339)
+			_, _ = fmt.Fprintf(w, "Name:     %s\n", f.Name)
+			_, _ = fmt.Fprintf(w, "Path:     %s\n", f.Path)
+			_, _ = fmt.Fprintf(w, "Type:     %s\n", fileType)
+			_, _ = fmt.Fprintf(w, "Size:     %d bytes\n", f.Size)
+			_, _ = fmt.Fprintf(w, "Mode:     %#o\n", f.Mode)
+			_, _ = fmt.Fprintf(w, "Modified: %s\n", modTime)
+			return nil
+		})
+
+	case "cat":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl files cat <workload-id> <path>")
+		}
+		stream, err := c.Client.File.ReadFile(ctx, connect.NewRequest(&v1.ReadFileRequest{
+			WorkloadId: args[1],
+			Path:       args[2],
+		}))
+		if err != nil {
+			return err
+		}
+		for stream.Receive() {
+			chunk := stream.Msg().Chunk
+			if len(chunk) > 0 {
+				if _, err := c.Stdout.Write(chunk); err != nil {
+					return err
+				}
+			}
+		}
+		return stream.Err()
+
+	case "put":
+		if len(args) < 4 {
+			return errors.New("usage: cloudctl files put <workload-id> <local-file> <remote-path>")
+		}
+		workloadID := args[1]
+		localPath := args[2]
+		remotePath := args[3]
+
+		f, err := os.Open(localPath)
+		if err != nil {
+			return fmt.Errorf("open local file: %w", err)
+		}
+		defer f.Close()
+
+		st, err := f.Stat()
+		if err != nil {
+			return fmt.Errorf("stat local file: %w", err)
+		}
+		totalSize := st.Size()
+		mode := uint32(st.Mode().Perm())
+
+		stream := c.Client.File.WriteFile(ctx)
+		buf := make([]byte, 64*1024)
+		var readBytes int64
+
+		if totalSize == 0 {
+			if err := stream.Send(&v1.WriteFileRequest{
+				WorkloadId: workloadID,
+				Path:       remotePath,
+				Chunk:      []byte{},
+				IsLast:     true,
+				Mode:       mode,
+			}); err != nil {
+				return fmt.Errorf("send empty file chunk: %w", err)
+			}
+		} else {
+			for {
+				n, rErr := f.Read(buf)
+				if n > 0 {
+					readBytes += int64(n)
+					isLast := (rErr == io.EOF) || (readBytes >= totalSize)
+					chunkCopy := make([]byte, n)
+					copy(chunkCopy, buf[:n])
+					if err := stream.Send(&v1.WriteFileRequest{
+						WorkloadId: workloadID,
+						Path:       remotePath,
+						Chunk:      chunkCopy,
+						IsLast:     isLast,
+						Mode:       mode,
+					}); err != nil {
+						return fmt.Errorf("send file chunk: %w", err)
+					}
+				}
+				if rErr != nil {
+					if errors.Is(rErr, io.EOF) {
+						break
+					}
+					return fmt.Errorf("read local file: %w", rErr)
+				}
+			}
+		}
+
+		resp, err := stream.CloseAndReceive()
+		if err != nil {
+			return fmt.Errorf("write file failed: %w", err)
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Uploaded %d bytes to %s\n", resp.Msg.BytesWritten, resp.Msg.Path)
+		return nil
+
+	case "rm":
+		fs := flag.NewFlagSet("files rm", flag.ContinueOnError)
+		recursive := fs.Bool("r", false, "Remove recursively")
+		recursiveLong := fs.Bool("recursive", false, "Remove recursively")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		parsedArgs := fs.Args()
+		if len(parsedArgs) < 2 {
+			return errors.New("usage: cloudctl files rm [-r] <workload-id> <path>")
+		}
+		workloadID := parsedArgs[0]
+		path := parsedArgs[1]
+		rec := *recursive || *recursiveLong
+
+		_, err := c.Client.File.DeleteFile(ctx, connect.NewRequest(&v1.DeleteFileRequest{
+			WorkloadId: workloadID,
+			Path:       path,
+			Recursive:  rec,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Deleted %s on workload %s\n", path, workloadID)
+		return nil
+
+	case "mkdir":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl files mkdir <workload-id> <path>")
+		}
+		workloadID := args[1]
+		path := args[2]
+
+		_, err := c.Client.File.CreateDirectory(ctx, connect.NewRequest(&v1.CreateDirectoryRequest{
+			WorkloadId: workloadID,
+			Path:       path,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Created directory %s on workload %s\n", path, workloadID)
+		return nil
+
+	default:
+		return fmt.Errorf("unknown files command: %s (usage: list, cat, put, rm, mkdir, stat)", args[0])
+	}
 }
 
 func maskKey(k string) string {

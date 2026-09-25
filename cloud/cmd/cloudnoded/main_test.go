@@ -148,7 +148,8 @@ func TestAgentLoop_JoinAndConnect(t *testing.T) {
 	state := &AgentState{}
 	logger := slogNew()
 
-	go runAgentLoop(ctx, logger, state, nodeagent.NewMockRunner(), ts.URL, "valid-join-token", idPath)
+	files := nodeagent.NewFileManager(tmpDir)
+	go runAgentLoop(ctx, logger, state, nodeagent.NewMockRunner(), files, ts.URL, "valid-join-token", idPath)
 
 	// Wait for node to join and connect
 	deadline := time.Now().Add(5 * time.Second)

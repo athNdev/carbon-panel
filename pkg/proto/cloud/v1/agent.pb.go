@@ -505,6 +505,444 @@ func (x *AgentCommandResult) GetOutput() string {
 	return ""
 }
 
+// AgentFileListResult returns directory contents.
+type AgentFileListResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Whether the operation succeeded.
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail when it did not.
+	Error string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Directory entries.
+	Files         []*FileInfo `protobuf:"bytes,4,rep,name=files,proto3" json:"files,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentFileListResult) Reset() {
+	*x = AgentFileListResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentFileListResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentFileListResult) ProtoMessage() {}
+
+func (x *AgentFileListResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentFileListResult.ProtoReflect.Descriptor instead.
+func (*AgentFileListResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AgentFileListResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentFileListResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentFileListResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *AgentFileListResult) GetFiles() []*FileInfo {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+// AgentReadFileChunk is a chunk of a file streamed from the node.
+type AgentReadFileChunk struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Whether reading succeeded.
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail when it did not.
+	Error string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Chunk payload (max 64KB).
+	Chunk []byte `protobuf:"bytes,4,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	// Whether this is the final chunk.
+	IsLast bool `protobuf:"varint,5,opt,name=is_last,json=isLast,proto3" json:"is_last,omitempty"`
+	// Total size of the file in bytes.
+	TotalSize     int64 `protobuf:"varint,6,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentReadFileChunk) Reset() {
+	*x = AgentReadFileChunk{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentReadFileChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentReadFileChunk) ProtoMessage() {}
+
+func (x *AgentReadFileChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentReadFileChunk.ProtoReflect.Descriptor instead.
+func (*AgentReadFileChunk) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AgentReadFileChunk) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentReadFileChunk) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentReadFileChunk) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *AgentReadFileChunk) GetChunk() []byte {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
+func (x *AgentReadFileChunk) GetIsLast() bool {
+	if x != nil {
+		return x.IsLast
+	}
+	return false
+}
+
+func (x *AgentReadFileChunk) GetTotalSize() int64 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+// AgentWriteFileResult acknowledges a file write.
+type AgentWriteFileResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Whether writing succeeded.
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail when it did not.
+	Error string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Bytes written.
+	BytesWritten  int64 `protobuf:"varint,4,opt,name=bytes_written,json=bytesWritten,proto3" json:"bytes_written,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentWriteFileResult) Reset() {
+	*x = AgentWriteFileResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentWriteFileResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentWriteFileResult) ProtoMessage() {}
+
+func (x *AgentWriteFileResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentWriteFileResult.ProtoReflect.Descriptor instead.
+func (*AgentWriteFileResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AgentWriteFileResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentWriteFileResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentWriteFileResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *AgentWriteFileResult) GetBytesWritten() int64 {
+	if x != nil {
+		return x.BytesWritten
+	}
+	return 0
+}
+
+// AgentDeleteFileResult acknowledges file deletion.
+type AgentDeleteFileResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Whether deletion succeeded.
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail when it did not.
+	Error         string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentDeleteFileResult) Reset() {
+	*x = AgentDeleteFileResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentDeleteFileResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentDeleteFileResult) ProtoMessage() {}
+
+func (x *AgentDeleteFileResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentDeleteFileResult.ProtoReflect.Descriptor instead.
+func (*AgentDeleteFileResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AgentDeleteFileResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentDeleteFileResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentDeleteFileResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// AgentCreateDirectoryResult acknowledges directory creation.
+type AgentCreateDirectoryResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Whether directory creation succeeded.
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail when it did not.
+	Error         string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentCreateDirectoryResult) Reset() {
+	*x = AgentCreateDirectoryResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentCreateDirectoryResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentCreateDirectoryResult) ProtoMessage() {}
+
+func (x *AgentCreateDirectoryResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentCreateDirectoryResult.ProtoReflect.Descriptor instead.
+func (*AgentCreateDirectoryResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AgentCreateDirectoryResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentCreateDirectoryResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentCreateDirectoryResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// AgentStatFileResult returns file metadata.
+type AgentStatFileResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Whether stat succeeded.
+	Success bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail when it did not.
+	Error string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// File metadata.
+	Info          *FileInfo `protobuf:"bytes,4,opt,name=info,proto3" json:"info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentStatFileResult) Reset() {
+	*x = AgentStatFileResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentStatFileResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentStatFileResult) ProtoMessage() {}
+
+func (x *AgentStatFileResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentStatFileResult.ProtoReflect.Descriptor instead.
+func (*AgentStatFileResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AgentStatFileResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentStatFileResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentStatFileResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *AgentStatFileResult) GetInfo() *FileInfo {
+	if x != nil {
+		return x.Info
+	}
+	return nil
+}
+
 // AgentMessage is anything the agent sends to the control plane.
 type AgentMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -517,6 +955,12 @@ type AgentMessage struct {
 	//	*AgentMessage_WorkloadStatus
 	//	*AgentMessage_Logs
 	//	*AgentMessage_CommandResult
+	//	*AgentMessage_FileListResult
+	//	*AgentMessage_FileReadChunk
+	//	*AgentMessage_FileWriteResult
+	//	*AgentMessage_FileDeleteResult
+	//	*AgentMessage_DirCreateResult
+	//	*AgentMessage_FileStatResult
 	Payload       isAgentMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -524,7 +968,7 @@ type AgentMessage struct {
 
 func (x *AgentMessage) Reset() {
 	*x = AgentMessage{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[6]
+	mi := &file_cloud_v1_agent_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -536,7 +980,7 @@ func (x *AgentMessage) String() string {
 func (*AgentMessage) ProtoMessage() {}
 
 func (x *AgentMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[6]
+	mi := &file_cloud_v1_agent_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +993,7 @@ func (x *AgentMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMessage.ProtoReflect.Descriptor instead.
 func (*AgentMessage) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{6}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AgentMessage) GetPayload() isAgentMessage_Payload {
@@ -604,6 +1048,60 @@ func (x *AgentMessage) GetCommandResult() *AgentCommandResult {
 	return nil
 }
 
+func (x *AgentMessage) GetFileListResult() *AgentFileListResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_FileListResult); ok {
+			return x.FileListResult
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetFileReadChunk() *AgentReadFileChunk {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_FileReadChunk); ok {
+			return x.FileReadChunk
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetFileWriteResult() *AgentWriteFileResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_FileWriteResult); ok {
+			return x.FileWriteResult
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetFileDeleteResult() *AgentDeleteFileResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_FileDeleteResult); ok {
+			return x.FileDeleteResult
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetDirCreateResult() *AgentCreateDirectoryResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_DirCreateResult); ok {
+			return x.DirCreateResult
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetFileStatResult() *AgentStatFileResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_FileStatResult); ok {
+			return x.FileStatResult
+		}
+	}
+	return nil
+}
+
 type isAgentMessage_Payload interface {
 	isAgentMessage_Payload()
 }
@@ -633,6 +1131,36 @@ type AgentMessage_CommandResult struct {
 	CommandResult *AgentCommandResult `protobuf:"bytes,5,opt,name=command_result,json=commandResult,proto3,oneof"`
 }
 
+type AgentMessage_FileListResult struct {
+	// Directory listing result.
+	FileListResult *AgentFileListResult `protobuf:"bytes,6,opt,name=file_list_result,json=fileListResult,proto3,oneof"`
+}
+
+type AgentMessage_FileReadChunk struct {
+	// File read chunk.
+	FileReadChunk *AgentReadFileChunk `protobuf:"bytes,7,opt,name=file_read_chunk,json=fileReadChunk,proto3,oneof"`
+}
+
+type AgentMessage_FileWriteResult struct {
+	// File write result.
+	FileWriteResult *AgentWriteFileResult `protobuf:"bytes,8,opt,name=file_write_result,json=fileWriteResult,proto3,oneof"`
+}
+
+type AgentMessage_FileDeleteResult struct {
+	// File deletion result.
+	FileDeleteResult *AgentDeleteFileResult `protobuf:"bytes,9,opt,name=file_delete_result,json=fileDeleteResult,proto3,oneof"`
+}
+
+type AgentMessage_DirCreateResult struct {
+	// Directory creation result.
+	DirCreateResult *AgentCreateDirectoryResult `protobuf:"bytes,10,opt,name=dir_create_result,json=dirCreateResult,proto3,oneof"`
+}
+
+type AgentMessage_FileStatResult struct {
+	// File stat result.
+	FileStatResult *AgentStatFileResult `protobuf:"bytes,11,opt,name=file_stat_result,json=fileStatResult,proto3,oneof"`
+}
+
 func (*AgentMessage_Hello) isAgentMessage_Payload() {}
 
 func (*AgentMessage_Heartbeat) isAgentMessage_Payload() {}
@@ -642,6 +1170,18 @@ func (*AgentMessage_WorkloadStatus) isAgentMessage_Payload() {}
 func (*AgentMessage_Logs) isAgentMessage_Payload() {}
 
 func (*AgentMessage_CommandResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_FileListResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_FileReadChunk) isAgentMessage_Payload() {}
+
+func (*AgentMessage_FileWriteResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_FileDeleteResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_DirCreateResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_FileStatResult) isAgentMessage_Payload() {}
 
 // ControlWelcome acknowledges a connection and reports control-plane state.
 type ControlWelcome struct {
@@ -658,7 +1198,7 @@ type ControlWelcome struct {
 
 func (x *ControlWelcome) Reset() {
 	*x = ControlWelcome{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[7]
+	mi := &file_cloud_v1_agent_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -670,7 +1210,7 @@ func (x *ControlWelcome) String() string {
 func (*ControlWelcome) ProtoMessage() {}
 
 func (x *ControlWelcome) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[7]
+	mi := &file_cloud_v1_agent_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +1223,7 @@ func (x *ControlWelcome) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlWelcome.ProtoReflect.Descriptor instead.
 func (*ControlWelcome) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{7}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ControlWelcome) GetServerTime() *timestamppb.Timestamp {
@@ -722,7 +1262,7 @@ type ControlWorkloadAssignment struct {
 
 func (x *ControlWorkloadAssignment) Reset() {
 	*x = ControlWorkloadAssignment{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[8]
+	mi := &file_cloud_v1_agent_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -734,7 +1274,7 @@ func (x *ControlWorkloadAssignment) String() string {
 func (*ControlWorkloadAssignment) ProtoMessage() {}
 
 func (x *ControlWorkloadAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[8]
+	mi := &file_cloud_v1_agent_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -747,7 +1287,7 @@ func (x *ControlWorkloadAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlWorkloadAssignment.ProtoReflect.Descriptor instead.
 func (*ControlWorkloadAssignment) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{8}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ControlWorkloadAssignment) GetCommandId() string {
@@ -786,7 +1326,7 @@ type ControlWorkloadStop struct {
 
 func (x *ControlWorkloadStop) Reset() {
 	*x = ControlWorkloadStop{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[9]
+	mi := &file_cloud_v1_agent_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -798,7 +1338,7 @@ func (x *ControlWorkloadStop) String() string {
 func (*ControlWorkloadStop) ProtoMessage() {}
 
 func (x *ControlWorkloadStop) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[9]
+	mi := &file_cloud_v1_agent_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -811,7 +1351,7 @@ func (x *ControlWorkloadStop) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlWorkloadStop.ProtoReflect.Descriptor instead.
 func (*ControlWorkloadStop) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{9}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ControlWorkloadStop) GetCommandId() string {
@@ -850,7 +1390,7 @@ type ControlWorkloadDelete struct {
 
 func (x *ControlWorkloadDelete) Reset() {
 	*x = ControlWorkloadDelete{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[10]
+	mi := &file_cloud_v1_agent_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +1402,7 @@ func (x *ControlWorkloadDelete) String() string {
 func (*ControlWorkloadDelete) ProtoMessage() {}
 
 func (x *ControlWorkloadDelete) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[10]
+	mi := &file_cloud_v1_agent_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +1415,7 @@ func (x *ControlWorkloadDelete) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlWorkloadDelete.ProtoReflect.Descriptor instead.
 func (*ControlWorkloadDelete) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{10}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ControlWorkloadDelete) GetCommandId() string {
@@ -914,7 +1454,7 @@ type ControlRunCommand struct {
 
 func (x *ControlRunCommand) Reset() {
 	*x = ControlRunCommand{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[11]
+	mi := &file_cloud_v1_agent_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -926,7 +1466,7 @@ func (x *ControlRunCommand) String() string {
 func (*ControlRunCommand) ProtoMessage() {}
 
 func (x *ControlRunCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[11]
+	mi := &file_cloud_v1_agent_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -939,7 +1479,7 @@ func (x *ControlRunCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlRunCommand.ProtoReflect.Descriptor instead.
 func (*ControlRunCommand) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{11}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ControlRunCommand) GetCommandId() string {
@@ -974,7 +1514,7 @@ type ControlProbe struct {
 
 func (x *ControlProbe) Reset() {
 	*x = ControlProbe{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[12]
+	mi := &file_cloud_v1_agent_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -986,7 +1526,7 @@ func (x *ControlProbe) String() string {
 func (*ControlProbe) ProtoMessage() {}
 
 func (x *ControlProbe) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[12]
+	mi := &file_cloud_v1_agent_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -999,7 +1539,7 @@ func (x *ControlProbe) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlProbe.ProtoReflect.Descriptor instead.
 func (*ControlProbe) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{12}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ControlProbe) GetCommandId() string {
@@ -1023,7 +1563,7 @@ type ControlDisconnect struct {
 
 func (x *ControlDisconnect) Reset() {
 	*x = ControlDisconnect{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[13]
+	mi := &file_cloud_v1_agent_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1035,7 +1575,7 @@ func (x *ControlDisconnect) String() string {
 func (*ControlDisconnect) ProtoMessage() {}
 
 func (x *ControlDisconnect) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[13]
+	mi := &file_cloud_v1_agent_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1048,7 +1588,7 @@ func (x *ControlDisconnect) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlDisconnect.ProtoReflect.Descriptor instead.
 func (*ControlDisconnect) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{13}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ControlDisconnect) GetReconnectAfterSeconds() int32 {
@@ -1061,6 +1601,426 @@ func (x *ControlDisconnect) GetReconnectAfterSeconds() int32 {
 func (x *ControlDisconnect) GetReason() string {
 	if x != nil {
 		return x.Reason
+	}
+	return ""
+}
+
+// ControlFileList requests directory contents from a workload on the node.
+type ControlFileList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Path relative to workload root.
+	Path          string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlFileList) Reset() {
+	*x = ControlFileList{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlFileList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlFileList) ProtoMessage() {}
+
+func (x *ControlFileList) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlFileList.ProtoReflect.Descriptor instead.
+func (*ControlFileList) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ControlFileList) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlFileList) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlFileList) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+// ControlReadFile requests chunks of a file on the node.
+type ControlReadFile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Path relative to workload root.
+	Path          string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlReadFile) Reset() {
+	*x = ControlReadFile{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlReadFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlReadFile) ProtoMessage() {}
+
+func (x *ControlReadFile) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlReadFile.ProtoReflect.Descriptor instead.
+func (*ControlReadFile) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ControlReadFile) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlReadFile) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlReadFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+// ControlWriteFileChunk writes a chunk (max 64KB) of a file on the node.
+type ControlWriteFileChunk struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Path relative to workload root.
+	Path string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	// Data bytes.
+	Chunk []byte `protobuf:"bytes,4,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	// Whether this is the final chunk.
+	IsLast bool `protobuf:"varint,5,opt,name=is_last,json=isLast,proto3" json:"is_last,omitempty"`
+	// Unix file mode bits (optional).
+	Mode          uint32 `protobuf:"varint,6,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlWriteFileChunk) Reset() {
+	*x = ControlWriteFileChunk{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlWriteFileChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlWriteFileChunk) ProtoMessage() {}
+
+func (x *ControlWriteFileChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlWriteFileChunk.ProtoReflect.Descriptor instead.
+func (*ControlWriteFileChunk) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ControlWriteFileChunk) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlWriteFileChunk) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlWriteFileChunk) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *ControlWriteFileChunk) GetChunk() []byte {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
+func (x *ControlWriteFileChunk) GetIsLast() bool {
+	if x != nil {
+		return x.IsLast
+	}
+	return false
+}
+
+func (x *ControlWriteFileChunk) GetMode() uint32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
+}
+
+// ControlDeleteFile deletes a file or directory on the node.
+type ControlDeleteFile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Path relative to workload root.
+	Path string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	// Whether to delete recursively.
+	Recursive     bool `protobuf:"varint,4,opt,name=recursive,proto3" json:"recursive,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlDeleteFile) Reset() {
+	*x = ControlDeleteFile{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlDeleteFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlDeleteFile) ProtoMessage() {}
+
+func (x *ControlDeleteFile) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlDeleteFile.ProtoReflect.Descriptor instead.
+func (*ControlDeleteFile) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ControlDeleteFile) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlDeleteFile) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlDeleteFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *ControlDeleteFile) GetRecursive() bool {
+	if x != nil {
+		return x.Recursive
+	}
+	return false
+}
+
+// ControlCreateDirectory creates a directory on the node.
+type ControlCreateDirectory struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Path relative to workload root.
+	Path          string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlCreateDirectory) Reset() {
+	*x = ControlCreateDirectory{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlCreateDirectory) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlCreateDirectory) ProtoMessage() {}
+
+func (x *ControlCreateDirectory) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlCreateDirectory.ProtoReflect.Descriptor instead.
+func (*ControlCreateDirectory) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ControlCreateDirectory) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlCreateDirectory) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlCreateDirectory) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+// ControlStatFile queries metadata for a path on the node.
+type ControlStatFile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Path relative to workload root.
+	Path          string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlStatFile) Reset() {
+	*x = ControlStatFile{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlStatFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlStatFile) ProtoMessage() {}
+
+func (x *ControlStatFile) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlStatFile.ProtoReflect.Descriptor instead.
+func (*ControlStatFile) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ControlStatFile) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlStatFile) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlStatFile) GetPath() string {
+	if x != nil {
+		return x.Path
 	}
 	return ""
 }
@@ -1079,6 +2039,12 @@ type ControlMessage struct {
 	//	*ControlMessage_RunCommand
 	//	*ControlMessage_Probe
 	//	*ControlMessage_Disconnect
+	//	*ControlMessage_FileList
+	//	*ControlMessage_FileRead
+	//	*ControlMessage_FileWrite
+	//	*ControlMessage_FileDelete
+	//	*ControlMessage_DirCreate
+	//	*ControlMessage_FileStat
 	Payload       isControlMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1086,7 +2052,7 @@ type ControlMessage struct {
 
 func (x *ControlMessage) Reset() {
 	*x = ControlMessage{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[14]
+	mi := &file_cloud_v1_agent_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1098,7 +2064,7 @@ func (x *ControlMessage) String() string {
 func (*ControlMessage) ProtoMessage() {}
 
 func (x *ControlMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[14]
+	mi := &file_cloud_v1_agent_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1111,7 +2077,7 @@ func (x *ControlMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlMessage.ProtoReflect.Descriptor instead.
 func (*ControlMessage) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{14}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ControlMessage) GetPayload() isControlMessage_Payload {
@@ -1184,6 +2150,60 @@ func (x *ControlMessage) GetDisconnect() *ControlDisconnect {
 	return nil
 }
 
+func (x *ControlMessage) GetFileList() *ControlFileList {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_FileList); ok {
+			return x.FileList
+		}
+	}
+	return nil
+}
+
+func (x *ControlMessage) GetFileRead() *ControlReadFile {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_FileRead); ok {
+			return x.FileRead
+		}
+	}
+	return nil
+}
+
+func (x *ControlMessage) GetFileWrite() *ControlWriteFileChunk {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_FileWrite); ok {
+			return x.FileWrite
+		}
+	}
+	return nil
+}
+
+func (x *ControlMessage) GetFileDelete() *ControlDeleteFile {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_FileDelete); ok {
+			return x.FileDelete
+		}
+	}
+	return nil
+}
+
+func (x *ControlMessage) GetDirCreate() *ControlCreateDirectory {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_DirCreate); ok {
+			return x.DirCreate
+		}
+	}
+	return nil
+}
+
+func (x *ControlMessage) GetFileStat() *ControlStatFile {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_FileStat); ok {
+			return x.FileStat
+		}
+	}
+	return nil
+}
+
 type isControlMessage_Payload interface {
 	isControlMessage_Payload()
 }
@@ -1223,6 +2243,36 @@ type ControlMessage_Disconnect struct {
 	Disconnect *ControlDisconnect `protobuf:"bytes,7,opt,name=disconnect,proto3,oneof"`
 }
 
+type ControlMessage_FileList struct {
+	// Directory listing request.
+	FileList *ControlFileList `protobuf:"bytes,8,opt,name=file_list,json=fileList,proto3,oneof"`
+}
+
+type ControlMessage_FileRead struct {
+	// File read request.
+	FileRead *ControlReadFile `protobuf:"bytes,9,opt,name=file_read,json=fileRead,proto3,oneof"`
+}
+
+type ControlMessage_FileWrite struct {
+	// File write chunk.
+	FileWrite *ControlWriteFileChunk `protobuf:"bytes,10,opt,name=file_write,json=fileWrite,proto3,oneof"`
+}
+
+type ControlMessage_FileDelete struct {
+	// File deletion request.
+	FileDelete *ControlDeleteFile `protobuf:"bytes,11,opt,name=file_delete,json=fileDelete,proto3,oneof"`
+}
+
+type ControlMessage_DirCreate struct {
+	// Directory creation request.
+	DirCreate *ControlCreateDirectory `protobuf:"bytes,12,opt,name=dir_create,json=dirCreate,proto3,oneof"`
+}
+
+type ControlMessage_FileStat struct {
+	// File stat request.
+	FileStat *ControlStatFile `protobuf:"bytes,13,opt,name=file_stat,json=fileStat,proto3,oneof"`
+}
+
 func (*ControlMessage_Welcome) isControlMessage_Payload() {}
 
 func (*ControlMessage_AssignWorkload) isControlMessage_Payload() {}
@@ -1236,6 +2286,18 @@ func (*ControlMessage_RunCommand) isControlMessage_Payload() {}
 func (*ControlMessage_Probe) isControlMessage_Payload() {}
 
 func (*ControlMessage_Disconnect) isControlMessage_Payload() {}
+
+func (*ControlMessage_FileList) isControlMessage_Payload() {}
+
+func (*ControlMessage_FileRead) isControlMessage_Payload() {}
+
+func (*ControlMessage_FileWrite) isControlMessage_Payload() {}
+
+func (*ControlMessage_FileDelete) isControlMessage_Payload() {}
+
+func (*ControlMessage_DirCreate) isControlMessage_Payload() {}
+
+func (*ControlMessage_FileStat) isControlMessage_Payload() {}
 
 // JoinNodeRequest redeems a join token. It is the only call a node makes before
 // it holds credentials, so it is authenticated by the token itself.
@@ -1261,7 +2323,7 @@ type JoinNodeRequest struct {
 
 func (x *JoinNodeRequest) Reset() {
 	*x = JoinNodeRequest{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[15]
+	mi := &file_cloud_v1_agent_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1273,7 +2335,7 @@ func (x *JoinNodeRequest) String() string {
 func (*JoinNodeRequest) ProtoMessage() {}
 
 func (x *JoinNodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[15]
+	mi := &file_cloud_v1_agent_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1286,7 +2348,7 @@ func (x *JoinNodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinNodeRequest.ProtoReflect.Descriptor instead.
 func (*JoinNodeRequest) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{15}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *JoinNodeRequest) GetToken() string {
@@ -1344,7 +2406,7 @@ type JoinNodeResponse struct {
 
 func (x *JoinNodeResponse) Reset() {
 	*x = JoinNodeResponse{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[16]
+	mi := &file_cloud_v1_agent_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1356,7 +2418,7 @@ func (x *JoinNodeResponse) String() string {
 func (*JoinNodeResponse) ProtoMessage() {}
 
 func (x *JoinNodeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[16]
+	mi := &file_cloud_v1_agent_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1369,7 +2431,7 @@ func (x *JoinNodeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinNodeResponse.ProtoReflect.Descriptor instead.
 func (*JoinNodeResponse) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{16}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *JoinNodeResponse) GetIdentity() *NodeIdentity {
@@ -1397,7 +2459,7 @@ type RenewCredentialsRequest struct {
 
 func (x *RenewCredentialsRequest) Reset() {
 	*x = RenewCredentialsRequest{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[17]
+	mi := &file_cloud_v1_agent_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1409,7 +2471,7 @@ func (x *RenewCredentialsRequest) String() string {
 func (*RenewCredentialsRequest) ProtoMessage() {}
 
 func (x *RenewCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[17]
+	mi := &file_cloud_v1_agent_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1422,7 +2484,7 @@ func (x *RenewCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*RenewCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{17}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RenewCredentialsRequest) GetCsrPem() string {
@@ -1443,7 +2505,7 @@ type RenewCredentialsResponse struct {
 
 func (x *RenewCredentialsResponse) Reset() {
 	*x = RenewCredentialsResponse{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[18]
+	mi := &file_cloud_v1_agent_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1455,7 +2517,7 @@ func (x *RenewCredentialsResponse) String() string {
 func (*RenewCredentialsResponse) ProtoMessage() {}
 
 func (x *RenewCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[18]
+	mi := &file_cloud_v1_agent_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1468,7 +2530,7 @@ func (x *RenewCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*RenewCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{18}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RenewCredentialsResponse) GetIdentity() *NodeIdentity {
@@ -1482,7 +2544,7 @@ var File_cloud_v1_agent_proto protoreflect.FileDescriptor
 
 const file_cloud_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x14cloud/v1/agent.proto\x12\bcloud.v1\x1a\x15cloud/v1/common.proto\x1a\x13cloud/v1/node.proto\x1a\x17cloud/v1/workload.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x02\n" +
+	"\x14cloud/v1/agent.proto\x12\bcloud.v1\x1a\x15cloud/v1/common.proto\x1a\x13cloud/v1/file.proto\x1a\x13cloud/v1/node.proto\x1a\x17cloud/v1/workload.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x02\n" +
 	"\fNodeIdentity\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x15\n" +
 	"\x06org_id\x18\x02 \x01(\tR\x05orgId\x124\n" +
@@ -1523,13 +2585,57 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
 	"\x05error\x18\x03 \x01(\tR\x05error\x12\x16\n" +
-	"\x06output\x18\x04 \x01(\tR\x06output\"\xc1\x02\n" +
+	"\x06output\x18\x04 \x01(\tR\x06output\"\x8e\x01\n" +
+	"\x13AgentFileListResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12(\n" +
+	"\x05files\x18\x04 \x03(\v2\x12.cloud.v1.FileInfoR\x05files\"\xb1\x01\n" +
+	"\x12AgentReadFileChunk\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x14\n" +
+	"\x05chunk\x18\x04 \x01(\fR\x05chunk\x12\x17\n" +
+	"\ais_last\x18\x05 \x01(\bR\x06isLast\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x06 \x01(\x03R\ttotalSize\"\x8a\x01\n" +
+	"\x14AgentWriteFileResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12#\n" +
+	"\rbytes_written\x18\x04 \x01(\x03R\fbytesWritten\"f\n" +
+	"\x15AgentDeleteFileResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"k\n" +
+	"\x1aAgentCreateDirectoryResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\x8c\x01\n" +
+	"\x13AgentStatFileResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12&\n" +
+	"\x04info\x18\x04 \x01(\v2\x12.cloud.v1.FileInfoR\x04info\"\x92\x06\n" +
 	"\fAgentMessage\x12,\n" +
 	"\x05hello\x18\x01 \x01(\v2\x14.cloud.v1.AgentHelloH\x00R\x05hello\x128\n" +
 	"\theartbeat\x18\x02 \x01(\v2\x18.cloud.v1.AgentHeartbeatH\x00R\theartbeat\x12H\n" +
 	"\x0fworkload_status\x18\x03 \x01(\v2\x1d.cloud.v1.AgentWorkloadStatusH\x00R\x0eworkloadStatus\x12-\n" +
 	"\x04logs\x18\x04 \x01(\v2\x17.cloud.v1.AgentLogChunkH\x00R\x04logs\x12E\n" +
-	"\x0ecommand_result\x18\x05 \x01(\v2\x1c.cloud.v1.AgentCommandResultH\x00R\rcommandResultB\t\n" +
+	"\x0ecommand_result\x18\x05 \x01(\v2\x1c.cloud.v1.AgentCommandResultH\x00R\rcommandResult\x12I\n" +
+	"\x10file_list_result\x18\x06 \x01(\v2\x1d.cloud.v1.AgentFileListResultH\x00R\x0efileListResult\x12F\n" +
+	"\x0ffile_read_chunk\x18\a \x01(\v2\x1c.cloud.v1.AgentReadFileChunkH\x00R\rfileReadChunk\x12L\n" +
+	"\x11file_write_result\x18\b \x01(\v2\x1e.cloud.v1.AgentWriteFileResultH\x00R\x0ffileWriteResult\x12O\n" +
+	"\x12file_delete_result\x18\t \x01(\v2\x1f.cloud.v1.AgentDeleteFileResultH\x00R\x10fileDeleteResult\x12R\n" +
+	"\x11dir_create_result\x18\n" +
+	" \x01(\v2$.cloud.v1.AgentCreateDirectoryResultH\x00R\x0fdirCreateResult\x12I\n" +
+	"\x10file_stat_result\x18\v \x01(\v2\x1d.cloud.v1.AgentStatFileResultH\x00R\x0efileStatResultB\t\n" +
 	"\apayload\"\xa7\x01\n" +
 	"\x0eControlWelcome\x12;\n" +
 	"\vserver_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -1565,7 +2671,47 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"command_id\x18\x01 \x01(\tR\tcommandId\"c\n" +
 	"\x11ControlDisconnect\x126\n" +
 	"\x17reconnect_after_seconds\x18\x01 \x01(\x05R\x15reconnectAfterSeconds\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xe2\x03\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"e\n" +
+	"\x0fControlFileList\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\"e\n" +
+	"\x0fControlReadFile\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\"\xae\x01\n" +
+	"\x15ControlWriteFileChunk\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12\x14\n" +
+	"\x05chunk\x18\x04 \x01(\fR\x05chunk\x12\x17\n" +
+	"\ais_last\x18\x05 \x01(\bR\x06isLast\x12\x12\n" +
+	"\x04mode\x18\x06 \x01(\rR\x04mode\"\x85\x01\n" +
+	"\x11ControlDeleteFile\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12\x1c\n" +
+	"\trecursive\x18\x04 \x01(\bR\trecursive\"l\n" +
+	"\x16ControlCreateDirectory\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\"e\n" +
+	"\x0fControlStatFile\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\"\xd5\x06\n" +
 	"\x0eControlMessage\x124\n" +
 	"\awelcome\x18\x01 \x01(\v2\x18.cloud.v1.ControlWelcomeH\x00R\awelcome\x12N\n" +
 	"\x0fassign_workload\x18\x02 \x01(\v2#.cloud.v1.ControlWorkloadAssignmentH\x00R\x0eassignWorkload\x12D\n" +
@@ -1576,7 +2722,17 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"\x05probe\x18\x06 \x01(\v2\x16.cloud.v1.ControlProbeH\x00R\x05probe\x12=\n" +
 	"\n" +
 	"disconnect\x18\a \x01(\v2\x1b.cloud.v1.ControlDisconnectH\x00R\n" +
-	"disconnectB\t\n" +
+	"disconnect\x128\n" +
+	"\tfile_list\x18\b \x01(\v2\x19.cloud.v1.ControlFileListH\x00R\bfileList\x128\n" +
+	"\tfile_read\x18\t \x01(\v2\x19.cloud.v1.ControlReadFileH\x00R\bfileRead\x12@\n" +
+	"\n" +
+	"file_write\x18\n" +
+	" \x01(\v2\x1f.cloud.v1.ControlWriteFileChunkH\x00R\tfileWrite\x12>\n" +
+	"\vfile_delete\x18\v \x01(\v2\x1b.cloud.v1.ControlDeleteFileH\x00R\n" +
+	"fileDelete\x12A\n" +
+	"\n" +
+	"dir_create\x18\f \x01(\v2 .cloud.v1.ControlCreateDirectoryH\x00R\tdirCreate\x128\n" +
+	"\tfile_stat\x18\r \x01(\v2\x19.cloud.v1.ControlStatFileH\x00R\bfileStatB\t\n" +
 	"\apayload\"\xdc\x01\n" +
 	"\x0fJoinNodeRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
@@ -1609,71 +2765,98 @@ func file_cloud_v1_agent_proto_rawDescGZIP() []byte {
 	return file_cloud_v1_agent_proto_rawDescData
 }
 
-var file_cloud_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_cloud_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_cloud_v1_agent_proto_goTypes = []any{
-	(*NodeIdentity)(nil),              // 0: cloud.v1.NodeIdentity
-	(*AgentHello)(nil),                // 1: cloud.v1.AgentHello
-	(*AgentHeartbeat)(nil),            // 2: cloud.v1.AgentHeartbeat
-	(*AgentWorkloadStatus)(nil),       // 3: cloud.v1.AgentWorkloadStatus
-	(*AgentLogChunk)(nil),             // 4: cloud.v1.AgentLogChunk
-	(*AgentCommandResult)(nil),        // 5: cloud.v1.AgentCommandResult
-	(*AgentMessage)(nil),              // 6: cloud.v1.AgentMessage
-	(*ControlWelcome)(nil),            // 7: cloud.v1.ControlWelcome
-	(*ControlWorkloadAssignment)(nil), // 8: cloud.v1.ControlWorkloadAssignment
-	(*ControlWorkloadStop)(nil),       // 9: cloud.v1.ControlWorkloadStop
-	(*ControlWorkloadDelete)(nil),     // 10: cloud.v1.ControlWorkloadDelete
-	(*ControlRunCommand)(nil),         // 11: cloud.v1.ControlRunCommand
-	(*ControlProbe)(nil),              // 12: cloud.v1.ControlProbe
-	(*ControlDisconnect)(nil),         // 13: cloud.v1.ControlDisconnect
-	(*ControlMessage)(nil),            // 14: cloud.v1.ControlMessage
-	(*JoinNodeRequest)(nil),           // 15: cloud.v1.JoinNodeRequest
-	(*JoinNodeResponse)(nil),          // 16: cloud.v1.JoinNodeResponse
-	(*RenewCredentialsRequest)(nil),   // 17: cloud.v1.RenewCredentialsRequest
-	(*RenewCredentialsResponse)(nil),  // 18: cloud.v1.RenewCredentialsResponse
-	(*NodeCapacity)(nil),              // 19: cloud.v1.NodeCapacity
-	(*NodeMetrics)(nil),               // 20: cloud.v1.NodeMetrics
-	(*NodeAllocation)(nil),            // 21: cloud.v1.NodeAllocation
-	(WorkloadStatus)(0),               // 22: cloud.v1.WorkloadStatus
-	(*WorkloadLogLine)(nil),           // 23: cloud.v1.WorkloadLogLine
-	(*timestamppb.Timestamp)(nil),     // 24: google.protobuf.Timestamp
-	(*Workload)(nil),                  // 25: cloud.v1.Workload
-	(*Node)(nil),                      // 26: cloud.v1.Node
+	(*NodeIdentity)(nil),               // 0: cloud.v1.NodeIdentity
+	(*AgentHello)(nil),                 // 1: cloud.v1.AgentHello
+	(*AgentHeartbeat)(nil),             // 2: cloud.v1.AgentHeartbeat
+	(*AgentWorkloadStatus)(nil),        // 3: cloud.v1.AgentWorkloadStatus
+	(*AgentLogChunk)(nil),              // 4: cloud.v1.AgentLogChunk
+	(*AgentCommandResult)(nil),         // 5: cloud.v1.AgentCommandResult
+	(*AgentFileListResult)(nil),        // 6: cloud.v1.AgentFileListResult
+	(*AgentReadFileChunk)(nil),         // 7: cloud.v1.AgentReadFileChunk
+	(*AgentWriteFileResult)(nil),       // 8: cloud.v1.AgentWriteFileResult
+	(*AgentDeleteFileResult)(nil),      // 9: cloud.v1.AgentDeleteFileResult
+	(*AgentCreateDirectoryResult)(nil), // 10: cloud.v1.AgentCreateDirectoryResult
+	(*AgentStatFileResult)(nil),        // 11: cloud.v1.AgentStatFileResult
+	(*AgentMessage)(nil),               // 12: cloud.v1.AgentMessage
+	(*ControlWelcome)(nil),             // 13: cloud.v1.ControlWelcome
+	(*ControlWorkloadAssignment)(nil),  // 14: cloud.v1.ControlWorkloadAssignment
+	(*ControlWorkloadStop)(nil),        // 15: cloud.v1.ControlWorkloadStop
+	(*ControlWorkloadDelete)(nil),      // 16: cloud.v1.ControlWorkloadDelete
+	(*ControlRunCommand)(nil),          // 17: cloud.v1.ControlRunCommand
+	(*ControlProbe)(nil),               // 18: cloud.v1.ControlProbe
+	(*ControlDisconnect)(nil),          // 19: cloud.v1.ControlDisconnect
+	(*ControlFileList)(nil),            // 20: cloud.v1.ControlFileList
+	(*ControlReadFile)(nil),            // 21: cloud.v1.ControlReadFile
+	(*ControlWriteFileChunk)(nil),      // 22: cloud.v1.ControlWriteFileChunk
+	(*ControlDeleteFile)(nil),          // 23: cloud.v1.ControlDeleteFile
+	(*ControlCreateDirectory)(nil),     // 24: cloud.v1.ControlCreateDirectory
+	(*ControlStatFile)(nil),            // 25: cloud.v1.ControlStatFile
+	(*ControlMessage)(nil),             // 26: cloud.v1.ControlMessage
+	(*JoinNodeRequest)(nil),            // 27: cloud.v1.JoinNodeRequest
+	(*JoinNodeResponse)(nil),           // 28: cloud.v1.JoinNodeResponse
+	(*RenewCredentialsRequest)(nil),    // 29: cloud.v1.RenewCredentialsRequest
+	(*RenewCredentialsResponse)(nil),   // 30: cloud.v1.RenewCredentialsResponse
+	(*NodeCapacity)(nil),               // 31: cloud.v1.NodeCapacity
+	(*NodeMetrics)(nil),                // 32: cloud.v1.NodeMetrics
+	(*NodeAllocation)(nil),             // 33: cloud.v1.NodeAllocation
+	(WorkloadStatus)(0),                // 34: cloud.v1.WorkloadStatus
+	(*WorkloadLogLine)(nil),            // 35: cloud.v1.WorkloadLogLine
+	(*FileInfo)(nil),                   // 36: cloud.v1.FileInfo
+	(*timestamppb.Timestamp)(nil),      // 37: google.protobuf.Timestamp
+	(*Workload)(nil),                   // 38: cloud.v1.Workload
+	(*Node)(nil),                       // 39: cloud.v1.Node
 }
 var file_cloud_v1_agent_proto_depIdxs = []int32{
-	19, // 0: cloud.v1.AgentHello.capacity:type_name -> cloud.v1.NodeCapacity
-	20, // 1: cloud.v1.AgentHeartbeat.metrics:type_name -> cloud.v1.NodeMetrics
-	21, // 2: cloud.v1.AgentHeartbeat.allocation:type_name -> cloud.v1.NodeAllocation
-	22, // 3: cloud.v1.AgentWorkloadStatus.status:type_name -> cloud.v1.WorkloadStatus
-	23, // 4: cloud.v1.AgentLogChunk.lines:type_name -> cloud.v1.WorkloadLogLine
-	1,  // 5: cloud.v1.AgentMessage.hello:type_name -> cloud.v1.AgentHello
-	2,  // 6: cloud.v1.AgentMessage.heartbeat:type_name -> cloud.v1.AgentHeartbeat
-	3,  // 7: cloud.v1.AgentMessage.workload_status:type_name -> cloud.v1.AgentWorkloadStatus
-	4,  // 8: cloud.v1.AgentMessage.logs:type_name -> cloud.v1.AgentLogChunk
-	5,  // 9: cloud.v1.AgentMessage.command_result:type_name -> cloud.v1.AgentCommandResult
-	24, // 10: cloud.v1.ControlWelcome.server_time:type_name -> google.protobuf.Timestamp
-	25, // 11: cloud.v1.ControlWorkloadAssignment.workload:type_name -> cloud.v1.Workload
-	7,  // 12: cloud.v1.ControlMessage.welcome:type_name -> cloud.v1.ControlWelcome
-	8,  // 13: cloud.v1.ControlMessage.assign_workload:type_name -> cloud.v1.ControlWorkloadAssignment
-	9,  // 14: cloud.v1.ControlMessage.stop_workload:type_name -> cloud.v1.ControlWorkloadStop
-	10, // 15: cloud.v1.ControlMessage.delete_workload:type_name -> cloud.v1.ControlWorkloadDelete
-	11, // 16: cloud.v1.ControlMessage.run_command:type_name -> cloud.v1.ControlRunCommand
-	12, // 17: cloud.v1.ControlMessage.probe:type_name -> cloud.v1.ControlProbe
-	13, // 18: cloud.v1.ControlMessage.disconnect:type_name -> cloud.v1.ControlDisconnect
-	19, // 19: cloud.v1.JoinNodeRequest.capacity:type_name -> cloud.v1.NodeCapacity
-	0,  // 20: cloud.v1.JoinNodeResponse.identity:type_name -> cloud.v1.NodeIdentity
-	26, // 21: cloud.v1.JoinNodeResponse.node:type_name -> cloud.v1.Node
-	0,  // 22: cloud.v1.RenewCredentialsResponse.identity:type_name -> cloud.v1.NodeIdentity
-	15, // 23: cloud.v1.AgentService.JoinNode:input_type -> cloud.v1.JoinNodeRequest
-	6,  // 24: cloud.v1.AgentService.Connect:input_type -> cloud.v1.AgentMessage
-	17, // 25: cloud.v1.AgentService.RenewCredentials:input_type -> cloud.v1.RenewCredentialsRequest
-	16, // 26: cloud.v1.AgentService.JoinNode:output_type -> cloud.v1.JoinNodeResponse
-	14, // 27: cloud.v1.AgentService.Connect:output_type -> cloud.v1.ControlMessage
-	18, // 28: cloud.v1.AgentService.RenewCredentials:output_type -> cloud.v1.RenewCredentialsResponse
-	26, // [26:29] is the sub-list for method output_type
-	23, // [23:26] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	31, // 0: cloud.v1.AgentHello.capacity:type_name -> cloud.v1.NodeCapacity
+	32, // 1: cloud.v1.AgentHeartbeat.metrics:type_name -> cloud.v1.NodeMetrics
+	33, // 2: cloud.v1.AgentHeartbeat.allocation:type_name -> cloud.v1.NodeAllocation
+	34, // 3: cloud.v1.AgentWorkloadStatus.status:type_name -> cloud.v1.WorkloadStatus
+	35, // 4: cloud.v1.AgentLogChunk.lines:type_name -> cloud.v1.WorkloadLogLine
+	36, // 5: cloud.v1.AgentFileListResult.files:type_name -> cloud.v1.FileInfo
+	36, // 6: cloud.v1.AgentStatFileResult.info:type_name -> cloud.v1.FileInfo
+	1,  // 7: cloud.v1.AgentMessage.hello:type_name -> cloud.v1.AgentHello
+	2,  // 8: cloud.v1.AgentMessage.heartbeat:type_name -> cloud.v1.AgentHeartbeat
+	3,  // 9: cloud.v1.AgentMessage.workload_status:type_name -> cloud.v1.AgentWorkloadStatus
+	4,  // 10: cloud.v1.AgentMessage.logs:type_name -> cloud.v1.AgentLogChunk
+	5,  // 11: cloud.v1.AgentMessage.command_result:type_name -> cloud.v1.AgentCommandResult
+	6,  // 12: cloud.v1.AgentMessage.file_list_result:type_name -> cloud.v1.AgentFileListResult
+	7,  // 13: cloud.v1.AgentMessage.file_read_chunk:type_name -> cloud.v1.AgentReadFileChunk
+	8,  // 14: cloud.v1.AgentMessage.file_write_result:type_name -> cloud.v1.AgentWriteFileResult
+	9,  // 15: cloud.v1.AgentMessage.file_delete_result:type_name -> cloud.v1.AgentDeleteFileResult
+	10, // 16: cloud.v1.AgentMessage.dir_create_result:type_name -> cloud.v1.AgentCreateDirectoryResult
+	11, // 17: cloud.v1.AgentMessage.file_stat_result:type_name -> cloud.v1.AgentStatFileResult
+	37, // 18: cloud.v1.ControlWelcome.server_time:type_name -> google.protobuf.Timestamp
+	38, // 19: cloud.v1.ControlWorkloadAssignment.workload:type_name -> cloud.v1.Workload
+	13, // 20: cloud.v1.ControlMessage.welcome:type_name -> cloud.v1.ControlWelcome
+	14, // 21: cloud.v1.ControlMessage.assign_workload:type_name -> cloud.v1.ControlWorkloadAssignment
+	15, // 22: cloud.v1.ControlMessage.stop_workload:type_name -> cloud.v1.ControlWorkloadStop
+	16, // 23: cloud.v1.ControlMessage.delete_workload:type_name -> cloud.v1.ControlWorkloadDelete
+	17, // 24: cloud.v1.ControlMessage.run_command:type_name -> cloud.v1.ControlRunCommand
+	18, // 25: cloud.v1.ControlMessage.probe:type_name -> cloud.v1.ControlProbe
+	19, // 26: cloud.v1.ControlMessage.disconnect:type_name -> cloud.v1.ControlDisconnect
+	20, // 27: cloud.v1.ControlMessage.file_list:type_name -> cloud.v1.ControlFileList
+	21, // 28: cloud.v1.ControlMessage.file_read:type_name -> cloud.v1.ControlReadFile
+	22, // 29: cloud.v1.ControlMessage.file_write:type_name -> cloud.v1.ControlWriteFileChunk
+	23, // 30: cloud.v1.ControlMessage.file_delete:type_name -> cloud.v1.ControlDeleteFile
+	24, // 31: cloud.v1.ControlMessage.dir_create:type_name -> cloud.v1.ControlCreateDirectory
+	25, // 32: cloud.v1.ControlMessage.file_stat:type_name -> cloud.v1.ControlStatFile
+	31, // 33: cloud.v1.JoinNodeRequest.capacity:type_name -> cloud.v1.NodeCapacity
+	0,  // 34: cloud.v1.JoinNodeResponse.identity:type_name -> cloud.v1.NodeIdentity
+	39, // 35: cloud.v1.JoinNodeResponse.node:type_name -> cloud.v1.Node
+	0,  // 36: cloud.v1.RenewCredentialsResponse.identity:type_name -> cloud.v1.NodeIdentity
+	27, // 37: cloud.v1.AgentService.JoinNode:input_type -> cloud.v1.JoinNodeRequest
+	12, // 38: cloud.v1.AgentService.Connect:input_type -> cloud.v1.AgentMessage
+	29, // 39: cloud.v1.AgentService.RenewCredentials:input_type -> cloud.v1.RenewCredentialsRequest
+	28, // 40: cloud.v1.AgentService.JoinNode:output_type -> cloud.v1.JoinNodeResponse
+	26, // 41: cloud.v1.AgentService.Connect:output_type -> cloud.v1.ControlMessage
+	30, // 42: cloud.v1.AgentService.RenewCredentials:output_type -> cloud.v1.RenewCredentialsResponse
+	40, // [40:43] is the sub-list for method output_type
+	37, // [37:40] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_cloud_v1_agent_proto_init() }
@@ -1682,16 +2865,23 @@ func file_cloud_v1_agent_proto_init() {
 		return
 	}
 	file_cloud_v1_common_proto_init()
+	file_cloud_v1_file_proto_init()
 	file_cloud_v1_node_proto_init()
 	file_cloud_v1_workload_proto_init()
-	file_cloud_v1_agent_proto_msgTypes[6].OneofWrappers = []any{
+	file_cloud_v1_agent_proto_msgTypes[12].OneofWrappers = []any{
 		(*AgentMessage_Hello)(nil),
 		(*AgentMessage_Heartbeat)(nil),
 		(*AgentMessage_WorkloadStatus)(nil),
 		(*AgentMessage_Logs)(nil),
 		(*AgentMessage_CommandResult)(nil),
+		(*AgentMessage_FileListResult)(nil),
+		(*AgentMessage_FileReadChunk)(nil),
+		(*AgentMessage_FileWriteResult)(nil),
+		(*AgentMessage_FileDeleteResult)(nil),
+		(*AgentMessage_DirCreateResult)(nil),
+		(*AgentMessage_FileStatResult)(nil),
 	}
-	file_cloud_v1_agent_proto_msgTypes[14].OneofWrappers = []any{
+	file_cloud_v1_agent_proto_msgTypes[26].OneofWrappers = []any{
 		(*ControlMessage_Welcome)(nil),
 		(*ControlMessage_AssignWorkload)(nil),
 		(*ControlMessage_StopWorkload)(nil),
@@ -1699,6 +2889,12 @@ func file_cloud_v1_agent_proto_init() {
 		(*ControlMessage_RunCommand)(nil),
 		(*ControlMessage_Probe)(nil),
 		(*ControlMessage_Disconnect)(nil),
+		(*ControlMessage_FileList)(nil),
+		(*ControlMessage_FileRead)(nil),
+		(*ControlMessage_FileWrite)(nil),
+		(*ControlMessage_FileDelete)(nil),
+		(*ControlMessage_DirCreate)(nil),
+		(*ControlMessage_FileStat)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1706,7 +2902,7 @@ func file_cloud_v1_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cloud_v1_agent_proto_rawDesc), len(file_cloud_v1_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

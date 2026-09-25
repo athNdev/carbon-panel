@@ -10,9 +10,10 @@
 package main
 
 import (
-	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodeagent"
+	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -28,12 +29,14 @@ import (
 	"syscall"
 	"time"
 
-
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/config"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodeagent"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/obs"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
+	"github.com/docker/docker/pkg/stdcopy"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Build metadata, injected via ldflags.
@@ -197,31 +200,31 @@ func startAgent(configPath, controlPlaneOverride, joinTokenOverride, dataDirOver
 		if state.identity != nil {
 			nodeID = state.identity.NodeID
 		}
+		connected := state.connected
 		state.mu.RUnlock()
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"status":  "ok",
-			"version": version,
-			"uptime":  uptime,
-			"node_id": nodeID,
+			"status":    "ok",
+			"version":   version,
+			"node_id":   nodeID,
+			"connected": connected,
+			"uptime":    uptime,
 		})
 	})
 
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		state.mu.RLock()
-		ready := state.identity != nil && state.connected
+		joined := state.identity != nil
+		connected := state.connected
 		state.mu.RUnlock()
 
-		w.Header().Set("Content-Type", "application/json")
-		if ready {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"status":"ready"}`))
-		} else {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte(`{"status":"not-ready"}`))
+		if !joined || !connected {
+			http.Error(w, `{"status":"not_ready"}`, http.StatusServiceUnavailable)
+			return
 		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ready"}`))
 	})
 
 	httpSrv := &http.Server{
@@ -243,8 +246,10 @@ func startAgent(configPath, controlPlaneOverride, joinTokenOverride, dataDirOver
 		runner = dockerRunner
 	}
 
+	fileManager := nodeagent.NewFileManager(dataDir)
+
 	// Run agent lifecycle loop in background
-	go runAgentLoop(ctx, logger, state, runner, controlPlaneURL, joinToken, identityFile)
+	go runAgentLoop(ctx, logger, state, runner, fileManager, controlPlaneURL, joinToken, identityFile)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -258,15 +263,15 @@ func startAgent(configPath, controlPlaneOverride, joinTokenOverride, dataDirOver
 	case sig := <-stop:
 		logger.Info("shutdown on signal", "signal", sig.String())
 	case err := <-serveErr:
-		if err != nil && err != http.ErrServerClosed {
-			return fmt.Errorf("serve: %w", err)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("local http server failed", "err", err)
 		}
-		return nil
 	}
 
-	shutCtx, shutCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shutCancel()
-	return httpSrv.Shutdown(shutCtx)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	_ = httpSrv.Shutdown(shutdownCtx)
+	return nil
 }
 
 func loadIdentity(path string) (*PersistedIdentity, error) {
@@ -282,30 +287,30 @@ func loadIdentity(path string) (*PersistedIdentity, error) {
 }
 
 func saveIdentity(path string, id *PersistedIdentity) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(id, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0600)
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func detectDockerVersion() string {
-	if out, err := exec.Command("docker", "version", "--format", "{{.Server.Version}}").Output(); err == nil {
-		v := strings.TrimSpace(string(out))
-		if v != "" {
-			return v
-		}
-	}
-	if out, err := exec.Command("docker", "-v").Output(); err == nil {
+	out, err := exec.Command("docker", "version", "--format", "{{.Server.Version}}").Output()
+	if err == nil {
 		return strings.TrimSpace(string(out))
 	}
 	return "unknown"
 }
 
-func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, runner nodeagent.Runner, controlPlaneURL, joinToken, identityPath string) {
+func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, runner nodeagent.Runner, files *nodeagent.FileManager, controlPlaneURL, joinToken, identityPath string) {
 	if controlPlaneURL == "" {
 		logger.Warn("control plane URL is empty; agent loop inactive")
 		return
@@ -420,6 +425,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 		ticker := time.NewTicker(interval)
 
 		sendMsgCh := make(chan *v1.AgentMessage, 64)
+		var activeStreams sync.Map
 
 		streamDone := make(chan struct{})
 		go func() {
@@ -458,6 +464,9 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 						if assign.Start {
 							st = v1.WorkloadStatus_WORKLOAD_STATUS_RUNNING
 							detail = fmt.Sprintf("container running on port %d", port)
+							if _, loaded := activeStreams.LoadOrStore(w.Id, true); !loaded {
+								go streamContainerLogs(ctx, runner, id.NodeID, w.Id, sendMsgCh, &activeStreams, logger)
+							}
 						}
 						sendMsgCh <- &v1.AgentMessage{
 							Payload: &v1.AgentMessage_WorkloadStatus{
@@ -476,6 +485,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 					if stop == nil || stop.WorkloadId == "" {
 						continue
 					}
+					activeStreams.Delete(stop.WorkloadId)
 					logger.Info("executing stop workload", "workload_id", stop.WorkloadId)
 					err := runner.Stop(ctx, stop.WorkloadId, int(stop.TimeoutSeconds))
 					if err != nil {
@@ -507,6 +517,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 					if del == nil || del.WorkloadId == "" {
 						continue
 					}
+					activeStreams.Delete(del.WorkloadId)
 					logger.Info("executing delete workload", "workload_id", del.WorkloadId)
 					_ = runner.Delete(ctx, del.WorkloadId, del.DeleteData)
 					sendMsgCh <- &v1.AgentMessage{
@@ -516,6 +527,173 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 								WorkloadId: del.WorkloadId,
 								Status:     v1.WorkloadStatus_WORKLOAD_STATUS_STOPPED,
 								Detail:     "workload removed",
+							},
+						},
+					}
+
+				case *v1.ControlMessage_RunCommand:
+					cmd := p.RunCommand
+					if cmd == nil || cmd.WorkloadId == "" {
+						continue
+					}
+					logger.Info("executing command on workload", "workload_id", cmd.WorkloadId, "command", cmd.Command, "command_id", cmd.CommandId)
+					out, err := runner.RunCommand(ctx, cmd.WorkloadId, cmd.Command)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_CommandResult{
+							CommandResult: &v1.AgentCommandResult{
+								CommandId: cmd.CommandId,
+								Success:   success,
+								Output:    out,
+								Error:     errMsg,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_FileList:
+					req := p.FileList
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					flist, err := files.ListFiles(req.WorkloadId, req.Path)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_FileListResult{
+							FileListResult: &v1.AgentFileListResult{
+								CommandId: req.CommandId,
+								Success:   success,
+								Error:     errMsg,
+								Files:     flist,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_FileRead:
+					req := p.FileRead
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					go func(cmdID, wID, relPath string) {
+						rErr := files.ReadFile(wID, relPath, func(chunk []byte, isLast bool, totalSize int64) error {
+							sendMsgCh <- &v1.AgentMessage{
+								Payload: &v1.AgentMessage_FileReadChunk{
+									FileReadChunk: &v1.AgentReadFileChunk{
+										CommandId: cmdID,
+										Success:   true,
+										Chunk:     chunk,
+										IsLast:    isLast,
+										TotalSize: totalSize,
+									},
+								},
+							}
+							return nil
+						})
+						if rErr != nil {
+							sendMsgCh <- &v1.AgentMessage{
+								Payload: &v1.AgentMessage_FileReadChunk{
+									FileReadChunk: &v1.AgentReadFileChunk{
+										CommandId: cmdID,
+										Success:   false,
+										Error:     rErr.Error(),
+										IsLast:    true,
+									},
+								},
+							}
+						}
+					}(req.CommandId, req.WorkloadId, req.Path)
+
+				case *v1.ControlMessage_FileWrite:
+					req := p.FileWrite
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					written, err := files.WriteChunk(req.CommandId, req.WorkloadId, req.Path, req.Chunk, req.IsLast, req.Mode)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					if req.IsLast || !success {
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_FileWriteResult{
+								FileWriteResult: &v1.AgentWriteFileResult{
+									CommandId:    req.CommandId,
+									Success:      success,
+									Error:        errMsg,
+									BytesWritten: written,
+								},
+							},
+						}
+					}
+
+				case *v1.ControlMessage_FileDelete:
+					req := p.FileDelete
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					err := files.DeleteFile(req.WorkloadId, req.Path, req.Recursive)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_FileDeleteResult{
+							FileDeleteResult: &v1.AgentDeleteFileResult{
+								CommandId: req.CommandId,
+								Success:   success,
+								Error:     errMsg,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_DirCreate:
+					req := p.DirCreate
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					err := files.CreateDirectory(req.WorkloadId, req.Path)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_DirCreateResult{
+							DirCreateResult: &v1.AgentCreateDirectoryResult{
+								CommandId: req.CommandId,
+								Success:   success,
+								Error:     errMsg,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_FileStat:
+					req := p.FileStat
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					stat, err := files.Stat(req.WorkloadId, req.Path)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_FileStatResult{
+							FileStatResult: &v1.AgentStatFileResult{
+								CommandId: req.CommandId,
+								Success:   success,
+								Error:     errMsg,
+								Info:      stat,
 							},
 						},
 					}
@@ -565,12 +743,70 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 	}
 }
 
+func streamContainerLogs(
+	ctx context.Context,
+	runner nodeagent.Runner,
+	nodeID, workloadID string,
+	sendMsgCh chan<- *v1.AgentMessage,
+	activeStreams *sync.Map,
+	logger *slog.Logger,
+) {
+	defer activeStreams.Delete(workloadID)
+
+	reader, err := runner.Logs(ctx, workloadID, 100, true)
+	if err != nil {
+		logger.Warn("failed opening log stream for workload", "workload_id", workloadID, "err", err)
+		return
+	}
+	defer func() { _ = reader.Close() }()
+
+	prOut, pwOut := io.Pipe()
+	prErr, pwErr := io.Pipe()
+
+	go func() {
+		defer func() { _ = pwOut.Close() }()
+		defer func() { _ = pwErr.Close() }()
+		_, _ = stdcopy.StdCopy(pwOut, pwErr, reader)
+	}()
+
+	scanLines := func(r io.Reader, isStderr bool) {
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			text := scanner.Text()
+			line := &v1.WorkloadLogLine{
+				Source:    "console",
+				Line:      text,
+				Stderr:    isStderr,
+				Timestamp: timestamppb.Now(),
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case sendMsgCh <- &v1.AgentMessage{
+				Payload: &v1.AgentMessage_Logs{
+					Logs: &v1.AgentLogChunk{
+						NodeId:     nodeID,
+						WorkloadId: workloadID,
+						Lines:      []*v1.WorkloadLogLine{line},
+					},
+				},
+			}:
+			}
+		}
+	}
+
+	go scanLines(prErr, true)
+	scanLines(prOut, false)
+}
+
 func newAgentHTTPClient() *http.Client {
 	protocols := new(http.Protocols)
 	protocols.SetUnencryptedHTTP2(true)
 	return &http.Client{
 		Transport: &http.Transport{
-			Protocols: protocols,
+			Protocols:           protocols,
+			ForceAttemptHTTP2:   true,
+			DisableCompression: true,
 		},
 	}
 }

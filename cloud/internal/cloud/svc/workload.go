@@ -3,6 +3,8 @@ package svc
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -417,16 +419,86 @@ func (s *WorkloadService) RestartWorkload(ctx context.Context, req *connect.Requ
 	return connect.NewResponse(&v1.RestartWorkloadResponse{Workload: workloadToProto(w)}), nil
 }
 
-// StreamWorkloadLogs tails live console output, which only the node agent
-// holds. Typed not-implemented so callers can retry via the agent path.
+// StreamWorkloadLogs tails live console output streamed from the node agent.
 func (s *WorkloadService) StreamWorkloadLogs(ctx context.Context, req *connect.Request[v1.StreamWorkloadLogsRequest], stream *connect.ServerStream[v1.WorkloadLogLine]) error {
-	return connect.NewError(connect.CodeUnimplemented, errNodeExecutes)
+	if req.Msg.Id == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("workload id is required"))
+	}
+	w, err := s.load(ctx, req.Msg.Id)
+	if err != nil {
+		return connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
+	}
+	if s.dispatcher == nil {
+		return connect.NewError(connect.CodeUnavailable, errors.New("dispatcher unavailable"))
+	}
+
+	logCh, cancel := s.dispatcher.SubscribeLogs(w.ID)
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case line, ok := <-logCh:
+			if !ok {
+				return nil
+			}
+			if err := stream.Send(line); err != nil {
+				return err
+			}
+		}
+	}
 }
 
-// SendWorkloadCommand runs a console command, which only the node agent can
-// execute. Typed not-implemented.
+// SendWorkloadCommand runs a console command over RCON via the node agent.
 func (s *WorkloadService) SendWorkloadCommand(ctx context.Context, req *connect.Request[v1.SendWorkloadCommandRequest]) (*connect.Response[v1.SendWorkloadCommandResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errNodeExecutes)
+	if req.Msg.Id == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("workload id is required"))
+	}
+	if strings.TrimSpace(req.Msg.Command) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("command cannot be empty"))
+	}
+	w, err := s.load(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
+	}
+	if w.NodeID == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("workload is not placed on any node"))
+	}
+	if s.dispatcher == nil || !s.dispatcher.IsConnected(w.NodeID) {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("node agent is offline"))
+	}
+
+	commandID := uuid.NewString()
+	waitCh := s.dispatcher.ExpectCommand(commandID)
+	defer s.dispatcher.CancelCommand(commandID)
+
+	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+		Payload: &v1.ControlMessage_RunCommand{
+			RunCommand: &v1.ControlRunCommand{
+				CommandId:  commandID,
+				WorkloadId: w.ID,
+				Command:    req.Msg.Command,
+			},
+		},
+	})
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch command to node agent"))
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
+	case <-time.After(15 * time.Second):
+		return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out waiting for command output from node agent"))
+	case res := <-waitCh:
+		if !res.Success {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("command execution failed: %s", res.Error))
+		}
+		return connect.NewResponse(&v1.SendWorkloadCommandResponse{
+			Output: res.Output,
+		}), nil
+	}
 }
 
 // ListWorkloadEvents returns the breadcrumb history of a workload.

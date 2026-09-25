@@ -50,17 +50,18 @@ type Deps struct {
 
 // Services holds one implementation per Connect service.
 type Services struct {
-	System    *SystemService
-	Org       *OrgService
-	Role      *RoleService
-	NodeType  *NodeTypeService
-	Node      *NodeService
-	APIKey    *APIKeyService
-	Session   *SessionService
-	Audit     *AuditService
+	System     *SystemService
+	Org        *OrgService
+	Role       *RoleService
+	NodeType   *NodeTypeService
+	Node       *NodeService
+	APIKey     *APIKeyService
+	Session    *SessionService
+	Audit      *AuditService
 	Provision  *ProvisionService
 	Workload   *WorkloadService
 	Agent      *AgentService
+	File       *FileService
 	Dispatcher *AgentDispatcher
 }
 
@@ -100,6 +101,7 @@ func New(deps Deps) (*Services, error) {
 		Provision:  &ProvisionService{deps: deps},
 		Workload:   &WorkloadService{deps: deps, dispatcher: deps.Dispatcher},
 		Agent:      &AgentService{deps: deps, dispatcher: deps.Dispatcher},
+		File:       &FileService{deps: deps, dispatcher: deps.Dispatcher},
 		Dispatcher: deps.Dispatcher,
 	}, nil
 }
