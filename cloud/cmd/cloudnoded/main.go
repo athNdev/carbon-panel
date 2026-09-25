@@ -10,6 +10,7 @@
 package main
 
 import (
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodeagent"
 	"context"
 	"encoding/json"
 	"flag"
@@ -233,8 +234,17 @@ func startAgent(configPath, controlPlaneOverride, joinTokenOverride, dataDirOver
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var runner nodeagent.Runner
+	dockerRunner, err := nodeagent.NewDockerRunner(dataDir, logger)
+	if err != nil {
+		logger.Warn("docker runner unavailable, falling back to mock runner", "err", err)
+		runner = nodeagent.NewMockRunner()
+	} else {
+		runner = dockerRunner
+	}
+
 	// Run agent lifecycle loop in background
-	go runAgentLoop(ctx, logger, state, controlPlaneURL, joinToken, identityFile)
+	go runAgentLoop(ctx, logger, state, runner, controlPlaneURL, joinToken, identityFile)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -295,7 +305,7 @@ func detectDockerVersion() string {
 	return "unknown"
 }
 
-func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, controlPlaneURL, joinToken, identityPath string) {
+func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, runner nodeagent.Runner, controlPlaneURL, joinToken, identityPath string) {
 	if controlPlaneURL == "" {
 		logger.Warn("control plane URL is empty; agent loop inactive")
 		return
@@ -409,6 +419,8 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 		}
 		ticker := time.NewTicker(interval)
 
+		sendMsgCh := make(chan *v1.AgentMessage, 64)
+
 		streamDone := make(chan struct{})
 		go func() {
 			defer close(streamDone)
@@ -419,6 +431,95 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 					return
 				}
 				logger.Debug("received control envelope", "msg", msg)
+				switch p := msg.Payload.(type) {
+				case *v1.ControlMessage_AssignWorkload:
+					assign := p.AssignWorkload
+					if assign == nil || assign.Workload == nil {
+						continue
+					}
+					w := assign.Workload
+					logger.Info("executing workload assignment", "workload_id", w.Id, "name", w.Name, "start", assign.Start)
+					cid, port, err := runner.Assign(ctx, w, assign.Start)
+					if err != nil {
+						logger.Error("failed assigning workload", "workload_id", w.Id, "err", err)
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_WorkloadStatus{
+								WorkloadStatus: &v1.AgentWorkloadStatus{
+									NodeId:     id.NodeID,
+									WorkloadId: w.Id,
+									Status:     v1.WorkloadStatus_WORKLOAD_STATUS_ERROR,
+									Detail:     err.Error(),
+								},
+							},
+						}
+					} else {
+						st := v1.WorkloadStatus_WORKLOAD_STATUS_STOPPED
+						detail := "container created"
+						if assign.Start {
+							st = v1.WorkloadStatus_WORKLOAD_STATUS_RUNNING
+							detail = fmt.Sprintf("container running on port %d", port)
+						}
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_WorkloadStatus{
+								WorkloadStatus: &v1.AgentWorkloadStatus{
+									NodeId:      id.NodeID,
+									WorkloadId:  w.Id,
+									Status:      st,
+									ContainerId: cid,
+									Detail:      detail,
+								},
+							},
+						}
+					}
+				case *v1.ControlMessage_StopWorkload:
+					stop := p.StopWorkload
+					if stop == nil || stop.WorkloadId == "" {
+						continue
+					}
+					logger.Info("executing stop workload", "workload_id", stop.WorkloadId)
+					err := runner.Stop(ctx, stop.WorkloadId, int(stop.TimeoutSeconds))
+					if err != nil {
+						logger.Error("failed stopping workload", "workload_id", stop.WorkloadId, "err", err)
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_WorkloadStatus{
+								WorkloadStatus: &v1.AgentWorkloadStatus{
+									NodeId:     id.NodeID,
+									WorkloadId: stop.WorkloadId,
+									Status:     v1.WorkloadStatus_WORKLOAD_STATUS_ERROR,
+									Detail:     err.Error(),
+								},
+							},
+						}
+					} else {
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_WorkloadStatus{
+								WorkloadStatus: &v1.AgentWorkloadStatus{
+									NodeId:     id.NodeID,
+									WorkloadId: stop.WorkloadId,
+									Status:     v1.WorkloadStatus_WORKLOAD_STATUS_STOPPED,
+									Detail:     "container stopped",
+								},
+							},
+						}
+					}
+				case *v1.ControlMessage_DeleteWorkload:
+					del := p.DeleteWorkload
+					if del == nil || del.WorkloadId == "" {
+						continue
+					}
+					logger.Info("executing delete workload", "workload_id", del.WorkloadId)
+					_ = runner.Delete(ctx, del.WorkloadId, del.DeleteData)
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_WorkloadStatus{
+							WorkloadStatus: &v1.AgentWorkloadStatus{
+								NodeId:     id.NodeID,
+								WorkloadId: del.WorkloadId,
+								Status:     v1.WorkloadStatus_WORKLOAD_STATUS_STOPPED,
+								Detail:     "workload removed",
+							},
+						},
+					}
+				}
 			}
 		}()
 
@@ -432,6 +533,12 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, c
 			case <-streamDone:
 				ticker.Stop()
 				break streamLoop
+			case outMsg := <-sendMsgCh:
+				if err := stream.Send(outMsg); err != nil {
+					logger.Warn("stream send error", "err", err)
+					ticker.Stop()
+					break streamLoop
+				}
 			case <-ticker.C:
 				hb := &v1.AgentMessage{
 					Payload: &v1.AgentMessage_Heartbeat{

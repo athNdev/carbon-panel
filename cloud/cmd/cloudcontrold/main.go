@@ -326,6 +326,7 @@ func serve(configPath string, stderr io.Writer) error {
 		Notifier:        notifier,
 		Outbox:          outbox,
 		Secrets:         secProvider,
+		Dispatcher:      svc.NewAgentDispatcher(logger),
 		ControlPlaneURL: cfg.Server.PublicURL,
 		Version:         version,
 		Commit:          commit,

@@ -45,6 +45,7 @@ type Deps struct {
 	Version   string
 	Commit    string
 	BuildTime string
+	Dispatcher *AgentDispatcher
 }
 
 // Services holds one implementation per Connect service.
@@ -57,9 +58,10 @@ type Services struct {
 	APIKey    *APIKeyService
 	Session   *SessionService
 	Audit     *AuditService
-	Provision *ProvisionService
-	Workload  *WorkloadService
-	Agent     *AgentService
+	Provision  *ProvisionService
+	Workload   *WorkloadService
+	Agent      *AgentService
+	Dispatcher *AgentDispatcher
 }
 
 // New constructs the service suite from its dependencies. Store and Nodes are
@@ -82,18 +84,23 @@ func New(deps Deps) (*Services, error) {
 		deps.Audits = audit.NewGormStore(deps.Store)
 	}
 
+	if deps.Dispatcher == nil {
+		deps.Dispatcher = NewAgentDispatcher(nil)
+	}
+
 	return &Services{
-		System:    &SystemService{deps: deps},
-		Org:       &OrgService{deps: deps},
-		Role:      &RoleService{deps: deps},
-		NodeType:  &NodeTypeService{deps: deps},
-		Node:      &NodeService{deps: deps},
-		APIKey:    &APIKeyService{deps: deps},
-		Session:   &SessionService{deps: deps},
-		Audit:     &AuditService{deps: deps},
-		Provision: &ProvisionService{deps: deps},
-		Workload:  &WorkloadService{deps: deps},
-		Agent:     &AgentService{deps: deps},
+		System:     &SystemService{deps: deps},
+		Org:        &OrgService{deps: deps},
+		Role:       &RoleService{deps: deps},
+		NodeType:   &NodeTypeService{deps: deps},
+		Node:       &NodeService{deps: deps},
+		APIKey:     &APIKeyService{deps: deps},
+		Session:    &SessionService{deps: deps},
+		Audit:      &AuditService{deps: deps},
+		Provision:  &ProvisionService{deps: deps},
+		Workload:   &WorkloadService{deps: deps, dispatcher: deps.Dispatcher},
+		Agent:      &AgentService{deps: deps, dispatcher: deps.Dispatcher},
+		Dispatcher: deps.Dispatcher,
 	}, nil
 }
 

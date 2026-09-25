@@ -27,7 +27,8 @@ import (
 // recorded as workload events; live dispatch state belongs to the w3-noded
 // lane.
 type AgentService struct {
-	deps Deps
+	deps       Deps
+	dispatcher *AgentDispatcher
 }
 
 // JoinNode redeems a single-use token and writes the node row.
@@ -117,6 +118,14 @@ func (s *AgentService) RenewCredentials(ctx context.Context, req *connect.Reques
 func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v1.AgentMessage, v1.ControlMessage]) error {
 	slog.Info("AgentService.Connect: stream opened")
 	defer slog.Info("AgentService.Connect: stream returned")
+
+	var currentSession *NodeSession
+	defer func() {
+		if currentSession != nil && s.dispatcher != nil {
+			s.dispatcher.Unregister(currentSession.NodeID)
+		}
+	}()
+
 	for {
 		msg, err := stream.Receive()
 		if err != nil {
@@ -125,10 +134,31 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 		}
 		switch payload := msg.Payload.(type) {
 		case *v1.AgentMessage_Hello:
-			slog.Info("AgentService.Connect: received Hello", "node_id", payload.Hello.GetNodeId())
+			nodeID := payload.Hello.GetNodeId()
+			slog.Info("AgentService.Connect: received Hello", "node_id", nodeID)
 			if err := stream.Send(welcomeMsg(ctx, s, payload.Hello)); err != nil {
 				slog.Warn("AgentService.Connect: send welcome error", "err", err)
 				return err
+			}
+			if s.dispatcher != nil && nodeID != "" {
+				currentSession = s.dispatcher.Register(nodeID)
+				go func(sess *NodeSession) {
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case outMsg, ok := <-sess.NextMessage():
+							if !ok {
+								return
+							}
+							if err := stream.Send(outMsg); err != nil {
+								slog.Warn("AgentService.Connect: error sending control msg to node", "node_id", sess.NodeID, "err", err)
+								return
+							}
+						}
+					}
+				}(currentSession)
+				go s.reconcileNodeWorkloads(ctx, nodeID)
 			}
 		case *v1.AgentMessage_Heartbeat:
 			slog.Info("AgentService.Connect: received Heartbeat", "node_id", payload.Heartbeat.GetNodeId())
@@ -143,6 +173,33 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 		default:
 			// Unknown envelopes are ignored: old agents keep working.
 		}
+	}
+}
+
+func (s *AgentService) reconcileNodeWorkloads(ctx context.Context, nodeID string) {
+	if s.deps.Store == nil || s.dispatcher == nil || nodeID == "" {
+		return
+	}
+	var workloads []db.Workload
+	err := s.deps.Store.Unscoped().WithContext(ctx).
+		Where("node_id = ? AND status IN ('pending', 'starting', 'running')", nodeID).
+		Find(&workloads).Error
+	if err != nil {
+		slog.Error("failed querying workloads to reconcile for node", "node_id", nodeID, "err", err)
+		return
+	}
+	for i := range workloads {
+		w := &workloads[i]
+		slog.Info("reconciling workload to connected node", "node_id", nodeID, "workload_id", w.ID, "status", w.Status)
+		s.dispatcher.Dispatch(nodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_AssignWorkload{
+				AssignWorkload: &v1.ControlWorkloadAssignment{
+					CommandId: uuid.NewString(),
+					Workload:  workloadToProto(w),
+					Start:     w.Status == "starting" || w.Status == "running",
+				},
+			},
+		})
 	}
 }
 
@@ -263,13 +320,18 @@ func (s *AgentService) onWorkloadStatus(ctx context.Context, st *v1.AgentWorkloa
 		"status":        workloadStatusToString(st.Status),
 		"status_detail": st.Detail,
 	}
+	if st.ContainerId != "" {
+		updates["container_id"] = st.ContainerId
+	}
 	_ = q.Model(&db.Workload{}).Where("id = ?", st.WorkloadId).Updates(updates).Error
-	_ = q.Create(&db.WorkloadEvent{
-		TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
-		WorkloadID: st.WorkloadId,
-		Kind:       "status_transition",
-		Message:    st.Detail,
-	}).Error
+	if eq, err := s.deps.Store.Org(ctx); err == nil {
+		_ = eq.Create(&db.WorkloadEvent{
+			TenantBase: db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
+			WorkloadID: st.WorkloadId,
+			Kind:       "status_transition",
+			Message:    st.Detail,
+		}).Error
+	}
 }
 
 func (s *AgentService) onCommandResult(ctx context.Context, res *v1.AgentCommandResult) {

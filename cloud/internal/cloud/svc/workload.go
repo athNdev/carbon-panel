@@ -25,7 +25,8 @@ import (
 // RPC records intent and returns errNodeExecutes so callers can tell
 // "accepted by control plane" from "executed on node".
 type WorkloadService struct {
-	deps Deps
+	deps       Deps
+	dispatcher *AgentDispatcher
 }
 
 func workloadToProto(w *db.Workload) *v1.Workload {
@@ -214,6 +215,18 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 		})
 	}
 
+	if s.dispatcher != nil && w.NodeID != "" {
+		s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_AssignWorkload{
+				AssignWorkload: &v1.ControlWorkloadAssignment{
+					CommandId: uuid.NewString(),
+					Workload:  workloadToProto(w),
+					Start:     false,
+				},
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.CreateWorkloadResponse{Workload: workloadToProto(w)}), nil
 }
 
@@ -256,7 +269,8 @@ func (s *WorkloadService) UpdateWorkload(ctx context.Context, req *connect.Reque
 // DeleteWorkload removes a workload row. Live container teardown is the
 // node agent's job; delete_data is recorded for it.
 func (s *WorkloadService) DeleteWorkload(ctx context.Context, req *connect.Request[v1.DeleteWorkloadRequest]) (*connect.Response[v1.DeleteWorkloadResponse], error) {
-	if _, err := s.load(ctx, req.Msg.Id); err != nil {
+	w, err := s.load(ctx, req.Msg.Id)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
 	}
 	q, err := s.deps.Store.Org(ctx)
@@ -265,6 +279,18 @@ func (s *WorkloadService) DeleteWorkload(ctx context.Context, req *connect.Reque
 	}
 	if err := q.Where("id = ?", req.Msg.Id).Delete(&db.Workload{}).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errWorkloadDelete)
+	}
+
+	if s.dispatcher != nil && w.NodeID != "" {
+		s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_DeleteWorkload{
+				DeleteWorkload: &v1.ControlWorkloadDelete{
+					CommandId:  uuid.NewString(),
+					WorkloadId: w.ID,
+					DeleteData: req.Msg.DeleteData,
+				},
+			},
+		})
 	}
 
 	if s.deps.Notifier != nil {
@@ -308,6 +334,18 @@ func (s *WorkloadService) StartWorkload(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	if s.dispatcher != nil && w.NodeID != "" {
+		s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_AssignWorkload{
+				AssignWorkload: &v1.ControlWorkloadAssignment{
+					CommandId: uuid.NewString(),
+					Workload:  workloadToProto(w),
+					Start:     true,
+				},
+			},
+		})
+	}
+
 	if s.deps.Notifier != nil {
 		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
 			EventID:   uuid.NewString(),
@@ -328,6 +366,18 @@ func (s *WorkloadService) StopWorkload(ctx context.Context, req *connect.Request
 	w, err := s.intend(ctx, req.Msg.Id, "stopping", "stop_requested", "stop requested, awaiting node agent")
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+
+	if s.dispatcher != nil && w.NodeID != "" {
+		s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_StopWorkload{
+				StopWorkload: &v1.ControlWorkloadStop{
+					CommandId:      uuid.NewString(),
+					WorkloadId:     w.ID,
+					TimeoutSeconds: 30,
+				},
+			},
+		})
 	}
 
 	if s.deps.Notifier != nil {
@@ -351,6 +401,19 @@ func (s *WorkloadService) RestartWorkload(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
+
+	if s.dispatcher != nil && w.NodeID != "" {
+		s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_AssignWorkload{
+				AssignWorkload: &v1.ControlWorkloadAssignment{
+					CommandId: uuid.NewString(),
+					Workload:  workloadToProto(w),
+					Start:     true,
+				},
+			},
+		})
+	}
+
 	return connect.NewResponse(&v1.RestartWorkloadResponse{Workload: workloadToProto(w)}), nil
 }
 

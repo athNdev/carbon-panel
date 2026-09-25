@@ -210,19 +210,6 @@ func (i *authInterceptor) bySession(ctx context.Context, raw, orgHeader string) 
 		}
 	}
 
-	if !foundOrg {
-		// Fallback to the default organization if it exists
-		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("slug = ?", "default").First(&org).Error; err == nil {
-			foundOrg = true
-		} else {
-			// Or any first organization in the system
-			if err := i.opts.Store.Unscoped().WithContext(ctx).First(&org).Error; err == nil {
-				foundOrg = true
-			}
-		}
-	}
-
 	if foundOrg {
 		p.OrgID = org.ID
 	}
@@ -247,8 +234,7 @@ func (i *authInterceptor) bySession(ctx context.Context, raw, orgHeader string) 
 			role := "operator"
 			if humanCount == 0 {
 				role = "owner"
-			}
-			if p.Role != "" && (p.Role == "owner" || p.Role == "admin") {
+			} else if p.Role != "" {
 				role = p.Role
 			}
 
