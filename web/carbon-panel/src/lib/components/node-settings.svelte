@@ -25,7 +25,6 @@
 		CheckCircle2,
 		XCircle,
 		AlertCircle,
-		HardDrive,
 		Cpu,
 		RefreshCw,
 		Layers,

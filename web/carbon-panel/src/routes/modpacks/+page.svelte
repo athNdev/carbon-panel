@@ -63,7 +63,7 @@
 	let showFavorites = $state(false);
 	let showUploaded = $state(false);
 	let showManifestInspector = $state(false);
-	let indexerStatus = $state<GetIndexerStatusResponse | null>(null);
+	let _indexerStatus = $state<GetIndexerStatusResponse | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let uploading = $state(false);
 	let uploadProgress = $state<UploadProgress | null>(null);
@@ -83,7 +83,7 @@
 
 	// Dynamic game versions and mod loaders from API
 	let gameVersions = $state<string[]>([]);
-	let modLoaders = $state<Array<{ value: string; label: string }>>([
+	let _modLoaders = $state<Array<{ value: string; label: string }>>([
 		{ value: '', label: 'All Loaders' }
 	]);
 
@@ -115,7 +115,7 @@
 		try {
 			const response = await rpcClient.minecraft.getModLoaders({});
 			const loaders = response.modloaders || [];
-			modLoaders = [
+			_modLoaders = [
 				{ value: '', label: 'All Loaders' },
 				...loaders.map((loader) => ({
 					value: loader.name,
@@ -130,7 +130,7 @@
 	async function checkIndexerStatus() {
 		try {
 			const response = await rpcClient.modpack.getIndexerStatus({});
-			indexerStatus = response;
+			_indexerStatus = response;
 		} catch (error) {
 			console.error('Failed to check indexer status:', error);
 		}

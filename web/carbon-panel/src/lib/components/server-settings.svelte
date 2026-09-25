@@ -8,17 +8,7 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { create } from '@bufbuild/protobuf';
 	import { toast } from 'svelte-sonner';
-	import {
-		Loader2,
-		Save,
-		AlertCircle,
-		Network,
-		Server as ServerIcon,
-		ArrowRightLeft,
-		ShieldCheck,
-		CheckCircle2,
-		RefreshCw
-	} from '@lucide/svelte';
+	import { Loader2, Save, AlertCircle, Network, ArrowRightLeft } from '@lucide/svelte';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import * as _ from 'lodash-es';
 	import { ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';

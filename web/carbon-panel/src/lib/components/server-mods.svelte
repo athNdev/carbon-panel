@@ -5,8 +5,6 @@
 		Upload,
 		Download,
 		Trash2,
-		ToggleLeft,
-		ToggleRight,
 		Package,
 		FileText,
 		X,

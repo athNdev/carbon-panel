@@ -106,7 +106,7 @@
 		}
 
 		const slugMatch = trimmed.match(
-			/\/(?:minecraft\/(?:modpacks|mc-mods|customization|worlds|texture-packs)|projects)\/([a-zA-Z0-9_\-]+)/
+			/\/(?:minecraft\/(?:modpacks|mc-mods|customization|worlds|texture-packs)|projects)\/([a-zA-Z0-9_-]+)/
 		);
 		if (slugMatch) {
 			slug = slugMatch[1];

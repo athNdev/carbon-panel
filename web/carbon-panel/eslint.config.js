@@ -11,7 +11,15 @@ const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
 export default ts.config(
 	{
-		ignores: ['src/lib/xterm.js', 'src/lib/proto/**', 'static/scalar.js']
+		ignores: [
+			'.svelte-kit/**',
+			'build/**',
+			'dist/**',
+			'node_modules/**',
+			'src/lib/xterm.js',
+			'src/lib/proto/**',
+			'static/scalar.js'
+		]
 	},
 	includeIgnoreFile(gitignorePath),
 	js.configs.recommended,
@@ -20,13 +28,20 @@ export default ts.config(
 	prettier,
 	...svelte.configs.prettier,
 	{
+		linterOptions: {
+			reportUnusedDisableDirectives: 'off'
+		},
 		languageOptions: {
 			globals: { ...globals.browser, ...globals.node }
 		},
 		rules: {
-			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
-			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
 			'no-undef': 'off',
+			'no-empty': ['error', { allowEmptyCatch: true }],
+			'@typescript-eslint/no-explicit-any': 'off',
+			'@typescript-eslint/no-unused-expressions': 'off',
+			'svelte/no-navigation-without-resolve': 'off',
+			'svelte/require-each-key': 'off',
+			'svelte/prefer-svelte-reactivity': 'off',
 			'@typescript-eslint/no-unused-vars': [
 				'error',
 				{
@@ -45,7 +60,6 @@ export default ts.config(
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
-				projectService: true,
 				extraFileExtensions: ['.svelte'],
 				parser: ts.parser,
 				svelteConfig

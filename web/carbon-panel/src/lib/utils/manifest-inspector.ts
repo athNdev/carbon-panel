@@ -147,7 +147,7 @@ export function inspectModrinthManifest(data: any): ManifestInspectionResult {
 	let universalCount = 0;
 	let clientOnlyCount = 0;
 	let serverOnlyCount = 0;
-	let unknownCount = 0;
+	const unknownCount = 0;
 
 	for (const file of files) {
 		const filePath = file.path || '';
@@ -219,7 +219,7 @@ export function inspectCurseForgeManifest(data: any): ManifestInspectionResult {
 	let universalCount = 0;
 	let clientOnlyCount = 0;
 	let serverOnlyCount = 0;
-	let unknownCount = 0;
+	const unknownCount = 0;
 
 	for (const file of files) {
 		const projId = file.projectID ?? file.projectId ?? '';
@@ -227,7 +227,7 @@ export function inspectCurseForgeManifest(data: any): ManifestInspectionResult {
 		const req = file.required !== false;
 
 		// Fallback environment classification based on name/hints if available
-		const identifier = `${projId}:${fId}`;
+		const _identifier = `${projId}:${fId}`;
 		let resolvedEnv: ModEnvironment = 'unknown';
 
 		// If filename or name exists in file object

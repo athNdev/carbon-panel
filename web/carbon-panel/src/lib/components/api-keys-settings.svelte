@@ -83,7 +83,7 @@
 			} else {
 				toast.error(data.message);
 			}
-		} catch (err) {
+		} catch (_err) {
 			cfTestResult = { valid: false, message: 'Failed to contact validation endpoint' };
 			toast.error('Connection test failed');
 		} finally {
@@ -111,7 +111,7 @@
 			} else {
 				toast.error(data.message);
 			}
-		} catch (err) {
+		} catch (_err) {
 			modrinthTestResult = { valid: false, message: 'Failed to contact validation endpoint' };
 			toast.error('Connection test failed');
 		} finally {

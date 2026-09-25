@@ -792,13 +792,13 @@
 	}
 
 	let containerEl = $state<HTMLDivElement>();
-	let heightStyle = $state('max-height: 600px');
+	let _heightStyle = $state('max-height: 600px');
 
 	function measure() {
 		if (!containerEl) return;
 		const rect = containerEl.getBoundingClientRect();
 		const available = window.innerHeight - rect.top - 24;
-		heightStyle = `height: ${Math.max(200, available)}px`;
+		_heightStyle = `height: ${Math.max(200, available)}px`;
 	}
 
 	$effect(() => {

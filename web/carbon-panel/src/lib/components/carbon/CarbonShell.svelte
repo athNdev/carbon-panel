@@ -3,15 +3,12 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { serversStore, runningServers, activitySortedServers } from '$lib/stores/servers';
-	import { authStore, currentUser, canAccessSettings } from '$lib/stores/auth';
-	import { ServerStatus, type User } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { runningServers, activitySortedServers } from '$lib/stores/servers';
+	import { currentUser, canAccessSettings } from '$lib/stores/auth';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { type Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { describeNodeStatus, pickPrimaryNode } from '$lib/utils/node-status';
 	import CarbonTag from './CarbonTag.svelte';
-	import CarbonButton from './CarbonButton.svelte';
 
 	interface Props {
 		children?: Snippet;
