@@ -816,7 +816,11 @@
 	});
 </script>
 
-<div bind:this={containerEl} class="flex flex-col overflow-hidden rounded-lg border bg-background">
+<div
+	bind:this={containerEl}
+	style={heightStyle}
+	class="flex flex-col overflow-hidden rounded-lg border bg-background"
+>
 	<!-- Toolbar -->
 	<FileToolbar
 		{filterText}

@@ -16,7 +16,7 @@ func buildArchive(t *testing.T, path string, names []string) {
 	if err != nil {
 		t.Fatalf("create archive: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	gz := gzip.NewWriter(f)
 	tw := tar.NewWriter(gz)
 	for _, name := range names {

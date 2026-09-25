@@ -10,16 +10,10 @@
 		Loader2,
 		Package,
 		Settings,
-		HardDrive,
 		Server as ServerIcon,
-		Network,
-		Cpu,
 		Activity,
-		CheckCircle2,
-		AlertCircle,
 		ChevronRight,
 		ChevronLeft,
-		Plus,
 		Check
 	} from '@lucide/svelte';
 	import { create } from '@bufbuild/protobuf';
@@ -30,7 +24,7 @@
 	import type { IndexedModpack, Version } from '$lib/proto/carbonpanel/v1/modpack_pb';
 	import type { Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { NodeStatus } from '$lib/proto/carbonpanel/v1/node_pb';
-	import { CarbonTag, CarbonButton, CarbonTile, CarbonInlineLoading } from '$lib/components/carbon';
+	import { CarbonTag, CarbonInlineLoading } from '$lib/components/carbon';
 	import {
 		Dialog,
 		DialogContent,
@@ -78,7 +72,6 @@
 	let favoriteModpacks = $state<IndexedModpack[]>([]);
 	let modpackVersions = $state<Version[]>([]);
 	let selectedVersionId = $state<string>('');
-	let loadingModpackVersions = $state(false);
 
 	let formData = $state<CreateServerRequest>(
 		create(CreateServerRequestSchema, {
@@ -203,7 +196,6 @@
 	}
 
 	async function loadModpackVersions(modpackId: string) {
-		loadingModpackVersions = true;
 		modpackVersions = [];
 		selectedVersionId = '';
 
@@ -220,8 +212,6 @@
 		} catch (error) {
 			console.error('Failed to load modpack versions:', error);
 			modpackVersions = [];
-		} finally {
-			loadingModpackVersions = false;
 		}
 	}
 
@@ -385,7 +375,7 @@
 		<!-- Carbon Page Header -->
 		<div class="flex items-center gap-4 border-b border-[#393939] pb-5">
 			<a
-				href="/servers"
+				href={resolve('/servers')}
 				class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				title="Back to Servers"
 			>
@@ -1201,7 +1191,7 @@
 			<!-- Carbon Wizard Navigation Bar -->
 			<div class="flex items-center justify-between border-t border-[#393939] pt-4">
 				<a
-					href="/servers"
+					href={resolve('/servers')}
 					class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				>
 					Cancel
