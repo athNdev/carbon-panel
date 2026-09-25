@@ -98,6 +98,7 @@ type Client struct {
 	File      cloudv1connect.FileServiceClient
 	Blueprint cloudv1connect.BlueprintServiceClient
 	Addon     cloudv1connect.AddonServiceClient
+	Schedule  cloudv1connect.ScheduleServiceClient
 }
 
 type authInterceptor struct {
@@ -161,6 +162,7 @@ func NewClient(endpoint, token, orgID string, httpClient *http.Client) *Client {
 		File:      cloudv1connect.NewFileServiceClient(httpClient, endpoint, opts),
 		Blueprint: cloudv1connect.NewBlueprintServiceClient(httpClient, endpoint, opts),
 		Addon:     cloudv1connect.NewAddonServiceClient(httpClient, endpoint, opts),
+		Schedule:  cloudv1connect.NewScheduleServiceClient(httpClient, endpoint, opts),
 	}
 }
 
@@ -301,6 +303,8 @@ func (c *CLI) Run(ctx context.Context, args []string) error {
 		return c.runBlueprints(ctx, subArgs)
 	case "addons":
 		return c.runAddons(ctx, subArgs)
+	case "schedules":
+		return c.runSchedules(ctx, subArgs)
 	default:
 		return fmt.Errorf("unknown command: %s (run 'cloudctl help' for usage)", cmd)
 	}
@@ -820,6 +824,8 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		})
 	case "addons":
 		return c.runWorkloadAddons(ctx, args[1:])
+	case "schedules":
+		return c.runSchedules(ctx, args[1:])
 	case "create":
 		fs := flag.NewFlagSet("workloads create", flag.ContinueOnError)
 		name := fs.String("name", "", "Workload display name (required)")
@@ -2031,5 +2037,280 @@ func (c *CLI) runWorkloadAddons(ctx context.Context, args []string) error {
 
 	default:
 		return fmt.Errorf("unknown workloads addons command: %s", args[0])
+	}
+}
+
+func parseScheduleAction(s string) v1.ScheduleActionType {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "command", "cmd":
+		return v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_COMMAND
+	case "restart":
+		return v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_RESTART
+	case "start":
+		return v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_START
+	case "stop":
+		return v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_STOP
+	case "backup":
+		return v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_BACKUP
+	default:
+		return v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_UNSPECIFIED
+	}
+}
+
+func scheduleActionString(a v1.ScheduleActionType) string {
+	switch a {
+	case v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_COMMAND:
+		return "command"
+	case v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_RESTART:
+		return "restart"
+	case v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_START:
+		return "start"
+	case v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_STOP:
+		return "stop"
+	case v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_BACKUP:
+		return "backup"
+	default:
+		return "unknown"
+	}
+}
+
+func (c *CLI) runSchedules(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: cloudctl schedules <list|get|create|update|delete|run|executions>")
+	}
+
+	switch args[0] {
+	case "list":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl schedules list <workload-id>")
+		}
+		workloadID := args[1]
+		resp, err := c.Client.Schedule.ListSchedules(ctx, connect.NewRequest(&v1.ListSchedulesRequest{
+			WorkloadId: workloadID,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Schedules, func(w io.Writer) error {
+			if len(resp.Msg.Schedules) == 0 {
+				_, _ = fmt.Fprintln(w, "No schedules found.")
+				return nil
+			}
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "ID	NAME	CRON	ACTION	ENABLED	NEXT RUN	LAST RUN")
+			for _, s := range resp.Msg.Schedules {
+				enStr := "yes"
+				if !s.Enabled {
+					enStr = "no"
+				}
+				nextStr := "-"
+				if s.NextRunAtUnix > 0 {
+					nextStr = time.Unix(s.NextRunAtUnix, 0).Format(time.RFC3339)
+				}
+				lastStr := "-"
+				if s.LastRunAtUnix > 0 {
+					lastStr = time.Unix(s.LastRunAtUnix, 0).Format(time.RFC3339)
+				}
+				_, _ = fmt.Fprintf(tw, "%s	%s	%s	%s	%s	%s	%s\n",
+					s.Id, s.Name, s.CronExpression, scheduleActionString(s.ActionType), enStr, nextStr, lastStr)
+			}
+			return tw.Flush()
+		})
+
+	case "get":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl schedules get <schedule-id>")
+		}
+		schedID := args[1]
+		resp, err := c.Client.Schedule.GetSchedule(ctx, connect.NewRequest(&v1.GetScheduleRequest{
+			ScheduleId: schedID,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Schedule, func(w io.Writer) error {
+			s := resp.Msg.Schedule
+			_, _ = fmt.Fprintf(w, "Schedule:    %s\n", s.Id)
+			_, _ = fmt.Fprintf(w, "Name:        %s\n", s.Name)
+			_, _ = fmt.Fprintf(w, "Workload:    %s\n", s.WorkloadId)
+			_, _ = fmt.Fprintf(w, "Cron:        %s\n", s.CronExpression)
+			_, _ = fmt.Fprintf(w, "Action:      %s\n", scheduleActionString(s.ActionType))
+			if s.Payload != "" {
+				_, _ = fmt.Fprintf(w, "Payload:     %s\n", s.Payload)
+			}
+			_, _ = fmt.Fprintf(w, "Enabled:     %v\n", s.Enabled)
+			if s.NextRunAtUnix > 0 {
+				_, _ = fmt.Fprintf(w, "Next Run:    %s\n", time.Unix(s.NextRunAtUnix, 0).Format(time.RFC3339))
+			}
+			if s.LastRunAtUnix > 0 {
+				_, _ = fmt.Fprintf(w, "Last Run:    %s\n", time.Unix(s.LastRunAtUnix, 0).Format(time.RFC3339))
+			}
+			return nil
+		})
+
+	case "create":
+		fs := flag.NewFlagSet("schedules create", flag.ContinueOnError)
+		workloadID := fs.String("workload", "", "Workload ID (required)")
+		name := fs.String("name", "", "Schedule name (required)")
+		cronExpr := fs.String("cron", "", "Cron expression (e.g. '0 4 * * *' or '*/10 * * * *') (required)")
+		actionStr := fs.String("action", "", "Action type: command, restart, start, stop, backup (required)")
+		payload := fs.String("payload", "", "Payload / command string (optional)")
+		enabled := fs.Bool("enabled", true, "Whether schedule is initially enabled")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if *workloadID == "" || *name == "" || *cronExpr == "" || *actionStr == "" {
+			return errors.New("flags -workload, -name, -cron, and -action are required")
+		}
+		act := parseScheduleAction(*actionStr)
+		if act == v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_UNSPECIFIED {
+			return fmt.Errorf("invalid action type %q (must be command, restart, start, stop, backup)", *actionStr)
+		}
+		resp, err := c.Client.Schedule.CreateSchedule(ctx, connect.NewRequest(&v1.CreateScheduleRequest{
+			WorkloadId:     *workloadID,
+			Name:           *name,
+			CronExpression: *cronExpr,
+			ActionType:     act,
+			Payload:        *payload,
+			Enabled:        *enabled,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Schedule, func(w io.Writer) error {
+			_, _ = fmt.Fprintf(w, "Created schedule %s (%s, next: %s)\n",
+				resp.Msg.Schedule.Id, resp.Msg.Schedule.Name,
+				time.Unix(resp.Msg.Schedule.NextRunAtUnix, 0).Format(time.RFC3339))
+			return nil
+		})
+
+	case "update":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl schedules update <schedule-id> [-name <name>] [-cron <expr>] [-action <type>] [-payload <payload>] [-enabled=true|false]")
+		}
+		schedID := args[1]
+		fs := flag.NewFlagSet("schedules update", flag.ContinueOnError)
+		name := fs.String("name", "", "Schedule name")
+		cronExpr := fs.String("cron", "", "Cron expression")
+		actionStr := fs.String("action", "", "Action type")
+		payload := fs.String("payload", "", "Action payload")
+		enabled := fs.Bool("enabled", true, "Schedule enabled state")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		act := v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_UNSPECIFIED
+		if *actionStr != "" {
+			act = parseScheduleAction(*actionStr)
+			if act == v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_UNSPECIFIED {
+				return fmt.Errorf("invalid action type %q", *actionStr)
+			}
+		}
+		resp, err := c.Client.Schedule.UpdateSchedule(ctx, connect.NewRequest(&v1.UpdateScheduleRequest{
+			ScheduleId:     schedID,
+			Name:           *name,
+			CronExpression: *cronExpr,
+			ActionType:     act,
+			Payload:        *payload,
+			Enabled:        *enabled,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Schedule, func(w io.Writer) error {
+			_, _ = fmt.Fprintf(w, "Updated schedule %s (%s, enabled: %v)\n",
+				resp.Msg.Schedule.Id, resp.Msg.Schedule.Name, resp.Msg.Schedule.Enabled)
+			return nil
+		})
+
+	case "delete", "rm":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl schedules delete <schedule-id>")
+		}
+		schedID := args[1]
+		_, err := c.Client.Schedule.DeleteSchedule(ctx, connect.NewRequest(&v1.DeleteScheduleRequest{
+			ScheduleId: schedID,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Deleted schedule: %s\n", schedID)
+		return nil
+
+	case "run":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl schedules run <schedule-id>")
+		}
+		schedID := args[1]
+		resp, err := c.Client.Schedule.RunSchedule(ctx, connect.NewRequest(&v1.RunScheduleRequest{
+			ScheduleId: schedID,
+		}))
+		if err != nil {
+			return err
+		}
+		exec := resp.Msg.Execution
+		return c.printOutput(exec, func(w io.Writer) error {
+			statusStr := "SUCCESS"
+			if exec.Status == v1.ScheduleExecutionStatus_SCHEDULE_EXECUTION_STATUS_FAILED {
+				statusStr = "FAILED"
+			}
+			_, _ = fmt.Fprintf(w, "Triggered schedule %s -> Execution %s (%s in %dms)\n",
+				schedID, exec.Id, statusStr, exec.DurationMs)
+			if exec.Output != "" {
+				_, _ = fmt.Fprintf(w, "Output: %s\n", exec.Output)
+			}
+			if exec.Error != "" {
+				_, _ = fmt.Fprintf(w, "Error:  %s\n", exec.Error)
+			}
+			return nil
+		})
+
+	case "executions", "history", "logs":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl schedules executions <schedule-id> [-limit <n>]")
+		}
+		schedID := args[1]
+		fs := flag.NewFlagSet("schedules executions", flag.ContinueOnError)
+		limit := fs.Int("limit", 20, "Maximum executions to return")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		resp, err := c.Client.Schedule.ListScheduleExecutions(ctx, connect.NewRequest(&v1.ListScheduleExecutionsRequest{
+			ScheduleId: schedID,
+			Limit:      int32(*limit),
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Executions, func(w io.Writer) error {
+			if len(resp.Msg.Executions) == 0 {
+				_, _ = fmt.Fprintln(w, "No executions recorded for this schedule.")
+				return nil
+			}
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "ID	TRIGGER	STATUS	DURATION	STARTED AT	OUTPUT / ERROR")
+			for _, e := range resp.Msg.Executions {
+				statusStr := "RUNNING"
+				switch e.Status {
+				case v1.ScheduleExecutionStatus_SCHEDULE_EXECUTION_STATUS_SUCCESS:
+					statusStr = "SUCCESS"
+				case v1.ScheduleExecutionStatus_SCHEDULE_EXECUTION_STATUS_FAILED:
+					statusStr = "FAILED"
+				}
+				details := e.Output
+				if e.Error != "" {
+					details = "ERROR: " + e.Error
+				}
+				if len(details) > 60 {
+					details = details[:57] + "..."
+				}
+				startStr := time.Unix(e.StartedAtUnix, 0).Format(time.RFC3339)
+				_, _ = fmt.Fprintf(tw, "%s	%s	%s	%dms	%s	%s\n",
+					e.Id, e.TriggeredBy, statusStr, e.DurationMs, startStr, details)
+			}
+			return tw.Flush()
+		})
+
+	default:
+		return fmt.Errorf("unknown schedules command: %s (usage: list, get, create, update, delete, run, executions)", args[0])
 	}
 }

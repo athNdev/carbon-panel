@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+enum ScheduleActionType {
+  SCHEDULE_ACTION_TYPE_UNSPECIFIED = 0;
+  SCHEDULE_ACTION_TYPE_COMMAND = 1;
+  SCHEDULE_ACTION_TYPE_RESTART = 2;
+  SCHEDULE_ACTION_TYPE_START = 3;
+  SCHEDULE_ACTION_TYPE_STOP = 4;
+  SCHEDULE_ACTION_TYPE_BACKUP = 5;
+}
+
+enum ScheduleExecutionStatus {
+  SCHEDULE_EXECUTION_STATUS_UNSPECIFIED = 0;
+  SCHEDULE_EXECUTION_STATUS_RUNNING = 1;
+  SCHEDULE_EXECUTION_STATUS_SUCCESS = 2;
+  SCHEDULE_EXECUTION_STATUS_FAILED = 3;
+}
+
+message WorkloadSchedule {
+  string id = 1;
+  string org_id = 2;
+  string workload_id = 3;
+  string name = 4;
+  string cron_expression = 5;
+  ScheduleActionType action_type = 6;
+  string payload = 7;
+  bool enabled = 8;
+  int64 last_run_at_unix = 9;
+  int64 next_run_at_unix = 10;
+  int64 created_at_unix = 11;
+  int64 updated_at_unix = 12;
+}
+
+message ScheduleExecution {
+  string id = 1;
+  string schedule_id = 2;
+  string workload_id = 3;
+  string triggered_by = 4; // "cron", "manual"
+  ScheduleExecutionStatus status = 5;
+  string output = 6;
+  string error = 7;
+  int64 duration_ms = 8;
+  int64 started_at_unix = 9;
+  int64 finished_at_unix = 10;
+}
+
+message CreateScheduleRequest {
+  string workload_id = 1;
+  string name = 2;
+  string cron_expression = 3;
+  ScheduleActionType action_type = 4;
+  string payload = 5;
+  bool enabled = 6;
+}
+
+message CreateScheduleResponse {
+  WorkloadSchedule schedule = 1;
+}
+
+message ListSchedulesRequest {
+  string workload_id = 1;
+}
+
+message ListSchedulesResponse {
+  repeated WorkloadSchedule schedules = 1;
+}
+
+message GetScheduleRequest {
+  string schedule_id = 1;
+}
+
+message GetScheduleResponse {
+  WorkloadSchedule schedule = 1;
+}
+
+message UpdateScheduleRequest {
+  string schedule_id = 1;
+  string name = 2;
+  string cron_expression = 3;
+  ScheduleActionType action_type = 4;
+  string payload = 5;
+  bool enabled = 6;
+}
+
+message UpdateScheduleResponse {
+  WorkloadSchedule schedule = 1;
+}
+
+message DeleteScheduleRequest {
+  string schedule_id = 1;
+}
+
+message DeleteScheduleResponse {
+  bool success = 1;
+}
+
+message RunScheduleRequest {
+  string schedule_id = 1;
+}
+
+message RunScheduleResponse {
+  ScheduleExecution execution = 1;
+}
+
+message ListScheduleExecutionsRequest {
+  string schedule_id = 1;
+  int32 limit = 2;
+}
+
+message ListScheduleExecutionsResponse {
+  repeated ScheduleExecution executions = 1;
+}
+
+service ScheduleService {
+  rpc CreateSchedule(CreateScheduleRequest) returns (CreateScheduleResponse);
+  rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse);
+  rpc GetSchedule(GetScheduleRequest) returns (GetScheduleResponse);
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (UpdateScheduleResponse);
+  rpc DeleteSchedule(DeleteScheduleRequest) returns (DeleteScheduleResponse);
+  rpc RunSchedule(RunScheduleRequest) returns (RunScheduleResponse);
+  rpc ListScheduleExecutions(ListScheduleExecutionsRequest) returns (ListScheduleExecutionsResponse);
+}

@@ -336,6 +336,10 @@ func serve(configPath string, stderr io.Writer) error {
 		return fmt.Errorf("services: %w", err)
 	}
 
+	if services.Schedule != nil {
+		go services.Schedule.RunBackgroundLoop(recCtx, 10*time.Second)
+	}
+
 	rateLimiter := auth.NewRateLimiter(auth.DefaultRateLimitConfig())
 	defer rateLimiter.Close()
 	httpapi.RateLimit = rateLimiter.Middleware

@@ -345,6 +345,91 @@ func (m *mockFileServer) RenameFile(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1.RenameFileResponse{}), nil
 }
 
+
+type mockScheduleServer struct {
+	cloudv1connect.UnimplementedScheduleServiceHandler
+}
+
+func (m *mockScheduleServer) ListSchedules(ctx context.Context, req *connect.Request[v1.ListSchedulesRequest]) (*connect.Response[v1.ListSchedulesResponse], error) {
+	return connect.NewResponse(&v1.ListSchedulesResponse{
+		Schedules: []*v1.WorkloadSchedule{
+			{
+				Id:             "sched_123",
+				WorkloadId:     req.Msg.WorkloadId,
+				Name:           "Daily Restart",
+				CronExpression: "0 4 * * *",
+				ActionType:     v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_RESTART,
+				Enabled:        true,
+				NextRunAtUnix:  1758800000,
+			},
+		},
+	}), nil
+}
+
+func (m *mockScheduleServer) GetSchedule(ctx context.Context, req *connect.Request[v1.GetScheduleRequest]) (*connect.Response[v1.GetScheduleResponse], error) {
+	return connect.NewResponse(&v1.GetScheduleResponse{
+		Schedule: &v1.WorkloadSchedule{
+			Id:             req.Msg.ScheduleId,
+			WorkloadId:     "wl_123",
+			Name:           "Daily Restart",
+			CronExpression: "0 4 * * *",
+			ActionType:     v1.ScheduleActionType_SCHEDULE_ACTION_TYPE_RESTART,
+			Enabled:        true,
+			NextRunAtUnix:  1758800000,
+		},
+	}), nil
+}
+
+func (m *mockScheduleServer) CreateSchedule(ctx context.Context, req *connect.Request[v1.CreateScheduleRequest]) (*connect.Response[v1.CreateScheduleResponse], error) {
+	return connect.NewResponse(&v1.CreateScheduleResponse{
+		Schedule: &v1.WorkloadSchedule{
+			Id:             "sched_new",
+			WorkloadId:     req.Msg.WorkloadId,
+			Name:           req.Msg.Name,
+			CronExpression: req.Msg.CronExpression,
+			ActionType:     req.Msg.ActionType,
+			Payload:        req.Msg.Payload,
+			Enabled:        req.Msg.Enabled,
+			NextRunAtUnix:  1758800000,
+		},
+	}), nil
+}
+
+func (m *mockScheduleServer) DeleteSchedule(ctx context.Context, req *connect.Request[v1.DeleteScheduleRequest]) (*connect.Response[v1.DeleteScheduleResponse], error) {
+	return connect.NewResponse(&v1.DeleteScheduleResponse{
+		Success: true,
+	}), nil
+}
+
+func (m *mockScheduleServer) RunSchedule(ctx context.Context, req *connect.Request[v1.RunScheduleRequest]) (*connect.Response[v1.RunScheduleResponse], error) {
+	return connect.NewResponse(&v1.RunScheduleResponse{
+		Execution: &v1.ScheduleExecution{
+			Id:          "exec_123",
+			ScheduleId:  req.Msg.ScheduleId,
+			TriggeredBy: "manual",
+			Status:      v1.ScheduleExecutionStatus_SCHEDULE_EXECUTION_STATUS_SUCCESS,
+			Output:      "Command broadcast sent",
+			DurationMs:  45,
+		},
+	}), nil
+}
+
+func (m *mockScheduleServer) ListScheduleExecutions(ctx context.Context, req *connect.Request[v1.ListScheduleExecutionsRequest]) (*connect.Response[v1.ListScheduleExecutionsResponse], error) {
+	return connect.NewResponse(&v1.ListScheduleExecutionsResponse{
+		Executions: []*v1.ScheduleExecution{
+			{
+				Id:            "exec_123",
+				ScheduleId:    req.Msg.ScheduleId,
+				TriggeredBy:   "cron",
+				Status:        v1.ScheduleExecutionStatus_SCHEDULE_EXECUTION_STATUS_SUCCESS,
+				Output:        "Server restarted cleanly",
+				DurationMs:    1200,
+				StartedAtUnix: 1758700000,
+			},
+		},
+	}), nil
+}
+
 func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -355,8 +440,10 @@ func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	bpPath, bpHandler := cloudv1connect.NewBlueprintServiceHandler(&mockBlueprintServer{})
 	addonPath, addonHandler := cloudv1connect.NewAddonServiceHandler(&mockAddonServer{})
 	filePath, fileHandler := cloudv1connect.NewFileServiceHandler(&mockFileServer{})
+	schedPath, schedHandler := cloudv1connect.NewScheduleServiceHandler(&mockScheduleServer{})
 
 	mux.Handle(sysPath, sysHandler)
+	mux.Handle(schedPath, schedHandler)
 	mux.Handle(nodePath, nodeHandler)
 	mux.Handle(workloadPath, workloadHandler)
 	mux.Handle(provisionPath, provisionHandler)
@@ -748,4 +835,114 @@ func TestCLI_AddonsAndFiles(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, stdout.String(), "Renamed server.properties -> server.properties.old")
 	})
+}
+
+func TestCLI_Schedules(t *testing.T) {
+	_, client := setupTestServer(t)
+
+	tt := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "schedules_list",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"schedules", "list", "wl_123"})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "Daily Restart")
+				require.Contains(t, stdout.String(), "0 4 * * *")
+				require.Contains(t, stdout.String(), "restart")
+			},
+		},
+		{
+			name: "schedules_get",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"schedules", "get", "sched_123"})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "Schedule:    sched_123")
+				require.Contains(t, stdout.String(), "Name:        Daily Restart")
+			},
+		},
+		{
+			name: "schedules_create",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{
+					"schedules", "create",
+					"-workload", "wl_123",
+					"-name", "Nightly Backup",
+					"-cron", "0 2 * * *",
+					"-action", "backup",
+				})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "Created schedule sched_new")
+			},
+		},
+		{
+			name: "schedules_run",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"schedules", "run", "sched_123"})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "Triggered schedule sched_123 -> Execution exec_123 (SUCCESS")
+			},
+		},
+		{
+			name: "schedules_executions",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"schedules", "executions", "sched_123"})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "exec_123")
+				require.Contains(t, stdout.String(), "cron")
+				require.Contains(t, stdout.String(), "SUCCESS")
+				require.Contains(t, stdout.String(), "Server restarted cleanly")
+			},
+		},
+		{
+			name: "schedules_delete",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"schedules", "delete", "sched_123"})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "Deleted schedule: sched_123")
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, tc.run)
+	}
 }

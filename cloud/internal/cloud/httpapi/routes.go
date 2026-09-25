@@ -59,4 +59,8 @@ func (s *Server) routes() {
 		path, h = cloudv1connect.NewAddonServiceHandler(svcs.Addon, chain)
 		mount(path, h)
 	}
+	if svcs.Schedule != nil {
+		path, h = cloudv1connect.NewScheduleServiceHandler(svcs.Schedule, chain)
+		mount(path, h)
+	}
 }

@@ -112,6 +112,14 @@ var procedurePermissions = map[string]Permission{
 	cloudv1connect.BlueprintServiceCreateBlueprintProcedure: PermWorkloadsWrite,
 	cloudv1connect.BlueprintServiceUpdateBlueprintProcedure: PermWorkloadsWrite,
 	cloudv1connect.BlueprintServiceDeleteBlueprintProcedure: PermWorkloadsWrite,
+	// ScheduleService.
+	cloudv1connect.ScheduleServiceCreateScheduleProcedure:         PermWorkloadsWrite,
+	cloudv1connect.ScheduleServiceListSchedulesProcedure:          PermWorkloadsRead,
+	cloudv1connect.ScheduleServiceGetScheduleProcedure:            PermWorkloadsRead,
+	cloudv1connect.ScheduleServiceUpdateScheduleProcedure:         PermWorkloadsWrite,
+	cloudv1connect.ScheduleServiceDeleteScheduleProcedure:         PermWorkloadsWrite,
+	cloudv1connect.ScheduleServiceRunScheduleProcedure:            PermWorkloadsWrite,
+	cloudv1connect.ScheduleServiceListScheduleExecutionsProcedure: PermWorkloadsRead,
 }
 
 // PermissionForProcedure returns the permission required by a Connect
@@ -218,6 +226,13 @@ func AllProcedures() []string {
 		cloudv1connect.AddonServiceUninstallAddonProcedure,
 		cloudv1connect.AddonServiceSearchAddonsProcedure,
 		cloudv1connect.AddonServiceGetAddonDetailsProcedure,
+		cloudv1connect.ScheduleServiceCreateScheduleProcedure,
+		cloudv1connect.ScheduleServiceListSchedulesProcedure,
+		cloudv1connect.ScheduleServiceGetScheduleProcedure,
+		cloudv1connect.ScheduleServiceUpdateScheduleProcedure,
+		cloudv1connect.ScheduleServiceDeleteScheduleProcedure,
+		cloudv1connect.ScheduleServiceRunScheduleProcedure,
+		cloudv1connect.ScheduleServiceListScheduleExecutionsProcedure,
 	}
 }
 

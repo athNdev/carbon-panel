@@ -56,6 +56,12 @@ func migrations() []*gormigrate.Migration {
 				return tx.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_blueprints_org_name ON blueprints (org_id, name)`).Error
 			},
 		},
+		{
+			ID: "0005_workload_schedules",
+			Migrate: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&WorkloadSchedule{}, &ScheduleExecution{})
+			},
+		},
 	}
 }
 
@@ -86,6 +92,8 @@ func tenantModels() []any {
 		&WorkloadEvent{},
 		&WorkloadBackup{},
 		&Blueprint{},
+		&WorkloadSchedule{},
+		&ScheduleExecution{},
 		&AuditEvent{},
 		&RoleBinding{},
 	}
