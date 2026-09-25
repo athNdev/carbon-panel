@@ -1394,6 +1394,8 @@ type AgentMessage struct {
 	//	*AgentMessage_BackupDeleteResult
 	//	*AgentMessage_MetricsResult
 	//	*AgentMessage_FileRenameResult
+	//	*AgentMessage_HibernateResult
+	//	*AgentMessage_WakeResult
 	Payload       isAgentMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1580,6 +1582,24 @@ func (x *AgentMessage) GetFileRenameResult() *AgentFileRenameResult {
 	return nil
 }
 
+func (x *AgentMessage) GetHibernateResult() *AgentHibernateResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_HibernateResult); ok {
+			return x.HibernateResult
+		}
+	}
+	return nil
+}
+
+func (x *AgentMessage) GetWakeResult() *AgentWakeResult {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentMessage_WakeResult); ok {
+			return x.WakeResult
+		}
+	}
+	return nil
+}
+
 type isAgentMessage_Payload interface {
 	isAgentMessage_Payload()
 }
@@ -1664,6 +1684,16 @@ type AgentMessage_FileRenameResult struct {
 	FileRenameResult *AgentFileRenameResult `protobuf:"bytes,16,opt,name=file_rename_result,json=fileRenameResult,proto3,oneof"`
 }
 
+type AgentMessage_HibernateResult struct {
+	// Workload hibernation result.
+	HibernateResult *AgentHibernateResult `protobuf:"bytes,17,opt,name=hibernate_result,json=hibernateResult,proto3,oneof"`
+}
+
+type AgentMessage_WakeResult struct {
+	// Workload wake result.
+	WakeResult *AgentWakeResult `protobuf:"bytes,18,opt,name=wake_result,json=wakeResult,proto3,oneof"`
+}
+
 func (*AgentMessage_Hello) isAgentMessage_Payload() {}
 
 func (*AgentMessage_Heartbeat) isAgentMessage_Payload() {}
@@ -1695,6 +1725,10 @@ func (*AgentMessage_BackupDeleteResult) isAgentMessage_Payload() {}
 func (*AgentMessage_MetricsResult) isAgentMessage_Payload() {}
 
 func (*AgentMessage_FileRenameResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_HibernateResult) isAgentMessage_Payload() {}
+
+func (*AgentMessage_WakeResult) isAgentMessage_Payload() {}
 
 // ControlWelcome acknowledges a connection and reports control-plane state.
 type ControlWelcome struct {
@@ -2867,6 +2901,271 @@ func (x *ControlGetWorkloadMetrics) GetWorkloadId() string {
 	return ""
 }
 
+// ControlHibernateWorkload asks the agent to freeze/pause or deep-sleep a workload.
+type ControlHibernateWorkload struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Mode: "pause" or "deep_sleep".
+	Mode          string `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlHibernateWorkload) Reset() {
+	*x = ControlHibernateWorkload{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlHibernateWorkload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlHibernateWorkload) ProtoMessage() {}
+
+func (x *ControlHibernateWorkload) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlHibernateWorkload.ProtoReflect.Descriptor instead.
+func (*ControlHibernateWorkload) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ControlHibernateWorkload) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlHibernateWorkload) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *ControlHibernateWorkload) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+// ControlWakeWorkload asks the agent to unpause or start a sleeping workload.
+type ControlWakeWorkload struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId    string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlWakeWorkload) Reset() {
+	*x = ControlWakeWorkload{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlWakeWorkload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlWakeWorkload) ProtoMessage() {}
+
+func (x *ControlWakeWorkload) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlWakeWorkload.ProtoReflect.Descriptor instead.
+func (*ControlWakeWorkload) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ControlWakeWorkload) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlWakeWorkload) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+// AgentHibernateResult acknowledges workload hibernation.
+type AgentHibernateResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Whether hibernation succeeded.
+	Success bool `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail if failed.
+	Error         string `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentHibernateResult) Reset() {
+	*x = AgentHibernateResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentHibernateResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentHibernateResult) ProtoMessage() {}
+
+func (x *AgentHibernateResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentHibernateResult.ProtoReflect.Descriptor instead.
+func (*AgentHibernateResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *AgentHibernateResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentHibernateResult) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *AgentHibernateResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentHibernateResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// AgentWakeResult acknowledges workload waking.
+type AgentWakeResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Correlation id.
+	CommandId string `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,2,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Whether waking succeeded.
+	Success bool `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	// Error detail if failed.
+	Error         string `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentWakeResult) Reset() {
+	*x = AgentWakeResult{}
+	mi := &file_cloud_v1_agent_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentWakeResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentWakeResult) ProtoMessage() {}
+
+func (x *AgentWakeResult) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_agent_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentWakeResult.ProtoReflect.Descriptor instead.
+func (*AgentWakeResult) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *AgentWakeResult) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *AgentWakeResult) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *AgentWakeResult) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AgentWakeResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 // ControlMessage is anything the control plane sends to an agent.
 type ControlMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2892,6 +3191,8 @@ type ControlMessage struct {
 	//	*ControlMessage_DeleteBackup
 	//	*ControlMessage_GetWorkloadMetrics
 	//	*ControlMessage_FileRename
+	//	*ControlMessage_HibernateWorkload
+	//	*ControlMessage_WakeWorkload
 	Payload       isControlMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2899,7 +3200,7 @@ type ControlMessage struct {
 
 func (x *ControlMessage) Reset() {
 	*x = ControlMessage{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[36]
+	mi := &file_cloud_v1_agent_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2911,7 +3212,7 @@ func (x *ControlMessage) String() string {
 func (*ControlMessage) ProtoMessage() {}
 
 func (x *ControlMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[36]
+	mi := &file_cloud_v1_agent_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2924,7 +3225,7 @@ func (x *ControlMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlMessage.ProtoReflect.Descriptor instead.
 func (*ControlMessage) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{36}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ControlMessage) GetPayload() isControlMessage_Payload {
@@ -3096,6 +3397,24 @@ func (x *ControlMessage) GetFileRename() *ControlFileRename {
 	return nil
 }
 
+func (x *ControlMessage) GetHibernateWorkload() *ControlHibernateWorkload {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_HibernateWorkload); ok {
+			return x.HibernateWorkload
+		}
+	}
+	return nil
+}
+
+func (x *ControlMessage) GetWakeWorkload() *ControlWakeWorkload {
+	if x != nil {
+		if x, ok := x.Payload.(*ControlMessage_WakeWorkload); ok {
+			return x.WakeWorkload
+		}
+	}
+	return nil
+}
+
 type isControlMessage_Payload interface {
 	isControlMessage_Payload()
 }
@@ -3190,6 +3509,16 @@ type ControlMessage_FileRename struct {
 	FileRename *ControlFileRename `protobuf:"bytes,18,opt,name=file_rename,json=fileRename,proto3,oneof"`
 }
 
+type ControlMessage_HibernateWorkload struct {
+	// Workload hibernation request.
+	HibernateWorkload *ControlHibernateWorkload `protobuf:"bytes,19,opt,name=hibernate_workload,json=hibernateWorkload,proto3,oneof"`
+}
+
+type ControlMessage_WakeWorkload struct {
+	// Workload wake request.
+	WakeWorkload *ControlWakeWorkload `protobuf:"bytes,20,opt,name=wake_workload,json=wakeWorkload,proto3,oneof"`
+}
+
 func (*ControlMessage_Welcome) isControlMessage_Payload() {}
 
 func (*ControlMessage_AssignWorkload) isControlMessage_Payload() {}
@@ -3226,6 +3555,10 @@ func (*ControlMessage_GetWorkloadMetrics) isControlMessage_Payload() {}
 
 func (*ControlMessage_FileRename) isControlMessage_Payload() {}
 
+func (*ControlMessage_HibernateWorkload) isControlMessage_Payload() {}
+
+func (*ControlMessage_WakeWorkload) isControlMessage_Payload() {}
+
 // JoinNodeRequest redeems a join token. It is the only call a node makes before
 // it holds credentials, so it is authenticated by the token itself.
 type JoinNodeRequest struct {
@@ -3250,7 +3583,7 @@ type JoinNodeRequest struct {
 
 func (x *JoinNodeRequest) Reset() {
 	*x = JoinNodeRequest{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[37]
+	mi := &file_cloud_v1_agent_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3262,7 +3595,7 @@ func (x *JoinNodeRequest) String() string {
 func (*JoinNodeRequest) ProtoMessage() {}
 
 func (x *JoinNodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[37]
+	mi := &file_cloud_v1_agent_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3275,7 +3608,7 @@ func (x *JoinNodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinNodeRequest.ProtoReflect.Descriptor instead.
 func (*JoinNodeRequest) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{37}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *JoinNodeRequest) GetToken() string {
@@ -3333,7 +3666,7 @@ type JoinNodeResponse struct {
 
 func (x *JoinNodeResponse) Reset() {
 	*x = JoinNodeResponse{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[38]
+	mi := &file_cloud_v1_agent_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3345,7 +3678,7 @@ func (x *JoinNodeResponse) String() string {
 func (*JoinNodeResponse) ProtoMessage() {}
 
 func (x *JoinNodeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[38]
+	mi := &file_cloud_v1_agent_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3358,7 +3691,7 @@ func (x *JoinNodeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinNodeResponse.ProtoReflect.Descriptor instead.
 func (*JoinNodeResponse) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{38}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *JoinNodeResponse) GetIdentity() *NodeIdentity {
@@ -3386,7 +3719,7 @@ type RenewCredentialsRequest struct {
 
 func (x *RenewCredentialsRequest) Reset() {
 	*x = RenewCredentialsRequest{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[39]
+	mi := &file_cloud_v1_agent_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3398,7 +3731,7 @@ func (x *RenewCredentialsRequest) String() string {
 func (*RenewCredentialsRequest) ProtoMessage() {}
 
 func (x *RenewCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[39]
+	mi := &file_cloud_v1_agent_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3411,7 +3744,7 @@ func (x *RenewCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*RenewCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{39}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *RenewCredentialsRequest) GetCsrPem() string {
@@ -3432,7 +3765,7 @@ type RenewCredentialsResponse struct {
 
 func (x *RenewCredentialsResponse) Reset() {
 	*x = RenewCredentialsResponse{}
-	mi := &file_cloud_v1_agent_proto_msgTypes[40]
+	mi := &file_cloud_v1_agent_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3444,7 +3777,7 @@ func (x *RenewCredentialsResponse) String() string {
 func (*RenewCredentialsResponse) ProtoMessage() {}
 
 func (x *RenewCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cloud_v1_agent_proto_msgTypes[40]
+	mi := &file_cloud_v1_agent_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3457,7 +3790,7 @@ func (x *RenewCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*RenewCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{40}
+	return file_cloud_v1_agent_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *RenewCredentialsResponse) GetIdentity() *NodeIdentity {
@@ -3591,7 +3924,8 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"workloadId\x12\x18\n" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x123\n" +
-	"\ametrics\x18\x05 \x01(\v2\x19.cloud.v1.WorkloadMetricsR\ametrics\"\xbd\t\n" +
+	"\ametrics\x18\x05 \x01(\v2\x19.cloud.v1.WorkloadMetricsR\ametrics\"\xc8\n" +
+	"\n" +
 	"\fAgentMessage\x12,\n" +
 	"\x05hello\x18\x01 \x01(\v2\x14.cloud.v1.AgentHelloH\x00R\x05hello\x128\n" +
 	"\theartbeat\x18\x02 \x01(\v2\x18.cloud.v1.AgentHeartbeatH\x00R\theartbeat\x12H\n" +
@@ -3609,7 +3943,10 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"\x15backup_restore_result\x18\r \x01(\v2\".cloud.v1.AgentRestoreBackupResultH\x00R\x13backupRestoreResult\x12U\n" +
 	"\x14backup_delete_result\x18\x0e \x01(\v2!.cloud.v1.AgentDeleteBackupResultH\x00R\x12backupDeleteResult\x12P\n" +
 	"\x0emetrics_result\x18\x0f \x01(\v2'.cloud.v1.AgentGetWorkloadMetricsResultH\x00R\rmetricsResult\x12O\n" +
-	"\x12file_rename_result\x18\x10 \x01(\v2\x1f.cloud.v1.AgentFileRenameResultH\x00R\x10fileRenameResultB\t\n" +
+	"\x12file_rename_result\x18\x10 \x01(\v2\x1f.cloud.v1.AgentFileRenameResultH\x00R\x10fileRenameResult\x12K\n" +
+	"\x10hibernate_result\x18\x11 \x01(\v2\x1e.cloud.v1.AgentHibernateResultH\x00R\x0fhibernateResult\x12<\n" +
+	"\vwake_result\x18\x12 \x01(\v2\x19.cloud.v1.AgentWakeResultH\x00R\n" +
+	"wakeResultB\t\n" +
 	"\apayload\"\xa7\x01\n" +
 	"\x0eControlWelcome\x12;\n" +
 	"\vserver_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -3716,7 +4053,33 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
 	"\vworkload_id\x18\x02 \x01(\tR\n" +
-	"workloadId\"\xc3\t\n" +
+	"workloadId\"n\n" +
+	"\x18ControlHibernateWorkload\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x12\n" +
+	"\x04mode\x18\x03 \x01(\tR\x04mode\"U\n" +
+	"\x13ControlWakeWorkload\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\"\x86\x01\n" +
+	"\x14AgentHibernateResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"\x81\x01\n" +
+	"\x0fAgentWakeResult\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x1f\n" +
+	"\vworkload_id\x18\x02 \x01(\tR\n" +
+	"workloadId\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"\xde\n" +
+	"\n" +
 	"\x0eControlMessage\x124\n" +
 	"\awelcome\x18\x01 \x01(\v2\x18.cloud.v1.ControlWelcomeH\x00R\awelcome\x12N\n" +
 	"\x0fassign_workload\x18\x02 \x01(\v2#.cloud.v1.ControlWorkloadAssignmentH\x00R\x0eassignWorkload\x12D\n" +
@@ -3743,7 +4106,9 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"\rdelete_backup\x18\x10 \x01(\v2\x1d.cloud.v1.ControlDeleteBackupH\x00R\fdeleteBackup\x12W\n" +
 	"\x14get_workload_metrics\x18\x11 \x01(\v2#.cloud.v1.ControlGetWorkloadMetricsH\x00R\x12getWorkloadMetrics\x12>\n" +
 	"\vfile_rename\x18\x12 \x01(\v2\x1b.cloud.v1.ControlFileRenameH\x00R\n" +
-	"fileRenameB\t\n" +
+	"fileRename\x12S\n" +
+	"\x12hibernate_workload\x18\x13 \x01(\v2\".cloud.v1.ControlHibernateWorkloadH\x00R\x11hibernateWorkload\x12D\n" +
+	"\rwake_workload\x18\x14 \x01(\v2\x1d.cloud.v1.ControlWakeWorkloadH\x00R\fwakeWorkloadB\t\n" +
 	"\apayload\"\xdc\x01\n" +
 	"\x0fJoinNodeRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n" +
@@ -3776,7 +4141,7 @@ func file_cloud_v1_agent_proto_rawDescGZIP() []byte {
 	return file_cloud_v1_agent_proto_rawDescData
 }
 
-var file_cloud_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_cloud_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
 var file_cloud_v1_agent_proto_goTypes = []any{
 	(*NodeIdentity)(nil),                  // 0: cloud.v1.NodeIdentity
 	(*AgentHello)(nil),                    // 1: cloud.v1.AgentHello
@@ -3814,32 +4179,36 @@ var file_cloud_v1_agent_proto_goTypes = []any{
 	(*ControlRestoreBackup)(nil),          // 33: cloud.v1.ControlRestoreBackup
 	(*ControlDeleteBackup)(nil),           // 34: cloud.v1.ControlDeleteBackup
 	(*ControlGetWorkloadMetrics)(nil),     // 35: cloud.v1.ControlGetWorkloadMetrics
-	(*ControlMessage)(nil),                // 36: cloud.v1.ControlMessage
-	(*JoinNodeRequest)(nil),               // 37: cloud.v1.JoinNodeRequest
-	(*JoinNodeResponse)(nil),              // 38: cloud.v1.JoinNodeResponse
-	(*RenewCredentialsRequest)(nil),       // 39: cloud.v1.RenewCredentialsRequest
-	(*RenewCredentialsResponse)(nil),      // 40: cloud.v1.RenewCredentialsResponse
-	(*NodeCapacity)(nil),                  // 41: cloud.v1.NodeCapacity
-	(*NodeMetrics)(nil),                   // 42: cloud.v1.NodeMetrics
-	(*NodeAllocation)(nil),                // 43: cloud.v1.NodeAllocation
-	(*WorkloadMetrics)(nil),               // 44: cloud.v1.WorkloadMetrics
-	(WorkloadStatus)(0),                   // 45: cloud.v1.WorkloadStatus
-	(*WorkloadLogLine)(nil),               // 46: cloud.v1.WorkloadLogLine
-	(*FileInfo)(nil),                      // 47: cloud.v1.FileInfo
-	(*timestamppb.Timestamp)(nil),         // 48: google.protobuf.Timestamp
-	(*Workload)(nil),                      // 49: cloud.v1.Workload
-	(*Node)(nil),                          // 50: cloud.v1.Node
+	(*ControlHibernateWorkload)(nil),      // 36: cloud.v1.ControlHibernateWorkload
+	(*ControlWakeWorkload)(nil),           // 37: cloud.v1.ControlWakeWorkload
+	(*AgentHibernateResult)(nil),          // 38: cloud.v1.AgentHibernateResult
+	(*AgentWakeResult)(nil),               // 39: cloud.v1.AgentWakeResult
+	(*ControlMessage)(nil),                // 40: cloud.v1.ControlMessage
+	(*JoinNodeRequest)(nil),               // 41: cloud.v1.JoinNodeRequest
+	(*JoinNodeResponse)(nil),              // 42: cloud.v1.JoinNodeResponse
+	(*RenewCredentialsRequest)(nil),       // 43: cloud.v1.RenewCredentialsRequest
+	(*RenewCredentialsResponse)(nil),      // 44: cloud.v1.RenewCredentialsResponse
+	(*NodeCapacity)(nil),                  // 45: cloud.v1.NodeCapacity
+	(*NodeMetrics)(nil),                   // 46: cloud.v1.NodeMetrics
+	(*NodeAllocation)(nil),                // 47: cloud.v1.NodeAllocation
+	(*WorkloadMetrics)(nil),               // 48: cloud.v1.WorkloadMetrics
+	(WorkloadStatus)(0),                   // 49: cloud.v1.WorkloadStatus
+	(*WorkloadLogLine)(nil),               // 50: cloud.v1.WorkloadLogLine
+	(*FileInfo)(nil),                      // 51: cloud.v1.FileInfo
+	(*timestamppb.Timestamp)(nil),         // 52: google.protobuf.Timestamp
+	(*Workload)(nil),                      // 53: cloud.v1.Workload
+	(*Node)(nil),                          // 54: cloud.v1.Node
 }
 var file_cloud_v1_agent_proto_depIdxs = []int32{
-	41, // 0: cloud.v1.AgentHello.capacity:type_name -> cloud.v1.NodeCapacity
-	42, // 1: cloud.v1.AgentHeartbeat.metrics:type_name -> cloud.v1.NodeMetrics
-	43, // 2: cloud.v1.AgentHeartbeat.allocation:type_name -> cloud.v1.NodeAllocation
-	44, // 3: cloud.v1.AgentHeartbeat.workload_metrics:type_name -> cloud.v1.WorkloadMetrics
-	45, // 4: cloud.v1.AgentWorkloadStatus.status:type_name -> cloud.v1.WorkloadStatus
-	46, // 5: cloud.v1.AgentLogChunk.lines:type_name -> cloud.v1.WorkloadLogLine
-	47, // 6: cloud.v1.AgentFileListResult.files:type_name -> cloud.v1.FileInfo
-	47, // 7: cloud.v1.AgentStatFileResult.info:type_name -> cloud.v1.FileInfo
-	44, // 8: cloud.v1.AgentGetWorkloadMetricsResult.metrics:type_name -> cloud.v1.WorkloadMetrics
+	45, // 0: cloud.v1.AgentHello.capacity:type_name -> cloud.v1.NodeCapacity
+	46, // 1: cloud.v1.AgentHeartbeat.metrics:type_name -> cloud.v1.NodeMetrics
+	47, // 2: cloud.v1.AgentHeartbeat.allocation:type_name -> cloud.v1.NodeAllocation
+	48, // 3: cloud.v1.AgentHeartbeat.workload_metrics:type_name -> cloud.v1.WorkloadMetrics
+	49, // 4: cloud.v1.AgentWorkloadStatus.status:type_name -> cloud.v1.WorkloadStatus
+	50, // 5: cloud.v1.AgentLogChunk.lines:type_name -> cloud.v1.WorkloadLogLine
+	51, // 6: cloud.v1.AgentFileListResult.files:type_name -> cloud.v1.FileInfo
+	51, // 7: cloud.v1.AgentStatFileResult.info:type_name -> cloud.v1.FileInfo
+	48, // 8: cloud.v1.AgentGetWorkloadMetricsResult.metrics:type_name -> cloud.v1.WorkloadMetrics
 	1,  // 9: cloud.v1.AgentMessage.hello:type_name -> cloud.v1.AgentHello
 	2,  // 10: cloud.v1.AgentMessage.heartbeat:type_name -> cloud.v1.AgentHeartbeat
 	3,  // 11: cloud.v1.AgentMessage.workload_status:type_name -> cloud.v1.AgentWorkloadStatus
@@ -3856,41 +4225,45 @@ var file_cloud_v1_agent_proto_depIdxs = []int32{
 	15, // 22: cloud.v1.AgentMessage.backup_delete_result:type_name -> cloud.v1.AgentDeleteBackupResult
 	16, // 23: cloud.v1.AgentMessage.metrics_result:type_name -> cloud.v1.AgentGetWorkloadMetricsResult
 	12, // 24: cloud.v1.AgentMessage.file_rename_result:type_name -> cloud.v1.AgentFileRenameResult
-	48, // 25: cloud.v1.ControlWelcome.server_time:type_name -> google.protobuf.Timestamp
-	49, // 26: cloud.v1.ControlWorkloadAssignment.workload:type_name -> cloud.v1.Workload
-	18, // 27: cloud.v1.ControlMessage.welcome:type_name -> cloud.v1.ControlWelcome
-	19, // 28: cloud.v1.ControlMessage.assign_workload:type_name -> cloud.v1.ControlWorkloadAssignment
-	20, // 29: cloud.v1.ControlMessage.stop_workload:type_name -> cloud.v1.ControlWorkloadStop
-	21, // 30: cloud.v1.ControlMessage.delete_workload:type_name -> cloud.v1.ControlWorkloadDelete
-	22, // 31: cloud.v1.ControlMessage.run_command:type_name -> cloud.v1.ControlRunCommand
-	23, // 32: cloud.v1.ControlMessage.probe:type_name -> cloud.v1.ControlProbe
-	24, // 33: cloud.v1.ControlMessage.disconnect:type_name -> cloud.v1.ControlDisconnect
-	25, // 34: cloud.v1.ControlMessage.file_list:type_name -> cloud.v1.ControlFileList
-	26, // 35: cloud.v1.ControlMessage.file_read:type_name -> cloud.v1.ControlReadFile
-	27, // 36: cloud.v1.ControlMessage.file_write:type_name -> cloud.v1.ControlWriteFileChunk
-	28, // 37: cloud.v1.ControlMessage.file_delete:type_name -> cloud.v1.ControlDeleteFile
-	29, // 38: cloud.v1.ControlMessage.dir_create:type_name -> cloud.v1.ControlCreateDirectory
-	30, // 39: cloud.v1.ControlMessage.file_stat:type_name -> cloud.v1.ControlStatFile
-	32, // 40: cloud.v1.ControlMessage.create_backup:type_name -> cloud.v1.ControlCreateBackup
-	33, // 41: cloud.v1.ControlMessage.restore_backup:type_name -> cloud.v1.ControlRestoreBackup
-	34, // 42: cloud.v1.ControlMessage.delete_backup:type_name -> cloud.v1.ControlDeleteBackup
-	35, // 43: cloud.v1.ControlMessage.get_workload_metrics:type_name -> cloud.v1.ControlGetWorkloadMetrics
-	31, // 44: cloud.v1.ControlMessage.file_rename:type_name -> cloud.v1.ControlFileRename
-	41, // 45: cloud.v1.JoinNodeRequest.capacity:type_name -> cloud.v1.NodeCapacity
-	0,  // 46: cloud.v1.JoinNodeResponse.identity:type_name -> cloud.v1.NodeIdentity
-	50, // 47: cloud.v1.JoinNodeResponse.node:type_name -> cloud.v1.Node
-	0,  // 48: cloud.v1.RenewCredentialsResponse.identity:type_name -> cloud.v1.NodeIdentity
-	37, // 49: cloud.v1.AgentService.JoinNode:input_type -> cloud.v1.JoinNodeRequest
-	17, // 50: cloud.v1.AgentService.Connect:input_type -> cloud.v1.AgentMessage
-	39, // 51: cloud.v1.AgentService.RenewCredentials:input_type -> cloud.v1.RenewCredentialsRequest
-	38, // 52: cloud.v1.AgentService.JoinNode:output_type -> cloud.v1.JoinNodeResponse
-	36, // 53: cloud.v1.AgentService.Connect:output_type -> cloud.v1.ControlMessage
-	40, // 54: cloud.v1.AgentService.RenewCredentials:output_type -> cloud.v1.RenewCredentialsResponse
-	52, // [52:55] is the sub-list for method output_type
-	49, // [49:52] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	38, // 25: cloud.v1.AgentMessage.hibernate_result:type_name -> cloud.v1.AgentHibernateResult
+	39, // 26: cloud.v1.AgentMessage.wake_result:type_name -> cloud.v1.AgentWakeResult
+	52, // 27: cloud.v1.ControlWelcome.server_time:type_name -> google.protobuf.Timestamp
+	53, // 28: cloud.v1.ControlWorkloadAssignment.workload:type_name -> cloud.v1.Workload
+	18, // 29: cloud.v1.ControlMessage.welcome:type_name -> cloud.v1.ControlWelcome
+	19, // 30: cloud.v1.ControlMessage.assign_workload:type_name -> cloud.v1.ControlWorkloadAssignment
+	20, // 31: cloud.v1.ControlMessage.stop_workload:type_name -> cloud.v1.ControlWorkloadStop
+	21, // 32: cloud.v1.ControlMessage.delete_workload:type_name -> cloud.v1.ControlWorkloadDelete
+	22, // 33: cloud.v1.ControlMessage.run_command:type_name -> cloud.v1.ControlRunCommand
+	23, // 34: cloud.v1.ControlMessage.probe:type_name -> cloud.v1.ControlProbe
+	24, // 35: cloud.v1.ControlMessage.disconnect:type_name -> cloud.v1.ControlDisconnect
+	25, // 36: cloud.v1.ControlMessage.file_list:type_name -> cloud.v1.ControlFileList
+	26, // 37: cloud.v1.ControlMessage.file_read:type_name -> cloud.v1.ControlReadFile
+	27, // 38: cloud.v1.ControlMessage.file_write:type_name -> cloud.v1.ControlWriteFileChunk
+	28, // 39: cloud.v1.ControlMessage.file_delete:type_name -> cloud.v1.ControlDeleteFile
+	29, // 40: cloud.v1.ControlMessage.dir_create:type_name -> cloud.v1.ControlCreateDirectory
+	30, // 41: cloud.v1.ControlMessage.file_stat:type_name -> cloud.v1.ControlStatFile
+	32, // 42: cloud.v1.ControlMessage.create_backup:type_name -> cloud.v1.ControlCreateBackup
+	33, // 43: cloud.v1.ControlMessage.restore_backup:type_name -> cloud.v1.ControlRestoreBackup
+	34, // 44: cloud.v1.ControlMessage.delete_backup:type_name -> cloud.v1.ControlDeleteBackup
+	35, // 45: cloud.v1.ControlMessage.get_workload_metrics:type_name -> cloud.v1.ControlGetWorkloadMetrics
+	31, // 46: cloud.v1.ControlMessage.file_rename:type_name -> cloud.v1.ControlFileRename
+	36, // 47: cloud.v1.ControlMessage.hibernate_workload:type_name -> cloud.v1.ControlHibernateWorkload
+	37, // 48: cloud.v1.ControlMessage.wake_workload:type_name -> cloud.v1.ControlWakeWorkload
+	45, // 49: cloud.v1.JoinNodeRequest.capacity:type_name -> cloud.v1.NodeCapacity
+	0,  // 50: cloud.v1.JoinNodeResponse.identity:type_name -> cloud.v1.NodeIdentity
+	54, // 51: cloud.v1.JoinNodeResponse.node:type_name -> cloud.v1.Node
+	0,  // 52: cloud.v1.RenewCredentialsResponse.identity:type_name -> cloud.v1.NodeIdentity
+	41, // 53: cloud.v1.AgentService.JoinNode:input_type -> cloud.v1.JoinNodeRequest
+	17, // 54: cloud.v1.AgentService.Connect:input_type -> cloud.v1.AgentMessage
+	43, // 55: cloud.v1.AgentService.RenewCredentials:input_type -> cloud.v1.RenewCredentialsRequest
+	42, // 56: cloud.v1.AgentService.JoinNode:output_type -> cloud.v1.JoinNodeResponse
+	40, // 57: cloud.v1.AgentService.Connect:output_type -> cloud.v1.ControlMessage
+	44, // 58: cloud.v1.AgentService.RenewCredentials:output_type -> cloud.v1.RenewCredentialsResponse
+	56, // [56:59] is the sub-list for method output_type
+	53, // [53:56] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_cloud_v1_agent_proto_init() }
@@ -3919,8 +4292,10 @@ func file_cloud_v1_agent_proto_init() {
 		(*AgentMessage_BackupDeleteResult)(nil),
 		(*AgentMessage_MetricsResult)(nil),
 		(*AgentMessage_FileRenameResult)(nil),
+		(*AgentMessage_HibernateResult)(nil),
+		(*AgentMessage_WakeResult)(nil),
 	}
-	file_cloud_v1_agent_proto_msgTypes[36].OneofWrappers = []any{
+	file_cloud_v1_agent_proto_msgTypes[40].OneofWrappers = []any{
 		(*ControlMessage_Welcome)(nil),
 		(*ControlMessage_AssignWorkload)(nil),
 		(*ControlMessage_StopWorkload)(nil),
@@ -3939,6 +4314,8 @@ func file_cloud_v1_agent_proto_init() {
 		(*ControlMessage_DeleteBackup)(nil),
 		(*ControlMessage_GetWorkloadMetrics)(nil),
 		(*ControlMessage_FileRename)(nil),
+		(*ControlMessage_HibernateWorkload)(nil),
+		(*ControlMessage_WakeWorkload)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -3946,7 +4323,7 @@ func file_cloud_v1_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cloud_v1_agent_proto_rawDesc), len(file_cloud_v1_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   41,
+			NumMessages:   45,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -79,6 +79,8 @@ enum WorkloadStatus {
   WORKLOAD_STATUS_STOPPED = 3;
   // Node agent reported a failure.
   WORKLOAD_STATUS_ERROR = 4;
+  // Workload is hibernated (cgroup frozen / sleeping on idle).
+  WORKLOAD_STATUS_HIBERNATED = 5;
 }
 
 // ProviderId identifies the infrastructure backend used for managed nodes.

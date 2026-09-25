@@ -44,6 +44,9 @@ type AgentDispatcher struct {
 	metricsMu            sync.RWMutex
 	cachedMetrics        map[string]*v1.WorkloadMetrics
 	metricsWaiters       map[string]chan *v1.AgentGetWorkloadMetricsResult
+	hibWakeMu            sync.RWMutex
+	hibernateWaiters     map[string]chan *v1.AgentHibernateResult
+	wakeWaiters          map[string]chan *v1.AgentWakeResult
 	logger               *slog.Logger
 }
 
@@ -68,6 +71,8 @@ func NewAgentDispatcher(logger *slog.Logger) *AgentDispatcher {
 		backupDeleteWaiters:  make(map[string]chan *v1.AgentDeleteBackupResult),
 		cachedMetrics:        make(map[string]*v1.WorkloadMetrics),
 		metricsWaiters:       make(map[string]chan *v1.AgentGetWorkloadMetricsResult),
+		hibernateWaiters:     make(map[string]chan *v1.AgentHibernateResult),
+		wakeWaiters:          make(map[string]chan *v1.AgentWakeResult),
 		logger:               logger,
 	}
 }
@@ -621,4 +626,68 @@ func (d *AgentDispatcher) CancelMetrics(commandID string) {
 	d.metricsMu.Lock()
 	delete(d.metricsWaiters, commandID)
 	d.metricsMu.Unlock()
+}
+
+// ExpectHibernate registers a channel waiting for a workload hibernate result.
+func (d *AgentDispatcher) ExpectHibernate(commandID string) chan *v1.AgentHibernateResult {
+	ch := make(chan *v1.AgentHibernateResult, 1)
+	d.hibWakeMu.Lock()
+	d.hibernateWaiters[commandID] = ch
+	d.hibWakeMu.Unlock()
+	return ch
+}
+
+// ResolveHibernate delivers a hibernate result to a waiting caller.
+func (d *AgentDispatcher) ResolveHibernate(res *v1.AgentHibernateResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.hibWakeMu.Lock()
+	ch, exists := d.hibernateWaiters[res.CommandId]
+	if exists {
+		delete(d.hibernateWaiters, res.CommandId)
+	}
+	d.hibWakeMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelHibernate cleans up an abandoned hibernate waiter.
+func (d *AgentDispatcher) CancelHibernate(commandID string) {
+	d.hibWakeMu.Lock()
+	delete(d.hibernateWaiters, commandID)
+	d.hibWakeMu.Unlock()
+}
+
+// ExpectWake registers a channel waiting for a workload wake result.
+func (d *AgentDispatcher) ExpectWake(commandID string) chan *v1.AgentWakeResult {
+	ch := make(chan *v1.AgentWakeResult, 1)
+	d.hibWakeMu.Lock()
+	d.wakeWaiters[commandID] = ch
+	d.hibWakeMu.Unlock()
+	return ch
+}
+
+// ResolveWake delivers a wake result to a waiting caller.
+func (d *AgentDispatcher) ResolveWake(res *v1.AgentWakeResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.hibWakeMu.Lock()
+	ch, exists := d.wakeWaiters[res.CommandId]
+	if exists {
+		delete(d.wakeWaiters, res.CommandId)
+	}
+	d.hibWakeMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelWake cleans up an abandoned wake waiter.
+func (d *AgentDispatcher) CancelWake(commandID string) {
+	d.hibWakeMu.Lock()
+	delete(d.wakeWaiters, commandID)
+	d.hibWakeMu.Unlock()
 }

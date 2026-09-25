@@ -31,6 +31,15 @@ func TestMockRunner_Lifecycle(t *testing.T) {
 	assert.Equal(t, int32(25565), port)
 	assert.Equal(t, cid, runner.Containers["wl-test-1"])
 
+	// Test Hibernate and Wake
+	err = runner.Hibernate(ctx, "wl-test-1", "pause")
+	require.NoError(t, err)
+	assert.Equal(t, "mock-hibernated", runner.Containers["wl-test-1"])
+
+	err = runner.Wake(ctx, "wl-test-1")
+	require.NoError(t, err)
+	assert.Equal(t, "mock-container-wl-test-1", runner.Containers["wl-test-1"])
+
 	err = runner.Stop(ctx, "wl-test-1", 10)
 	require.NoError(t, err)
 	assert.Empty(t, runner.Containers["wl-test-1"])

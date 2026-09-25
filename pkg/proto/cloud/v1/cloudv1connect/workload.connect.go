@@ -96,6 +96,15 @@ const (
 	// WorkloadServiceListNodePortsProcedure is the fully-qualified name of the WorkloadService's
 	// ListNodePorts RPC.
 	WorkloadServiceListNodePortsProcedure = "/cloud.v1.WorkloadService/ListNodePorts"
+	// WorkloadServiceHibernateWorkloadProcedure is the fully-qualified name of the WorkloadService's
+	// HibernateWorkload RPC.
+	WorkloadServiceHibernateWorkloadProcedure = "/cloud.v1.WorkloadService/HibernateWorkload"
+	// WorkloadServiceWakeWorkloadProcedure is the fully-qualified name of the WorkloadService's
+	// WakeWorkload RPC.
+	WorkloadServiceWakeWorkloadProcedure = "/cloud.v1.WorkloadService/WakeWorkload"
+	// WorkloadServiceSyncIngressRoutesProcedure is the fully-qualified name of the WorkloadService's
+	// SyncIngressRoutes RPC.
+	WorkloadServiceSyncIngressRoutesProcedure = "/cloud.v1.WorkloadService/SyncIngressRoutes"
 )
 
 // WorkloadServiceClient is a client for the cloud.v1.WorkloadService service.
@@ -143,6 +152,12 @@ type WorkloadServiceClient interface {
 	GetWorkloadNetworking(context.Context, *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error)
 	// ListNodePorts lists allocated and available ports on a given node.
 	ListNodePorts(context.Context, *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error)
+	// HibernateWorkload pauses or deep-sleeps an idle workload.
+	HibernateWorkload(context.Context, *connect.Request[v1.HibernateWorkloadRequest]) (*connect.Response[v1.HibernateWorkloadResponse], error)
+	// WakeWorkload unpauses or starts a hibernated workload.
+	WakeWorkload(context.Context, *connect.Request[v1.WakeWorkloadRequest]) (*connect.Response[v1.WakeWorkloadResponse], error)
+	// SyncIngressRoutes synchronizes hostname routing table for ingress / Gate proxy.
+	SyncIngressRoutes(context.Context, *connect.Request[v1.SyncIngressRoutesRequest]) (*connect.Response[v1.SyncIngressRoutesResponse], error)
 }
 
 // NewWorkloadServiceClient constructs a client for the cloud.v1.WorkloadService service. By
@@ -282,6 +297,24 @@ func NewWorkloadServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(workloadServiceMethods.ByName("ListNodePorts")),
 			connect.WithClientOptions(opts...),
 		),
+		hibernateWorkload: connect.NewClient[v1.HibernateWorkloadRequest, v1.HibernateWorkloadResponse](
+			httpClient,
+			baseURL+WorkloadServiceHibernateWorkloadProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("HibernateWorkload")),
+			connect.WithClientOptions(opts...),
+		),
+		wakeWorkload: connect.NewClient[v1.WakeWorkloadRequest, v1.WakeWorkloadResponse](
+			httpClient,
+			baseURL+WorkloadServiceWakeWorkloadProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("WakeWorkload")),
+			connect.WithClientOptions(opts...),
+		),
+		syncIngressRoutes: connect.NewClient[v1.SyncIngressRoutesRequest, v1.SyncIngressRoutesResponse](
+			httpClient,
+			baseURL+WorkloadServiceSyncIngressRoutesProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("SyncIngressRoutes")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -308,6 +341,9 @@ type workloadServiceClient struct {
 	getWorkloadMetrics      *connect.Client[v1.GetWorkloadMetricsRequest, v1.GetWorkloadMetricsResponse]
 	getWorkloadNetworking   *connect.Client[v1.GetWorkloadNetworkingRequest, v1.GetWorkloadNetworkingResponse]
 	listNodePorts           *connect.Client[v1.ListNodePortsRequest, v1.ListNodePortsResponse]
+	hibernateWorkload       *connect.Client[v1.HibernateWorkloadRequest, v1.HibernateWorkloadResponse]
+	wakeWorkload            *connect.Client[v1.WakeWorkloadRequest, v1.WakeWorkloadResponse]
+	syncIngressRoutes       *connect.Client[v1.SyncIngressRoutesRequest, v1.SyncIngressRoutesResponse]
 }
 
 // ListWorkloads calls cloud.v1.WorkloadService.ListWorkloads.
@@ -415,6 +451,21 @@ func (c *workloadServiceClient) ListNodePorts(ctx context.Context, req *connect.
 	return c.listNodePorts.CallUnary(ctx, req)
 }
 
+// HibernateWorkload calls cloud.v1.WorkloadService.HibernateWorkload.
+func (c *workloadServiceClient) HibernateWorkload(ctx context.Context, req *connect.Request[v1.HibernateWorkloadRequest]) (*connect.Response[v1.HibernateWorkloadResponse], error) {
+	return c.hibernateWorkload.CallUnary(ctx, req)
+}
+
+// WakeWorkload calls cloud.v1.WorkloadService.WakeWorkload.
+func (c *workloadServiceClient) WakeWorkload(ctx context.Context, req *connect.Request[v1.WakeWorkloadRequest]) (*connect.Response[v1.WakeWorkloadResponse], error) {
+	return c.wakeWorkload.CallUnary(ctx, req)
+}
+
+// SyncIngressRoutes calls cloud.v1.WorkloadService.SyncIngressRoutes.
+func (c *workloadServiceClient) SyncIngressRoutes(ctx context.Context, req *connect.Request[v1.SyncIngressRoutesRequest]) (*connect.Response[v1.SyncIngressRoutesResponse], error) {
+	return c.syncIngressRoutes.CallUnary(ctx, req)
+}
+
 // WorkloadServiceHandler is an implementation of the cloud.v1.WorkloadService service.
 type WorkloadServiceHandler interface {
 	// ListWorkloads lists workloads in the active org.
@@ -460,6 +511,12 @@ type WorkloadServiceHandler interface {
 	GetWorkloadNetworking(context.Context, *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error)
 	// ListNodePorts lists allocated and available ports on a given node.
 	ListNodePorts(context.Context, *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error)
+	// HibernateWorkload pauses or deep-sleeps an idle workload.
+	HibernateWorkload(context.Context, *connect.Request[v1.HibernateWorkloadRequest]) (*connect.Response[v1.HibernateWorkloadResponse], error)
+	// WakeWorkload unpauses or starts a hibernated workload.
+	WakeWorkload(context.Context, *connect.Request[v1.WakeWorkloadRequest]) (*connect.Response[v1.WakeWorkloadResponse], error)
+	// SyncIngressRoutes synchronizes hostname routing table for ingress / Gate proxy.
+	SyncIngressRoutes(context.Context, *connect.Request[v1.SyncIngressRoutesRequest]) (*connect.Response[v1.SyncIngressRoutesResponse], error)
 }
 
 // NewWorkloadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -595,6 +652,24 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 		connect.WithSchema(workloadServiceMethods.ByName("ListNodePorts")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workloadServiceHibernateWorkloadHandler := connect.NewUnaryHandler(
+		WorkloadServiceHibernateWorkloadProcedure,
+		svc.HibernateWorkload,
+		connect.WithSchema(workloadServiceMethods.ByName("HibernateWorkload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceWakeWorkloadHandler := connect.NewUnaryHandler(
+		WorkloadServiceWakeWorkloadProcedure,
+		svc.WakeWorkload,
+		connect.WithSchema(workloadServiceMethods.ByName("WakeWorkload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceSyncIngressRoutesHandler := connect.NewUnaryHandler(
+		WorkloadServiceSyncIngressRoutesProcedure,
+		svc.SyncIngressRoutes,
+		connect.WithSchema(workloadServiceMethods.ByName("SyncIngressRoutes")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/cloud.v1.WorkloadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkloadServiceListWorkloadsProcedure:
@@ -639,6 +714,12 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 			workloadServiceGetWorkloadNetworkingHandler.ServeHTTP(w, r)
 		case WorkloadServiceListNodePortsProcedure:
 			workloadServiceListNodePortsHandler.ServeHTTP(w, r)
+		case WorkloadServiceHibernateWorkloadProcedure:
+			workloadServiceHibernateWorkloadHandler.ServeHTTP(w, r)
+		case WorkloadServiceWakeWorkloadProcedure:
+			workloadServiceWakeWorkloadHandler.ServeHTTP(w, r)
+		case WorkloadServiceSyncIngressRoutesProcedure:
+			workloadServiceSyncIngressRoutesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -730,4 +811,16 @@ func (UnimplementedWorkloadServiceHandler) GetWorkloadNetworking(context.Context
 
 func (UnimplementedWorkloadServiceHandler) ListNodePorts(context.Context, *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.ListNodePorts is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) HibernateWorkload(context.Context, *connect.Request[v1.HibernateWorkloadRequest]) (*connect.Response[v1.HibernateWorkloadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.HibernateWorkload is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) WakeWorkload(context.Context, *connect.Request[v1.WakeWorkloadRequest]) (*connect.Response[v1.WakeWorkloadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.WakeWorkload is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) SyncIngressRoutes(context.Context, *connect.Request[v1.SyncIngressRoutesRequest]) (*connect.Response[v1.SyncIngressRoutesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.SyncIngressRoutes is not implemented"))
 }

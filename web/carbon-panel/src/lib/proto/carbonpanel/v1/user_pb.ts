@@ -2,246 +2,233 @@
 // @generated from file carbonpanel/v1/user.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
-import type { User } from './common_pb';
-import { file_carbonpanel_v1_common } from './common_pb';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { User } from "./common_pb";
+import { file_carbonpanel_v1_common } from "./common_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file carbonpanel/v1/user.proto.
  */
-export const file_carbonpanel_v1_user: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		'ChljYXJib25wYW5lbC92MS91c2VyLnByb3RvEg5jYXJib25wYW5lbC52MSISChBMaXN0VXNlcnNSZXF1ZXN0IjgKEUxpc3RVc2Vyc1Jlc3BvbnNlEiMKBXVzZXJzGAEgAygLMhQuY2FyYm9ucGFuZWwudjEuVXNlciIcCg5HZXRVc2VyUmVxdWVzdBIKCgJpZBgBIAEoCSI1Cg9HZXRVc2VyUmVzcG9uc2USIgoEdXNlchgBIAEoCzIULmNhcmJvbnBhbmVsLnYxLlVzZXIiVQoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSDQoFZW1haWwYAiABKAkSEAoIcGFzc3dvcmQYAyABKAkSDQoFcm9sZXMYBCADKAkiOAoSQ3JlYXRlVXNlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyInIKEVVwZGF0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJEhIKBWVtYWlsGAIgASgJSACIAQESFgoJaXNfYWN0aXZlGAMgASgISAGIAQESDQoFcm9sZXMYBCADKAlCCAoGX2VtYWlsQgwKCl9pc19hY3RpdmUiOAoSVXBkYXRlVXNlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyIh8KEURlbGV0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJIiUKEkRlbGV0ZVVzZXJSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJMqoDCgtVc2VyU2VydmljZRJQCglMaXN0VXNlcnMSIC5jYXJib25wYW5lbC52MS5MaXN0VXNlcnNSZXF1ZXN0GiEuY2FyYm9ucGFuZWwudjEuTGlzdFVzZXJzUmVzcG9uc2USSgoHR2V0VXNlchIeLmNhcmJvbnBhbmVsLnYxLkdldFVzZXJSZXF1ZXN0Gh8uY2FyYm9ucGFuZWwudjEuR2V0VXNlclJlc3BvbnNlElMKCkNyZWF0ZVVzZXISIS5jYXJib25wYW5lbC52MS5DcmVhdGVVc2VyUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVVzZXJSZXNwb25zZRJTCgpVcGRhdGVVc2VyEiEuY2FyYm9ucGFuZWwudjEuVXBkYXRlVXNlclJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5VcGRhdGVVc2VyUmVzcG9uc2USUwoKRGVsZXRlVXNlchIhLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVVzZXJSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuRGVsZXRlVXNlclJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw',
-		[file_carbonpanel_v1_common]
-	);
+export const file_carbonpanel_v1_user: GenFile = /*@__PURE__*/
+  fileDesc("ChljYXJib25wYW5lbC92MS91c2VyLnByb3RvEg5jYXJib25wYW5lbC52MSISChBMaXN0VXNlcnNSZXF1ZXN0IjgKEUxpc3RVc2Vyc1Jlc3BvbnNlEiMKBXVzZXJzGAEgAygLMhQuY2FyYm9ucGFuZWwudjEuVXNlciIcCg5HZXRVc2VyUmVxdWVzdBIKCgJpZBgBIAEoCSI1Cg9HZXRVc2VyUmVzcG9uc2USIgoEdXNlchgBIAEoCzIULmNhcmJvbnBhbmVsLnYxLlVzZXIiVQoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSDQoFZW1haWwYAiABKAkSEAoIcGFzc3dvcmQYAyABKAkSDQoFcm9sZXMYBCADKAkiOAoSQ3JlYXRlVXNlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyInIKEVVwZGF0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJEhIKBWVtYWlsGAIgASgJSACIAQESFgoJaXNfYWN0aXZlGAMgASgISAGIAQESDQoFcm9sZXMYBCADKAlCCAoGX2VtYWlsQgwKCl9pc19hY3RpdmUiOAoSVXBkYXRlVXNlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyIh8KEURlbGV0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJIiUKEkRlbGV0ZVVzZXJSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJMqoDCgtVc2VyU2VydmljZRJQCglMaXN0VXNlcnMSIC5jYXJib25wYW5lbC52MS5MaXN0VXNlcnNSZXF1ZXN0GiEuY2FyYm9ucGFuZWwudjEuTGlzdFVzZXJzUmVzcG9uc2USSgoHR2V0VXNlchIeLmNhcmJvbnBhbmVsLnYxLkdldFVzZXJSZXF1ZXN0Gh8uY2FyYm9ucGFuZWwudjEuR2V0VXNlclJlc3BvbnNlElMKCkNyZWF0ZVVzZXISIS5jYXJib25wYW5lbC52MS5DcmVhdGVVc2VyUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVVzZXJSZXNwb25zZRJTCgpVcGRhdGVVc2VyEiEuY2FyYm9ucGFuZWwudjEuVXBkYXRlVXNlclJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5VcGRhdGVVc2VyUmVzcG9uc2USUwoKRGVsZXRlVXNlchIhLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVVzZXJSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuRGVsZXRlVXNlclJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw", [file_carbonpanel_v1_common]);
 
 /**
  * Empty user list request
  *
  * @generated from message carbonpanel.v1.ListUsersRequest
  */
-export type ListUsersRequest = Message<'carbonpanel.v1.ListUsersRequest'> & {};
+export type ListUsersRequest = Message<"carbonpanel.v1.ListUsersRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.ListUsersRequest.
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
-export const ListUsersRequestSchema: GenMessage<ListUsersRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 0);
+export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 0);
 
 /**
  * All system users
  *
  * @generated from message carbonpanel.v1.ListUsersResponse
  */
-export type ListUsersResponse = Message<'carbonpanel.v1.ListUsersResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.User users = 1;
-	 */
-	users: User[];
+export type ListUsersResponse = Message<"carbonpanel.v1.ListUsersResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.User users = 1;
+   */
+  users: User[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListUsersResponse.
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
-export const ListUsersResponseSchema: GenMessage<ListUsersResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 1);
+export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 1);
 
 /**
  * Get user by ID
  *
  * @generated from message carbonpanel.v1.GetUserRequest
  */
-export type GetUserRequest = Message<'carbonpanel.v1.GetUserRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type GetUserRequest = Message<"carbonpanel.v1.GetUserRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetUserRequest.
  * Use `create(GetUserRequestSchema)` to create a new message.
  */
-export const GetUserRequestSchema: GenMessage<GetUserRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 2);
+export const GetUserRequestSchema: GenMessage<GetUserRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 2);
 
 /**
  * Single user
  *
  * @generated from message carbonpanel.v1.GetUserResponse
  */
-export type GetUserResponse = Message<'carbonpanel.v1.GetUserResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.User user = 1;
-	 */
-	user?: User | undefined;
+export type GetUserResponse = Message<"carbonpanel.v1.GetUserResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.User user = 1;
+   */
+  user?: User | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetUserResponse.
  * Use `create(GetUserResponseSchema)` to create a new message.
  */
-export const GetUserResponseSchema: GenMessage<GetUserResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 3);
+export const GetUserResponseSchema: GenMessage<GetUserResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 3);
 
 /**
  * New user details
  *
  * @generated from message carbonpanel.v1.CreateUserRequest
  */
-export type CreateUserRequest = Message<'carbonpanel.v1.CreateUserRequest'> & {
-	/**
-	 * @generated from field: string username = 1;
-	 */
-	username: string;
+export type CreateUserRequest = Message<"carbonpanel.v1.CreateUserRequest"> & {
+  /**
+   * @generated from field: string username = 1;
+   */
+  username: string;
 
-	/**
-	 * @generated from field: string email = 2;
-	 */
-	email: string;
+  /**
+   * @generated from field: string email = 2;
+   */
+  email: string;
 
-	/**
-	 * @generated from field: string password = 3;
-	 */
-	password: string;
+  /**
+   * @generated from field: string password = 3;
+   */
+  password: string;
 
-	/**
-	 * @generated from field: repeated string roles = 4;
-	 */
-	roles: string[];
+  /**
+   * @generated from field: repeated string roles = 4;
+   */
+  roles: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateUserRequest.
  * Use `create(CreateUserRequestSchema)` to create a new message.
  */
-export const CreateUserRequestSchema: GenMessage<CreateUserRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 4);
+export const CreateUserRequestSchema: GenMessage<CreateUserRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 4);
 
 /**
  * Created user
  *
  * @generated from message carbonpanel.v1.CreateUserResponse
  */
-export type CreateUserResponse = Message<'carbonpanel.v1.CreateUserResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.User user = 1;
-	 */
-	user?: User | undefined;
+export type CreateUserResponse = Message<"carbonpanel.v1.CreateUserResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.User user = 1;
+   */
+  user?: User | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateUserResponse.
  * Use `create(CreateUserResponseSchema)` to create a new message.
  */
-export const CreateUserResponseSchema: GenMessage<CreateUserResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 5);
+export const CreateUserResponseSchema: GenMessage<CreateUserResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 5);
 
 /**
  * User fields to update
  *
  * @generated from message carbonpanel.v1.UpdateUserRequest
  */
-export type UpdateUserRequest = Message<'carbonpanel.v1.UpdateUserRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type UpdateUserRequest = Message<"carbonpanel.v1.UpdateUserRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * @generated from field: optional string email = 2;
-	 */
-	email?: string | undefined;
+  /**
+   * @generated from field: optional string email = 2;
+   */
+  email?: string | undefined;
 
-	/**
-	 * @generated from field: optional bool is_active = 3;
-	 */
-	isActive?: boolean | undefined;
+  /**
+   * @generated from field: optional bool is_active = 3;
+   */
+  isActive?: boolean | undefined;
 
-	/**
-	 * @generated from field: repeated string roles = 4;
-	 */
-	roles: string[];
+  /**
+   * @generated from field: repeated string roles = 4;
+   */
+  roles: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateUserRequest.
  * Use `create(UpdateUserRequestSchema)` to create a new message.
  */
-export const UpdateUserRequestSchema: GenMessage<UpdateUserRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 6);
+export const UpdateUserRequestSchema: GenMessage<UpdateUserRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 6);
 
 /**
  * Updated user
  *
  * @generated from message carbonpanel.v1.UpdateUserResponse
  */
-export type UpdateUserResponse = Message<'carbonpanel.v1.UpdateUserResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.User user = 1;
-	 */
-	user?: User | undefined;
+export type UpdateUserResponse = Message<"carbonpanel.v1.UpdateUserResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.User user = 1;
+   */
+  user?: User | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateUserResponse.
  * Use `create(UpdateUserResponseSchema)` to create a new message.
  */
-export const UpdateUserResponseSchema: GenMessage<UpdateUserResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 7);
+export const UpdateUserResponseSchema: GenMessage<UpdateUserResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 7);
 
 /**
  * User to delete
  *
  * @generated from message carbonpanel.v1.DeleteUserRequest
  */
-export type DeleteUserRequest = Message<'carbonpanel.v1.DeleteUserRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type DeleteUserRequest = Message<"carbonpanel.v1.DeleteUserRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteUserRequest.
  * Use `create(DeleteUserRequestSchema)` to create a new message.
  */
-export const DeleteUserRequestSchema: GenMessage<DeleteUserRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 8);
+export const DeleteUserRequestSchema: GenMessage<DeleteUserRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 8);
 
 /**
  * Deletion confirmation
  *
  * @generated from message carbonpanel.v1.DeleteUserResponse
  */
-export type DeleteUserResponse = Message<'carbonpanel.v1.DeleteUserResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type DeleteUserResponse = Message<"carbonpanel.v1.DeleteUserResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteUserResponse.
  * Use `create(DeleteUserResponseSchema)` to create a new message.
  */
-export const DeleteUserResponseSchema: GenMessage<DeleteUserResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_user, 9);
+export const DeleteUserResponseSchema: GenMessage<DeleteUserResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_user, 9);
 
 /**
  * User management service (admin only)
@@ -249,54 +236,56 @@ export const DeleteUserResponseSchema: GenMessage<DeleteUserResponse> =
  * @generated from service carbonpanel.v1.UserService
  */
 export const UserService: GenService<{
-	/**
-	 * Get all system users
-	 *
-	 * @generated from rpc carbonpanel.v1.UserService.ListUsers
-	 */
-	listUsers: {
-		methodKind: 'unary';
-		input: typeof ListUsersRequestSchema;
-		output: typeof ListUsersResponseSchema;
-	};
-	/**
-	 * Get a single user
-	 *
-	 * @generated from rpc carbonpanel.v1.UserService.GetUser
-	 */
-	getUser: {
-		methodKind: 'unary';
-		input: typeof GetUserRequestSchema;
-		output: typeof GetUserResponseSchema;
-	};
-	/**
-	 * Create new user account
-	 *
-	 * @generated from rpc carbonpanel.v1.UserService.CreateUser
-	 */
-	createUser: {
-		methodKind: 'unary';
-		input: typeof CreateUserRequestSchema;
-		output: typeof CreateUserResponseSchema;
-	};
-	/**
-	 * Modify user account
-	 *
-	 * @generated from rpc carbonpanel.v1.UserService.UpdateUser
-	 */
-	updateUser: {
-		methodKind: 'unary';
-		input: typeof UpdateUserRequestSchema;
-		output: typeof UpdateUserResponseSchema;
-	};
-	/**
-	 * Remove user account
-	 *
-	 * @generated from rpc carbonpanel.v1.UserService.DeleteUser
-	 */
-	deleteUser: {
-		methodKind: 'unary';
-		input: typeof DeleteUserRequestSchema;
-		output: typeof DeleteUserResponseSchema;
-	};
-}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_user, 0);
+  /**
+   * Get all system users
+   *
+   * @generated from rpc carbonpanel.v1.UserService.ListUsers
+   */
+  listUsers: {
+    methodKind: "unary";
+    input: typeof ListUsersRequestSchema;
+    output: typeof ListUsersResponseSchema;
+  },
+  /**
+   * Get a single user
+   *
+   * @generated from rpc carbonpanel.v1.UserService.GetUser
+   */
+  getUser: {
+    methodKind: "unary";
+    input: typeof GetUserRequestSchema;
+    output: typeof GetUserResponseSchema;
+  },
+  /**
+   * Create new user account
+   *
+   * @generated from rpc carbonpanel.v1.UserService.CreateUser
+   */
+  createUser: {
+    methodKind: "unary";
+    input: typeof CreateUserRequestSchema;
+    output: typeof CreateUserResponseSchema;
+  },
+  /**
+   * Modify user account
+   *
+   * @generated from rpc carbonpanel.v1.UserService.UpdateUser
+   */
+  updateUser: {
+    methodKind: "unary";
+    input: typeof UpdateUserRequestSchema;
+    output: typeof UpdateUserResponseSchema;
+  },
+  /**
+   * Remove user account
+   *
+   * @generated from rpc carbonpanel.v1.UserService.DeleteUser
+   */
+  deleteUser: {
+    methodKind: "unary";
+    input: typeof DeleteUserRequestSchema;
+    output: typeof DeleteUserResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_carbonpanel_v1_user, 0);
+

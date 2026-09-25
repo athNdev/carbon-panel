@@ -427,8 +427,92 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 
 		sendMsgCh := make(chan *v1.AgentMessage, 64)
 		var activeStreams sync.Map
+		var assignedWorkloads sync.Map
+		var idleTrackers sync.Map
+
+		type idleState struct {
+			mu         sync.Mutex
+			lastActive time.Time
+			hibernated bool
+		}
 
 		streamDone := make(chan struct{})
+
+		// Background idle watchdog for auto-hibernation
+		go func() {
+			watchdogTicker := time.NewTicker(30 * time.Second)
+			defer watchdogTicker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-streamDone:
+					return
+				case now := <-watchdogTicker.C:
+					assignedWorkloads.Range(func(key, value any) bool {
+						wID, ok := key.(string)
+						if !ok {
+							return true
+						}
+						w, ok := value.(*v1.Workload)
+						if !ok || w == nil || w.Spec == nil {
+							return true
+						}
+						idleMinutes := int(w.Spec.IdleTimeoutMinutes)
+						if idleMinutes <= 0 {
+							return true
+						}
+
+						rawTracker, _ := idleTrackers.LoadOrStore(wID, &idleState{lastActive: now})
+						ist := rawTracker.(*idleState)
+						ist.mu.Lock()
+						hibernated := ist.hibernated
+						lastActive := ist.lastActive
+						ist.mu.Unlock()
+
+						if hibernated {
+							return true
+						}
+
+						metrics, err := runner.GetMetrics(ctx, wID)
+						if err != nil {
+							return true
+						}
+
+						if metrics.PlayersOnline > 0 {
+							ist.mu.Lock()
+							ist.lastActive = now
+							ist.mu.Unlock()
+							return true
+						}
+
+						if now.Sub(lastActive) >= time.Duration(idleMinutes)*time.Minute {
+							logger.Info("idle watchdog triggered hibernation", "workload_id", wID, "idle_minutes", idleMinutes)
+							mode := w.Spec.HibernationMode
+							if mode == "" {
+								mode = "pause"
+							}
+							if err := runner.Hibernate(ctx, wID, mode); err == nil {
+								ist.mu.Lock()
+								ist.hibernated = true
+								ist.mu.Unlock()
+								sendMsgCh <- &v1.AgentMessage{
+									Payload: &v1.AgentMessage_WorkloadStatus{
+										WorkloadStatus: &v1.AgentWorkloadStatus{
+											NodeId:     id.NodeID,
+											WorkloadId: wID,
+											Status:     v1.WorkloadStatus_WORKLOAD_STATUS_HIBERNATED,
+											Detail:     fmt.Sprintf("auto-hibernated after %d min idle", idleMinutes),
+										},
+									},
+								}
+							}
+						}
+						return true
+					})
+				}
+			}
+		}()
 		go func() {
 			defer close(streamDone)
 			for {
@@ -446,6 +530,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 					}
 					w := assign.Workload
 					logger.Info("executing workload assignment", "workload_id", w.Id, "name", w.Name, "start", assign.Start)
+					assignedWorkloads.Store(w.Id, w)
 					cid, port, err := runner.Assign(ctx, w, assign.Start)
 					if err != nil {
 						logger.Error("failed assigning workload", "workload_id", w.Id, "err", err)
@@ -488,6 +573,8 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 						continue
 					}
 					activeStreams.Delete(stop.WorkloadId)
+					assignedWorkloads.Delete(stop.WorkloadId)
+					idleTrackers.Delete(stop.WorkloadId)
 					logger.Info("executing stop workload", "workload_id", stop.WorkloadId)
 					err := runner.Stop(ctx, stop.WorkloadId, int(stop.TimeoutSeconds))
 					if err != nil {
@@ -520,6 +607,8 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 						continue
 					}
 					activeStreams.Delete(del.WorkloadId)
+					assignedWorkloads.Delete(del.WorkloadId)
+					idleTrackers.Delete(del.WorkloadId)
 					logger.Info("executing delete workload", "workload_id", del.WorkloadId)
 					_ = runner.Delete(ctx, del.WorkloadId, del.DeleteData)
 					sendMsgCh <- &v1.AgentMessage{
@@ -820,6 +909,89 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 								Metrics:    metrics,
 							},
 						},
+					}
+
+				case *v1.ControlMessage_HibernateWorkload:
+					req := p.HibernateWorkload
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					logger.Info("executing hibernate workload", "workload_id", req.WorkloadId, "mode", req.Mode, "command_id", req.CommandId)
+					err := runner.Hibernate(ctx, req.WorkloadId, req.Mode)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_HibernateResult{
+							HibernateResult: &v1.AgentHibernateResult{
+								CommandId:  req.CommandId,
+								WorkloadId: req.WorkloadId,
+								Success:    success,
+								Error:      errMsg,
+							},
+						},
+					}
+					if success {
+						if val, ok := idleTrackers.Load(req.WorkloadId); ok {
+							ist := val.(*idleState)
+							ist.mu.Lock()
+							ist.hibernated = true
+							ist.mu.Unlock()
+						}
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_WorkloadStatus{
+								WorkloadStatus: &v1.AgentWorkloadStatus{
+									NodeId:     id.NodeID,
+									WorkloadId: req.WorkloadId,
+									Status:     v1.WorkloadStatus_WORKLOAD_STATUS_HIBERNATED,
+									Detail:     "workload hibernated",
+								},
+							},
+						}
+					}
+
+				case *v1.ControlMessage_WakeWorkload:
+					req := p.WakeWorkload
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					logger.Info("executing wake workload", "workload_id", req.WorkloadId, "command_id", req.CommandId)
+					err := runner.Wake(ctx, req.WorkloadId)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_WakeResult{
+							WakeResult: &v1.AgentWakeResult{
+								CommandId:  req.CommandId,
+								WorkloadId: req.WorkloadId,
+								Success:    success,
+								Error:      errMsg,
+							},
+						},
+					}
+					if success {
+						if val, ok := idleTrackers.Load(req.WorkloadId); ok {
+							ist := val.(*idleState)
+							ist.mu.Lock()
+							ist.hibernated = false
+							ist.lastActive = time.Now()
+							ist.mu.Unlock()
+						}
+						sendMsgCh <- &v1.AgentMessage{
+							Payload: &v1.AgentMessage_WorkloadStatus{
+								WorkloadStatus: &v1.AgentWorkloadStatus{
+									NodeId:     id.NodeID,
+									WorkloadId: req.WorkloadId,
+									Status:     v1.WorkloadStatus_WORKLOAD_STATUS_RUNNING,
+									Detail:     "workload resumed from hibernation",
+								},
+							},
+						}
 					}
 				}
 			}

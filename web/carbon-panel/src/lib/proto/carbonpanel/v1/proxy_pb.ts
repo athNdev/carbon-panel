@@ -2,795 +2,765 @@
 // @generated from file carbonpanel/v1/proxy.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
-import type { ProxyListener } from './common_pb';
-import { file_carbonpanel_v1_common } from './common_pb';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ProxyListener } from "./common_pb";
+import { file_carbonpanel_v1_common } from "./common_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file carbonpanel/v1/proxy.proto.
  */
-export const file_carbonpanel_v1_proxy: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		'ChpjYXJib25wYW5lbC92MS9wcm94eS5wcm90bxIOY2FyYm9ucGFuZWwudjEibQoKUHJveHlSb3V0ZRIRCglzZXJ2ZXJfaWQYASABKAkSEAoIaG9zdG5hbWUYAiABKAkSFAoMYmFja2VuZF9ob3N0GAMgASgJEhQKDGJhY2tlbmRfcG9ydBgEIAEoBRIOCgZhY3RpdmUYBSABKAgiFwoVR2V0UHJveHlSb3V0ZXNSZXF1ZXN0IkQKFkdldFByb3h5Um91dGVzUmVzcG9uc2USKgoGcm91dGVzGAEgAygLMhouY2FyYm9ucGFuZWwudjEuUHJveHlSb3V0ZSIXChVHZXRQcm94eVN0YXR1c1JlcXVlc3QiwAEKFkdldFByb3h5U3RhdHVzUmVzcG9uc2USDwoHZW5hYmxlZBgBIAEoCBIQCghiYXNlX3VybBgCIAEoCRIUCgxsaXN0ZW5fcG9ydHMYAyADKAUSMAoJbGlzdGVuZXJzGAQgAygLMh0uY2FyYm9ucGFuZWwudjEuUHJveHlMaXN0ZW5lchITCgtsaXN0ZW5fcG9ydBgFIAEoBRIPCgdydW5uaW5nGAYgASgIEhUKDWFjdGl2ZV9yb3V0ZXMYByABKAUiPQoYVXBkYXRlUHJveHlDb25maWdSZXF1ZXN0Eg8KB2VuYWJsZWQYASABKAgSEAoIYmFzZV91cmwYAiABKAkiwwEKGVVwZGF0ZVByb3h5Q29uZmlnUmVzcG9uc2USDwoHZW5hYmxlZBgBIAEoCBIQCghiYXNlX3VybBgCIAEoCRIUCgxsaXN0ZW5fcG9ydHMYAyADKAUSMAoJbGlzdGVuZXJzGAQgAygLMh0uY2FyYm9ucGFuZWwudjEuUHJveHlMaXN0ZW5lchITCgtsaXN0ZW5fcG9ydBgFIAEoBRIPCgdydW5uaW5nGAYgASgIEhUKDWFjdGl2ZV9yb3V0ZXMYByABKAUiGgoYR2V0UHJveHlMaXN0ZW5lcnNSZXF1ZXN0Il8KFlByb3h5TGlzdGVuZXJXaXRoQ291bnQSLwoIbGlzdGVuZXIYASABKAsyHS5jYXJib25wYW5lbC52MS5Qcm94eUxpc3RlbmVyEhQKDHNlcnZlcl9jb3VudBgCIAEoBSJWChlHZXRQcm94eUxpc3RlbmVyc1Jlc3BvbnNlEjkKCWxpc3RlbmVycxgBIAMoCzImLmNhcmJvbnBhbmVsLnYxLlByb3h5TGlzdGVuZXJXaXRoQ291bnQiigEKGkNyZWF0ZVByb3h5TGlzdGVuZXJSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSDAoEcG9ydBgDIAEoBRIPCgdlbmFibGVkGAQgASgIEhIKCmlzX2RlZmF1bHQYBSABKAgSFgoOcHJveHlfcHJvdG9jb2wYBiABKAgiTgobQ3JlYXRlUHJveHlMaXN0ZW5lclJlc3BvbnNlEi8KCGxpc3RlbmVyGAEgASgLMh0uY2FyYm9ucGFuZWwudjEuUHJveHlMaXN0ZW5lciKuAQoaVXBkYXRlUHJveHlMaXN0ZW5lclJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRwb3J0GAQgASgFEg8KB2VuYWJsZWQYBSABKAgSEgoKaXNfZGVmYXVsdBgGIAEoCBIbCg5wcm94eV9wcm90b2NvbBgHIAEoCEgAiAEBQhEKD19wcm94eV9wcm90b2NvbCJOChtVcGRhdGVQcm94eUxpc3RlbmVyUmVzcG9uc2USLwoIbGlzdGVuZXIYASABKAsyHS5jYXJib25wYW5lbC52MS5Qcm94eUxpc3RlbmVyIigKGkRlbGV0ZVByb3h5TGlzdGVuZXJSZXF1ZXN0EgoKAmlkGAEgASgJIi0KG0RlbGV0ZVByb3h5TGlzdGVuZXJSZXNwb25zZRIOCgZzdGF0dXMYASABKAkiLAoXR2V0U2VydmVyUm91dGluZ1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJIi8KC1NlcnZlclJvdXRlEhAKCGhvc3RuYW1lGAEgASgJEg4KBmFjdGl2ZRgCIAEoCCLyAQoYR2V0U2VydmVyUm91dGluZ1Jlc3BvbnNlEhUKDXByb3h5X2VuYWJsZWQYASABKAgSFgoOcHJveHlfaG9zdG5hbWUYAiABKAkSGgoSc3VnZ2VzdGVkX2hvc3RuYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEhMKC2xpc3Rlbl9wb3J0GAUgASgFEjcKDWN1cnJlbnRfcm91dGUYBiABKAsyGy5jYXJib25wYW5lbC52MS5TZXJ2ZXJSb3V0ZUgAiAEBEhkKEXByb3h5X2xpc3RlbmVyX2lkGAcgASgJQhAKDl9jdXJyZW50X3JvdXRlImIKGlVwZGF0ZVNlcnZlclJvdXRpbmdSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIWCg5wcm94eV9ob3N0bmFtZRgCIAEoCRIZChFwcm94eV9saXN0ZW5lcl9pZBgDIAEoCSJaChtVcGRhdGVTZXJ2ZXJSb3V0aW5nUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJEhAKCGhvc3RuYW1lGAIgASgJEhkKEXByb3h5X2xpc3RlbmVyX2lkGAMgASgJIhoKGEdldFZlbG9jaXR5U2VjcmV0UmVxdWVzdCJhChlHZXRWZWxvY2l0eVNlY3JldFJlc3BvbnNlEg4KBnNlY3JldBgBIAEoCRIWCg5hdXRvX2dlbmVyYXRlZBgCIAEoCBIcChRzeW5jZWRfc2VydmVyc19jb3VudBgDIAEoBSJlChtSb3RhdGVWZWxvY2l0eVNlY3JldFJlcXVlc3QSGgoNY3VzdG9tX3NlY3JldBgBIAEoCUgAiAEBEhgKEHN5bmNfYWxsX3NlcnZlcnMYAiABKAhCEAoOX2N1c3RvbV9zZWNyZXQifAocUm90YXRlVmVsb2NpdHlTZWNyZXRSZXNwb25zZRISCgpuZXdfc2VjcmV0GAEgASgJEhwKFHN5bmNlZF9zZXJ2ZXJzX2NvdW50GAIgASgFEhkKEXN5bmNlZF9zZXJ2ZXJfaWRzGAMgAygJEg8KB21lc3NhZ2UYBCABKAkiNgohU3luY1ZlbG9jaXR5U2VjcmV0VG9TZXJ2ZXJSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCSJvCiJTeW5jVmVsb2NpdHlTZWNyZXRUb1NlcnZlclJlc3BvbnNlEhEKCXNlcnZlcl9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEhQKDHVwZGF0ZWRfZmlsZRgDIAEoCRIPCgdtZXNzYWdlGAQgASgJMq4KCgxQcm94eVNlcnZpY2USXwoOR2V0UHJveHlSb3V0ZXMSJS5jYXJib25wYW5lbC52MS5HZXRQcm94eVJvdXRlc1JlcXVlc3QaJi5jYXJib25wYW5lbC52MS5HZXRQcm94eVJvdXRlc1Jlc3BvbnNlEl8KDkdldFByb3h5U3RhdHVzEiUuY2FyYm9ucGFuZWwudjEuR2V0UHJveHlTdGF0dXNSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuR2V0UHJveHlTdGF0dXNSZXNwb25zZRJoChFVcGRhdGVQcm94eUNvbmZpZxIoLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVByb3h5Q29uZmlnUmVxdWVzdBopLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVByb3h5Q29uZmlnUmVzcG9uc2USaAoRR2V0UHJveHlMaXN0ZW5lcnMSKC5jYXJib25wYW5lbC52MS5HZXRQcm94eUxpc3RlbmVyc1JlcXVlc3QaKS5jYXJib25wYW5lbC52MS5HZXRQcm94eUxpc3RlbmVyc1Jlc3BvbnNlEm4KE0NyZWF0ZVByb3h5TGlzdGVuZXISKi5jYXJib25wYW5lbC52MS5DcmVhdGVQcm94eUxpc3RlbmVyUmVxdWVzdBorLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVByb3h5TGlzdGVuZXJSZXNwb25zZRJuChNVcGRhdGVQcm94eUxpc3RlbmVyEiouY2FyYm9ucGFuZWwudjEuVXBkYXRlUHJveHlMaXN0ZW5lclJlcXVlc3QaKy5jYXJib25wYW5lbC52MS5VcGRhdGVQcm94eUxpc3RlbmVyUmVzcG9uc2USbgoTRGVsZXRlUHJveHlMaXN0ZW5lchIqLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVByb3h5TGlzdGVuZXJSZXF1ZXN0GisuY2FyYm9ucGFuZWwudjEuRGVsZXRlUHJveHlMaXN0ZW5lclJlc3BvbnNlEmUKEEdldFNlcnZlclJvdXRpbmcSJy5jYXJib25wYW5lbC52MS5HZXRTZXJ2ZXJSb3V0aW5nUmVxdWVzdBooLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlclJvdXRpbmdSZXNwb25zZRJuChNVcGRhdGVTZXJ2ZXJSb3V0aW5nEiouY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyUm91dGluZ1JlcXVlc3QaKy5jYXJib25wYW5lbC52MS5VcGRhdGVTZXJ2ZXJSb3V0aW5nUmVzcG9uc2USaAoRR2V0VmVsb2NpdHlTZWNyZXQSKC5jYXJib25wYW5lbC52MS5HZXRWZWxvY2l0eVNlY3JldFJlcXVlc3QaKS5jYXJib25wYW5lbC52MS5HZXRWZWxvY2l0eVNlY3JldFJlc3BvbnNlEnEKFFJvdGF0ZVZlbG9jaXR5U2VjcmV0EisuY2FyYm9ucGFuZWwudjEuUm90YXRlVmVsb2NpdHlTZWNyZXRSZXF1ZXN0GiwuY2FyYm9ucGFuZWwudjEuUm90YXRlVmVsb2NpdHlTZWNyZXRSZXNwb25zZRKDAQoaU3luY1ZlbG9jaXR5U2VjcmV0VG9TZXJ2ZXISMS5jYXJib25wYW5lbC52MS5TeW5jVmVsb2NpdHlTZWNyZXRUb1NlcnZlclJlcXVlc3QaMi5jYXJib25wYW5lbC52MS5TeW5jVmVsb2NpdHlTZWNyZXRUb1NlcnZlclJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw',
-		[file_carbonpanel_v1_common]
-	);
+export const file_carbonpanel_v1_proxy: GenFile = /*@__PURE__*/
+  fileDesc("ChpjYXJib25wYW5lbC92MS9wcm94eS5wcm90bxIOY2FyYm9ucGFuZWwudjEibQoKUHJveHlSb3V0ZRIRCglzZXJ2ZXJfaWQYASABKAkSEAoIaG9zdG5hbWUYAiABKAkSFAoMYmFja2VuZF9ob3N0GAMgASgJEhQKDGJhY2tlbmRfcG9ydBgEIAEoBRIOCgZhY3RpdmUYBSABKAgiFwoVR2V0UHJveHlSb3V0ZXNSZXF1ZXN0IkQKFkdldFByb3h5Um91dGVzUmVzcG9uc2USKgoGcm91dGVzGAEgAygLMhouY2FyYm9ucGFuZWwudjEuUHJveHlSb3V0ZSIXChVHZXRQcm94eVN0YXR1c1JlcXVlc3QiwAEKFkdldFByb3h5U3RhdHVzUmVzcG9uc2USDwoHZW5hYmxlZBgBIAEoCBIQCghiYXNlX3VybBgCIAEoCRIUCgxsaXN0ZW5fcG9ydHMYAyADKAUSMAoJbGlzdGVuZXJzGAQgAygLMh0uY2FyYm9ucGFuZWwudjEuUHJveHlMaXN0ZW5lchITCgtsaXN0ZW5fcG9ydBgFIAEoBRIPCgdydW5uaW5nGAYgASgIEhUKDWFjdGl2ZV9yb3V0ZXMYByABKAUiPQoYVXBkYXRlUHJveHlDb25maWdSZXF1ZXN0Eg8KB2VuYWJsZWQYASABKAgSEAoIYmFzZV91cmwYAiABKAkiwwEKGVVwZGF0ZVByb3h5Q29uZmlnUmVzcG9uc2USDwoHZW5hYmxlZBgBIAEoCBIQCghiYXNlX3VybBgCIAEoCRIUCgxsaXN0ZW5fcG9ydHMYAyADKAUSMAoJbGlzdGVuZXJzGAQgAygLMh0uY2FyYm9ucGFuZWwudjEuUHJveHlMaXN0ZW5lchITCgtsaXN0ZW5fcG9ydBgFIAEoBRIPCgdydW5uaW5nGAYgASgIEhUKDWFjdGl2ZV9yb3V0ZXMYByABKAUiGgoYR2V0UHJveHlMaXN0ZW5lcnNSZXF1ZXN0Il8KFlByb3h5TGlzdGVuZXJXaXRoQ291bnQSLwoIbGlzdGVuZXIYASABKAsyHS5jYXJib25wYW5lbC52MS5Qcm94eUxpc3RlbmVyEhQKDHNlcnZlcl9jb3VudBgCIAEoBSJWChlHZXRQcm94eUxpc3RlbmVyc1Jlc3BvbnNlEjkKCWxpc3RlbmVycxgBIAMoCzImLmNhcmJvbnBhbmVsLnYxLlByb3h5TGlzdGVuZXJXaXRoQ291bnQiigEKGkNyZWF0ZVByb3h5TGlzdGVuZXJSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSDAoEcG9ydBgDIAEoBRIPCgdlbmFibGVkGAQgASgIEhIKCmlzX2RlZmF1bHQYBSABKAgSFgoOcHJveHlfcHJvdG9jb2wYBiABKAgiTgobQ3JlYXRlUHJveHlMaXN0ZW5lclJlc3BvbnNlEi8KCGxpc3RlbmVyGAEgASgLMh0uY2FyYm9ucGFuZWwudjEuUHJveHlMaXN0ZW5lciKuAQoaVXBkYXRlUHJveHlMaXN0ZW5lclJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRwb3J0GAQgASgFEg8KB2VuYWJsZWQYBSABKAgSEgoKaXNfZGVmYXVsdBgGIAEoCBIbCg5wcm94eV9wcm90b2NvbBgHIAEoCEgAiAEBQhEKD19wcm94eV9wcm90b2NvbCJOChtVcGRhdGVQcm94eUxpc3RlbmVyUmVzcG9uc2USLwoIbGlzdGVuZXIYASABKAsyHS5jYXJib25wYW5lbC52MS5Qcm94eUxpc3RlbmVyIigKGkRlbGV0ZVByb3h5TGlzdGVuZXJSZXF1ZXN0EgoKAmlkGAEgASgJIi0KG0RlbGV0ZVByb3h5TGlzdGVuZXJSZXNwb25zZRIOCgZzdGF0dXMYASABKAkiLAoXR2V0U2VydmVyUm91dGluZ1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJIi8KC1NlcnZlclJvdXRlEhAKCGhvc3RuYW1lGAEgASgJEg4KBmFjdGl2ZRgCIAEoCCLyAQoYR2V0U2VydmVyUm91dGluZ1Jlc3BvbnNlEhUKDXByb3h5X2VuYWJsZWQYASABKAgSFgoOcHJveHlfaG9zdG5hbWUYAiABKAkSGgoSc3VnZ2VzdGVkX2hvc3RuYW1lGAMgASgJEhAKCGJhc2VfdXJsGAQgASgJEhMKC2xpc3Rlbl9wb3J0GAUgASgFEjcKDWN1cnJlbnRfcm91dGUYBiABKAsyGy5jYXJib25wYW5lbC52MS5TZXJ2ZXJSb3V0ZUgAiAEBEhkKEXByb3h5X2xpc3RlbmVyX2lkGAcgASgJQhAKDl9jdXJyZW50X3JvdXRlImIKGlVwZGF0ZVNlcnZlclJvdXRpbmdSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIWCg5wcm94eV9ob3N0bmFtZRgCIAEoCRIZChFwcm94eV9saXN0ZW5lcl9pZBgDIAEoCSJaChtVcGRhdGVTZXJ2ZXJSb3V0aW5nUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJEhAKCGhvc3RuYW1lGAIgASgJEhkKEXByb3h5X2xpc3RlbmVyX2lkGAMgASgJIhoKGEdldFZlbG9jaXR5U2VjcmV0UmVxdWVzdCJhChlHZXRWZWxvY2l0eVNlY3JldFJlc3BvbnNlEg4KBnNlY3JldBgBIAEoCRIWCg5hdXRvX2dlbmVyYXRlZBgCIAEoCBIcChRzeW5jZWRfc2VydmVyc19jb3VudBgDIAEoBSJlChtSb3RhdGVWZWxvY2l0eVNlY3JldFJlcXVlc3QSGgoNY3VzdG9tX3NlY3JldBgBIAEoCUgAiAEBEhgKEHN5bmNfYWxsX3NlcnZlcnMYAiABKAhCEAoOX2N1c3RvbV9zZWNyZXQifAocUm90YXRlVmVsb2NpdHlTZWNyZXRSZXNwb25zZRISCgpuZXdfc2VjcmV0GAEgASgJEhwKFHN5bmNlZF9zZXJ2ZXJzX2NvdW50GAIgASgFEhkKEXN5bmNlZF9zZXJ2ZXJfaWRzGAMgAygJEg8KB21lc3NhZ2UYBCABKAkiNgohU3luY1ZlbG9jaXR5U2VjcmV0VG9TZXJ2ZXJSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCSJvCiJTeW5jVmVsb2NpdHlTZWNyZXRUb1NlcnZlclJlc3BvbnNlEhEKCXNlcnZlcl9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEhQKDHVwZGF0ZWRfZmlsZRgDIAEoCRIPCgdtZXNzYWdlGAQgASgJMq4KCgxQcm94eVNlcnZpY2USXwoOR2V0UHJveHlSb3V0ZXMSJS5jYXJib25wYW5lbC52MS5HZXRQcm94eVJvdXRlc1JlcXVlc3QaJi5jYXJib25wYW5lbC52MS5HZXRQcm94eVJvdXRlc1Jlc3BvbnNlEl8KDkdldFByb3h5U3RhdHVzEiUuY2FyYm9ucGFuZWwudjEuR2V0UHJveHlTdGF0dXNSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuR2V0UHJveHlTdGF0dXNSZXNwb25zZRJoChFVcGRhdGVQcm94eUNvbmZpZxIoLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVByb3h5Q29uZmlnUmVxdWVzdBopLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVByb3h5Q29uZmlnUmVzcG9uc2USaAoRR2V0UHJveHlMaXN0ZW5lcnMSKC5jYXJib25wYW5lbC52MS5HZXRQcm94eUxpc3RlbmVyc1JlcXVlc3QaKS5jYXJib25wYW5lbC52MS5HZXRQcm94eUxpc3RlbmVyc1Jlc3BvbnNlEm4KE0NyZWF0ZVByb3h5TGlzdGVuZXISKi5jYXJib25wYW5lbC52MS5DcmVhdGVQcm94eUxpc3RlbmVyUmVxdWVzdBorLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZVByb3h5TGlzdGVuZXJSZXNwb25zZRJuChNVcGRhdGVQcm94eUxpc3RlbmVyEiouY2FyYm9ucGFuZWwudjEuVXBkYXRlUHJveHlMaXN0ZW5lclJlcXVlc3QaKy5jYXJib25wYW5lbC52MS5VcGRhdGVQcm94eUxpc3RlbmVyUmVzcG9uc2USbgoTRGVsZXRlUHJveHlMaXN0ZW5lchIqLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZVByb3h5TGlzdGVuZXJSZXF1ZXN0GisuY2FyYm9ucGFuZWwudjEuRGVsZXRlUHJveHlMaXN0ZW5lclJlc3BvbnNlEmUKEEdldFNlcnZlclJvdXRpbmcSJy5jYXJib25wYW5lbC52MS5HZXRTZXJ2ZXJSb3V0aW5nUmVxdWVzdBooLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlclJvdXRpbmdSZXNwb25zZRJuChNVcGRhdGVTZXJ2ZXJSb3V0aW5nEiouY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyUm91dGluZ1JlcXVlc3QaKy5jYXJib25wYW5lbC52MS5VcGRhdGVTZXJ2ZXJSb3V0aW5nUmVzcG9uc2USaAoRR2V0VmVsb2NpdHlTZWNyZXQSKC5jYXJib25wYW5lbC52MS5HZXRWZWxvY2l0eVNlY3JldFJlcXVlc3QaKS5jYXJib25wYW5lbC52MS5HZXRWZWxvY2l0eVNlY3JldFJlc3BvbnNlEnEKFFJvdGF0ZVZlbG9jaXR5U2VjcmV0EisuY2FyYm9ucGFuZWwudjEuUm90YXRlVmVsb2NpdHlTZWNyZXRSZXF1ZXN0GiwuY2FyYm9ucGFuZWwudjEuUm90YXRlVmVsb2NpdHlTZWNyZXRSZXNwb25zZRKDAQoaU3luY1ZlbG9jaXR5U2VjcmV0VG9TZXJ2ZXISMS5jYXJib25wYW5lbC52MS5TeW5jVmVsb2NpdHlTZWNyZXRUb1NlcnZlclJlcXVlc3QaMi5jYXJib25wYW5lbC52MS5TeW5jVmVsb2NpdHlTZWNyZXRUb1NlcnZlclJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw", [file_carbonpanel_v1_common]);
 
 /**
  * Active proxy connection
  *
  * @generated from message carbonpanel.v1.ProxyRoute
  */
-export type ProxyRoute = Message<'carbonpanel.v1.ProxyRoute'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type ProxyRoute = Message<"carbonpanel.v1.ProxyRoute"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string hostname = 2;
-	 */
-	hostname: string;
+  /**
+   * @generated from field: string hostname = 2;
+   */
+  hostname: string;
 
-	/**
-	 * @generated from field: string backend_host = 3;
-	 */
-	backendHost: string;
+  /**
+   * @generated from field: string backend_host = 3;
+   */
+  backendHost: string;
 
-	/**
-	 * @generated from field: int32 backend_port = 4;
-	 */
-	backendPort: number;
+  /**
+   * @generated from field: int32 backend_port = 4;
+   */
+  backendPort: number;
 
-	/**
-	 * @generated from field: bool active = 5;
-	 */
-	active: boolean;
+  /**
+   * @generated from field: bool active = 5;
+   */
+  active: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.ProxyRoute.
  * Use `create(ProxyRouteSchema)` to create a new message.
  */
-export const ProxyRouteSchema: GenMessage<ProxyRoute> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 0);
+export const ProxyRouteSchema: GenMessage<ProxyRoute> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 0);
 
 /**
  * Empty routes request
  *
  * @generated from message carbonpanel.v1.GetProxyRoutesRequest
  */
-export type GetProxyRoutesRequest = Message<'carbonpanel.v1.GetProxyRoutesRequest'> & {};
+export type GetProxyRoutesRequest = Message<"carbonpanel.v1.GetProxyRoutesRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetProxyRoutesRequest.
  * Use `create(GetProxyRoutesRequestSchema)` to create a new message.
  */
-export const GetProxyRoutesRequestSchema: GenMessage<GetProxyRoutesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 1);
+export const GetProxyRoutesRequestSchema: GenMessage<GetProxyRoutesRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 1);
 
 /**
  * All proxy routes
  *
  * @generated from message carbonpanel.v1.GetProxyRoutesResponse
  */
-export type GetProxyRoutesResponse = Message<'carbonpanel.v1.GetProxyRoutesResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.ProxyRoute routes = 1;
-	 */
-	routes: ProxyRoute[];
+export type GetProxyRoutesResponse = Message<"carbonpanel.v1.GetProxyRoutesResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.ProxyRoute routes = 1;
+   */
+  routes: ProxyRoute[];
 };
 
 /**
  * Describes the message carbonpanel.v1.GetProxyRoutesResponse.
  * Use `create(GetProxyRoutesResponseSchema)` to create a new message.
  */
-export const GetProxyRoutesResponseSchema: GenMessage<GetProxyRoutesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 2);
+export const GetProxyRoutesResponseSchema: GenMessage<GetProxyRoutesResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 2);
 
 /**
  * Empty status request
  *
  * @generated from message carbonpanel.v1.GetProxyStatusRequest
  */
-export type GetProxyStatusRequest = Message<'carbonpanel.v1.GetProxyStatusRequest'> & {};
+export type GetProxyStatusRequest = Message<"carbonpanel.v1.GetProxyStatusRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetProxyStatusRequest.
  * Use `create(GetProxyStatusRequestSchema)` to create a new message.
  */
-export const GetProxyStatusRequestSchema: GenMessage<GetProxyStatusRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 3);
+export const GetProxyStatusRequestSchema: GenMessage<GetProxyStatusRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 3);
 
 /**
  * Proxy system state
  *
  * @generated from message carbonpanel.v1.GetProxyStatusResponse
  */
-export type GetProxyStatusResponse = Message<'carbonpanel.v1.GetProxyStatusResponse'> & {
-	/**
-	 * @generated from field: bool enabled = 1;
-	 */
-	enabled: boolean;
+export type GetProxyStatusResponse = Message<"carbonpanel.v1.GetProxyStatusResponse"> & {
+  /**
+   * @generated from field: bool enabled = 1;
+   */
+  enabled: boolean;
 
-	/**
-	 * @generated from field: string base_url = 2;
-	 */
-	baseUrl: string;
+  /**
+   * @generated from field: string base_url = 2;
+   */
+  baseUrl: string;
 
-	/**
-	 * @generated from field: repeated int32 listen_ports = 3;
-	 */
-	listenPorts: number[];
+  /**
+   * @generated from field: repeated int32 listen_ports = 3;
+   */
+  listenPorts: number[];
 
-	/**
-	 * @generated from field: repeated carbonpanel.v1.ProxyListener listeners = 4;
-	 */
-	listeners: ProxyListener[];
+  /**
+   * @generated from field: repeated carbonpanel.v1.ProxyListener listeners = 4;
+   */
+  listeners: ProxyListener[];
 
-	/**
-	 * Primary port
-	 *
-	 * @generated from field: int32 listen_port = 5;
-	 */
-	listenPort: number;
+  /**
+   * Primary port
+   *
+   * @generated from field: int32 listen_port = 5;
+   */
+  listenPort: number;
 
-	/**
-	 * @generated from field: bool running = 6;
-	 */
-	running: boolean;
+  /**
+   * @generated from field: bool running = 6;
+   */
+  running: boolean;
 
-	/**
-	 * @generated from field: int32 active_routes = 7;
-	 */
-	activeRoutes: number;
+  /**
+   * @generated from field: int32 active_routes = 7;
+   */
+  activeRoutes: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetProxyStatusResponse.
  * Use `create(GetProxyStatusResponseSchema)` to create a new message.
  */
-export const GetProxyStatusResponseSchema: GenMessage<GetProxyStatusResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 4);
+export const GetProxyStatusResponseSchema: GenMessage<GetProxyStatusResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 4);
 
 /**
  * Proxy settings to update
  *
  * @generated from message carbonpanel.v1.UpdateProxyConfigRequest
  */
-export type UpdateProxyConfigRequest = Message<'carbonpanel.v1.UpdateProxyConfigRequest'> & {
-	/**
-	 * @generated from field: bool enabled = 1;
-	 */
-	enabled: boolean;
+export type UpdateProxyConfigRequest = Message<"carbonpanel.v1.UpdateProxyConfigRequest"> & {
+  /**
+   * @generated from field: bool enabled = 1;
+   */
+  enabled: boolean;
 
-	/**
-	 * @generated from field: string base_url = 2;
-	 */
-	baseUrl: string;
+  /**
+   * @generated from field: string base_url = 2;
+   */
+  baseUrl: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateProxyConfigRequest.
  * Use `create(UpdateProxyConfigRequestSchema)` to create a new message.
  */
-export const UpdateProxyConfigRequestSchema: GenMessage<UpdateProxyConfigRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 5);
+export const UpdateProxyConfigRequestSchema: GenMessage<UpdateProxyConfigRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 5);
 
 /**
  * Updated proxy state
  *
  * @generated from message carbonpanel.v1.UpdateProxyConfigResponse
  */
-export type UpdateProxyConfigResponse = Message<'carbonpanel.v1.UpdateProxyConfigResponse'> & {
-	/**
-	 * @generated from field: bool enabled = 1;
-	 */
-	enabled: boolean;
+export type UpdateProxyConfigResponse = Message<"carbonpanel.v1.UpdateProxyConfigResponse"> & {
+  /**
+   * @generated from field: bool enabled = 1;
+   */
+  enabled: boolean;
 
-	/**
-	 * @generated from field: string base_url = 2;
-	 */
-	baseUrl: string;
+  /**
+   * @generated from field: string base_url = 2;
+   */
+  baseUrl: string;
 
-	/**
-	 * @generated from field: repeated int32 listen_ports = 3;
-	 */
-	listenPorts: number[];
+  /**
+   * @generated from field: repeated int32 listen_ports = 3;
+   */
+  listenPorts: number[];
 
-	/**
-	 * @generated from field: repeated carbonpanel.v1.ProxyListener listeners = 4;
-	 */
-	listeners: ProxyListener[];
+  /**
+   * @generated from field: repeated carbonpanel.v1.ProxyListener listeners = 4;
+   */
+  listeners: ProxyListener[];
 
-	/**
-	 * @generated from field: int32 listen_port = 5;
-	 */
-	listenPort: number;
+  /**
+   * @generated from field: int32 listen_port = 5;
+   */
+  listenPort: number;
 
-	/**
-	 * @generated from field: bool running = 6;
-	 */
-	running: boolean;
+  /**
+   * @generated from field: bool running = 6;
+   */
+  running: boolean;
 
-	/**
-	 * @generated from field: int32 active_routes = 7;
-	 */
-	activeRoutes: number;
+  /**
+   * @generated from field: int32 active_routes = 7;
+   */
+  activeRoutes: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateProxyConfigResponse.
  * Use `create(UpdateProxyConfigResponseSchema)` to create a new message.
  */
-export const UpdateProxyConfigResponseSchema: GenMessage<UpdateProxyConfigResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 6);
+export const UpdateProxyConfigResponseSchema: GenMessage<UpdateProxyConfigResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 6);
 
 /**
  * Empty listeners request
  *
  * @generated from message carbonpanel.v1.GetProxyListenersRequest
  */
-export type GetProxyListenersRequest = Message<'carbonpanel.v1.GetProxyListenersRequest'> & {};
+export type GetProxyListenersRequest = Message<"carbonpanel.v1.GetProxyListenersRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetProxyListenersRequest.
  * Use `create(GetProxyListenersRequestSchema)` to create a new message.
  */
-export const GetProxyListenersRequestSchema: GenMessage<GetProxyListenersRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 7);
+export const GetProxyListenersRequestSchema: GenMessage<GetProxyListenersRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 7);
 
 /**
  * Listener with usage count
  *
  * @generated from message carbonpanel.v1.ProxyListenerWithCount
  */
-export type ProxyListenerWithCount = Message<'carbonpanel.v1.ProxyListenerWithCount'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.ProxyListener listener = 1;
-	 */
-	listener?: ProxyListener | undefined;
+export type ProxyListenerWithCount = Message<"carbonpanel.v1.ProxyListenerWithCount"> & {
+  /**
+   * @generated from field: carbonpanel.v1.ProxyListener listener = 1;
+   */
+  listener?: ProxyListener | undefined;
 
-	/**
-	 * @generated from field: int32 server_count = 2;
-	 */
-	serverCount: number;
+  /**
+   * @generated from field: int32 server_count = 2;
+   */
+  serverCount: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.ProxyListenerWithCount.
  * Use `create(ProxyListenerWithCountSchema)` to create a new message.
  */
-export const ProxyListenerWithCountSchema: GenMessage<ProxyListenerWithCount> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 8);
+export const ProxyListenerWithCountSchema: GenMessage<ProxyListenerWithCount> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 8);
 
 /**
  * All configured listeners
  *
  * @generated from message carbonpanel.v1.GetProxyListenersResponse
  */
-export type GetProxyListenersResponse = Message<'carbonpanel.v1.GetProxyListenersResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.ProxyListenerWithCount listeners = 1;
-	 */
-	listeners: ProxyListenerWithCount[];
+export type GetProxyListenersResponse = Message<"carbonpanel.v1.GetProxyListenersResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.ProxyListenerWithCount listeners = 1;
+   */
+  listeners: ProxyListenerWithCount[];
 };
 
 /**
  * Describes the message carbonpanel.v1.GetProxyListenersResponse.
  * Use `create(GetProxyListenersResponseSchema)` to create a new message.
  */
-export const GetProxyListenersResponseSchema: GenMessage<GetProxyListenersResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 9);
+export const GetProxyListenersResponseSchema: GenMessage<GetProxyListenersResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 9);
 
 /**
  * New listener configuration
  *
  * @generated from message carbonpanel.v1.CreateProxyListenerRequest
  */
-export type CreateProxyListenerRequest = Message<'carbonpanel.v1.CreateProxyListenerRequest'> & {
-	/**
-	 * @generated from field: string name = 1;
-	 */
-	name: string;
+export type CreateProxyListenerRequest = Message<"carbonpanel.v1.CreateProxyListenerRequest"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
 
-	/**
-	 * @generated from field: string description = 2;
-	 */
-	description: string;
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
 
-	/**
-	 * @generated from field: int32 port = 3;
-	 */
-	port: number;
+  /**
+   * @generated from field: int32 port = 3;
+   */
+  port: number;
 
-	/**
-	 * @generated from field: bool enabled = 4;
-	 */
-	enabled: boolean;
+  /**
+   * @generated from field: bool enabled = 4;
+   */
+  enabled: boolean;
 
-	/**
-	 * @generated from field: bool is_default = 5;
-	 */
-	isDefault: boolean;
+  /**
+   * @generated from field: bool is_default = 5;
+   */
+  isDefault: boolean;
 
-	/**
-	 * @generated from field: bool proxy_protocol = 6;
-	 */
-	proxyProtocol: boolean;
+  /**
+   * @generated from field: bool proxy_protocol = 6;
+   */
+  proxyProtocol: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateProxyListenerRequest.
  * Use `create(CreateProxyListenerRequestSchema)` to create a new message.
  */
-export const CreateProxyListenerRequestSchema: GenMessage<CreateProxyListenerRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 10);
+export const CreateProxyListenerRequestSchema: GenMessage<CreateProxyListenerRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 10);
 
 /**
  * Created listener
  *
  * @generated from message carbonpanel.v1.CreateProxyListenerResponse
  */
-export type CreateProxyListenerResponse = Message<'carbonpanel.v1.CreateProxyListenerResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.ProxyListener listener = 1;
-	 */
-	listener?: ProxyListener | undefined;
+export type CreateProxyListenerResponse = Message<"carbonpanel.v1.CreateProxyListenerResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.ProxyListener listener = 1;
+   */
+  listener?: ProxyListener | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateProxyListenerResponse.
  * Use `create(CreateProxyListenerResponseSchema)` to create a new message.
  */
-export const CreateProxyListenerResponseSchema: GenMessage<CreateProxyListenerResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 11);
+export const CreateProxyListenerResponseSchema: GenMessage<CreateProxyListenerResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 11);
 
 /**
  * Listener fields to update
  *
  * @generated from message carbonpanel.v1.UpdateProxyListenerRequest
  */
-export type UpdateProxyListenerRequest = Message<'carbonpanel.v1.UpdateProxyListenerRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type UpdateProxyListenerRequest = Message<"carbonpanel.v1.UpdateProxyListenerRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * @generated from field: string name = 2;
-	 */
-	name: string;
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
 
-	/**
-	 * @generated from field: string description = 3;
-	 */
-	description: string;
+  /**
+   * @generated from field: string description = 3;
+   */
+  description: string;
 
-	/**
-	 * @generated from field: int32 port = 4;
-	 */
-	port: number;
+  /**
+   * @generated from field: int32 port = 4;
+   */
+  port: number;
 
-	/**
-	 * @generated from field: bool enabled = 5;
-	 */
-	enabled: boolean;
+  /**
+   * @generated from field: bool enabled = 5;
+   */
+  enabled: boolean;
 
-	/**
-	 * @generated from field: bool is_default = 6;
-	 */
-	isDefault: boolean;
+  /**
+   * @generated from field: bool is_default = 6;
+   */
+  isDefault: boolean;
 
-	/**
-	 * @generated from field: optional bool proxy_protocol = 7;
-	 */
-	proxyProtocol?: boolean | undefined;
+  /**
+   * @generated from field: optional bool proxy_protocol = 7;
+   */
+  proxyProtocol?: boolean | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateProxyListenerRequest.
  * Use `create(UpdateProxyListenerRequestSchema)` to create a new message.
  */
-export const UpdateProxyListenerRequestSchema: GenMessage<UpdateProxyListenerRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 12);
+export const UpdateProxyListenerRequestSchema: GenMessage<UpdateProxyListenerRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 12);
 
 /**
  * Updated listener
  *
  * @generated from message carbonpanel.v1.UpdateProxyListenerResponse
  */
-export type UpdateProxyListenerResponse = Message<'carbonpanel.v1.UpdateProxyListenerResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.ProxyListener listener = 1;
-	 */
-	listener?: ProxyListener | undefined;
+export type UpdateProxyListenerResponse = Message<"carbonpanel.v1.UpdateProxyListenerResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.ProxyListener listener = 1;
+   */
+  listener?: ProxyListener | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateProxyListenerResponse.
  * Use `create(UpdateProxyListenerResponseSchema)` to create a new message.
  */
-export const UpdateProxyListenerResponseSchema: GenMessage<UpdateProxyListenerResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 13);
+export const UpdateProxyListenerResponseSchema: GenMessage<UpdateProxyListenerResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 13);
 
 /**
  * Listener to delete
  *
  * @generated from message carbonpanel.v1.DeleteProxyListenerRequest
  */
-export type DeleteProxyListenerRequest = Message<'carbonpanel.v1.DeleteProxyListenerRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type DeleteProxyListenerRequest = Message<"carbonpanel.v1.DeleteProxyListenerRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteProxyListenerRequest.
  * Use `create(DeleteProxyListenerRequestSchema)` to create a new message.
  */
-export const DeleteProxyListenerRequestSchema: GenMessage<DeleteProxyListenerRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 14);
+export const DeleteProxyListenerRequestSchema: GenMessage<DeleteProxyListenerRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 14);
 
 /**
  * Deletion status
  *
  * @generated from message carbonpanel.v1.DeleteProxyListenerResponse
  */
-export type DeleteProxyListenerResponse = Message<'carbonpanel.v1.DeleteProxyListenerResponse'> & {
-	/**
-	 * @generated from field: string status = 1;
-	 */
-	status: string;
+export type DeleteProxyListenerResponse = Message<"carbonpanel.v1.DeleteProxyListenerResponse"> & {
+  /**
+   * @generated from field: string status = 1;
+   */
+  status: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteProxyListenerResponse.
  * Use `create(DeleteProxyListenerResponseSchema)` to create a new message.
  */
-export const DeleteProxyListenerResponseSchema: GenMessage<DeleteProxyListenerResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 15);
+export const DeleteProxyListenerResponseSchema: GenMessage<DeleteProxyListenerResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 15);
 
 /**
  * Server routing lookup
  *
  * @generated from message carbonpanel.v1.GetServerRoutingRequest
  */
-export type GetServerRoutingRequest = Message<'carbonpanel.v1.GetServerRoutingRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type GetServerRoutingRequest = Message<"carbonpanel.v1.GetServerRoutingRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetServerRoutingRequest.
  * Use `create(GetServerRoutingRequestSchema)` to create a new message.
  */
-export const GetServerRoutingRequestSchema: GenMessage<GetServerRoutingRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 16);
+export const GetServerRoutingRequestSchema: GenMessage<GetServerRoutingRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 16);
 
 /**
  * Active server route
  *
  * @generated from message carbonpanel.v1.ServerRoute
  */
-export type ServerRoute = Message<'carbonpanel.v1.ServerRoute'> & {
-	/**
-	 * @generated from field: string hostname = 1;
-	 */
-	hostname: string;
+export type ServerRoute = Message<"carbonpanel.v1.ServerRoute"> & {
+  /**
+   * @generated from field: string hostname = 1;
+   */
+  hostname: string;
 
-	/**
-	 * @generated from field: bool active = 2;
-	 */
-	active: boolean;
+  /**
+   * @generated from field: bool active = 2;
+   */
+  active: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.ServerRoute.
  * Use `create(ServerRouteSchema)` to create a new message.
  */
-export const ServerRouteSchema: GenMessage<ServerRoute> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 17);
+export const ServerRouteSchema: GenMessage<ServerRoute> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 17);
 
 /**
  * Server proxy configuration
  *
  * @generated from message carbonpanel.v1.GetServerRoutingResponse
  */
-export type GetServerRoutingResponse = Message<'carbonpanel.v1.GetServerRoutingResponse'> & {
-	/**
-	 * @generated from field: bool proxy_enabled = 1;
-	 */
-	proxyEnabled: boolean;
+export type GetServerRoutingResponse = Message<"carbonpanel.v1.GetServerRoutingResponse"> & {
+  /**
+   * @generated from field: bool proxy_enabled = 1;
+   */
+  proxyEnabled: boolean;
 
-	/**
-	 * @generated from field: string proxy_hostname = 2;
-	 */
-	proxyHostname: string;
+  /**
+   * @generated from field: string proxy_hostname = 2;
+   */
+  proxyHostname: string;
 
-	/**
-	 * @generated from field: string suggested_hostname = 3;
-	 */
-	suggestedHostname: string;
+  /**
+   * @generated from field: string suggested_hostname = 3;
+   */
+  suggestedHostname: string;
 
-	/**
-	 * @generated from field: string base_url = 4;
-	 */
-	baseUrl: string;
+  /**
+   * @generated from field: string base_url = 4;
+   */
+  baseUrl: string;
 
-	/**
-	 * @generated from field: int32 listen_port = 5;
-	 */
-	listenPort: number;
+  /**
+   * @generated from field: int32 listen_port = 5;
+   */
+  listenPort: number;
 
-	/**
-	 * @generated from field: optional carbonpanel.v1.ServerRoute current_route = 6;
-	 */
-	currentRoute?: ServerRoute | undefined;
+  /**
+   * @generated from field: optional carbonpanel.v1.ServerRoute current_route = 6;
+   */
+  currentRoute?: ServerRoute | undefined;
 
-	/**
-	 * @generated from field: string proxy_listener_id = 7;
-	 */
-	proxyListenerId: string;
+  /**
+   * @generated from field: string proxy_listener_id = 7;
+   */
+  proxyListenerId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetServerRoutingResponse.
  * Use `create(GetServerRoutingResponseSchema)` to create a new message.
  */
-export const GetServerRoutingResponseSchema: GenMessage<GetServerRoutingResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 18);
+export const GetServerRoutingResponseSchema: GenMessage<GetServerRoutingResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 18);
 
 /**
  * Hostname and listener to assign
  *
  * @generated from message carbonpanel.v1.UpdateServerRoutingRequest
  */
-export type UpdateServerRoutingRequest = Message<'carbonpanel.v1.UpdateServerRoutingRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type UpdateServerRoutingRequest = Message<"carbonpanel.v1.UpdateServerRoutingRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string proxy_hostname = 2;
-	 */
-	proxyHostname: string;
+  /**
+   * @generated from field: string proxy_hostname = 2;
+   */
+  proxyHostname: string;
 
-	/**
-	 * @generated from field: string proxy_listener_id = 3;
-	 */
-	proxyListenerId: string;
+  /**
+   * @generated from field: string proxy_listener_id = 3;
+   */
+  proxyListenerId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateServerRoutingRequest.
  * Use `create(UpdateServerRoutingRequestSchema)` to create a new message.
  */
-export const UpdateServerRoutingRequestSchema: GenMessage<UpdateServerRoutingRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 19);
+export const UpdateServerRoutingRequestSchema: GenMessage<UpdateServerRoutingRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 19);
 
 /**
  * Routing update result
  *
  * @generated from message carbonpanel.v1.UpdateServerRoutingResponse
  */
-export type UpdateServerRoutingResponse = Message<'carbonpanel.v1.UpdateServerRoutingResponse'> & {
-	/**
-	 * @generated from field: string status = 1;
-	 */
-	status: string;
+export type UpdateServerRoutingResponse = Message<"carbonpanel.v1.UpdateServerRoutingResponse"> & {
+  /**
+   * @generated from field: string status = 1;
+   */
+  status: string;
 
-	/**
-	 * @generated from field: string hostname = 2;
-	 */
-	hostname: string;
+  /**
+   * @generated from field: string hostname = 2;
+   */
+  hostname: string;
 
-	/**
-	 * @generated from field: string proxy_listener_id = 3;
-	 */
-	proxyListenerId: string;
+  /**
+   * @generated from field: string proxy_listener_id = 3;
+   */
+  proxyListenerId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateServerRoutingResponse.
  * Use `create(UpdateServerRoutingResponseSchema)` to create a new message.
  */
-export const UpdateServerRoutingResponseSchema: GenMessage<UpdateServerRoutingResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 20);
+export const UpdateServerRoutingResponseSchema: GenMessage<UpdateServerRoutingResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 20);
 
 /**
  * Request to retrieve the current Velocity forwarding secret
  *
  * @generated from message carbonpanel.v1.GetVelocitySecretRequest
  */
-export type GetVelocitySecretRequest = Message<'carbonpanel.v1.GetVelocitySecretRequest'> & {};
+export type GetVelocitySecretRequest = Message<"carbonpanel.v1.GetVelocitySecretRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetVelocitySecretRequest.
  * Use `create(GetVelocitySecretRequestSchema)` to create a new message.
  */
-export const GetVelocitySecretRequestSchema: GenMessage<GetVelocitySecretRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 21);
+export const GetVelocitySecretRequestSchema: GenMessage<GetVelocitySecretRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 21);
 
 /**
  * Response containing current Velocity forwarding secret
  *
  * @generated from message carbonpanel.v1.GetVelocitySecretResponse
  */
-export type GetVelocitySecretResponse = Message<'carbonpanel.v1.GetVelocitySecretResponse'> & {
-	/**
-	 * @generated from field: string secret = 1;
-	 */
-	secret: string;
+export type GetVelocitySecretResponse = Message<"carbonpanel.v1.GetVelocitySecretResponse"> & {
+  /**
+   * @generated from field: string secret = 1;
+   */
+  secret: string;
 
-	/**
-	 * @generated from field: bool auto_generated = 2;
-	 */
-	autoGenerated: boolean;
+  /**
+   * @generated from field: bool auto_generated = 2;
+   */
+  autoGenerated: boolean;
 
-	/**
-	 * @generated from field: int32 synced_servers_count = 3;
-	 */
-	syncedServersCount: number;
+  /**
+   * @generated from field: int32 synced_servers_count = 3;
+   */
+  syncedServersCount: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetVelocitySecretResponse.
  * Use `create(GetVelocitySecretResponseSchema)` to create a new message.
  */
-export const GetVelocitySecretResponseSchema: GenMessage<GetVelocitySecretResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 22);
+export const GetVelocitySecretResponseSchema: GenMessage<GetVelocitySecretResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 22);
 
 /**
  * Request to rotate the Velocity forwarding secret
  *
  * @generated from message carbonpanel.v1.RotateVelocitySecretRequest
  */
-export type RotateVelocitySecretRequest = Message<'carbonpanel.v1.RotateVelocitySecretRequest'> & {
-	/**
-	 * If empty, generates a cryptographically secure random 32-byte secret
-	 *
-	 * @generated from field: optional string custom_secret = 1;
-	 */
-	customSecret?: string | undefined;
+export type RotateVelocitySecretRequest = Message<"carbonpanel.v1.RotateVelocitySecretRequest"> & {
+  /**
+   * If empty, generates a cryptographically secure random 32-byte secret
+   *
+   * @generated from field: optional string custom_secret = 1;
+   */
+  customSecret?: string | undefined;
 
-	/**
-	 * If true, automatically updates paper.yml / config/paper-global.yml on all backend servers
-	 *
-	 * @generated from field: bool sync_all_servers = 2;
-	 */
-	syncAllServers: boolean;
+  /**
+   * If true, automatically updates paper.yml / config/paper-global.yml on all backend servers
+   *
+   * @generated from field: bool sync_all_servers = 2;
+   */
+  syncAllServers: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.RotateVelocitySecretRequest.
  * Use `create(RotateVelocitySecretRequestSchema)` to create a new message.
  */
-export const RotateVelocitySecretRequestSchema: GenMessage<RotateVelocitySecretRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 23);
+export const RotateVelocitySecretRequestSchema: GenMessage<RotateVelocitySecretRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 23);
 
 /**
  * Response with newly rotated secret details
  *
  * @generated from message carbonpanel.v1.RotateVelocitySecretResponse
  */
-export type RotateVelocitySecretResponse =
-	Message<'carbonpanel.v1.RotateVelocitySecretResponse'> & {
-		/**
-		 * @generated from field: string new_secret = 1;
-		 */
-		newSecret: string;
+export type RotateVelocitySecretResponse = Message<"carbonpanel.v1.RotateVelocitySecretResponse"> & {
+  /**
+   * @generated from field: string new_secret = 1;
+   */
+  newSecret: string;
 
-		/**
-		 * @generated from field: int32 synced_servers_count = 2;
-		 */
-		syncedServersCount: number;
+  /**
+   * @generated from field: int32 synced_servers_count = 2;
+   */
+  syncedServersCount: number;
 
-		/**
-		 * @generated from field: repeated string synced_server_ids = 3;
-		 */
-		syncedServerIds: string[];
+  /**
+   * @generated from field: repeated string synced_server_ids = 3;
+   */
+  syncedServerIds: string[];
 
-		/**
-		 * @generated from field: string message = 4;
-		 */
-		message: string;
-	};
+  /**
+   * @generated from field: string message = 4;
+   */
+  message: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.RotateVelocitySecretResponse.
  * Use `create(RotateVelocitySecretResponseSchema)` to create a new message.
  */
-export const RotateVelocitySecretResponseSchema: GenMessage<RotateVelocitySecretResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 24);
+export const RotateVelocitySecretResponseSchema: GenMessage<RotateVelocitySecretResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 24);
 
 /**
  * Request to sync Velocity forwarding secret to a specific server
  *
  * @generated from message carbonpanel.v1.SyncVelocitySecretToServerRequest
  */
-export type SyncVelocitySecretToServerRequest =
-	Message<'carbonpanel.v1.SyncVelocitySecretToServerRequest'> & {
-		/**
-		 * @generated from field: string server_id = 1;
-		 */
-		serverId: string;
-	};
+export type SyncVelocitySecretToServerRequest = Message<"carbonpanel.v1.SyncVelocitySecretToServerRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.SyncVelocitySecretToServerRequest.
  * Use `create(SyncVelocitySecretToServerRequestSchema)` to create a new message.
  */
-export const SyncVelocitySecretToServerRequestSchema: GenMessage<SyncVelocitySecretToServerRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 25);
+export const SyncVelocitySecretToServerRequestSchema: GenMessage<SyncVelocitySecretToServerRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 25);
 
 /**
  * Response from syncing secret to a specific server
  *
  * @generated from message carbonpanel.v1.SyncVelocitySecretToServerResponse
  */
-export type SyncVelocitySecretToServerResponse =
-	Message<'carbonpanel.v1.SyncVelocitySecretToServerResponse'> & {
-		/**
-		 * @generated from field: string server_id = 1;
-		 */
-		serverId: string;
+export type SyncVelocitySecretToServerResponse = Message<"carbonpanel.v1.SyncVelocitySecretToServerResponse"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-		/**
-		 * @generated from field: bool success = 2;
-		 */
-		success: boolean;
+  /**
+   * @generated from field: bool success = 2;
+   */
+  success: boolean;
 
-		/**
-		 * @generated from field: string updated_file = 3;
-		 */
-		updatedFile: string;
+  /**
+   * @generated from field: string updated_file = 3;
+   */
+  updatedFile: string;
 
-		/**
-		 * @generated from field: string message = 4;
-		 */
-		message: string;
-	};
+  /**
+   * @generated from field: string message = 4;
+   */
+  message: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.SyncVelocitySecretToServerResponse.
  * Use `create(SyncVelocitySecretToServerResponseSchema)` to create a new message.
  */
-export const SyncVelocitySecretToServerResponseSchema: GenMessage<SyncVelocitySecretToServerResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_proxy, 26);
+export const SyncVelocitySecretToServerResponseSchema: GenMessage<SyncVelocitySecretToServerResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_proxy, 26);
 
 /**
  * TCP proxy and routing management
@@ -798,124 +768,126 @@ export const SyncVelocitySecretToServerResponseSchema: GenMessage<SyncVelocitySe
  * @generated from service carbonpanel.v1.ProxyService
  */
 export const ProxyService: GenService<{
-	/**
-	 * List active proxy routes
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.GetProxyRoutes
-	 */
-	getProxyRoutes: {
-		methodKind: 'unary';
-		input: typeof GetProxyRoutesRequestSchema;
-		output: typeof GetProxyRoutesResponseSchema;
-	};
-	/**
-	 * Check proxy system status
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.GetProxyStatus
-	 */
-	getProxyStatus: {
-		methodKind: 'unary';
-		input: typeof GetProxyStatusRequestSchema;
-		output: typeof GetProxyStatusResponseSchema;
-	};
-	/**
-	 * Modify proxy settings
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.UpdateProxyConfig
-	 */
-	updateProxyConfig: {
-		methodKind: 'unary';
-		input: typeof UpdateProxyConfigRequestSchema;
-		output: typeof UpdateProxyConfigResponseSchema;
-	};
-	/**
-	 * List all proxy listeners
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.GetProxyListeners
-	 */
-	getProxyListeners: {
-		methodKind: 'unary';
-		input: typeof GetProxyListenersRequestSchema;
-		output: typeof GetProxyListenersResponseSchema;
-	};
-	/**
-	 * Add new listener port
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.CreateProxyListener
-	 */
-	createProxyListener: {
-		methodKind: 'unary';
-		input: typeof CreateProxyListenerRequestSchema;
-		output: typeof CreateProxyListenerResponseSchema;
-	};
-	/**
-	 * Modify listener settings
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.UpdateProxyListener
-	 */
-	updateProxyListener: {
-		methodKind: 'unary';
-		input: typeof UpdateProxyListenerRequestSchema;
-		output: typeof UpdateProxyListenerResponseSchema;
-	};
-	/**
-	 * Remove listener port
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.DeleteProxyListener
-	 */
-	deleteProxyListener: {
-		methodKind: 'unary';
-		input: typeof DeleteProxyListenerRequestSchema;
-		output: typeof DeleteProxyListenerResponseSchema;
-	};
-	/**
-	 * Get server proxy configuration
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.GetServerRouting
-	 */
-	getServerRouting: {
-		methodKind: 'unary';
-		input: typeof GetServerRoutingRequestSchema;
-		output: typeof GetServerRoutingResponseSchema;
-	};
-	/**
-	 * Update server proxy hostname
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.UpdateServerRouting
-	 */
-	updateServerRouting: {
-		methodKind: 'unary';
-		input: typeof UpdateServerRoutingRequestSchema;
-		output: typeof UpdateServerRoutingResponseSchema;
-	};
-	/**
-	 * Get current Velocity modern forwarding secret
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.GetVelocitySecret
-	 */
-	getVelocitySecret: {
-		methodKind: 'unary';
-		input: typeof GetVelocitySecretRequestSchema;
-		output: typeof GetVelocitySecretResponseSchema;
-	};
-	/**
-	 * Rotate or regenerate Velocity modern forwarding secret and sync to backend Paper/Folia servers
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.RotateVelocitySecret
-	 */
-	rotateVelocitySecret: {
-		methodKind: 'unary';
-		input: typeof RotateVelocitySecretRequestSchema;
-		output: typeof RotateVelocitySecretResponseSchema;
-	};
-	/**
-	 * Sync Velocity modern forwarding secret to a specific server's config files
-	 *
-	 * @generated from rpc carbonpanel.v1.ProxyService.SyncVelocitySecretToServer
-	 */
-	syncVelocitySecretToServer: {
-		methodKind: 'unary';
-		input: typeof SyncVelocitySecretToServerRequestSchema;
-		output: typeof SyncVelocitySecretToServerResponseSchema;
-	};
-}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_proxy, 0);
+  /**
+   * List active proxy routes
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.GetProxyRoutes
+   */
+  getProxyRoutes: {
+    methodKind: "unary";
+    input: typeof GetProxyRoutesRequestSchema;
+    output: typeof GetProxyRoutesResponseSchema;
+  },
+  /**
+   * Check proxy system status
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.GetProxyStatus
+   */
+  getProxyStatus: {
+    methodKind: "unary";
+    input: typeof GetProxyStatusRequestSchema;
+    output: typeof GetProxyStatusResponseSchema;
+  },
+  /**
+   * Modify proxy settings
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.UpdateProxyConfig
+   */
+  updateProxyConfig: {
+    methodKind: "unary";
+    input: typeof UpdateProxyConfigRequestSchema;
+    output: typeof UpdateProxyConfigResponseSchema;
+  },
+  /**
+   * List all proxy listeners
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.GetProxyListeners
+   */
+  getProxyListeners: {
+    methodKind: "unary";
+    input: typeof GetProxyListenersRequestSchema;
+    output: typeof GetProxyListenersResponseSchema;
+  },
+  /**
+   * Add new listener port
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.CreateProxyListener
+   */
+  createProxyListener: {
+    methodKind: "unary";
+    input: typeof CreateProxyListenerRequestSchema;
+    output: typeof CreateProxyListenerResponseSchema;
+  },
+  /**
+   * Modify listener settings
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.UpdateProxyListener
+   */
+  updateProxyListener: {
+    methodKind: "unary";
+    input: typeof UpdateProxyListenerRequestSchema;
+    output: typeof UpdateProxyListenerResponseSchema;
+  },
+  /**
+   * Remove listener port
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.DeleteProxyListener
+   */
+  deleteProxyListener: {
+    methodKind: "unary";
+    input: typeof DeleteProxyListenerRequestSchema;
+    output: typeof DeleteProxyListenerResponseSchema;
+  },
+  /**
+   * Get server proxy configuration
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.GetServerRouting
+   */
+  getServerRouting: {
+    methodKind: "unary";
+    input: typeof GetServerRoutingRequestSchema;
+    output: typeof GetServerRoutingResponseSchema;
+  },
+  /**
+   * Update server proxy hostname
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.UpdateServerRouting
+   */
+  updateServerRouting: {
+    methodKind: "unary";
+    input: typeof UpdateServerRoutingRequestSchema;
+    output: typeof UpdateServerRoutingResponseSchema;
+  },
+  /**
+   * Get current Velocity modern forwarding secret
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.GetVelocitySecret
+   */
+  getVelocitySecret: {
+    methodKind: "unary";
+    input: typeof GetVelocitySecretRequestSchema;
+    output: typeof GetVelocitySecretResponseSchema;
+  },
+  /**
+   * Rotate or regenerate Velocity modern forwarding secret and sync to backend Paper/Folia servers
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.RotateVelocitySecret
+   */
+  rotateVelocitySecret: {
+    methodKind: "unary";
+    input: typeof RotateVelocitySecretRequestSchema;
+    output: typeof RotateVelocitySecretResponseSchema;
+  },
+  /**
+   * Sync Velocity modern forwarding secret to a specific server's config files
+   *
+   * @generated from rpc carbonpanel.v1.ProxyService.SyncVelocitySecretToServer
+   */
+  syncVelocitySecretToServer: {
+    methodKind: "unary";
+    input: typeof SyncVelocitySecretToServerRequestSchema;
+    output: typeof SyncVelocitySecretToServerResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_carbonpanel_v1_proxy, 0);
+

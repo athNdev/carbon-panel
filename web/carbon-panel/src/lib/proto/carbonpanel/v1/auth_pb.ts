@@ -2,980 +2,943 @@
 // @generated from file carbonpanel/v1/auth.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
-import type { Permission, User } from './common_pb';
-import { file_carbonpanel_v1_common } from './common_pb';
-import { file_gnostic_openapi_v3_annotations } from '../../gnostic/openapi/v3/annotations_pb';
-import type { Timestamp } from '@bufbuild/protobuf/wkt';
-import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Permission, User } from "./common_pb";
+import { file_carbonpanel_v1_common } from "./common_pb";
+import { file_gnostic_openapi_v3_annotations } from "../../gnostic/openapi/v3/annotations_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file carbonpanel/v1/auth.proto.
  */
-export const file_carbonpanel_v1_auth: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		'ChljYXJib25wYW5lbC92MS9hdXRoLnByb3RvEg5jYXJib25wYW5lbC52MSIWChRHZXRBdXRoU3RhdHVzUmVxdWVzdCKhAQoVR2V0QXV0aFN0YXR1c1Jlc3BvbnNlEhoKEmxvY2FsX2F1dGhfZW5hYmxlZBgBIAEoCBIUCgxvaWRjX2VuYWJsZWQYAiABKAgSGgoSYWxsb3dfcmVnaXN0cmF0aW9uGAMgASgIEhgKEGZpcnN0X3VzZXJfc2V0dXAYBCABKAgSIAoYYW5vbnltb3VzX2FjY2Vzc19lbmFibGVkGAUgASgIIjIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJyCg1Mb2dpblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEiIKBHVzZXIYAiABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIg8KDUxvZ291dFJlcXVlc3QiIQoOTG9nb3V0UmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSKWAQoPUmVnaXN0ZXJSZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEg0KBWVtYWlsGAIgASgJEhAKCHBhc3N3b3JkGAMgASgJEhgKC2ludml0ZV9jb2RlGAQgASgJSACIAQESFwoKaW52aXRlX3BpbhgFIAEoCUgBiAEBQg4KDF9pbnZpdGVfY29kZUINCgtfaW52aXRlX3BpbiI2ChBSZWdpc3RlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyIhcKFUdldEN1cnJlbnRVc2VyUmVxdWVzdCJtChZHZXRDdXJyZW50VXNlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyEi8KC3Blcm1pc3Npb25zGAIgAygLMhouY2FyYm9ucGFuZWwudjEuUGVybWlzc2lvbiJDChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSFAoMb2xkX3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIpChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiGAoWR2V0T0lEQ0xvZ2luVVJMUmVxdWVzdCIsChdHZXRPSURDTG9naW5VUkxSZXNwb25zZRIRCglsb2dpbl91cmwYASABKAkiFgoUR2V0QXV0aENvbmZpZ1JlcXVlc3QikQMKFUdldEF1dGhDb25maWdSZXNwb25zZRIaChJsb2NhbF9hdXRoX2VuYWJsZWQYASABKAgSGgoSYWxsb3dfcmVnaXN0cmF0aW9uGAIgASgIEhgKEGFub255bW91c19hY2Nlc3MYAyABKAgSFwoPc2Vzc2lvbl90aW1lb3V0GAQgASgFEhQKDG9pZGNfZW5hYmxlZBgFIAEoCBIcCg9vaWRjX2lzc3Vlcl91cmkYBiABKAlIAIgBARIbCg5vaWRjX2NsaWVudF9pZBgHIAEoCUgBiAEBEh4KEW9pZGNfcmVkaXJlY3RfdXJsGAggASgJSAKIAQESEwoLb2lkY19zY29wZXMYCSADKAkSHAoPb2lkY19yb2xlX2NsYWltGAogASgJSAOIAQESGAoQZmlyc3RfdXNlcl9zZXR1cBgLIAEoCEISChBfb2lkY19pc3N1ZXJfdXJpQhEKD19vaWRjX2NsaWVudF9pZEIUChJfb2lkY19yZWRpcmVjdF91cmxCEgoQX29pZGNfcm9sZV9jbGFpbSLxAQoZVXBkYXRlQXV0aFNldHRpbmdzUmVxdWVzdBIfChJsb2NhbF9hdXRoX2VuYWJsZWQYASABKAhIAIgBARIfChJhbGxvd19yZWdpc3RyYXRpb24YAiABKAhIAYgBARIdChBhbm9ueW1vdXNfYWNjZXNzGAMgASgISAKIAQESHAoPc2Vzc2lvbl90aW1lb3V0GAQgASgFSAOIAQFCFQoTX2xvY2FsX2F1dGhfZW5hYmxlZEIVChNfYWxsb3dfcmVnaXN0cmF0aW9uQhMKEV9hbm9ueW1vdXNfYWNjZXNzQhIKEF9zZXNzaW9uX3RpbWVvdXQiUwoaVXBkYXRlQXV0aFNldHRpbmdzUmVzcG9uc2USNQoGY29uZmlnGAEgASgLMiUuY2FyYm9ucGFuZWwudjEuR2V0QXV0aENvbmZpZ1Jlc3BvbnNlIvwBChJSZWdpc3RyYXRpb25JbnZpdGUSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRINCgVyb2xlcxgEIAMoCRIPCgdoYXNfcGluGAUgASgIEhAKCG1heF91c2VzGAYgASgFEhEKCXVzZV9jb3VudBgHIAEoBRIuCgpleHBpcmVzX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpjcmVhdGVkX2J5GAkgASgJEi4KCmNyZWF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpkBChNDcmVhdGVJbnZpdGVSZXF1ZXN0EhMKC2Rlc2NyaXB0aW9uGAEgASgJEg0KBXJvbGVzGAIgAygJEhAKA3BpbhgDIAEoCUgAiAEBEhAKCG1heF91c2VzGAQgASgFEh0KEGV4cGlyZXNfaW5faG91cnMYBSABKAVIAYgBAUIGCgRfcGluQhMKEV9leHBpcmVzX2luX2hvdXJzIkoKFENyZWF0ZUludml0ZVJlc3BvbnNlEjIKBmludml0ZRgBIAEoCzIiLmNhcmJvbnBhbmVsLnYxLlJlZ2lzdHJhdGlvbkludml0ZSIUChJMaXN0SW52aXRlc1JlcXVlc3QiSgoTTGlzdEludml0ZXNSZXNwb25zZRIzCgdpbnZpdGVzGAEgAygLMiIuY2FyYm9ucGFuZWwudjEuUmVnaXN0cmF0aW9uSW52aXRlIh4KEEdldEludml0ZVJlcXVlc3QSCgoCaWQYASABKAkiRwoRR2V0SW52aXRlUmVzcG9uc2USMgoGaW52aXRlGAEgASgLMiIuY2FyYm9ucGFuZWwudjEuUmVnaXN0cmF0aW9uSW52aXRlIiEKE0RlbGV0ZUludml0ZVJlcXVlc3QSCgoCaWQYASABKAkiFgoURGVsZXRlSW52aXRlUmVzcG9uc2UiJQoVVmFsaWRhdGVJbnZpdGVSZXF1ZXN0EgwKBGNvZGUYASABKAkiUgoWVmFsaWRhdGVJbnZpdGVSZXNwb25zZRINCgV2YWxpZBgBIAEoCBIUCgxyZXF1aXJlc19waW4YAiABKAgSEwoLZGVzY3JpcHRpb24YAyABKAkitgEKCEFwaVRva2VuEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSLgoKZXhwaXJlc19hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMbGFzdF91c2VkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJXChVDcmVhdGVBUElUb2tlblJlcXVlc3QSDAoEbmFtZRgBIAEoCRIcCg9leHBpcmVzX2luX2RheXMYAiABKAVIAIgBAUISChBfZXhwaXJlc19pbl9kYXlzIl4KFkNyZWF0ZUFQSVRva2VuUmVzcG9uc2USFwoPcGxhaW50ZXh0X3Rva2VuGAEgASgJEisKCWFwaV90b2tlbhgCIAEoCzIYLmNhcmJvbnBhbmVsLnYxLkFwaVRva2VuIhYKFExpc3RBUElUb2tlbnNSZXF1ZXN0IkUKFUxpc3RBUElUb2tlbnNSZXNwb25zZRIsCgphcGlfdG9rZW5zGAEgAygLMhguY2FyYm9ucGFuZWwudjEuQXBpVG9rZW4iIwoVRGVsZXRlQVBJVG9rZW5SZXF1ZXN0EgoKAmlkGAEgASgJIhgKFkRlbGV0ZUFQSVRva2VuUmVzcG9uc2UiLQoVVXNlUmVjb3ZlcnlLZXlSZXF1ZXN0EhQKDHJlY292ZXJ5X2tleRgBIAEoCSIpChZVc2VSZWNvdmVyeUtleVJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAky/AwKC0F1dGhTZXJ2aWNlElwKDUdldEF1dGhTdGF0dXMSJC5jYXJib25wYW5lbC52MS5HZXRBdXRoU3RhdHVzUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLkdldEF1dGhTdGF0dXNSZXNwb25zZRJECgVMb2dpbhIcLmNhcmJvbnBhbmVsLnYxLkxvZ2luUmVxdWVzdBodLmNhcmJvbnBhbmVsLnYxLkxvZ2luUmVzcG9uc2USRwoGTG9nb3V0Eh0uY2FyYm9ucGFuZWwudjEuTG9nb3V0UmVxdWVzdBoeLmNhcmJvbnBhbmVsLnYxLkxvZ291dFJlc3BvbnNlEk0KCFJlZ2lzdGVyEh8uY2FyYm9ucGFuZWwudjEuUmVnaXN0ZXJSZXF1ZXN0GiAuY2FyYm9ucGFuZWwudjEuUmVnaXN0ZXJSZXNwb25zZRJfCg5HZXRDdXJyZW50VXNlchIlLmNhcmJvbnBhbmVsLnYxLkdldEN1cnJlbnRVc2VyUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkdldEN1cnJlbnRVc2VyUmVzcG9uc2USXwoOQ2hhbmdlUGFzc3dvcmQSJS5jYXJib25wYW5lbC52MS5DaGFuZ2VQYXNzd29yZFJlcXVlc3QaJi5jYXJib25wYW5lbC52MS5DaGFuZ2VQYXNzd29yZFJlc3BvbnNlEmIKD0dldE9JRENMb2dpblVSTBImLmNhcmJvbnBhbmVsLnYxLkdldE9JRENMb2dpblVSTFJlcXVlc3QaJy5jYXJib25wYW5lbC52MS5HZXRPSURDTG9naW5VUkxSZXNwb25zZRJcCg1HZXRBdXRoQ29uZmlnEiQuY2FyYm9ucGFuZWwudjEuR2V0QXV0aENvbmZpZ1JlcXVlc3QaJS5jYXJib25wYW5lbC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2USawoSVXBkYXRlQXV0aFNldHRpbmdzEikuY2FyYm9ucGFuZWwudjEuVXBkYXRlQXV0aFNldHRpbmdzUmVxdWVzdBoqLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZUF1dGhTZXR0aW5nc1Jlc3BvbnNlElkKDENyZWF0ZUludml0ZRIjLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZUludml0ZVJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5DcmVhdGVJbnZpdGVSZXNwb25zZRJWCgtMaXN0SW52aXRlcxIiLmNhcmJvbnBhbmVsLnYxLkxpc3RJbnZpdGVzUmVxdWVzdBojLmNhcmJvbnBhbmVsLnYxLkxpc3RJbnZpdGVzUmVzcG9uc2USUAoJR2V0SW52aXRlEiAuY2FyYm9ucGFuZWwudjEuR2V0SW52aXRlUmVxdWVzdBohLmNhcmJvbnBhbmVsLnYxLkdldEludml0ZVJlc3BvbnNlElkKDERlbGV0ZUludml0ZRIjLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZUludml0ZVJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5EZWxldGVJbnZpdGVSZXNwb25zZRJfCg5WYWxpZGF0ZUludml0ZRIlLmNhcmJvbnBhbmVsLnYxLlZhbGlkYXRlSW52aXRlUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLlZhbGlkYXRlSW52aXRlUmVzcG9uc2USXwoOQ3JlYXRlQVBJVG9rZW4SJS5jYXJib25wYW5lbC52MS5DcmVhdGVBUElUb2tlblJlcXVlc3QaJi5jYXJib25wYW5lbC52MS5DcmVhdGVBUElUb2tlblJlc3BvbnNlElwKDUxpc3RBUElUb2tlbnMSJC5jYXJib25wYW5lbC52MS5MaXN0QVBJVG9rZW5zUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLkxpc3RBUElUb2tlbnNSZXNwb25zZRJfCg5EZWxldGVBUElUb2tlbhIlLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZUFQSVRva2VuUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZUFQSVRva2VuUmVzcG9uc2USXwoOVXNlUmVjb3ZlcnlLZXkSJS5jYXJib25wYW5lbC52MS5Vc2VSZWNvdmVyeUtleVJlcXVlc3QaJi5jYXJib25wYW5lbC52MS5Vc2VSZWNvdmVyeUtleVJlc3BvbnNlQv0GWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxukexBhLCBQoQQ2FyYm9uIFBhbmVsIEFQSRKoBUNhcmJvbiBQYW5lbCBzZXJ2ZXIgbWFuYWdlbWVudCBBUEkuIEF1dGhlbnRpY2F0ZSB1c2luZyBhIHNlc3Npb24gdG9rZW4gKGZyb20gTG9naW4vT0lEQykgb3IgYW4gQVBJIHRva2VuIChkcF8uLi4gcHJlZml4KSBpbiB0aGUgQXV0aG9yaXphdGlvbiBoZWFkZXIuCgojIyBDb25uZWN0IFByb3RvY29sCgpUaGlzIEFQSSB1c2VzIHRoZSBbQ29ubmVjdCBwcm90b2NvbF0oaHR0cHM6Ly9jb25uZWN0cnBjLmNvbS9kb2NzL3Byb3RvY29sKSBvdmVyIEhUVFAuIEFsbCBlbmRwb2ludHMgYWNjZXB0IGBQT1NUYCB3aXRoIGBhcHBsaWNhdGlvbi9qc29uYCBib2RpZXMuIENvbm5lY3QgY2xpZW50cyBtYXkgc2VuZCB0aGUgZm9sbG93aW5nIG9wdGlvbmFsIGhlYWRlcnM6CgotIGBDb25uZWN0LVByb3RvY29sLVZlcnNpb246IDFgIMOi4oKs4oCdIGRlY2xhcmVzIHRoZSBDb25uZWN0IHByb3RvY29sIHZlcnNpb24uCi0gYENvbm5lY3QtVGltZW91dC1NczogPG1zPmAgw6LigqzigJ0gcmVxdWVzdCBkZWFkbGluZSBpbiBtaWxsaXNlY29uZHMuCgpUaGVzZSBoZWFkZXJzIGFyZSBoYW5kbGVkIGF1dG9tYXRpY2FsbHkgYnkgQ29ubmVjdCBjbGllbnQgbGlicmFyaWVzIGFuZCBhcmUgbm90IHJlcXVpcmVkIHdoZW4gY2FsbGluZyB0aGUgQVBJIGRpcmVjdGx5IHdpdGggY3VybCBvciBvdGhlciBIVFRQIGNsaWVudHMuMgMyLngqWDpWClQKCkJlYXJlckF1dGgSRgpECgRodHRwEjRTZXNzaW9uIEpXVCBmcm9tIGxvZ2luLCBvciBBUEkgdG9rZW4gd2l0aCBkcF8gcHJlZml4KgZiZWFyZXIyEAoOCgpCZWFyZXJBdXRoEgBiBnByb3RvMw',
-		[
-			file_carbonpanel_v1_common,
-			file_gnostic_openapi_v3_annotations,
-			file_google_protobuf_timestamp
-		]
-	);
+export const file_carbonpanel_v1_auth: GenFile = /*@__PURE__*/
+  fileDesc("ChljYXJib25wYW5lbC92MS9hdXRoLnByb3RvEg5jYXJib25wYW5lbC52MSIWChRHZXRBdXRoU3RhdHVzUmVxdWVzdCKhAQoVR2V0QXV0aFN0YXR1c1Jlc3BvbnNlEhoKEmxvY2FsX2F1dGhfZW5hYmxlZBgBIAEoCBIUCgxvaWRjX2VuYWJsZWQYAiABKAgSGgoSYWxsb3dfcmVnaXN0cmF0aW9uGAMgASgIEhgKEGZpcnN0X3VzZXJfc2V0dXAYBCABKAgSIAoYYW5vbnltb3VzX2FjY2Vzc19lbmFibGVkGAUgASgIIjIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJyCg1Mb2dpblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEiIKBHVzZXIYAiABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyEi4KCmV4cGlyZXNfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIg8KDUxvZ291dFJlcXVlc3QiIQoOTG9nb3V0UmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSKWAQoPUmVnaXN0ZXJSZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEg0KBWVtYWlsGAIgASgJEhAKCHBhc3N3b3JkGAMgASgJEhgKC2ludml0ZV9jb2RlGAQgASgJSACIAQESFwoKaW52aXRlX3BpbhgFIAEoCUgBiAEBQg4KDF9pbnZpdGVfY29kZUINCgtfaW52aXRlX3BpbiI2ChBSZWdpc3RlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyIhcKFUdldEN1cnJlbnRVc2VyUmVxdWVzdCJtChZHZXRDdXJyZW50VXNlclJlc3BvbnNlEiIKBHVzZXIYASABKAsyFC5jYXJib25wYW5lbC52MS5Vc2VyEi8KC3Blcm1pc3Npb25zGAIgAygLMhouY2FyYm9ucGFuZWwudjEuUGVybWlzc2lvbiJDChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSFAoMb2xkX3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIpChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiGAoWR2V0T0lEQ0xvZ2luVVJMUmVxdWVzdCIsChdHZXRPSURDTG9naW5VUkxSZXNwb25zZRIRCglsb2dpbl91cmwYASABKAkiFgoUR2V0QXV0aENvbmZpZ1JlcXVlc3QikQMKFUdldEF1dGhDb25maWdSZXNwb25zZRIaChJsb2NhbF9hdXRoX2VuYWJsZWQYASABKAgSGgoSYWxsb3dfcmVnaXN0cmF0aW9uGAIgASgIEhgKEGFub255bW91c19hY2Nlc3MYAyABKAgSFwoPc2Vzc2lvbl90aW1lb3V0GAQgASgFEhQKDG9pZGNfZW5hYmxlZBgFIAEoCBIcCg9vaWRjX2lzc3Vlcl91cmkYBiABKAlIAIgBARIbCg5vaWRjX2NsaWVudF9pZBgHIAEoCUgBiAEBEh4KEW9pZGNfcmVkaXJlY3RfdXJsGAggASgJSAKIAQESEwoLb2lkY19zY29wZXMYCSADKAkSHAoPb2lkY19yb2xlX2NsYWltGAogASgJSAOIAQESGAoQZmlyc3RfdXNlcl9zZXR1cBgLIAEoCEISChBfb2lkY19pc3N1ZXJfdXJpQhEKD19vaWRjX2NsaWVudF9pZEIUChJfb2lkY19yZWRpcmVjdF91cmxCEgoQX29pZGNfcm9sZV9jbGFpbSLxAQoZVXBkYXRlQXV0aFNldHRpbmdzUmVxdWVzdBIfChJsb2NhbF9hdXRoX2VuYWJsZWQYASABKAhIAIgBARIfChJhbGxvd19yZWdpc3RyYXRpb24YAiABKAhIAYgBARIdChBhbm9ueW1vdXNfYWNjZXNzGAMgASgISAKIAQESHAoPc2Vzc2lvbl90aW1lb3V0GAQgASgFSAOIAQFCFQoTX2xvY2FsX2F1dGhfZW5hYmxlZEIVChNfYWxsb3dfcmVnaXN0cmF0aW9uQhMKEV9hbm9ueW1vdXNfYWNjZXNzQhIKEF9zZXNzaW9uX3RpbWVvdXQiUwoaVXBkYXRlQXV0aFNldHRpbmdzUmVzcG9uc2USNQoGY29uZmlnGAEgASgLMiUuY2FyYm9ucGFuZWwudjEuR2V0QXV0aENvbmZpZ1Jlc3BvbnNlIvwBChJSZWdpc3RyYXRpb25JbnZpdGUSCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRINCgVyb2xlcxgEIAMoCRIPCgdoYXNfcGluGAUgASgIEhAKCG1heF91c2VzGAYgASgFEhEKCXVzZV9jb3VudBgHIAEoBRIuCgpleHBpcmVzX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpjcmVhdGVkX2J5GAkgASgJEi4KCmNyZWF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpkBChNDcmVhdGVJbnZpdGVSZXF1ZXN0EhMKC2Rlc2NyaXB0aW9uGAEgASgJEg0KBXJvbGVzGAIgAygJEhAKA3BpbhgDIAEoCUgAiAEBEhAKCG1heF91c2VzGAQgASgFEh0KEGV4cGlyZXNfaW5faG91cnMYBSABKAVIAYgBAUIGCgRfcGluQhMKEV9leHBpcmVzX2luX2hvdXJzIkoKFENyZWF0ZUludml0ZVJlc3BvbnNlEjIKBmludml0ZRgBIAEoCzIiLmNhcmJvbnBhbmVsLnYxLlJlZ2lzdHJhdGlvbkludml0ZSIUChJMaXN0SW52aXRlc1JlcXVlc3QiSgoTTGlzdEludml0ZXNSZXNwb25zZRIzCgdpbnZpdGVzGAEgAygLMiIuY2FyYm9ucGFuZWwudjEuUmVnaXN0cmF0aW9uSW52aXRlIh4KEEdldEludml0ZVJlcXVlc3QSCgoCaWQYASABKAkiRwoRR2V0SW52aXRlUmVzcG9uc2USMgoGaW52aXRlGAEgASgLMiIuY2FyYm9ucGFuZWwudjEuUmVnaXN0cmF0aW9uSW52aXRlIiEKE0RlbGV0ZUludml0ZVJlcXVlc3QSCgoCaWQYASABKAkiFgoURGVsZXRlSW52aXRlUmVzcG9uc2UiJQoVVmFsaWRhdGVJbnZpdGVSZXF1ZXN0EgwKBGNvZGUYASABKAkiUgoWVmFsaWRhdGVJbnZpdGVSZXNwb25zZRINCgV2YWxpZBgBIAEoCBIUCgxyZXF1aXJlc19waW4YAiABKAgSEwoLZGVzY3JpcHRpb24YAyABKAkitgEKCEFwaVRva2VuEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSLgoKZXhwaXJlc19hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMbGFzdF91c2VkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJXChVDcmVhdGVBUElUb2tlblJlcXVlc3QSDAoEbmFtZRgBIAEoCRIcCg9leHBpcmVzX2luX2RheXMYAiABKAVIAIgBAUISChBfZXhwaXJlc19pbl9kYXlzIl4KFkNyZWF0ZUFQSVRva2VuUmVzcG9uc2USFwoPcGxhaW50ZXh0X3Rva2VuGAEgASgJEisKCWFwaV90b2tlbhgCIAEoCzIYLmNhcmJvbnBhbmVsLnYxLkFwaVRva2VuIhYKFExpc3RBUElUb2tlbnNSZXF1ZXN0IkUKFUxpc3RBUElUb2tlbnNSZXNwb25zZRIsCgphcGlfdG9rZW5zGAEgAygLMhguY2FyYm9ucGFuZWwudjEuQXBpVG9rZW4iIwoVRGVsZXRlQVBJVG9rZW5SZXF1ZXN0EgoKAmlkGAEgASgJIhgKFkRlbGV0ZUFQSVRva2VuUmVzcG9uc2UiLQoVVXNlUmVjb3ZlcnlLZXlSZXF1ZXN0EhQKDHJlY292ZXJ5X2tleRgBIAEoCSIpChZVc2VSZWNvdmVyeUtleVJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAky/AwKC0F1dGhTZXJ2aWNlElwKDUdldEF1dGhTdGF0dXMSJC5jYXJib25wYW5lbC52MS5HZXRBdXRoU3RhdHVzUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLkdldEF1dGhTdGF0dXNSZXNwb25zZRJECgVMb2dpbhIcLmNhcmJvbnBhbmVsLnYxLkxvZ2luUmVxdWVzdBodLmNhcmJvbnBhbmVsLnYxLkxvZ2luUmVzcG9uc2USRwoGTG9nb3V0Eh0uY2FyYm9ucGFuZWwudjEuTG9nb3V0UmVxdWVzdBoeLmNhcmJvbnBhbmVsLnYxLkxvZ291dFJlc3BvbnNlEk0KCFJlZ2lzdGVyEh8uY2FyYm9ucGFuZWwudjEuUmVnaXN0ZXJSZXF1ZXN0GiAuY2FyYm9ucGFuZWwudjEuUmVnaXN0ZXJSZXNwb25zZRJfCg5HZXRDdXJyZW50VXNlchIlLmNhcmJvbnBhbmVsLnYxLkdldEN1cnJlbnRVc2VyUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkdldEN1cnJlbnRVc2VyUmVzcG9uc2USXwoOQ2hhbmdlUGFzc3dvcmQSJS5jYXJib25wYW5lbC52MS5DaGFuZ2VQYXNzd29yZFJlcXVlc3QaJi5jYXJib25wYW5lbC52MS5DaGFuZ2VQYXNzd29yZFJlc3BvbnNlEmIKD0dldE9JRENMb2dpblVSTBImLmNhcmJvbnBhbmVsLnYxLkdldE9JRENMb2dpblVSTFJlcXVlc3QaJy5jYXJib25wYW5lbC52MS5HZXRPSURDTG9naW5VUkxSZXNwb25zZRJcCg1HZXRBdXRoQ29uZmlnEiQuY2FyYm9ucGFuZWwudjEuR2V0QXV0aENvbmZpZ1JlcXVlc3QaJS5jYXJib25wYW5lbC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2USawoSVXBkYXRlQXV0aFNldHRpbmdzEikuY2FyYm9ucGFuZWwudjEuVXBkYXRlQXV0aFNldHRpbmdzUmVxdWVzdBoqLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZUF1dGhTZXR0aW5nc1Jlc3BvbnNlElkKDENyZWF0ZUludml0ZRIjLmNhcmJvbnBhbmVsLnYxLkNyZWF0ZUludml0ZVJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5DcmVhdGVJbnZpdGVSZXNwb25zZRJWCgtMaXN0SW52aXRlcxIiLmNhcmJvbnBhbmVsLnYxLkxpc3RJbnZpdGVzUmVxdWVzdBojLmNhcmJvbnBhbmVsLnYxLkxpc3RJbnZpdGVzUmVzcG9uc2USUAoJR2V0SW52aXRlEiAuY2FyYm9ucGFuZWwudjEuR2V0SW52aXRlUmVxdWVzdBohLmNhcmJvbnBhbmVsLnYxLkdldEludml0ZVJlc3BvbnNlElkKDERlbGV0ZUludml0ZRIjLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZUludml0ZVJlcXVlc3QaJC5jYXJib25wYW5lbC52MS5EZWxldGVJbnZpdGVSZXNwb25zZRJfCg5WYWxpZGF0ZUludml0ZRIlLmNhcmJvbnBhbmVsLnYxLlZhbGlkYXRlSW52aXRlUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLlZhbGlkYXRlSW52aXRlUmVzcG9uc2USXwoOQ3JlYXRlQVBJVG9rZW4SJS5jYXJib25wYW5lbC52MS5DcmVhdGVBUElUb2tlblJlcXVlc3QaJi5jYXJib25wYW5lbC52MS5DcmVhdGVBUElUb2tlblJlc3BvbnNlElwKDUxpc3RBUElUb2tlbnMSJC5jYXJib25wYW5lbC52MS5MaXN0QVBJVG9rZW5zUmVxdWVzdBolLmNhcmJvbnBhbmVsLnYxLkxpc3RBUElUb2tlbnNSZXNwb25zZRJfCg5EZWxldGVBUElUb2tlbhIlLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZUFQSVRva2VuUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZUFQSVRva2VuUmVzcG9uc2USXwoOVXNlUmVjb3ZlcnlLZXkSJS5jYXJib25wYW5lbC52MS5Vc2VSZWNvdmVyeUtleVJlcXVlc3QaJi5jYXJib25wYW5lbC52MS5Vc2VSZWNvdmVyeUtleVJlc3BvbnNlQv0GWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxukexBhLCBQoQQ2FyYm9uIFBhbmVsIEFQSRKoBUNhcmJvbiBQYW5lbCBzZXJ2ZXIgbWFuYWdlbWVudCBBUEkuIEF1dGhlbnRpY2F0ZSB1c2luZyBhIHNlc3Npb24gdG9rZW4gKGZyb20gTG9naW4vT0lEQykgb3IgYW4gQVBJIHRva2VuIChkcF8uLi4gcHJlZml4KSBpbiB0aGUgQXV0aG9yaXphdGlvbiBoZWFkZXIuCgojIyBDb25uZWN0IFByb3RvY29sCgpUaGlzIEFQSSB1c2VzIHRoZSBbQ29ubmVjdCBwcm90b2NvbF0oaHR0cHM6Ly9jb25uZWN0cnBjLmNvbS9kb2NzL3Byb3RvY29sKSBvdmVyIEhUVFAuIEFsbCBlbmRwb2ludHMgYWNjZXB0IGBQT1NUYCB3aXRoIGBhcHBsaWNhdGlvbi9qc29uYCBib2RpZXMuIENvbm5lY3QgY2xpZW50cyBtYXkgc2VuZCB0aGUgZm9sbG93aW5nIG9wdGlvbmFsIGhlYWRlcnM6CgotIGBDb25uZWN0LVByb3RvY29sLVZlcnNpb246IDFgIMOi4oKs4oCdIGRlY2xhcmVzIHRoZSBDb25uZWN0IHByb3RvY29sIHZlcnNpb24uCi0gYENvbm5lY3QtVGltZW91dC1NczogPG1zPmAgw6LigqzigJ0gcmVxdWVzdCBkZWFkbGluZSBpbiBtaWxsaXNlY29uZHMuCgpUaGVzZSBoZWFkZXJzIGFyZSBoYW5kbGVkIGF1dG9tYXRpY2FsbHkgYnkgQ29ubmVjdCBjbGllbnQgbGlicmFyaWVzIGFuZCBhcmUgbm90IHJlcXVpcmVkIHdoZW4gY2FsbGluZyB0aGUgQVBJIGRpcmVjdGx5IHdpdGggY3VybCBvciBvdGhlciBIVFRQIGNsaWVudHMuMgMyLngqWDpWClQKCkJlYXJlckF1dGgSRgpECgRodHRwEjRTZXNzaW9uIEpXVCBmcm9tIGxvZ2luLCBvciBBUEkgdG9rZW4gd2l0aCBkcF8gcHJlZml4KgZiZWFyZXIyEAoOCgpCZWFyZXJBdXRoEgBiBnByb3RvMw", [file_carbonpanel_v1_common, file_gnostic_openapi_v3_annotations, file_google_protobuf_timestamp]);
 
 /**
  * Empty auth status request
  *
  * @generated from message carbonpanel.v1.GetAuthStatusRequest
  */
-export type GetAuthStatusRequest = Message<'carbonpanel.v1.GetAuthStatusRequest'> & {};
+export type GetAuthStatusRequest = Message<"carbonpanel.v1.GetAuthStatusRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetAuthStatusRequest.
  * Use `create(GetAuthStatusRequestSchema)` to create a new message.
  */
-export const GetAuthStatusRequestSchema: GenMessage<GetAuthStatusRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 0);
+export const GetAuthStatusRequestSchema: GenMessage<GetAuthStatusRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 0);
 
 /**
  * Auth system state
  *
  * @generated from message carbonpanel.v1.GetAuthStatusResponse
  */
-export type GetAuthStatusResponse = Message<'carbonpanel.v1.GetAuthStatusResponse'> & {
-	/**
-	 * @generated from field: bool local_auth_enabled = 1;
-	 */
-	localAuthEnabled: boolean;
+export type GetAuthStatusResponse = Message<"carbonpanel.v1.GetAuthStatusResponse"> & {
+  /**
+   * @generated from field: bool local_auth_enabled = 1;
+   */
+  localAuthEnabled: boolean;
 
-	/**
-	 * @generated from field: bool oidc_enabled = 2;
-	 */
-	oidcEnabled: boolean;
+  /**
+   * @generated from field: bool oidc_enabled = 2;
+   */
+  oidcEnabled: boolean;
 
-	/**
-	 * @generated from field: bool allow_registration = 3;
-	 */
-	allowRegistration: boolean;
+  /**
+   * @generated from field: bool allow_registration = 3;
+   */
+  allowRegistration: boolean;
 
-	/**
-	 * @generated from field: bool first_user_setup = 4;
-	 */
-	firstUserSetup: boolean;
+  /**
+   * @generated from field: bool first_user_setup = 4;
+   */
+  firstUserSetup: boolean;
 
-	/**
-	 * @generated from field: bool anonymous_access_enabled = 5;
-	 */
-	anonymousAccessEnabled: boolean;
+  /**
+   * @generated from field: bool anonymous_access_enabled = 5;
+   */
+  anonymousAccessEnabled: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetAuthStatusResponse.
  * Use `create(GetAuthStatusResponseSchema)` to create a new message.
  */
-export const GetAuthStatusResponseSchema: GenMessage<GetAuthStatusResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 1);
+export const GetAuthStatusResponseSchema: GenMessage<GetAuthStatusResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 1);
 
 /**
  * Local login credentials
  *
  * @generated from message carbonpanel.v1.LoginRequest
  */
-export type LoginRequest = Message<'carbonpanel.v1.LoginRequest'> & {
-	/**
-	 * @generated from field: string username = 1;
-	 */
-	username: string;
+export type LoginRequest = Message<"carbonpanel.v1.LoginRequest"> & {
+  /**
+   * @generated from field: string username = 1;
+   */
+  username: string;
 
-	/**
-	 * @generated from field: string password = 2;
-	 */
-	password: string;
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.LoginRequest.
  * Use `create(LoginRequestSchema)` to create a new message.
  */
-export const LoginRequestSchema: GenMessage<LoginRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 2);
+export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 2);
 
 /**
  * Session token and user
  *
  * @generated from message carbonpanel.v1.LoginResponse
  */
-export type LoginResponse = Message<'carbonpanel.v1.LoginResponse'> & {
-	/**
-	 * @generated from field: string token = 1;
-	 */
-	token: string;
+export type LoginResponse = Message<"carbonpanel.v1.LoginResponse"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
 
-	/**
-	 * @generated from field: carbonpanel.v1.User user = 2;
-	 */
-	user?: User | undefined;
+  /**
+   * @generated from field: carbonpanel.v1.User user = 2;
+   */
+  user?: User | undefined;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp expires_at = 3;
-	 */
-	expiresAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 3;
+   */
+  expiresAt?: Timestamp | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.LoginResponse.
  * Use `create(LoginResponseSchema)` to create a new message.
  */
-export const LoginResponseSchema: GenMessage<LoginResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 3);
+export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 3);
 
 /**
  * Empty logout request
  *
  * @generated from message carbonpanel.v1.LogoutRequest
  */
-export type LogoutRequest = Message<'carbonpanel.v1.LogoutRequest'> & {};
+export type LogoutRequest = Message<"carbonpanel.v1.LogoutRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.LogoutRequest.
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
-export const LogoutRequestSchema: GenMessage<LogoutRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 4);
+export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 4);
 
 /**
  * Logout confirmation
  *
  * @generated from message carbonpanel.v1.LogoutResponse
  */
-export type LogoutResponse = Message<'carbonpanel.v1.LogoutResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type LogoutResponse = Message<"carbonpanel.v1.LogoutResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.LogoutResponse.
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
-export const LogoutResponseSchema: GenMessage<LogoutResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 5);
+export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 5);
 
 /**
  * New local account
  *
  * @generated from message carbonpanel.v1.RegisterRequest
  */
-export type RegisterRequest = Message<'carbonpanel.v1.RegisterRequest'> & {
-	/**
-	 * @generated from field: string username = 1;
-	 */
-	username: string;
+export type RegisterRequest = Message<"carbonpanel.v1.RegisterRequest"> & {
+  /**
+   * @generated from field: string username = 1;
+   */
+  username: string;
 
-	/**
-	 * @generated from field: string email = 2;
-	 */
-	email: string;
+  /**
+   * @generated from field: string email = 2;
+   */
+  email: string;
 
-	/**
-	 * @generated from field: string password = 3;
-	 */
-	password: string;
+  /**
+   * @generated from field: string password = 3;
+   */
+  password: string;
 
-	/**
-	 * @generated from field: optional string invite_code = 4;
-	 */
-	inviteCode?: string | undefined;
+  /**
+   * @generated from field: optional string invite_code = 4;
+   */
+  inviteCode?: string | undefined;
 
-	/**
-	 * @generated from field: optional string invite_pin = 5;
-	 */
-	invitePin?: string | undefined;
+  /**
+   * @generated from field: optional string invite_pin = 5;
+   */
+  invitePin?: string | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.RegisterRequest.
  * Use `create(RegisterRequestSchema)` to create a new message.
  */
-export const RegisterRequestSchema: GenMessage<RegisterRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 6);
+export const RegisterRequestSchema: GenMessage<RegisterRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 6);
 
 /**
  * Created user
  *
  * @generated from message carbonpanel.v1.RegisterResponse
  */
-export type RegisterResponse = Message<'carbonpanel.v1.RegisterResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.User user = 1;
-	 */
-	user?: User | undefined;
+export type RegisterResponse = Message<"carbonpanel.v1.RegisterResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.User user = 1;
+   */
+  user?: User | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.RegisterResponse.
  * Use `create(RegisterResponseSchema)` to create a new message.
  */
-export const RegisterResponseSchema: GenMessage<RegisterResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 7);
+export const RegisterResponseSchema: GenMessage<RegisterResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 7);
 
 /**
  * Empty current user request
  *
  * @generated from message carbonpanel.v1.GetCurrentUserRequest
  */
-export type GetCurrentUserRequest = Message<'carbonpanel.v1.GetCurrentUserRequest'> & {};
+export type GetCurrentUserRequest = Message<"carbonpanel.v1.GetCurrentUserRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetCurrentUserRequest.
  * Use `create(GetCurrentUserRequestSchema)` to create a new message.
  */
-export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 8);
+export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 8);
 
 /**
  * Authenticated user with permissions
  *
  * @generated from message carbonpanel.v1.GetCurrentUserResponse
  */
-export type GetCurrentUserResponse = Message<'carbonpanel.v1.GetCurrentUserResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.User user = 1;
-	 */
-	user?: User | undefined;
+export type GetCurrentUserResponse = Message<"carbonpanel.v1.GetCurrentUserResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.User user = 1;
+   */
+  user?: User | undefined;
 
-	/**
-	 * @generated from field: repeated carbonpanel.v1.Permission permissions = 2;
-	 */
-	permissions: Permission[];
+  /**
+   * @generated from field: repeated carbonpanel.v1.Permission permissions = 2;
+   */
+  permissions: Permission[];
 };
 
 /**
  * Describes the message carbonpanel.v1.GetCurrentUserResponse.
  * Use `create(GetCurrentUserResponseSchema)` to create a new message.
  */
-export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 9);
+export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 9);
 
 /**
  * Password change
  *
  * @generated from message carbonpanel.v1.ChangePasswordRequest
  */
-export type ChangePasswordRequest = Message<'carbonpanel.v1.ChangePasswordRequest'> & {
-	/**
-	 * @generated from field: string old_password = 1;
-	 */
-	oldPassword: string;
+export type ChangePasswordRequest = Message<"carbonpanel.v1.ChangePasswordRequest"> & {
+  /**
+   * @generated from field: string old_password = 1;
+   */
+  oldPassword: string;
 
-	/**
-	 * @generated from field: string new_password = 2;
-	 */
-	newPassword: string;
+  /**
+   * @generated from field: string new_password = 2;
+   */
+  newPassword: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ChangePasswordRequest.
  * Use `create(ChangePasswordRequestSchema)` to create a new message.
  */
-export const ChangePasswordRequestSchema: GenMessage<ChangePasswordRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 10);
+export const ChangePasswordRequestSchema: GenMessage<ChangePasswordRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 10);
 
 /**
  * Password change confirmation
  *
  * @generated from message carbonpanel.v1.ChangePasswordResponse
  */
-export type ChangePasswordResponse = Message<'carbonpanel.v1.ChangePasswordResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type ChangePasswordResponse = Message<"carbonpanel.v1.ChangePasswordResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ChangePasswordResponse.
  * Use `create(ChangePasswordResponseSchema)` to create a new message.
  */
-export const ChangePasswordResponseSchema: GenMessage<ChangePasswordResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 11);
+export const ChangePasswordResponseSchema: GenMessage<ChangePasswordResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 11);
 
 /**
  * OIDC login URL request
  *
  * @generated from message carbonpanel.v1.GetOIDCLoginURLRequest
  */
-export type GetOIDCLoginURLRequest = Message<'carbonpanel.v1.GetOIDCLoginURLRequest'> & {};
+export type GetOIDCLoginURLRequest = Message<"carbonpanel.v1.GetOIDCLoginURLRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetOIDCLoginURLRequest.
  * Use `create(GetOIDCLoginURLRequestSchema)` to create a new message.
  */
-export const GetOIDCLoginURLRequestSchema: GenMessage<GetOIDCLoginURLRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 12);
+export const GetOIDCLoginURLRequestSchema: GenMessage<GetOIDCLoginURLRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 12);
 
 /**
  * OIDC login redirect URL
  *
  * @generated from message carbonpanel.v1.GetOIDCLoginURLResponse
  */
-export type GetOIDCLoginURLResponse = Message<'carbonpanel.v1.GetOIDCLoginURLResponse'> & {
-	/**
-	 * @generated from field: string login_url = 1;
-	 */
-	loginUrl: string;
+export type GetOIDCLoginURLResponse = Message<"carbonpanel.v1.GetOIDCLoginURLResponse"> & {
+  /**
+   * @generated from field: string login_url = 1;
+   */
+  loginUrl: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetOIDCLoginURLResponse.
  * Use `create(GetOIDCLoginURLResponseSchema)` to create a new message.
  */
-export const GetOIDCLoginURLResponseSchema: GenMessage<GetOIDCLoginURLResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 13);
+export const GetOIDCLoginURLResponseSchema: GenMessage<GetOIDCLoginURLResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 13);
 
 /**
  * Empty auth config request
  *
  * @generated from message carbonpanel.v1.GetAuthConfigRequest
  */
-export type GetAuthConfigRequest = Message<'carbonpanel.v1.GetAuthConfigRequest'> & {};
+export type GetAuthConfigRequest = Message<"carbonpanel.v1.GetAuthConfigRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.GetAuthConfigRequest.
  * Use `create(GetAuthConfigRequestSchema)` to create a new message.
  */
-export const GetAuthConfigRequestSchema: GenMessage<GetAuthConfigRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 14);
+export const GetAuthConfigRequestSchema: GenMessage<GetAuthConfigRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 14);
 
 /**
  * Full auth configuration for admin display
  *
  * @generated from message carbonpanel.v1.GetAuthConfigResponse
  */
-export type GetAuthConfigResponse = Message<'carbonpanel.v1.GetAuthConfigResponse'> & {
-	/**
-	 * @generated from field: bool local_auth_enabled = 1;
-	 */
-	localAuthEnabled: boolean;
+export type GetAuthConfigResponse = Message<"carbonpanel.v1.GetAuthConfigResponse"> & {
+  /**
+   * @generated from field: bool local_auth_enabled = 1;
+   */
+  localAuthEnabled: boolean;
 
-	/**
-	 * @generated from field: bool allow_registration = 2;
-	 */
-	allowRegistration: boolean;
+  /**
+   * @generated from field: bool allow_registration = 2;
+   */
+  allowRegistration: boolean;
 
-	/**
-	 * @generated from field: bool anonymous_access = 3;
-	 */
-	anonymousAccess: boolean;
+  /**
+   * @generated from field: bool anonymous_access = 3;
+   */
+  anonymousAccess: boolean;
 
-	/**
-	 * @generated from field: int32 session_timeout = 4;
-	 */
-	sessionTimeout: number;
+  /**
+   * @generated from field: int32 session_timeout = 4;
+   */
+  sessionTimeout: number;
 
-	/**
-	 * @generated from field: bool oidc_enabled = 5;
-	 */
-	oidcEnabled: boolean;
+  /**
+   * @generated from field: bool oidc_enabled = 5;
+   */
+  oidcEnabled: boolean;
 
-	/**
-	 * OIDC display details (non-secret, only populated when OIDC is enabled)
-	 *
-	 * @generated from field: optional string oidc_issuer_uri = 6;
-	 */
-	oidcIssuerUri?: string | undefined;
+  /**
+   * OIDC display details (non-secret, only populated when OIDC is enabled)
+   *
+   * @generated from field: optional string oidc_issuer_uri = 6;
+   */
+  oidcIssuerUri?: string | undefined;
 
-	/**
-	 * @generated from field: optional string oidc_client_id = 7;
-	 */
-	oidcClientId?: string | undefined;
+  /**
+   * @generated from field: optional string oidc_client_id = 7;
+   */
+  oidcClientId?: string | undefined;
 
-	/**
-	 * @generated from field: optional string oidc_redirect_url = 8;
-	 */
-	oidcRedirectUrl?: string | undefined;
+  /**
+   * @generated from field: optional string oidc_redirect_url = 8;
+   */
+  oidcRedirectUrl?: string | undefined;
 
-	/**
-	 * @generated from field: repeated string oidc_scopes = 9;
-	 */
-	oidcScopes: string[];
+  /**
+   * @generated from field: repeated string oidc_scopes = 9;
+   */
+  oidcScopes: string[];
 
-	/**
-	 * @generated from field: optional string oidc_role_claim = 10;
-	 */
-	oidcRoleClaim?: string | undefined;
+  /**
+   * @generated from field: optional string oidc_role_claim = 10;
+   */
+  oidcRoleClaim?: string | undefined;
 
-	/**
-	 * @generated from field: bool first_user_setup = 11;
-	 */
-	firstUserSetup: boolean;
+  /**
+   * @generated from field: bool first_user_setup = 11;
+   */
+  firstUserSetup: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetAuthConfigResponse.
  * Use `create(GetAuthConfigResponseSchema)` to create a new message.
  */
-export const GetAuthConfigResponseSchema: GenMessage<GetAuthConfigResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 15);
+export const GetAuthConfigResponseSchema: GenMessage<GetAuthConfigResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 15);
 
 /**
  * Update mutable auth settings (all fields optional, only provided fields are updated)
  *
  * @generated from message carbonpanel.v1.UpdateAuthSettingsRequest
  */
-export type UpdateAuthSettingsRequest = Message<'carbonpanel.v1.UpdateAuthSettingsRequest'> & {
-	/**
-	 * @generated from field: optional bool local_auth_enabled = 1;
-	 */
-	localAuthEnabled?: boolean | undefined;
+export type UpdateAuthSettingsRequest = Message<"carbonpanel.v1.UpdateAuthSettingsRequest"> & {
+  /**
+   * @generated from field: optional bool local_auth_enabled = 1;
+   */
+  localAuthEnabled?: boolean | undefined;
 
-	/**
-	 * @generated from field: optional bool allow_registration = 2;
-	 */
-	allowRegistration?: boolean | undefined;
+  /**
+   * @generated from field: optional bool allow_registration = 2;
+   */
+  allowRegistration?: boolean | undefined;
 
-	/**
-	 * @generated from field: optional bool anonymous_access = 3;
-	 */
-	anonymousAccess?: boolean | undefined;
+  /**
+   * @generated from field: optional bool anonymous_access = 3;
+   */
+  anonymousAccess?: boolean | undefined;
 
-	/**
-	 * @generated from field: optional int32 session_timeout = 4;
-	 */
-	sessionTimeout?: number | undefined;
+  /**
+   * @generated from field: optional int32 session_timeout = 4;
+   */
+  sessionTimeout?: number | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateAuthSettingsRequest.
  * Use `create(UpdateAuthSettingsRequestSchema)` to create a new message.
  */
-export const UpdateAuthSettingsRequestSchema: GenMessage<UpdateAuthSettingsRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 16);
+export const UpdateAuthSettingsRequestSchema: GenMessage<UpdateAuthSettingsRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 16);
 
 /**
  * Returns the updated auth configuration
  *
  * @generated from message carbonpanel.v1.UpdateAuthSettingsResponse
  */
-export type UpdateAuthSettingsResponse = Message<'carbonpanel.v1.UpdateAuthSettingsResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.GetAuthConfigResponse config = 1;
-	 */
-	config?: GetAuthConfigResponse | undefined;
+export type UpdateAuthSettingsResponse = Message<"carbonpanel.v1.UpdateAuthSettingsResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.GetAuthConfigResponse config = 1;
+   */
+  config?: GetAuthConfigResponse | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateAuthSettingsResponse.
  * Use `create(UpdateAuthSettingsResponseSchema)` to create a new message.
  */
-export const UpdateAuthSettingsResponseSchema: GenMessage<UpdateAuthSettingsResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 17);
+export const UpdateAuthSettingsResponseSchema: GenMessage<UpdateAuthSettingsResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 17);
 
 /**
  * Registration invite link
  *
  * @generated from message carbonpanel.v1.RegistrationInvite
  */
-export type RegistrationInvite = Message<'carbonpanel.v1.RegistrationInvite'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type RegistrationInvite = Message<"carbonpanel.v1.RegistrationInvite"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * @generated from field: string code = 2;
-	 */
-	code: string;
+  /**
+   * @generated from field: string code = 2;
+   */
+  code: string;
 
-	/**
-	 * @generated from field: string description = 3;
-	 */
-	description: string;
+  /**
+   * @generated from field: string description = 3;
+   */
+  description: string;
 
-	/**
-	 * @generated from field: repeated string roles = 4;
-	 */
-	roles: string[];
+  /**
+   * @generated from field: repeated string roles = 4;
+   */
+  roles: string[];
 
-	/**
-	 * @generated from field: bool has_pin = 5;
-	 */
-	hasPin: boolean;
+  /**
+   * @generated from field: bool has_pin = 5;
+   */
+  hasPin: boolean;
 
-	/**
-	 * @generated from field: int32 max_uses = 6;
-	 */
-	maxUses: number;
+  /**
+   * @generated from field: int32 max_uses = 6;
+   */
+  maxUses: number;
 
-	/**
-	 * @generated from field: int32 use_count = 7;
-	 */
-	useCount: number;
+  /**
+   * @generated from field: int32 use_count = 7;
+   */
+  useCount: number;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp expires_at = 8;
-	 */
-	expiresAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 8;
+   */
+  expiresAt?: Timestamp | undefined;
 
-	/**
-	 * @generated from field: string created_by = 9;
-	 */
-	createdBy: string;
+  /**
+   * @generated from field: string created_by = 9;
+   */
+  createdBy: string;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp created_at = 10;
-	 */
-	createdAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   */
+  createdAt?: Timestamp | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.RegistrationInvite.
  * Use `create(RegistrationInviteSchema)` to create a new message.
  */
-export const RegistrationInviteSchema: GenMessage<RegistrationInvite> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 18);
+export const RegistrationInviteSchema: GenMessage<RegistrationInvite> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 18);
 
 /**
  * New invite with roles, optional PIN, and expiry
  *
  * @generated from message carbonpanel.v1.CreateInviteRequest
  */
-export type CreateInviteRequest = Message<'carbonpanel.v1.CreateInviteRequest'> & {
-	/**
-	 * @generated from field: string description = 1;
-	 */
-	description: string;
+export type CreateInviteRequest = Message<"carbonpanel.v1.CreateInviteRequest"> & {
+  /**
+   * @generated from field: string description = 1;
+   */
+  description: string;
 
-	/**
-	 * @generated from field: repeated string roles = 2;
-	 */
-	roles: string[];
+  /**
+   * @generated from field: repeated string roles = 2;
+   */
+  roles: string[];
 
-	/**
-	 * @generated from field: optional string pin = 3;
-	 */
-	pin?: string | undefined;
+  /**
+   * @generated from field: optional string pin = 3;
+   */
+  pin?: string | undefined;
 
-	/**
-	 * @generated from field: int32 max_uses = 4;
-	 */
-	maxUses: number;
+  /**
+   * @generated from field: int32 max_uses = 4;
+   */
+  maxUses: number;
 
-	/**
-	 * @generated from field: optional int32 expires_in_hours = 5;
-	 */
-	expiresInHours?: number | undefined;
+  /**
+   * @generated from field: optional int32 expires_in_hours = 5;
+   */
+  expiresInHours?: number | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateInviteRequest.
  * Use `create(CreateInviteRequestSchema)` to create a new message.
  */
-export const CreateInviteRequestSchema: GenMessage<CreateInviteRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 19);
+export const CreateInviteRequestSchema: GenMessage<CreateInviteRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 19);
 
 /**
  * Created invite details
  *
  * @generated from message carbonpanel.v1.CreateInviteResponse
  */
-export type CreateInviteResponse = Message<'carbonpanel.v1.CreateInviteResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.RegistrationInvite invite = 1;
-	 */
-	invite?: RegistrationInvite | undefined;
+export type CreateInviteResponse = Message<"carbonpanel.v1.CreateInviteResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.RegistrationInvite invite = 1;
+   */
+  invite?: RegistrationInvite | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateInviteResponse.
  * Use `create(CreateInviteResponseSchema)` to create a new message.
  */
-export const CreateInviteResponseSchema: GenMessage<CreateInviteResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 20);
+export const CreateInviteResponseSchema: GenMessage<CreateInviteResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 20);
 
 /**
  * Empty list invites request
  *
  * @generated from message carbonpanel.v1.ListInvitesRequest
  */
-export type ListInvitesRequest = Message<'carbonpanel.v1.ListInvitesRequest'> & {};
+export type ListInvitesRequest = Message<"carbonpanel.v1.ListInvitesRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.ListInvitesRequest.
  * Use `create(ListInvitesRequestSchema)` to create a new message.
  */
-export const ListInvitesRequestSchema: GenMessage<ListInvitesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 21);
+export const ListInvitesRequestSchema: GenMessage<ListInvitesRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 21);
 
 /**
  * All registration invites
  *
  * @generated from message carbonpanel.v1.ListInvitesResponse
  */
-export type ListInvitesResponse = Message<'carbonpanel.v1.ListInvitesResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.RegistrationInvite invites = 1;
-	 */
-	invites: RegistrationInvite[];
+export type ListInvitesResponse = Message<"carbonpanel.v1.ListInvitesResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.RegistrationInvite invites = 1;
+   */
+  invites: RegistrationInvite[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListInvitesResponse.
  * Use `create(ListInvitesResponseSchema)` to create a new message.
  */
-export const ListInvitesResponseSchema: GenMessage<ListInvitesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 22);
+export const ListInvitesResponseSchema: GenMessage<ListInvitesResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 22);
 
 /**
  * Invite lookup by ID
  *
  * @generated from message carbonpanel.v1.GetInviteRequest
  */
-export type GetInviteRequest = Message<'carbonpanel.v1.GetInviteRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type GetInviteRequest = Message<"carbonpanel.v1.GetInviteRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetInviteRequest.
  * Use `create(GetInviteRequestSchema)` to create a new message.
  */
-export const GetInviteRequestSchema: GenMessage<GetInviteRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 23);
+export const GetInviteRequestSchema: GenMessage<GetInviteRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 23);
 
 /**
  * Single invite details
  *
  * @generated from message carbonpanel.v1.GetInviteResponse
  */
-export type GetInviteResponse = Message<'carbonpanel.v1.GetInviteResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.RegistrationInvite invite = 1;
-	 */
-	invite?: RegistrationInvite | undefined;
+export type GetInviteResponse = Message<"carbonpanel.v1.GetInviteResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.RegistrationInvite invite = 1;
+   */
+  invite?: RegistrationInvite | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetInviteResponse.
  * Use `create(GetInviteResponseSchema)` to create a new message.
  */
-export const GetInviteResponseSchema: GenMessage<GetInviteResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 24);
+export const GetInviteResponseSchema: GenMessage<GetInviteResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 24);
 
 /**
  * Invite deletion by ID
  *
  * @generated from message carbonpanel.v1.DeleteInviteRequest
  */
-export type DeleteInviteRequest = Message<'carbonpanel.v1.DeleteInviteRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type DeleteInviteRequest = Message<"carbonpanel.v1.DeleteInviteRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteInviteRequest.
  * Use `create(DeleteInviteRequestSchema)` to create a new message.
  */
-export const DeleteInviteRequestSchema: GenMessage<DeleteInviteRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 25);
+export const DeleteInviteRequestSchema: GenMessage<DeleteInviteRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 25);
 
 /**
  * Empty delete invite confirmation
  *
  * @generated from message carbonpanel.v1.DeleteInviteResponse
  */
-export type DeleteInviteResponse = Message<'carbonpanel.v1.DeleteInviteResponse'> & {};
+export type DeleteInviteResponse = Message<"carbonpanel.v1.DeleteInviteResponse"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.DeleteInviteResponse.
  * Use `create(DeleteInviteResponseSchema)` to create a new message.
  */
-export const DeleteInviteResponseSchema: GenMessage<DeleteInviteResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 26);
+export const DeleteInviteResponseSchema: GenMessage<DeleteInviteResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 26);
 
 /**
  * Invite code to validate
  *
  * @generated from message carbonpanel.v1.ValidateInviteRequest
  */
-export type ValidateInviteRequest = Message<'carbonpanel.v1.ValidateInviteRequest'> & {
-	/**
-	 * @generated from field: string code = 1;
-	 */
-	code: string;
+export type ValidateInviteRequest = Message<"carbonpanel.v1.ValidateInviteRequest"> & {
+  /**
+   * @generated from field: string code = 1;
+   */
+  code: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ValidateInviteRequest.
  * Use `create(ValidateInviteRequestSchema)` to create a new message.
  */
-export const ValidateInviteRequestSchema: GenMessage<ValidateInviteRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 27);
+export const ValidateInviteRequestSchema: GenMessage<ValidateInviteRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 27);
 
 /**
  * Invite validity and PIN requirement
  *
  * @generated from message carbonpanel.v1.ValidateInviteResponse
  */
-export type ValidateInviteResponse = Message<'carbonpanel.v1.ValidateInviteResponse'> & {
-	/**
-	 * @generated from field: bool valid = 1;
-	 */
-	valid: boolean;
+export type ValidateInviteResponse = Message<"carbonpanel.v1.ValidateInviteResponse"> & {
+  /**
+   * @generated from field: bool valid = 1;
+   */
+  valid: boolean;
 
-	/**
-	 * @generated from field: bool requires_pin = 2;
-	 */
-	requiresPin: boolean;
+  /**
+   * @generated from field: bool requires_pin = 2;
+   */
+  requiresPin: boolean;
 
-	/**
-	 * @generated from field: string description = 3;
-	 */
-	description: string;
+  /**
+   * @generated from field: string description = 3;
+   */
+  description: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ValidateInviteResponse.
  * Use `create(ValidateInviteResponseSchema)` to create a new message.
  */
-export const ValidateInviteResponseSchema: GenMessage<ValidateInviteResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 28);
+export const ValidateInviteResponseSchema: GenMessage<ValidateInviteResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 28);
 
 /**
  * API Token metadata (never includes the token value)
  *
  * @generated from message carbonpanel.v1.ApiToken
  */
-export type ApiToken = Message<'carbonpanel.v1.ApiToken'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type ApiToken = Message<"carbonpanel.v1.ApiToken"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * @generated from field: string name = 2;
-	 */
-	name: string;
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp expires_at = 3;
-	 */
-	expiresAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 3;
+   */
+  expiresAt?: Timestamp | undefined;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp last_used_at = 4;
-	 */
-	lastUsedAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp last_used_at = 4;
+   */
+  lastUsedAt?: Timestamp | undefined;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp created_at = 5;
-	 */
-	createdAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: Timestamp | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.ApiToken.
  * Use `create(ApiTokenSchema)` to create a new message.
  */
-export const ApiTokenSchema: GenMessage<ApiToken> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 29);
+export const ApiTokenSchema: GenMessage<ApiToken> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 29);
 
 /**
  * New API token with name and optional expiry
  *
  * @generated from message carbonpanel.v1.CreateAPITokenRequest
  */
-export type CreateAPITokenRequest = Message<'carbonpanel.v1.CreateAPITokenRequest'> & {
-	/**
-	 * @generated from field: string name = 1;
-	 */
-	name: string;
+export type CreateAPITokenRequest = Message<"carbonpanel.v1.CreateAPITokenRequest"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
 
-	/**
-	 * @generated from field: optional int32 expires_in_days = 2;
-	 */
-	expiresInDays?: number | undefined;
+  /**
+   * @generated from field: optional int32 expires_in_days = 2;
+   */
+  expiresInDays?: number | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateAPITokenRequest.
  * Use `create(CreateAPITokenRequestSchema)` to create a new message.
  */
-export const CreateAPITokenRequestSchema: GenMessage<CreateAPITokenRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 30);
+export const CreateAPITokenRequestSchema: GenMessage<CreateAPITokenRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 30);
 
 /**
  * Plaintext token (shown once) and metadata
  *
  * @generated from message carbonpanel.v1.CreateAPITokenResponse
  */
-export type CreateAPITokenResponse = Message<'carbonpanel.v1.CreateAPITokenResponse'> & {
-	/**
-	 * @generated from field: string plaintext_token = 1;
-	 */
-	plaintextToken: string;
+export type CreateAPITokenResponse = Message<"carbonpanel.v1.CreateAPITokenResponse"> & {
+  /**
+   * @generated from field: string plaintext_token = 1;
+   */
+  plaintextToken: string;
 
-	/**
-	 * @generated from field: carbonpanel.v1.ApiToken api_token = 2;
-	 */
-	apiToken?: ApiToken | undefined;
+  /**
+   * @generated from field: carbonpanel.v1.ApiToken api_token = 2;
+   */
+  apiToken?: ApiToken | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateAPITokenResponse.
  * Use `create(CreateAPITokenResponseSchema)` to create a new message.
  */
-export const CreateAPITokenResponseSchema: GenMessage<CreateAPITokenResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 31);
+export const CreateAPITokenResponseSchema: GenMessage<CreateAPITokenResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 31);
 
 /**
  * Empty list API tokens request
  *
  * @generated from message carbonpanel.v1.ListAPITokensRequest
  */
-export type ListAPITokensRequest = Message<'carbonpanel.v1.ListAPITokensRequest'> & {};
+export type ListAPITokensRequest = Message<"carbonpanel.v1.ListAPITokensRequest"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.ListAPITokensRequest.
  * Use `create(ListAPITokensRequestSchema)` to create a new message.
  */
-export const ListAPITokensRequestSchema: GenMessage<ListAPITokensRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 32);
+export const ListAPITokensRequestSchema: GenMessage<ListAPITokensRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 32);
 
 /**
  * All API tokens for the authenticated user
  *
  * @generated from message carbonpanel.v1.ListAPITokensResponse
  */
-export type ListAPITokensResponse = Message<'carbonpanel.v1.ListAPITokensResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.ApiToken api_tokens = 1;
-	 */
-	apiTokens: ApiToken[];
+export type ListAPITokensResponse = Message<"carbonpanel.v1.ListAPITokensResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.ApiToken api_tokens = 1;
+   */
+  apiTokens: ApiToken[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListAPITokensResponse.
  * Use `create(ListAPITokensResponseSchema)` to create a new message.
  */
-export const ListAPITokensResponseSchema: GenMessage<ListAPITokensResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 33);
+export const ListAPITokensResponseSchema: GenMessage<ListAPITokensResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 33);
 
 /**
  * API token deletion by ID
  *
  * @generated from message carbonpanel.v1.DeleteAPITokenRequest
  */
-export type DeleteAPITokenRequest = Message<'carbonpanel.v1.DeleteAPITokenRequest'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type DeleteAPITokenRequest = Message<"carbonpanel.v1.DeleteAPITokenRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteAPITokenRequest.
  * Use `create(DeleteAPITokenRequestSchema)` to create a new message.
  */
-export const DeleteAPITokenRequestSchema: GenMessage<DeleteAPITokenRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 34);
+export const DeleteAPITokenRequestSchema: GenMessage<DeleteAPITokenRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 34);
 
 /**
  * Empty delete API token confirmation
  *
  * @generated from message carbonpanel.v1.DeleteAPITokenResponse
  */
-export type DeleteAPITokenResponse = Message<'carbonpanel.v1.DeleteAPITokenResponse'> & {};
+export type DeleteAPITokenResponse = Message<"carbonpanel.v1.DeleteAPITokenResponse"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.DeleteAPITokenResponse.
  * Use `create(DeleteAPITokenResponseSchema)` to create a new message.
  */
-export const DeleteAPITokenResponseSchema: GenMessage<DeleteAPITokenResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 35);
+export const DeleteAPITokenResponseSchema: GenMessage<DeleteAPITokenResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 35);
 
 /**
  * Recovery key to reset panel access
  *
  * @generated from message carbonpanel.v1.UseRecoveryKeyRequest
  */
-export type UseRecoveryKeyRequest = Message<'carbonpanel.v1.UseRecoveryKeyRequest'> & {
-	/**
-	 * @generated from field: string recovery_key = 1;
-	 */
-	recoveryKey: string;
+export type UseRecoveryKeyRequest = Message<"carbonpanel.v1.UseRecoveryKeyRequest"> & {
+  /**
+   * @generated from field: string recovery_key = 1;
+   */
+  recoveryKey: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UseRecoveryKeyRequest.
  * Use `create(UseRecoveryKeyRequestSchema)` to create a new message.
  */
-export const UseRecoveryKeyRequestSchema: GenMessage<UseRecoveryKeyRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 36);
+export const UseRecoveryKeyRequestSchema: GenMessage<UseRecoveryKeyRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 36);
 
 /**
  * Recovery key result
  *
  * @generated from message carbonpanel.v1.UseRecoveryKeyResponse
  */
-export type UseRecoveryKeyResponse = Message<'carbonpanel.v1.UseRecoveryKeyResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type UseRecoveryKeyResponse = Message<"carbonpanel.v1.UseRecoveryKeyResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UseRecoveryKeyResponse.
  * Use `create(UseRecoveryKeyResponseSchema)` to create a new message.
  */
-export const UseRecoveryKeyResponseSchema: GenMessage<UseRecoveryKeyResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_auth, 37);
+export const UseRecoveryKeyResponseSchema: GenMessage<UseRecoveryKeyResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_auth, 37);
 
 /**
  * Authentication service
@@ -983,184 +946,186 @@ export const UseRecoveryKeyResponseSchema: GenMessage<UseRecoveryKeyResponse> =
  * @generated from service carbonpanel.v1.AuthService
  */
 export const AuthService: GenService<{
-	/**
-	 * Check auth system status (public)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.GetAuthStatus
-	 */
-	getAuthStatus: {
-		methodKind: 'unary';
-		input: typeof GetAuthStatusRequestSchema;
-		output: typeof GetAuthStatusResponseSchema;
-	};
-	/**
-	 * Authenticate with local credentials (public)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.Login
-	 */
-	login: {
-		methodKind: 'unary';
-		input: typeof LoginRequestSchema;
-		output: typeof LoginResponseSchema;
-	};
-	/**
-	 * Invalidate session
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.Logout
-	 */
-	logout: {
-		methodKind: 'unary';
-		input: typeof LogoutRequestSchema;
-		output: typeof LogoutResponseSchema;
-	};
-	/**
-	 * Register new local account (public)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.Register
-	 */
-	register: {
-		methodKind: 'unary';
-		input: typeof RegisterRequestSchema;
-		output: typeof RegisterResponseSchema;
-	};
-	/**
-	 * Get authenticated user info
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.GetCurrentUser
-	 */
-	getCurrentUser: {
-		methodKind: 'unary';
-		input: typeof GetCurrentUserRequestSchema;
-		output: typeof GetCurrentUserResponseSchema;
-	};
-	/**
-	 * Change own password (local auth only)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.ChangePassword
-	 */
-	changePassword: {
-		methodKind: 'unary';
-		input: typeof ChangePasswordRequestSchema;
-		output: typeof ChangePasswordResponseSchema;
-	};
-	/**
-	 * Get OIDC login redirect URL (public)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.GetOIDCLoginURL
-	 */
-	getOIDCLoginURL: {
-		methodKind: 'unary';
-		input: typeof GetOIDCLoginURLRequestSchema;
-		output: typeof GetOIDCLoginURLResponseSchema;
-	};
-	/**
-	 * Get full auth configuration
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.GetAuthConfig
-	 */
-	getAuthConfig: {
-		methodKind: 'unary';
-		input: typeof GetAuthConfigRequestSchema;
-		output: typeof GetAuthConfigResponseSchema;
-	};
-	/**
-	 * Update mutable auth settings
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.UpdateAuthSettings
-	 */
-	updateAuthSettings: {
-		methodKind: 'unary';
-		input: typeof UpdateAuthSettingsRequestSchema;
-		output: typeof UpdateAuthSettingsResponseSchema;
-	};
-	/**
-	 * Create a registration invite link
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.CreateInvite
-	 */
-	createInvite: {
-		methodKind: 'unary';
-		input: typeof CreateInviteRequestSchema;
-		output: typeof CreateInviteResponseSchema;
-	};
-	/**
-	 * List all registration invites
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.ListInvites
-	 */
-	listInvites: {
-		methodKind: 'unary';
-		input: typeof ListInvitesRequestSchema;
-		output: typeof ListInvitesResponseSchema;
-	};
-	/**
-	 * Get a specific invite by ID
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.GetInvite
-	 */
-	getInvite: {
-		methodKind: 'unary';
-		input: typeof GetInviteRequestSchema;
-		output: typeof GetInviteResponseSchema;
-	};
-	/**
-	 * Delete/revoke an invite
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.DeleteInvite
-	 */
-	deleteInvite: {
-		methodKind: 'unary';
-		input: typeof DeleteInviteRequestSchema;
-		output: typeof DeleteInviteResponseSchema;
-	};
-	/**
-	 * Validate an invite code (public)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.ValidateInvite
-	 */
-	validateInvite: {
-		methodKind: 'unary';
-		input: typeof ValidateInviteRequestSchema;
-		output: typeof ValidateInviteResponseSchema;
-	};
-	/**
-	 * Create a new API token for the authenticated user
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.CreateAPIToken
-	 */
-	createAPIToken: {
-		methodKind: 'unary';
-		input: typeof CreateAPITokenRequestSchema;
-		output: typeof CreateAPITokenResponseSchema;
-	};
-	/**
-	 * List all API tokens for the authenticated user
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.ListAPITokens
-	 */
-	listAPITokens: {
-		methodKind: 'unary';
-		input: typeof ListAPITokensRequestSchema;
-		output: typeof ListAPITokensResponseSchema;
-	};
-	/**
-	 * Delete/revoke an API token
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.DeleteAPIToken
-	 */
-	deleteAPIToken: {
-		methodKind: 'unary';
-		input: typeof DeleteAPITokenRequestSchema;
-		output: typeof DeleteAPITokenResponseSchema;
-	};
-	/**
-	 * Use recovery key to reset all users and return to first-user-setup (public)
-	 *
-	 * @generated from rpc carbonpanel.v1.AuthService.UseRecoveryKey
-	 */
-	useRecoveryKey: {
-		methodKind: 'unary';
-		input: typeof UseRecoveryKeyRequestSchema;
-		output: typeof UseRecoveryKeyResponseSchema;
-	};
-}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_auth, 0);
+  /**
+   * Check auth system status (public)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.GetAuthStatus
+   */
+  getAuthStatus: {
+    methodKind: "unary";
+    input: typeof GetAuthStatusRequestSchema;
+    output: typeof GetAuthStatusResponseSchema;
+  },
+  /**
+   * Authenticate with local credentials (public)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.Login
+   */
+  login: {
+    methodKind: "unary";
+    input: typeof LoginRequestSchema;
+    output: typeof LoginResponseSchema;
+  },
+  /**
+   * Invalidate session
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.Logout
+   */
+  logout: {
+    methodKind: "unary";
+    input: typeof LogoutRequestSchema;
+    output: typeof LogoutResponseSchema;
+  },
+  /**
+   * Register new local account (public)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.Register
+   */
+  register: {
+    methodKind: "unary";
+    input: typeof RegisterRequestSchema;
+    output: typeof RegisterResponseSchema;
+  },
+  /**
+   * Get authenticated user info
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.GetCurrentUser
+   */
+  getCurrentUser: {
+    methodKind: "unary";
+    input: typeof GetCurrentUserRequestSchema;
+    output: typeof GetCurrentUserResponseSchema;
+  },
+  /**
+   * Change own password (local auth only)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.ChangePassword
+   */
+  changePassword: {
+    methodKind: "unary";
+    input: typeof ChangePasswordRequestSchema;
+    output: typeof ChangePasswordResponseSchema;
+  },
+  /**
+   * Get OIDC login redirect URL (public)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.GetOIDCLoginURL
+   */
+  getOIDCLoginURL: {
+    methodKind: "unary";
+    input: typeof GetOIDCLoginURLRequestSchema;
+    output: typeof GetOIDCLoginURLResponseSchema;
+  },
+  /**
+   * Get full auth configuration
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.GetAuthConfig
+   */
+  getAuthConfig: {
+    methodKind: "unary";
+    input: typeof GetAuthConfigRequestSchema;
+    output: typeof GetAuthConfigResponseSchema;
+  },
+  /**
+   * Update mutable auth settings
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.UpdateAuthSettings
+   */
+  updateAuthSettings: {
+    methodKind: "unary";
+    input: typeof UpdateAuthSettingsRequestSchema;
+    output: typeof UpdateAuthSettingsResponseSchema;
+  },
+  /**
+   * Create a registration invite link
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.CreateInvite
+   */
+  createInvite: {
+    methodKind: "unary";
+    input: typeof CreateInviteRequestSchema;
+    output: typeof CreateInviteResponseSchema;
+  },
+  /**
+   * List all registration invites
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.ListInvites
+   */
+  listInvites: {
+    methodKind: "unary";
+    input: typeof ListInvitesRequestSchema;
+    output: typeof ListInvitesResponseSchema;
+  },
+  /**
+   * Get a specific invite by ID
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.GetInvite
+   */
+  getInvite: {
+    methodKind: "unary";
+    input: typeof GetInviteRequestSchema;
+    output: typeof GetInviteResponseSchema;
+  },
+  /**
+   * Delete/revoke an invite
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.DeleteInvite
+   */
+  deleteInvite: {
+    methodKind: "unary";
+    input: typeof DeleteInviteRequestSchema;
+    output: typeof DeleteInviteResponseSchema;
+  },
+  /**
+   * Validate an invite code (public)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.ValidateInvite
+   */
+  validateInvite: {
+    methodKind: "unary";
+    input: typeof ValidateInviteRequestSchema;
+    output: typeof ValidateInviteResponseSchema;
+  },
+  /**
+   * Create a new API token for the authenticated user
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.CreateAPIToken
+   */
+  createAPIToken: {
+    methodKind: "unary";
+    input: typeof CreateAPITokenRequestSchema;
+    output: typeof CreateAPITokenResponseSchema;
+  },
+  /**
+   * List all API tokens for the authenticated user
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.ListAPITokens
+   */
+  listAPITokens: {
+    methodKind: "unary";
+    input: typeof ListAPITokensRequestSchema;
+    output: typeof ListAPITokensResponseSchema;
+  },
+  /**
+   * Delete/revoke an API token
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.DeleteAPIToken
+   */
+  deleteAPIToken: {
+    methodKind: "unary";
+    input: typeof DeleteAPITokenRequestSchema;
+    output: typeof DeleteAPITokenResponseSchema;
+  },
+  /**
+   * Use recovery key to reset all users and return to first-user-setup (public)
+   *
+   * @generated from rpc carbonpanel.v1.AuthService.UseRecoveryKey
+   */
+  useRecoveryKey: {
+    methodKind: "unary";
+    input: typeof UseRecoveryKeyRequestSchema;
+    output: typeof UseRecoveryKeyResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_carbonpanel_v1_auth, 0);
+

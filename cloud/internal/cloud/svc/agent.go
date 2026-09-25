@@ -218,6 +218,14 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 			if s.dispatcher != nil {
 				s.dispatcher.ResolveMetrics(payload.MetricsResult)
 			}
+		case *v1.AgentMessage_HibernateResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveHibernate(payload.HibernateResult)
+			}
+		case *v1.AgentMessage_WakeResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveWake(payload.WakeResult)
+			}
 		default:
 			// Unknown envelopes are ignored: old agents keep working.
 		}

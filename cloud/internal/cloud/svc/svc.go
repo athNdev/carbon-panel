@@ -288,6 +288,8 @@ func workloadStatusToProto(s string) v1.WorkloadStatus {
 		return v1.WorkloadStatus_WORKLOAD_STATUS_STOPPED
 	case "error", "failed":
 		return v1.WorkloadStatus_WORKLOAD_STATUS_ERROR
+	case "hibernated", "sleeping", "paused":
+		return v1.WorkloadStatus_WORKLOAD_STATUS_HIBERNATED
 	default:
 		return v1.WorkloadStatus_WORKLOAD_STATUS_UNSPECIFIED
 	}
@@ -344,6 +346,8 @@ func workloadStatusToString(s v1.WorkloadStatus) string {
 		return "stopped"
 	case v1.WorkloadStatus_WORKLOAD_STATUS_ERROR:
 		return "error"
+	case v1.WorkloadStatus_WORKLOAD_STATUS_HIBERNATED:
+		return "hibernated"
 	default:
 		return ""
 	}

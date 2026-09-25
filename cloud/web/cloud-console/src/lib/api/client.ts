@@ -21,6 +21,10 @@ import { WorkloadService } from '$lib/proto/cloud/v1/workload_pb';
 import { RoleService } from '$lib/proto/cloud/v1/rbac_pb';
 import { AuditService } from '$lib/proto/cloud/v1/audit_pb';
 import { SystemService } from '$lib/proto/cloud/v1/system_pb';
+import { FileService } from '$lib/proto/cloud/v1/file_pb';
+import { AddonService } from '$lib/proto/cloud/v1/addon_pb';
+import { BlueprintService } from '$lib/proto/cloud/v1/blueprint_pb';
+import { ScheduleService } from '$lib/proto/cloud/v1/schedule_pb';
 
 export const API_URL: string =
 	env.PUBLIC_API_URL ||
@@ -58,6 +62,10 @@ export const roleClient = createClient(RoleService, transport);
 export const apiKeyClient = createClient(ApiKeyService, transport);
 export const auditClient = createClient(AuditService, transport);
 export const systemClient = createClient(SystemService, transport);
+export const fileClient = createClient(FileService, transport);
+export const addonClient = createClient(AddonService, transport);
+export const blueprintClient = createClient(BlueprintService, transport);
+export const scheduleClient = createClient(ScheduleService, transport);
 
 /** User-facing error carrying the Connect code (when one was mapped). */
 export class ApiError extends Error {

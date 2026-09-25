@@ -33,6 +33,8 @@ type Runner interface {
 	Logs(ctx context.Context, workloadID string, tail int, follow bool) (io.ReadCloser, error)
 	GetMetrics(ctx context.Context, workloadID string) (*v1.WorkloadMetrics, error)
 	ListActiveWorkloadIDs(ctx context.Context) ([]string, error)
+	Hibernate(ctx context.Context, workloadID, mode string) error
+	Wake(ctx context.Context, workloadID string) error
 }
 
 // DockerRunner interacts directly with Docker Engine on the local node.
@@ -223,6 +225,50 @@ func (r *DockerRunner) Delete(ctx context.Context, workloadID string, deleteData
 	if deleteData {
 		hostDataDir := filepath.Join(r.dataDir, "workloads", workloadID)
 		_ = os.RemoveAll(hostDataDir)
+	}
+	return nil
+}
+
+// Hibernate pauses or deep-sleeps the workload container.
+func (r *DockerRunner) Hibernate(ctx context.Context, workloadID, mode string) error {
+	containerName := "carbon-workload-" + workloadID
+	inspect, err := r.cli.ContainerInspect(ctx, containerName)
+	if err != nil {
+		return fmt.Errorf("inspect container for hibernate: %w", err)
+	}
+
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "deep_sleep" || mode == "stop" {
+		if inspect.State.Running {
+			timeout := 15
+			return r.cli.ContainerStop(ctx, containerName, container.StopOptions{Timeout: &timeout})
+		}
+		return nil
+	}
+
+	// Default: pause (cgroup freeze)
+	if inspect.State.Paused {
+		return nil
+	}
+	if !inspect.State.Running {
+		return fmt.Errorf("container is not running (status: %s)", inspect.State.Status)
+	}
+	return r.cli.ContainerPause(ctx, containerName)
+}
+
+// Wake unpauses or starts a hibernated workload container.
+func (r *DockerRunner) Wake(ctx context.Context, workloadID string) error {
+	containerName := "carbon-workload-" + workloadID
+	inspect, err := r.cli.ContainerInspect(ctx, containerName)
+	if err != nil {
+		return fmt.Errorf("inspect container for wake: %w", err)
+	}
+
+	if inspect.State.Paused {
+		return r.cli.ContainerUnpause(ctx, containerName)
+	}
+	if !inspect.State.Running {
+		return r.cli.ContainerStart(ctx, inspect.ID, container.StartOptions{})
 	}
 	return nil
 }
@@ -445,6 +491,19 @@ func (m *MockRunner) Stop(ctx context.Context, workloadID string, timeoutSec int
 
 func (m *MockRunner) Delete(ctx context.Context, workloadID string, deleteData bool) error {
 	delete(m.Containers, workloadID)
+	return nil
+}
+
+func (m *MockRunner) Hibernate(ctx context.Context, workloadID, mode string) error {
+	if _, ok := m.Containers[workloadID]; !ok {
+		return fmt.Errorf("workload %s not running", workloadID)
+	}
+	m.Containers[workloadID] = "mock-hibernated"
+	return nil
+}
+
+func (m *MockRunner) Wake(ctx context.Context, workloadID string) error {
+	m.Containers[workloadID] = "mock-container-" + workloadID
 	return nil
 }
 

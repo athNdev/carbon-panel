@@ -56,20 +56,24 @@ func workloadToProto(w *db.Workload) *v1.Workload {
 			CPUMillicores    int64             `json:"cpu_millicores"`
 			Hostname         string            `json:"hostname"`
 			BlueprintID      string            `json:"blueprint_id"`
-			Env              map[string]string `json:"env"`
-			JVMFlags         []string          `json:"jvm_flags"`
+			Env                map[string]string `json:"env"`
+			JVMFlags           []string          `json:"jvm_flags"`
+			IdleTimeoutMinutes int32             `json:"idle_timeout_minutes"`
+			HibernationMode    string            `json:"hibernation_mode"`
 		}
 		if json.Unmarshal([]byte(w.Spec), &s) == nil {
 			out.Spec = &v1.WorkloadSpec{
-				Loader:           s.Loader,
-				MinecraftVersion: s.MinecraftVersion,
-				MemoryMb:         s.MemoryMB,
-				CpuMillicores:    s.CPUMillicores,
-				Hostname:         s.Hostname,
-				HostPort:         int32(w.HostPort),
-				BlueprintId:      s.BlueprintID,
-				Env:              s.Env,
-				JvmFlags:         s.JVMFlags,
+				Loader:             s.Loader,
+				MinecraftVersion:   s.MinecraftVersion,
+				MemoryMb:           s.MemoryMB,
+				CpuMillicores:      s.CPUMillicores,
+				Hostname:           s.Hostname,
+				HostPort:           int32(w.HostPort),
+				BlueprintId:        s.BlueprintID,
+				Env:                s.Env,
+				JvmFlags:           s.JVMFlags,
+				IdleTimeoutMinutes: s.IdleTimeoutMinutes,
+				HibernationMode:    s.HibernationMode,
 			}
 		}
 	}
@@ -279,15 +283,17 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 
 	if m.Spec != nil {
 		raw, _ := json.Marshal(map[string]any{
-			"loader":            m.Spec.Loader,
-			"minecraft_version": m.Spec.MinecraftVersion,
-			"memory_mb":         m.Spec.MemoryMb,
-			"cpu_millicores":    m.Spec.CpuMillicores,
-			"hostname":          m.Spec.Hostname,
-			"host_port":         allocatedPort,
-			"blueprint_id":      m.Spec.BlueprintId,
-			"env":               m.Spec.Env,
-			"jvm_flags":         m.Spec.JvmFlags,
+			"loader":               m.Spec.Loader,
+			"minecraft_version":    m.Spec.MinecraftVersion,
+			"memory_mb":            m.Spec.MemoryMb,
+			"cpu_millicores":       m.Spec.CpuMillicores,
+			"hostname":             m.Spec.Hostname,
+			"host_port":            allocatedPort,
+			"blueprint_id":         m.Spec.BlueprintId,
+			"env":                  m.Spec.Env,
+			"jvm_flags":            m.Spec.JvmFlags,
+			"idle_timeout_minutes": m.Spec.IdleTimeoutMinutes,
+			"hibernation_mode":     m.Spec.HibernationMode,
 		})
 		w.Spec = string(raw)
 		w.Hostname = m.Spec.Hostname
@@ -357,15 +363,17 @@ func (s *WorkloadService) UpdateWorkload(ctx context.Context, req *connect.Reque
 			updates["host_port"] = newPort
 		}
 		raw, _ := json.Marshal(map[string]any{
-			"loader":            req.Msg.Spec.Loader,
-			"minecraft_version": req.Msg.Spec.MinecraftVersion,
-			"memory_mb":         req.Msg.Spec.MemoryMb,
-			"cpu_millicores":    req.Msg.Spec.CpuMillicores,
-			"hostname":          req.Msg.Spec.Hostname,
-			"host_port":         newPort,
-			"blueprint_id":      req.Msg.Spec.BlueprintId,
-			"env":               req.Msg.Spec.Env,
-			"jvm_flags":         req.Msg.Spec.JvmFlags,
+			"loader":               req.Msg.Spec.Loader,
+			"minecraft_version":    req.Msg.Spec.MinecraftVersion,
+			"memory_mb":            req.Msg.Spec.MemoryMb,
+			"cpu_millicores":       req.Msg.Spec.CpuMillicores,
+			"hostname":             req.Msg.Spec.Hostname,
+			"host_port":            newPort,
+			"blueprint_id":         req.Msg.Spec.BlueprintId,
+			"env":                  req.Msg.Spec.Env,
+			"jvm_flags":            req.Msg.Spec.JvmFlags,
+			"idle_timeout_minutes": req.Msg.Spec.IdleTimeoutMinutes,
+			"hibernation_mode":     req.Msg.Spec.HibernationMode,
 		})
 		updates["spec"] = string(raw)
 		updates["hostname"] = req.Msg.Spec.Hostname

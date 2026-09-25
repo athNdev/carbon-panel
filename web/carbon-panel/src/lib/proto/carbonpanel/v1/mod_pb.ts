@@ -2,528 +2,506 @@
 // @generated from file carbonpanel/v1/mod.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
-import type { Timestamp } from '@bufbuild/protobuf/wkt';
-import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file carbonpanel/v1/mod.proto.
  */
-export const file_carbonpanel_v1_mod: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		'ChhjYXJib25wYW5lbC92MS9tb2QucHJvdG8SDmNhcmJvbnBhbmVsLnYxIqkCCgNNb2QSCgoCaWQYASABKAkSEQoJc2VydmVyX2lkGAIgASgJEhEKCWZpbGVfbmFtZRgDIAEoCRIUCgxkaXNwbGF5X25hbWUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSDwoHdmVyc2lvbhgGIAEoCRIOCgZtb2RfaWQYByABKAkSDgoGYXV0aG9yGAggASgJEg8KB3dlYnNpdGUYCSABKAkSEQoJZmlsZV9zaXplGAogASgDEi8KC3VwbG9hZGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIPCgdlbmFibGVkGA0gASgIIiQKD0xpc3RNb2RzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiNQoQTGlzdE1vZHNSZXNwb25zZRIhCgRtb2RzGAEgAygLMhMuY2FyYm9ucGFuZWwudjEuTW9kIjIKDUdldE1vZFJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEg4KBm1vZF9pZBgCIAEoCSIyCg5HZXRNb2RSZXNwb25zZRIgCgNtb2QYASABKAsyEy5jYXJib25wYW5lbC52MS5Nb2QicwoYSW1wb3J0VXBsb2FkZWRNb2RSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIZChF1cGxvYWRfc2Vzc2lvbl9pZBgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkiTgoZSW1wb3J0VXBsb2FkZWRNb2RSZXNwb25zZRIgCgNtb2QYASABKAsyEy5jYXJib25wYW5lbC52MS5Nb2QSDwoHbWVzc2FnZRgCIAEoCSKtAQoQVXBkYXRlTW9kUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDgoGbW9kX2lkGAIgASgJEhkKDGRpc3BsYXlfbmFtZRgDIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAQgASgJSAGIAQESFAoHZW5hYmxlZBgFIAEoCEgCiAEBQg8KDV9kaXNwbGF5X25hbWVCDgoMX2Rlc2NyaXB0aW9uQgoKCF9lbmFibGVkIjUKEVVwZGF0ZU1vZFJlc3BvbnNlEiAKA21vZBgBIAEoCzITLmNhcmJvbnBhbmVsLnYxLk1vZCI1ChBEZWxldGVNb2RSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIOCgZtb2RfaWQYAiABKAkiJAoRRGVsZXRlTW9kUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSLYAQoVRmFicmljT3B0aW1pemF0aW9uTW9kEg4KBm1vZF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhEKCWluc3RhbGxlZBgEIAEoCBISCgpjb21wYXRpYmxlGAUgASgIEhkKEWluc3RhbGxlZF92ZXJzaW9uGAYgASgJEiEKGWxhdGVzdF9jb21wYXRpYmxlX3ZlcnNpb24YByABKAkSEQoJZmlsZV9uYW1lGAggASgJEhQKDGRvd25sb2FkX3VybBgJIAEoCSI2CiFHZXRGYWJyaWNPcHRpbWl6YXRpb25TdGFja1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJIoABCiJHZXRGYWJyaWNPcHRpbWl6YXRpb25TdGFja1Jlc3BvbnNlEhEKCWlzX2ZhYnJpYxgBIAEoCBISCgptY192ZXJzaW9uGAIgASgJEjMKBG1vZHMYAyADKAsyJS5jYXJib25wYW5lbC52MS5GYWJyaWNPcHRpbWl6YXRpb25Nb2QiSwolSW5zdGFsbEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDwoHbW9kX2lkcxgCIAMoCSKKAQomSW5zdGFsbEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVzcG9uc2USPQoOaW5zdGFsbGVkX21vZHMYASADKAsyJS5jYXJib25wYW5lbC52MS5GYWJyaWNPcHRpbWl6YXRpb25Nb2QSEAoId2FybmluZ3MYAiADKAkSDwoHbWVzc2FnZRgDIAEoCTLKBQoKTW9kU2VydmljZRJNCghMaXN0TW9kcxIfLmNhcmJvbnBhbmVsLnYxLkxpc3RNb2RzUmVxdWVzdBogLmNhcmJvbnBhbmVsLnYxLkxpc3RNb2RzUmVzcG9uc2USRwoGR2V0TW9kEh0uY2FyYm9ucGFuZWwudjEuR2V0TW9kUmVxdWVzdBoeLmNhcmJvbnBhbmVsLnYxLkdldE1vZFJlc3BvbnNlEmgKEUltcG9ydFVwbG9hZGVkTW9kEiguY2FyYm9ucGFuZWwudjEuSW1wb3J0VXBsb2FkZWRNb2RSZXF1ZXN0GikuY2FyYm9ucGFuZWwudjEuSW1wb3J0VXBsb2FkZWRNb2RSZXNwb25zZRJQCglVcGRhdGVNb2QSIC5jYXJib25wYW5lbC52MS5VcGRhdGVNb2RSZXF1ZXN0GiEuY2FyYm9ucGFuZWwudjEuVXBkYXRlTW9kUmVzcG9uc2USUAoJRGVsZXRlTW9kEiAuY2FyYm9ucGFuZWwudjEuRGVsZXRlTW9kUmVxdWVzdBohLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZU1vZFJlc3BvbnNlEoMBChpHZXRGYWJyaWNPcHRpbWl6YXRpb25TdGFjaxIxLmNhcmJvbnBhbmVsLnYxLkdldEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVxdWVzdBoyLmNhcmJvbnBhbmVsLnYxLkdldEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVzcG9uc2USjwEKHkluc3RhbGxGYWJyaWNPcHRpbWl6YXRpb25TdGFjaxI1LmNhcmJvbnBhbmVsLnYxLkluc3RhbGxGYWJyaWNPcHRpbWl6YXRpb25TdGFja1JlcXVlc3QaNi5jYXJib25wYW5lbC52MS5JbnN0YWxsRmFicmljT3B0aW1pemF0aW9uU3RhY2tSZXNwb25zZUJIWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxYgZwcm90bzM',
-		[file_google_protobuf_timestamp]
-	);
+export const file_carbonpanel_v1_mod: GenFile = /*@__PURE__*/
+  fileDesc("ChhjYXJib25wYW5lbC92MS9tb2QucHJvdG8SDmNhcmJvbnBhbmVsLnYxIqkCCgNNb2QSCgoCaWQYASABKAkSEQoJc2VydmVyX2lkGAIgASgJEhEKCWZpbGVfbmFtZRgDIAEoCRIUCgxkaXNwbGF5X25hbWUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSDwoHdmVyc2lvbhgGIAEoCRIOCgZtb2RfaWQYByABKAkSDgoGYXV0aG9yGAggASgJEg8KB3dlYnNpdGUYCSABKAkSEQoJZmlsZV9zaXplGAogASgDEi8KC3VwbG9hZGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIPCgdlbmFibGVkGA0gASgIIiQKD0xpc3RNb2RzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiNQoQTGlzdE1vZHNSZXNwb25zZRIhCgRtb2RzGAEgAygLMhMuY2FyYm9ucGFuZWwudjEuTW9kIjIKDUdldE1vZFJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEg4KBm1vZF9pZBgCIAEoCSIyCg5HZXRNb2RSZXNwb25zZRIgCgNtb2QYASABKAsyEy5jYXJib25wYW5lbC52MS5Nb2QicwoYSW1wb3J0VXBsb2FkZWRNb2RSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIZChF1cGxvYWRfc2Vzc2lvbl9pZBgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkiTgoZSW1wb3J0VXBsb2FkZWRNb2RSZXNwb25zZRIgCgNtb2QYASABKAsyEy5jYXJib25wYW5lbC52MS5Nb2QSDwoHbWVzc2FnZRgCIAEoCSKtAQoQVXBkYXRlTW9kUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDgoGbW9kX2lkGAIgASgJEhkKDGRpc3BsYXlfbmFtZRgDIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAQgASgJSAGIAQESFAoHZW5hYmxlZBgFIAEoCEgCiAEBQg8KDV9kaXNwbGF5X25hbWVCDgoMX2Rlc2NyaXB0aW9uQgoKCF9lbmFibGVkIjUKEVVwZGF0ZU1vZFJlc3BvbnNlEiAKA21vZBgBIAEoCzITLmNhcmJvbnBhbmVsLnYxLk1vZCI1ChBEZWxldGVNb2RSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIOCgZtb2RfaWQYAiABKAkiJAoRRGVsZXRlTW9kUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSLYAQoVRmFicmljT3B0aW1pemF0aW9uTW9kEg4KBm1vZF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhEKCWluc3RhbGxlZBgEIAEoCBISCgpjb21wYXRpYmxlGAUgASgIEhkKEWluc3RhbGxlZF92ZXJzaW9uGAYgASgJEiEKGWxhdGVzdF9jb21wYXRpYmxlX3ZlcnNpb24YByABKAkSEQoJZmlsZV9uYW1lGAggASgJEhQKDGRvd25sb2FkX3VybBgJIAEoCSI2CiFHZXRGYWJyaWNPcHRpbWl6YXRpb25TdGFja1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJIoABCiJHZXRGYWJyaWNPcHRpbWl6YXRpb25TdGFja1Jlc3BvbnNlEhEKCWlzX2ZhYnJpYxgBIAEoCBISCgptY192ZXJzaW9uGAIgASgJEjMKBG1vZHMYAyADKAsyJS5jYXJib25wYW5lbC52MS5GYWJyaWNPcHRpbWl6YXRpb25Nb2QiSwolSW5zdGFsbEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDwoHbW9kX2lkcxgCIAMoCSKKAQomSW5zdGFsbEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVzcG9uc2USPQoOaW5zdGFsbGVkX21vZHMYASADKAsyJS5jYXJib25wYW5lbC52MS5GYWJyaWNPcHRpbWl6YXRpb25Nb2QSEAoId2FybmluZ3MYAiADKAkSDwoHbWVzc2FnZRgDIAEoCTLKBQoKTW9kU2VydmljZRJNCghMaXN0TW9kcxIfLmNhcmJvbnBhbmVsLnYxLkxpc3RNb2RzUmVxdWVzdBogLmNhcmJvbnBhbmVsLnYxLkxpc3RNb2RzUmVzcG9uc2USRwoGR2V0TW9kEh0uY2FyYm9ucGFuZWwudjEuR2V0TW9kUmVxdWVzdBoeLmNhcmJvbnBhbmVsLnYxLkdldE1vZFJlc3BvbnNlEmgKEUltcG9ydFVwbG9hZGVkTW9kEiguY2FyYm9ucGFuZWwudjEuSW1wb3J0VXBsb2FkZWRNb2RSZXF1ZXN0GikuY2FyYm9ucGFuZWwudjEuSW1wb3J0VXBsb2FkZWRNb2RSZXNwb25zZRJQCglVcGRhdGVNb2QSIC5jYXJib25wYW5lbC52MS5VcGRhdGVNb2RSZXF1ZXN0GiEuY2FyYm9ucGFuZWwudjEuVXBkYXRlTW9kUmVzcG9uc2USUAoJRGVsZXRlTW9kEiAuY2FyYm9ucGFuZWwudjEuRGVsZXRlTW9kUmVxdWVzdBohLmNhcmJvbnBhbmVsLnYxLkRlbGV0ZU1vZFJlc3BvbnNlEoMBChpHZXRGYWJyaWNPcHRpbWl6YXRpb25TdGFjaxIxLmNhcmJvbnBhbmVsLnYxLkdldEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVxdWVzdBoyLmNhcmJvbnBhbmVsLnYxLkdldEZhYnJpY09wdGltaXphdGlvblN0YWNrUmVzcG9uc2USjwEKHkluc3RhbGxGYWJyaWNPcHRpbWl6YXRpb25TdGFjaxI1LmNhcmJvbnBhbmVsLnYxLkluc3RhbGxGYWJyaWNPcHRpbWl6YXRpb25TdGFja1JlcXVlc3QaNi5jYXJib25wYW5lbC52MS5JbnN0YWxsRmFicmljT3B0aW1pemF0aW9uU3RhY2tSZXNwb25zZUJIWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * Server mod metadata
  *
  * @generated from message carbonpanel.v1.Mod
  */
-export type Mod = Message<'carbonpanel.v1.Mod'> & {
-	/**
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+export type Mod = Message<"carbonpanel.v1.Mod"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * @generated from field: string server_id = 2;
-	 */
-	serverId: string;
+  /**
+   * @generated from field: string server_id = 2;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string file_name = 3;
-	 */
-	fileName: string;
+  /**
+   * @generated from field: string file_name = 3;
+   */
+  fileName: string;
 
-	/**
-	 * @generated from field: string display_name = 4;
-	 */
-	displayName: string;
+  /**
+   * @generated from field: string display_name = 4;
+   */
+  displayName: string;
 
-	/**
-	 * @generated from field: string description = 5;
-	 */
-	description: string;
+  /**
+   * @generated from field: string description = 5;
+   */
+  description: string;
 
-	/**
-	 * @generated from field: string version = 6;
-	 */
-	version: string;
+  /**
+   * @generated from field: string version = 6;
+   */
+  version: string;
 
-	/**
-	 * External mod ID (e.g., CurseForge ID)
-	 *
-	 * @generated from field: string mod_id = 7;
-	 */
-	modId: string;
+  /**
+   * External mod ID (e.g., CurseForge ID)
+   *
+   * @generated from field: string mod_id = 7;
+   */
+  modId: string;
 
-	/**
-	 * @generated from field: string author = 8;
-	 */
-	author: string;
+  /**
+   * @generated from field: string author = 8;
+   */
+  author: string;
 
-	/**
-	 * @generated from field: string website = 9;
-	 */
-	website: string;
+  /**
+   * @generated from field: string website = 9;
+   */
+  website: string;
 
-	/**
-	 * @generated from field: int64 file_size = 10;
-	 */
-	fileSize: bigint;
+  /**
+   * @generated from field: int64 file_size = 10;
+   */
+  fileSize: bigint;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp uploaded_at = 11;
-	 */
-	uploadedAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp uploaded_at = 11;
+   */
+  uploadedAt?: Timestamp | undefined;
 
-	/**
-	 * @generated from field: google.protobuf.Timestamp updated_at = 12;
-	 */
-	updatedAt?: Timestamp | undefined;
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 12;
+   */
+  updatedAt?: Timestamp | undefined;
 
-	/**
-	 * @generated from field: bool enabled = 13;
-	 */
-	enabled: boolean;
+  /**
+   * @generated from field: bool enabled = 13;
+   */
+  enabled: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.Mod.
  * Use `create(ModSchema)` to create a new message.
  */
-export const ModSchema: GenMessage<Mod> = /*@__PURE__*/ messageDesc(file_carbonpanel_v1_mod, 0);
+export const ModSchema: GenMessage<Mod> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 0);
 
 /**
  * Server mods request
  *
  * @generated from message carbonpanel.v1.ListModsRequest
  */
-export type ListModsRequest = Message<'carbonpanel.v1.ListModsRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type ListModsRequest = Message<"carbonpanel.v1.ListModsRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListModsRequest.
  * Use `create(ListModsRequestSchema)` to create a new message.
  */
-export const ListModsRequestSchema: GenMessage<ListModsRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 1);
+export const ListModsRequestSchema: GenMessage<ListModsRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 1);
 
 /**
  * All server mods
  *
  * @generated from message carbonpanel.v1.ListModsResponse
  */
-export type ListModsResponse = Message<'carbonpanel.v1.ListModsResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.Mod mods = 1;
-	 */
-	mods: Mod[];
+export type ListModsResponse = Message<"carbonpanel.v1.ListModsResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.Mod mods = 1;
+   */
+  mods: Mod[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListModsResponse.
  * Use `create(ListModsResponseSchema)` to create a new message.
  */
-export const ListModsResponseSchema: GenMessage<ListModsResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 2);
+export const ListModsResponseSchema: GenMessage<ListModsResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 2);
 
 /**
  * Mod lookup
  *
  * @generated from message carbonpanel.v1.GetModRequest
  */
-export type GetModRequest = Message<'carbonpanel.v1.GetModRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type GetModRequest = Message<"carbonpanel.v1.GetModRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string mod_id = 2;
-	 */
-	modId: string;
+  /**
+   * @generated from field: string mod_id = 2;
+   */
+  modId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetModRequest.
  * Use `create(GetModRequestSchema)` to create a new message.
  */
-export const GetModRequestSchema: GenMessage<GetModRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 3);
+export const GetModRequestSchema: GenMessage<GetModRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 3);
 
 /**
  * Mod details
  *
  * @generated from message carbonpanel.v1.GetModResponse
  */
-export type GetModResponse = Message<'carbonpanel.v1.GetModResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.Mod mod = 1;
-	 */
-	mod?: Mod | undefined;
+export type GetModResponse = Message<"carbonpanel.v1.GetModResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.Mod mod = 1;
+   */
+  mod?: Mod | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetModResponse.
  * Use `create(GetModResponseSchema)` to create a new message.
  */
-export const GetModResponseSchema: GenMessage<GetModResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 4);
+export const GetModResponseSchema: GenMessage<GetModResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 4);
 
 /**
  * Import mod from chunked upload session
  *
  * @generated from message carbonpanel.v1.ImportUploadedModRequest
  */
-export type ImportUploadedModRequest = Message<'carbonpanel.v1.ImportUploadedModRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type ImportUploadedModRequest = Message<"carbonpanel.v1.ImportUploadedModRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string upload_session_id = 2;
-	 */
-	uploadSessionId: string;
+  /**
+   * @generated from field: string upload_session_id = 2;
+   */
+  uploadSessionId: string;
 
-	/**
-	 * @generated from field: string display_name = 3;
-	 */
-	displayName: string;
+  /**
+   * @generated from field: string display_name = 3;
+   */
+  displayName: string;
 
-	/**
-	 * @generated from field: string description = 4;
-	 */
-	description: string;
+  /**
+   * @generated from field: string description = 4;
+   */
+  description: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ImportUploadedModRequest.
  * Use `create(ImportUploadedModRequestSchema)` to create a new message.
  */
-export const ImportUploadedModRequestSchema: GenMessage<ImportUploadedModRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 5);
+export const ImportUploadedModRequestSchema: GenMessage<ImportUploadedModRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 5);
 
 /**
  * Import result
  *
  * @generated from message carbonpanel.v1.ImportUploadedModResponse
  */
-export type ImportUploadedModResponse = Message<'carbonpanel.v1.ImportUploadedModResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.Mod mod = 1;
-	 */
-	mod?: Mod | undefined;
+export type ImportUploadedModResponse = Message<"carbonpanel.v1.ImportUploadedModResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.Mod mod = 1;
+   */
+  mod?: Mod | undefined;
 
-	/**
-	 * @generated from field: string message = 2;
-	 */
-	message: string;
+  /**
+   * @generated from field: string message = 2;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ImportUploadedModResponse.
  * Use `create(ImportUploadedModResponseSchema)` to create a new message.
  */
-export const ImportUploadedModResponseSchema: GenMessage<ImportUploadedModResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 6);
+export const ImportUploadedModResponseSchema: GenMessage<ImportUploadedModResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 6);
 
 /**
  * Mod fields to update
  *
  * @generated from message carbonpanel.v1.UpdateModRequest
  */
-export type UpdateModRequest = Message<'carbonpanel.v1.UpdateModRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type UpdateModRequest = Message<"carbonpanel.v1.UpdateModRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string mod_id = 2;
-	 */
-	modId: string;
+  /**
+   * @generated from field: string mod_id = 2;
+   */
+  modId: string;
 
-	/**
-	 * @generated from field: optional string display_name = 3;
-	 */
-	displayName?: string | undefined;
+  /**
+   * @generated from field: optional string display_name = 3;
+   */
+  displayName?: string | undefined;
 
-	/**
-	 * @generated from field: optional string description = 4;
-	 */
-	description?: string | undefined;
+  /**
+   * @generated from field: optional string description = 4;
+   */
+  description?: string | undefined;
 
-	/**
-	 * @generated from field: optional bool enabled = 5;
-	 */
-	enabled?: boolean | undefined;
+  /**
+   * @generated from field: optional bool enabled = 5;
+   */
+  enabled?: boolean | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateModRequest.
  * Use `create(UpdateModRequestSchema)` to create a new message.
  */
-export const UpdateModRequestSchema: GenMessage<UpdateModRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 7);
+export const UpdateModRequestSchema: GenMessage<UpdateModRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 7);
 
 /**
  * Updated mod
  *
  * @generated from message carbonpanel.v1.UpdateModResponse
  */
-export type UpdateModResponse = Message<'carbonpanel.v1.UpdateModResponse'> & {
-	/**
-	 * @generated from field: carbonpanel.v1.Mod mod = 1;
-	 */
-	mod?: Mod | undefined;
+export type UpdateModResponse = Message<"carbonpanel.v1.UpdateModResponse"> & {
+  /**
+   * @generated from field: carbonpanel.v1.Mod mod = 1;
+   */
+  mod?: Mod | undefined;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateModResponse.
  * Use `create(UpdateModResponseSchema)` to create a new message.
  */
-export const UpdateModResponseSchema: GenMessage<UpdateModResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 8);
+export const UpdateModResponseSchema: GenMessage<UpdateModResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 8);
 
 /**
  * Mod to delete
  *
  * @generated from message carbonpanel.v1.DeleteModRequest
  */
-export type DeleteModRequest = Message<'carbonpanel.v1.DeleteModRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type DeleteModRequest = Message<"carbonpanel.v1.DeleteModRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string mod_id = 2;
-	 */
-	modId: string;
+  /**
+   * @generated from field: string mod_id = 2;
+   */
+  modId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteModRequest.
  * Use `create(DeleteModRequestSchema)` to create a new message.
  */
-export const DeleteModRequestSchema: GenMessage<DeleteModRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 9);
+export const DeleteModRequestSchema: GenMessage<DeleteModRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 9);
 
 /**
  * Deletion confirmation
  *
  * @generated from message carbonpanel.v1.DeleteModResponse
  */
-export type DeleteModResponse = Message<'carbonpanel.v1.DeleteModResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type DeleteModResponse = Message<"carbonpanel.v1.DeleteModResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteModResponse.
  * Use `create(DeleteModResponseSchema)` to create a new message.
  */
-export const DeleteModResponseSchema: GenMessage<DeleteModResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 10);
+export const DeleteModResponseSchema: GenMessage<DeleteModResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 10);
 
 /**
  * Fabric optimization mod item
  *
  * @generated from message carbonpanel.v1.FabricOptimizationMod
  */
-export type FabricOptimizationMod = Message<'carbonpanel.v1.FabricOptimizationMod'> & {
-	/**
-	 * e.g. "lithium", "ferrite-core", "modernfix", "c2me-fabric"
-	 *
-	 * @generated from field: string mod_id = 1;
-	 */
-	modId: string;
+export type FabricOptimizationMod = Message<"carbonpanel.v1.FabricOptimizationMod"> & {
+  /**
+   * e.g. "lithium", "ferrite-core", "modernfix", "c2me-fabric"
+   *
+   * @generated from field: string mod_id = 1;
+   */
+  modId: string;
 
-	/**
-	 * e.g. "Lithium", "FerriteCore", "ModernFix", "C2ME"
-	 *
-	 * @generated from field: string name = 2;
-	 */
-	name: string;
+  /**
+   * e.g. "Lithium", "FerriteCore", "ModernFix", "C2ME"
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
 
-	/**
-	 * Mod optimization description
-	 *
-	 * @generated from field: string description = 3;
-	 */
-	description: string;
+  /**
+   * Mod optimization description
+   *
+   * @generated from field: string description = 3;
+   */
+  description: string;
 
-	/**
-	 * @generated from field: bool installed = 4;
-	 */
-	installed: boolean;
+  /**
+   * @generated from field: bool installed = 4;
+   */
+  installed: boolean;
 
-	/**
-	 * @generated from field: bool compatible = 5;
-	 */
-	compatible: boolean;
+  /**
+   * @generated from field: bool compatible = 5;
+   */
+  compatible: boolean;
 
-	/**
-	 * @generated from field: string installed_version = 6;
-	 */
-	installedVersion: string;
+  /**
+   * @generated from field: string installed_version = 6;
+   */
+  installedVersion: string;
 
-	/**
-	 * @generated from field: string latest_compatible_version = 7;
-	 */
-	latestCompatibleVersion: string;
+  /**
+   * @generated from field: string latest_compatible_version = 7;
+   */
+  latestCompatibleVersion: string;
 
-	/**
-	 * @generated from field: string file_name = 8;
-	 */
-	fileName: string;
+  /**
+   * @generated from field: string file_name = 8;
+   */
+  fileName: string;
 
-	/**
-	 * @generated from field: string download_url = 9;
-	 */
-	downloadUrl: string;
+  /**
+   * @generated from field: string download_url = 9;
+   */
+  downloadUrl: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.FabricOptimizationMod.
  * Use `create(FabricOptimizationModSchema)` to create a new message.
  */
-export const FabricOptimizationModSchema: GenMessage<FabricOptimizationMod> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 11);
+export const FabricOptimizationModSchema: GenMessage<FabricOptimizationMod> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 11);
 
 /**
  * Get Fabric optimization stack request
  *
  * @generated from message carbonpanel.v1.GetFabricOptimizationStackRequest
  */
-export type GetFabricOptimizationStackRequest =
-	Message<'carbonpanel.v1.GetFabricOptimizationStackRequest'> & {
-		/**
-		 * @generated from field: string server_id = 1;
-		 */
-		serverId: string;
-	};
+export type GetFabricOptimizationStackRequest = Message<"carbonpanel.v1.GetFabricOptimizationStackRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.GetFabricOptimizationStackRequest.
  * Use `create(GetFabricOptimizationStackRequestSchema)` to create a new message.
  */
-export const GetFabricOptimizationStackRequestSchema: GenMessage<GetFabricOptimizationStackRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 12);
+export const GetFabricOptimizationStackRequestSchema: GenMessage<GetFabricOptimizationStackRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 12);
 
 /**
  * Get Fabric optimization stack response
  *
  * @generated from message carbonpanel.v1.GetFabricOptimizationStackResponse
  */
-export type GetFabricOptimizationStackResponse =
-	Message<'carbonpanel.v1.GetFabricOptimizationStackResponse'> & {
-		/**
-		 * @generated from field: bool is_fabric = 1;
-		 */
-		isFabric: boolean;
+export type GetFabricOptimizationStackResponse = Message<"carbonpanel.v1.GetFabricOptimizationStackResponse"> & {
+  /**
+   * @generated from field: bool is_fabric = 1;
+   */
+  isFabric: boolean;
 
-		/**
-		 * @generated from field: string mc_version = 2;
-		 */
-		mcVersion: string;
+  /**
+   * @generated from field: string mc_version = 2;
+   */
+  mcVersion: string;
 
-		/**
-		 * @generated from field: repeated carbonpanel.v1.FabricOptimizationMod mods = 3;
-		 */
-		mods: FabricOptimizationMod[];
-	};
+  /**
+   * @generated from field: repeated carbonpanel.v1.FabricOptimizationMod mods = 3;
+   */
+  mods: FabricOptimizationMod[];
+};
 
 /**
  * Describes the message carbonpanel.v1.GetFabricOptimizationStackResponse.
  * Use `create(GetFabricOptimizationStackResponseSchema)` to create a new message.
  */
-export const GetFabricOptimizationStackResponseSchema: GenMessage<GetFabricOptimizationStackResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 13);
+export const GetFabricOptimizationStackResponseSchema: GenMessage<GetFabricOptimizationStackResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 13);
 
 /**
  * Install Fabric optimization stack request
  *
  * @generated from message carbonpanel.v1.InstallFabricOptimizationStackRequest
  */
-export type InstallFabricOptimizationStackRequest =
-	Message<'carbonpanel.v1.InstallFabricOptimizationStackRequest'> & {
-		/**
-		 * @generated from field: string server_id = 1;
-		 */
-		serverId: string;
+export type InstallFabricOptimizationStackRequest = Message<"carbonpanel.v1.InstallFabricOptimizationStackRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-		/**
-		 * Optional filter; empty installs all 4
-		 *
-		 * @generated from field: repeated string mod_ids = 2;
-		 */
-		modIds: string[];
-	};
+  /**
+   * Optional filter; empty installs all 4
+   *
+   * @generated from field: repeated string mod_ids = 2;
+   */
+  modIds: string[];
+};
 
 /**
  * Describes the message carbonpanel.v1.InstallFabricOptimizationStackRequest.
  * Use `create(InstallFabricOptimizationStackRequestSchema)` to create a new message.
  */
-export const InstallFabricOptimizationStackRequestSchema: GenMessage<InstallFabricOptimizationStackRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 14);
+export const InstallFabricOptimizationStackRequestSchema: GenMessage<InstallFabricOptimizationStackRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 14);
 
 /**
  * Install Fabric optimization stack response
  *
  * @generated from message carbonpanel.v1.InstallFabricOptimizationStackResponse
  */
-export type InstallFabricOptimizationStackResponse =
-	Message<'carbonpanel.v1.InstallFabricOptimizationStackResponse'> & {
-		/**
-		 * @generated from field: repeated carbonpanel.v1.FabricOptimizationMod installed_mods = 1;
-		 */
-		installedMods: FabricOptimizationMod[];
+export type InstallFabricOptimizationStackResponse = Message<"carbonpanel.v1.InstallFabricOptimizationStackResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.FabricOptimizationMod installed_mods = 1;
+   */
+  installedMods: FabricOptimizationMod[];
 
-		/**
-		 * @generated from field: repeated string warnings = 2;
-		 */
-		warnings: string[];
+  /**
+   * @generated from field: repeated string warnings = 2;
+   */
+  warnings: string[];
 
-		/**
-		 * @generated from field: string message = 3;
-		 */
-		message: string;
-	};
+  /**
+   * @generated from field: string message = 3;
+   */
+  message: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.InstallFabricOptimizationStackResponse.
  * Use `create(InstallFabricOptimizationStackResponseSchema)` to create a new message.
  */
-export const InstallFabricOptimizationStackResponseSchema: GenMessage<InstallFabricOptimizationStackResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_mod, 15);
+export const InstallFabricOptimizationStackResponseSchema: GenMessage<InstallFabricOptimizationStackResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_mod, 15);
 
 /**
  * Server mod management
@@ -531,74 +509,76 @@ export const InstallFabricOptimizationStackResponseSchema: GenMessage<InstallFab
  * @generated from service carbonpanel.v1.ModService
  */
 export const ModService: GenService<{
-	/**
-	 * List server mods
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.ListMods
-	 */
-	listMods: {
-		methodKind: 'unary';
-		input: typeof ListModsRequestSchema;
-		output: typeof ListModsResponseSchema;
-	};
-	/**
-	 * Get mod details
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.GetMod
-	 */
-	getMod: {
-		methodKind: 'unary';
-		input: typeof GetModRequestSchema;
-		output: typeof GetModResponseSchema;
-	};
-	/**
-	 * Import mod from chunked upload session
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.ImportUploadedMod
-	 */
-	importUploadedMod: {
-		methodKind: 'unary';
-		input: typeof ImportUploadedModRequestSchema;
-		output: typeof ImportUploadedModResponseSchema;
-	};
-	/**
-	 * Update mod metadata
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.UpdateMod
-	 */
-	updateMod: {
-		methodKind: 'unary';
-		input: typeof UpdateModRequestSchema;
-		output: typeof UpdateModResponseSchema;
-	};
-	/**
-	 * Delete mod file
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.DeleteMod
-	 */
-	deleteMod: {
-		methodKind: 'unary';
-		input: typeof DeleteModRequestSchema;
-		output: typeof DeleteModResponseSchema;
-	};
-	/**
-	 * Get Fabric optimization stack status and compatibility for a server
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.GetFabricOptimizationStack
-	 */
-	getFabricOptimizationStack: {
-		methodKind: 'unary';
-		input: typeof GetFabricOptimizationStackRequestSchema;
-		output: typeof GetFabricOptimizationStackResponseSchema;
-	};
-	/**
-	 * Install or update Fabric optimization stack mods (Lithium, FerriteCore, ModernFix, C2ME)
-	 *
-	 * @generated from rpc carbonpanel.v1.ModService.InstallFabricOptimizationStack
-	 */
-	installFabricOptimizationStack: {
-		methodKind: 'unary';
-		input: typeof InstallFabricOptimizationStackRequestSchema;
-		output: typeof InstallFabricOptimizationStackResponseSchema;
-	};
-}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_mod, 0);
+  /**
+   * List server mods
+   *
+   * @generated from rpc carbonpanel.v1.ModService.ListMods
+   */
+  listMods: {
+    methodKind: "unary";
+    input: typeof ListModsRequestSchema;
+    output: typeof ListModsResponseSchema;
+  },
+  /**
+   * Get mod details
+   *
+   * @generated from rpc carbonpanel.v1.ModService.GetMod
+   */
+  getMod: {
+    methodKind: "unary";
+    input: typeof GetModRequestSchema;
+    output: typeof GetModResponseSchema;
+  },
+  /**
+   * Import mod from chunked upload session
+   *
+   * @generated from rpc carbonpanel.v1.ModService.ImportUploadedMod
+   */
+  importUploadedMod: {
+    methodKind: "unary";
+    input: typeof ImportUploadedModRequestSchema;
+    output: typeof ImportUploadedModResponseSchema;
+  },
+  /**
+   * Update mod metadata
+   *
+   * @generated from rpc carbonpanel.v1.ModService.UpdateMod
+   */
+  updateMod: {
+    methodKind: "unary";
+    input: typeof UpdateModRequestSchema;
+    output: typeof UpdateModResponseSchema;
+  },
+  /**
+   * Delete mod file
+   *
+   * @generated from rpc carbonpanel.v1.ModService.DeleteMod
+   */
+  deleteMod: {
+    methodKind: "unary";
+    input: typeof DeleteModRequestSchema;
+    output: typeof DeleteModResponseSchema;
+  },
+  /**
+   * Get Fabric optimization stack status and compatibility for a server
+   *
+   * @generated from rpc carbonpanel.v1.ModService.GetFabricOptimizationStack
+   */
+  getFabricOptimizationStack: {
+    methodKind: "unary";
+    input: typeof GetFabricOptimizationStackRequestSchema;
+    output: typeof GetFabricOptimizationStackResponseSchema;
+  },
+  /**
+   * Install or update Fabric optimization stack mods (Lithium, FerriteCore, ModernFix, C2ME)
+   *
+   * @generated from rpc carbonpanel.v1.ModService.InstallFabricOptimizationStack
+   */
+  installFabricOptimizationStack: {
+    methodKind: "unary";
+    input: typeof InstallFabricOptimizationStackRequestSchema;
+    output: typeof InstallFabricOptimizationStackResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_carbonpanel_v1_mod, 0);
+

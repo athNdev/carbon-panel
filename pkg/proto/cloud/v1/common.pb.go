@@ -289,6 +289,8 @@ const (
 	WorkloadStatus_WORKLOAD_STATUS_STOPPED WorkloadStatus = 3
 	// Node agent reported a failure.
 	WorkloadStatus_WORKLOAD_STATUS_ERROR WorkloadStatus = 4
+	// Workload is hibernated (cgroup frozen / sleeping on idle).
+	WorkloadStatus_WORKLOAD_STATUS_HIBERNATED WorkloadStatus = 5
 )
 
 // Enum value maps for WorkloadStatus.
@@ -299,6 +301,7 @@ var (
 		2: "WORKLOAD_STATUS_RUNNING",
 		3: "WORKLOAD_STATUS_STOPPED",
 		4: "WORKLOAD_STATUS_ERROR",
+		5: "WORKLOAD_STATUS_HIBERNATED",
 	}
 	WorkloadStatus_value = map[string]int32{
 		"WORKLOAD_STATUS_UNSPECIFIED": 0,
@@ -306,6 +309,7 @@ var (
 		"WORKLOAD_STATUS_RUNNING":     2,
 		"WORKLOAD_STATUS_STOPPED":     3,
 		"WORKLOAD_STATUS_ERROR":       4,
+		"WORKLOAD_STATUS_HIBERNATED":  5,
 	}
 )
 
@@ -865,13 +869,14 @@ const file_cloud_v1_common_proto_rawDesc = "" +
 	"\x19PROVISION_STATUS_APPLYING\x10\x03\x12\x1c\n" +
 	"\x18PROVISION_STATUS_APPLIED\x10\x04\x12\x1b\n" +
 	"\x17PROVISION_STATUS_FAILED\x10\x05\x12\x1e\n" +
-	"\x1aPROVISION_STATUS_DESTROYED\x10\x06*\xa3\x01\n" +
+	"\x1aPROVISION_STATUS_DESTROYED\x10\x06*\xc3\x01\n" +
 	"\x0eWorkloadStatus\x12\x1f\n" +
 	"\x1bWORKLOAD_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17WORKLOAD_STATUS_PENDING\x10\x01\x12\x1b\n" +
 	"\x17WORKLOAD_STATUS_RUNNING\x10\x02\x12\x1b\n" +
 	"\x17WORKLOAD_STATUS_STOPPED\x10\x03\x12\x19\n" +
-	"\x15WORKLOAD_STATUS_ERROR\x10\x04*\xbc\x01\n" +
+	"\x15WORKLOAD_STATUS_ERROR\x10\x04\x12\x1e\n" +
+	"\x1aWORKLOAD_STATUS_HIBERNATED\x10\x05*\xbc\x01\n" +
 	"\n" +
 	"ProviderId\x12\x1b\n" +
 	"\x17PROVIDER_ID_UNSPECIFIED\x10\x00\x12\x17\n" +

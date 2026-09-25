@@ -275,6 +275,10 @@ message AgentMessage {
     AgentGetWorkloadMetricsResult metrics_result = 15;
     // File rename result.
     AgentFileRenameResult file_rename_result = 16;
+    // Workload hibernation result.
+    AgentHibernateResult hibernate_result = 17;
+    // Workload wake result.
+    AgentWakeResult wake_result = 18;
   }
 }
 
@@ -464,6 +468,49 @@ message ControlGetWorkloadMetrics {
   string workload_id = 2;
 }
 
+
+// ControlHibernateWorkload asks the agent to freeze/pause or deep-sleep a workload.
+message ControlHibernateWorkload {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Mode: "pause" or "deep_sleep".
+  string mode = 3;
+}
+
+// ControlWakeWorkload asks the agent to unpause or start a sleeping workload.
+message ControlWakeWorkload {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+}
+
+// AgentHibernateResult acknowledges workload hibernation.
+message AgentHibernateResult {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Whether hibernation succeeded.
+  bool success = 3;
+  // Error detail if failed.
+  string error = 4;
+}
+
+// AgentWakeResult acknowledges workload waking.
+message AgentWakeResult {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Whether waking succeeded.
+  bool success = 3;
+  // Error detail if failed.
+  string error = 4;
+}
+
 // ControlMessage is anything the control plane sends to an agent.
 message ControlMessage {
   // Exactly one payload per message.
@@ -504,6 +551,10 @@ message ControlMessage {
     ControlGetWorkloadMetrics get_workload_metrics = 17;
     // File rename request.
     ControlFileRename file_rename = 18;
+    // Workload hibernation request.
+    ControlHibernateWorkload hibernate_workload = 19;
+    // Workload wake request.
+    ControlWakeWorkload wake_workload = 20;
   }
 }
 

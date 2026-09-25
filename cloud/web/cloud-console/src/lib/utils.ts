@@ -94,6 +94,8 @@ export function workloadStatusMeta(s: WorkloadStatus | number | undefined | null
 	switch (s) {
 		case WorkloadStatus.RUNNING:
 			return { label: 'Running', tone: 'green' };
+		case WorkloadStatus.HIBERNATED:
+			return { label: 'Hibernated', tone: 'purple' };
 		case WorkloadStatus.STOPPED:
 			return { label: 'Stopped', tone: 'neutral' };
 		case WorkloadStatus.PENDING:

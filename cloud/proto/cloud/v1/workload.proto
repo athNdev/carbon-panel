@@ -32,6 +32,10 @@ message WorkloadSpec {
   int32 host_port = 10;
   // Optional blueprint/preset ID to inherit server configuration from (MINE-162).
   string blueprint_id = 11;
+  // Minutes of inactivity before auto-hibernation (0 = disabled).
+  int32 idle_timeout_minutes = 12;
+  // Hibernation mode: "pause" (cgroup freeze) or "deep_sleep" (stop container).
+  string hibernation_mode = 13;
 }
 
 // WorkloadEvent is an auditable lifecycle transition of a workload.
@@ -123,6 +127,12 @@ service WorkloadService {
   rpc GetWorkloadNetworking(GetWorkloadNetworkingRequest) returns (GetWorkloadNetworkingResponse);
   // ListNodePorts lists allocated and available ports on a given node.
   rpc ListNodePorts(ListNodePortsRequest) returns (ListNodePortsResponse);
+  // HibernateWorkload pauses or deep-sleeps an idle workload.
+  rpc HibernateWorkload(HibernateWorkloadRequest) returns (HibernateWorkloadResponse);
+  // WakeWorkload unpauses or starts a hibernated workload.
+  rpc WakeWorkload(WakeWorkloadRequest) returns (WakeWorkloadResponse);
+  // SyncIngressRoutes synchronizes hostname routing table for ingress / Gate proxy.
+  rpc SyncIngressRoutes(SyncIngressRoutesRequest) returns (SyncIngressRoutesResponse);
 }
 
 // WorkloadLogLine is one console line from a workload.
@@ -519,4 +529,70 @@ message ListNodePortsResponse {
   repeated NodePortAllocation allocations = 4;
   // Count of remaining unallocated ports in the range.
   int32 available_ports = 5;
+}
+
+// HibernateWorkloadRequest requests putting a workload to sleep.
+message HibernateWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // Reason for hibernation (e.g. "idle_timeout", "manual").
+  string reason = 2;
+}
+
+// HibernateWorkloadResponse returns outcome of hibernation.
+message HibernateWorkloadResponse {
+  // Whether hibernation succeeded.
+  bool success = 1;
+  // Resulting workload status.
+  WorkloadStatus status = 2;
+  // Detail message.
+  string message = 3;
+}
+
+// WakeWorkloadRequest requests waking a hibernated workload.
+message WakeWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// WakeWorkloadResponse returns outcome of waking.
+message WakeWorkloadResponse {
+  // Whether wake succeeded.
+  bool success = 1;
+  // Resulting workload status.
+  WorkloadStatus status = 2;
+  // Detail message.
+  string message = 3;
+}
+
+// IngressRoute describes a virtual hostname mapping to a workload backend.
+message IngressRoute {
+  // Workload id.
+  string workload_id = 1;
+  // Public virtual hostname (e.g. "survival.example.com").
+  string hostname = 2;
+  // Backend node IP or internal address.
+  string backend_host = 3;
+  // Backend allocated host port.
+  int32 backend_port = 4;
+  // Public proxy port (typically 25565).
+  int32 proxy_port = 5;
+  // Whether the backend is currently hibernated.
+  bool hibernated = 6;
+  // Node ID hosting the workload.
+  string node_id = 7;
+}
+
+// SyncIngressRoutesRequest initiates ingress route synchronization.
+message SyncIngressRoutesRequest {
+  // Optional specific workload id to sync. If empty, syncs all active routes in org.
+  string workload_id = 1;
+}
+
+// SyncIngressRoutesResponse returns synchronized ingress routes.
+message SyncIngressRoutesResponse {
+  // Number of routes synchronized.
+  int32 routes_synced = 1;
+  // Active ingress routes.
+  repeated IngressRoute routes = 2;
 }

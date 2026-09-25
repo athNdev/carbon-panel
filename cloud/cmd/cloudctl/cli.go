@@ -837,6 +837,8 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		cpu := fs.Int64("cpu", 0, "CPU millicores (0 to inherit blueprint default)")
 		port := fs.Int("port", 0, "Host port to allocate (optional, 0 for dynamic)")
 		hostname := fs.String("hostname", "", "Public hostname for workload (optional)")
+		idle := fs.Int("idle-timeout", 0, "Idle timeout in minutes before auto-hibernation (0 to disable)")
+		mode := fs.String("hibernation-mode", "pause", "Hibernation mode: pause or deep_sleep")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -869,8 +871,10 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 				Loader:           defaultLoader,
 				MemoryMb:         defaultMem,
 				CpuMillicores:    defaultCpu,
-				HostPort:         int32(*port),
-				Hostname:         *hostname,
+				HostPort:           int32(*port),
+				Hostname:           *hostname,
+				IdleTimeoutMinutes: int32(*idle),
+				HibernationMode:    *mode,
 			},
 		}))
 		if err != nil {
@@ -908,6 +912,62 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		}
 		_, _ = fmt.Fprintf(c.Stdout, "Workload %s restarted (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
 		return nil
+	case "hibernate":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads hibernate <id> [--reason <reason>]")
+		}
+		id := args[1]
+		fs := flag.NewFlagSet("workloads hibernate", flag.ContinueOnError)
+		reason := fs.String("reason", "manual hibernation", "Reason for hibernation")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		resp, err := c.Client.Workload.HibernateWorkload(ctx, connect.NewRequest(&v1.HibernateWorkloadRequest{
+			Id:     id,
+			Reason: *reason,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Workload %s hibernated (status: %s, message: %s)\n", id, resp.Msg.Status, resp.Msg.Message)
+		return nil
+	case "wake":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads wake <id>")
+		}
+		id := args[1]
+		resp, err := c.Client.Workload.WakeWorkload(ctx, connect.NewRequest(&v1.WakeWorkloadRequest{
+			Id: id,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Workload %s resumed (status: %s, message: %s)\n", id, resp.Msg.Status, resp.Msg.Message)
+		return nil
+	case "sync-routes", "routes":
+		workloadID := ""
+		if len(args) > 1 && args[1] != "" && !strings.HasPrefix(args[1], "-") {
+			workloadID = args[1]
+		}
+		resp, err := c.Client.Workload.SyncIngressRoutes(ctx, connect.NewRequest(&v1.SyncIngressRoutesRequest{
+			WorkloadId: workloadID,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg, func(w io.Writer) error {
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintf(w, "Synced %d ingress route(s):\n", resp.Msg.RoutesSynced)
+			_, _ = fmt.Fprintln(tw, "HOSTNAME\tWORKLOAD ID\tBACKEND\tSTATUS\tNODE ID")
+			for _, r := range resp.Msg.Routes {
+				st := "running"
+				if r.Hibernated {
+					st = "hibernated"
+				}
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s:%d\t%s\t%s\n", r.Hostname, r.WorkloadId, r.BackendHost, r.BackendPort, st, r.NodeId)
+			}
+			return tw.Flush()
+		})
 	case "delete":
 		if len(args) < 2 {
 			return errors.New("usage: cloudctl workloads delete <id>")
