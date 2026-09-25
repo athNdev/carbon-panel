@@ -37,7 +37,10 @@ type AgentDispatcher struct {
 	backupCreateWaiters map[string]chan *v1.AgentCreateBackupResult
 	backupRestoreWaiters map[string]chan *v1.AgentRestoreBackupResult
 	backupDeleteWaiters  map[string]chan *v1.AgentDeleteBackupResult
-	logger            *slog.Logger
+	metricsMu            sync.RWMutex
+	cachedMetrics        map[string]*v1.WorkloadMetrics
+	metricsWaiters       map[string]chan *v1.AgentGetWorkloadMetricsResult
+	logger               *slog.Logger
 }
 
 // NewAgentDispatcher creates a thread-safe registry of connected node agents.
@@ -58,7 +61,9 @@ func NewAgentDispatcher(logger *slog.Logger) *AgentDispatcher {
 		backupCreateWaiters:  make(map[string]chan *v1.AgentCreateBackupResult),
 		backupRestoreWaiters: make(map[string]chan *v1.AgentRestoreBackupResult),
 		backupDeleteWaiters:  make(map[string]chan *v1.AgentDeleteBackupResult),
-		logger:            logger,
+		cachedMetrics:        make(map[string]*v1.WorkloadMetrics),
+		metricsWaiters:       make(map[string]chan *v1.AgentGetWorkloadMetricsResult),
+		logger:               logger,
 	}
 }
 
@@ -482,4 +487,60 @@ func (d *AgentDispatcher) SubscribeLogs(workloadID string) (<-chan *v1.WorkloadL
 		close(ch)
 	}
 	return ch, cancel
+}
+
+// UpdateWorkloadMetrics ingests fresh telemetry reported in agent heartbeats.
+func (d *AgentDispatcher) UpdateWorkloadMetrics(metrics []*v1.WorkloadMetrics) {
+	if len(metrics) == 0 {
+		return
+	}
+	d.metricsMu.Lock()
+	defer d.metricsMu.Unlock()
+	for _, m := range metrics {
+		if m != nil && m.WorkloadId != "" {
+			d.cachedMetrics[m.WorkloadId] = m
+		}
+	}
+}
+
+// GetWorkloadMetrics returns the latest cached metrics for a workload, if any.
+func (d *AgentDispatcher) GetWorkloadMetrics(workloadID string) *v1.WorkloadMetrics {
+	d.metricsMu.RLock()
+	defer d.metricsMu.RUnlock()
+	return d.cachedMetrics[workloadID]
+}
+
+// ExpectMetrics registers a channel waiting for an on-demand metrics result.
+func (d *AgentDispatcher) ExpectMetrics(commandID string) chan *v1.AgentGetWorkloadMetricsResult {
+	ch := make(chan *v1.AgentGetWorkloadMetricsResult, 1)
+	d.metricsMu.Lock()
+	d.metricsWaiters[commandID] = ch
+	d.metricsMu.Unlock()
+	return ch
+}
+
+// ResolveMetrics delivers an on-demand metrics result to a waiting caller and updates cache.
+func (d *AgentDispatcher) ResolveMetrics(res *v1.AgentGetWorkloadMetricsResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.metricsMu.Lock()
+	ch, exists := d.metricsWaiters[res.CommandId]
+	if exists {
+		delete(d.metricsWaiters, res.CommandId)
+	}
+	if res.Success && res.Metrics != nil && res.WorkloadId != "" {
+		d.cachedMetrics[res.WorkloadId] = res.Metrics
+	}
+	d.metricsMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelMetrics cleans up an abandoned metrics waiter.
+func (d *AgentDispatcher) CancelMetrics(commandID string) {
+	d.metricsMu.Lock()
+	delete(d.metricsWaiters, commandID)
+	d.metricsMu.Unlock()
 }

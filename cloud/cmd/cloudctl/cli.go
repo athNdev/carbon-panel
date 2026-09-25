@@ -1093,6 +1093,37 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		default:
 			return fmt.Errorf("unknown backup sub-command: %s", args[1])
 		}
+	case "metrics", "top":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads metrics <workload-id>")
+		}
+		resp, err := c.Client.Workload.GetWorkloadMetrics(ctx, connect.NewRequest(&v1.GetWorkloadMetricsRequest{Id: args[1]}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Metrics, func(w io.Writer) error {
+			m := resp.Msg.Metrics
+			memPct := 0.0
+			if m.MemoryLimitMb > 0 {
+				memPct = (m.MemoryUsedMb / m.MemoryLimitMb) * 100.0
+			}
+			updated := "n/a"
+			if m.UpdatedAt != nil {
+				updated = m.UpdatedAt.AsTime().Format(time.RFC3339)
+			}
+			_, _ = fmt.Fprintf(w, "Workload Metrics: %s\n", m.WorkloadId)
+			_, _ = fmt.Fprintf(w, "  CPU Usage:       %.2f%%\n", m.CpuPercent)
+			_, _ = fmt.Fprintf(w, "  Memory Usage:    %.1f MB / %.1f MB (%.1f%%)\n", m.MemoryUsedMb, m.MemoryLimitMb, memPct)
+			_, _ = fmt.Fprintf(w, "  Disk Usage:      %.2f MB (%d bytes)\n", float64(m.DiskUsedBytes)/(1024*1024), m.DiskUsedBytes)
+			_, _ = fmt.Fprintf(w, "  Network I/O:     RX: %.2f MB | TX: %.2f MB\n", float64(m.NetworkRxBytes)/(1024*1024), float64(m.NetworkTxBytes)/(1024*1024))
+			_, _ = fmt.Fprintf(w, "  Players:         %d / %d\n", m.PlayersOnline, m.MaxPlayers)
+			if len(m.PlayerSample) > 0 {
+				_, _ = fmt.Fprintf(w, "  Online Players:  %s\n", strings.Join(m.PlayerSample, ", "))
+			}
+			_, _ = fmt.Fprintf(w, "  TPS:             %.2f\n", m.Tps)
+			_, _ = fmt.Fprintf(w, "  Updated At:      %s\n", updated)
+			return nil
+		})
 	default:
 		return fmt.Errorf("unknown workloads command: %s", args[0])
 	}

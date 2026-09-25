@@ -3,6 +3,7 @@ package nodeagent
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,12 +11,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/athNdev/carbon-panel/internal/minecraft"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Runner manages the execution of containerized Minecraft workloads.
@@ -25,13 +31,23 @@ type Runner interface {
 	Delete(ctx context.Context, workloadID string, deleteData bool) error
 	RunCommand(ctx context.Context, workloadID, command string) (string, error)
 	Logs(ctx context.Context, workloadID string, tail int, follow bool) (io.ReadCloser, error)
+	GetMetrics(ctx context.Context, workloadID string) (*v1.WorkloadMetrics, error)
+	ListActiveWorkloadIDs(ctx context.Context) ([]string, error)
+}
+
+// DockerRunner interacts directly with Docker Engine on the local node.
+type diskCacheEntry struct {
+	size      int64
+	updatedAt time.Time
 }
 
 // DockerRunner interacts directly with Docker Engine on the local node.
 type DockerRunner struct {
-	cli     *client.Client
-	dataDir string
-	logger  *slog.Logger
+	cli       *client.Client
+	dataDir   string
+	logger    *slog.Logger
+	diskMu    sync.RWMutex
+	diskCache map[string]diskCacheEntry
 }
 
 // NewDockerRunner creates a new Docker runner using local environment connection.
@@ -264,6 +280,143 @@ func (r *DockerRunner) Logs(ctx context.Context, workloadID string, tail int, fo
 	return r.cli.ContainerLogs(ctx, containerName, opts)
 }
 
+// ListActiveWorkloadIDs returns all workload IDs that currently exist as Docker containers on this node.
+func (r *DockerRunner) ListActiveWorkloadIDs(ctx context.Context) ([]string, error) {
+	containers, err := r.cli.ContainerList(ctx, container.ListOptions{
+		Filters: filters.NewArgs(filters.Arg("label", "carbon.workload.id")),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list workload containers: %w", err)
+	}
+	var ids []string
+	for _, c := range containers {
+		if id, ok := c.Labels["carbon.workload.id"]; ok && id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
+}
+
+func (r *DockerRunner) getWorkloadDiskUsage(workloadID string) int64 {
+	r.diskMu.RLock()
+	if r.diskCache != nil {
+		if entry, ok := r.diskCache[workloadID]; ok && time.Since(entry.updatedAt) < 60*time.Second {
+			r.diskMu.RUnlock()
+			return entry.size
+		}
+	}
+	r.diskMu.RUnlock()
+
+	dataDir := filepath.Join(r.dataDir, "workloads", workloadID, "data")
+	var total int64
+	_ = filepath.Walk(dataDir, func(_ string, info os.FileInfo, err error) error {
+		if err == nil && info != nil && !info.IsDir() {
+			total += info.Size()
+		}
+		return nil
+	})
+
+	r.diskMu.Lock()
+	if r.diskCache == nil {
+		r.diskCache = make(map[string]diskCacheEntry)
+	}
+	r.diskCache[workloadID] = diskCacheEntry{
+		size:      total,
+		updatedAt: time.Now(),
+	}
+	r.diskMu.Unlock()
+	return total
+}
+
+// GetMetrics samples real-time container metrics (CPU, RAM, network, disk, players, TPS).
+func (r *DockerRunner) GetMetrics(ctx context.Context, workloadID string) (*v1.WorkloadMetrics, error) {
+	containerName := "carbon-workload-" + workloadID
+
+	statsResp, err := r.cli.ContainerStats(ctx, containerName, false)
+	if err != nil {
+		return nil, fmt.Errorf("container stats: %w", err)
+	}
+	defer statsResp.Body.Close()
+
+	var stats container.StatsResponse
+	if err := json.NewDecoder(statsResp.Body).Decode(&stats); err != nil {
+		return nil, fmt.Errorf("decode container stats: %w", err)
+	}
+
+	// Calculate CPU percentage
+	cpuPercent := 0.0
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage) - float64(stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage) - float64(stats.PreCPUStats.SystemUsage)
+	cpuCount := float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
+	if cpuCount == 0 {
+		cpuCount = float64(stats.CPUStats.OnlineCPUs)
+	}
+	if cpuCount == 0 {
+		cpuCount = 1.0
+	}
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * cpuCount * 100.0
+	}
+
+	// Calculate Memory in MB (deduct cache/inactive file)
+	cache := stats.MemoryStats.Stats["cache"]
+	if cache == 0 {
+		cache = stats.MemoryStats.Stats["inactive_file"]
+	}
+	usedBytes := stats.MemoryStats.Usage
+	if usedBytes > cache {
+		usedBytes -= cache
+	}
+	memUsedMb := float64(usedBytes) / 1024.0 / 1024.0
+	memLimitMb := float64(stats.MemoryStats.Limit) / 1024.0 / 1024.0
+
+	// Network I/O
+	var rxBytes, txBytes int64
+	for _, netStats := range stats.Networks {
+		rxBytes += int64(netStats.RxBytes)
+		txBytes += int64(netStats.TxBytes)
+	}
+
+	// Disk usage
+	diskUsed := r.getWorkloadDiskUsage(workloadID)
+
+	// Minecraft RCON queries (best-effort, non-blocking)
+	var playersOnline int32
+	var maxPlayers int32 = 20
+	var playerSample []string
+	var tps float64 = 20.0
+
+	rconCtx, rconCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer rconCancel()
+
+	if listOut, err := r.RunCommand(rconCtx, workloadID, "list"); err == nil && listOut != "" {
+		count, sample := minecraft.ParsePlayerListFromOutput(listOut)
+		playersOnline = int32(count)
+		playerSample = sample
+	}
+
+	if tpsOut, err := r.RunCommand(rconCtx, workloadID, "tps"); err == nil && tpsOut != "" {
+		if parsedTPS := minecraft.ParseTPSFromOutput(tpsOut); parsedTPS > 0 {
+			tps = parsedTPS
+		}
+	}
+
+	return &v1.WorkloadMetrics{
+		WorkloadId:     workloadID,
+		CpuPercent:     cpuPercent,
+		MemoryUsedMb:   memUsedMb,
+		MemoryLimitMb:  memLimitMb,
+		DiskUsedBytes:  diskUsed,
+		NetworkRxBytes: rxBytes,
+		NetworkTxBytes: txBytes,
+		PlayersOnline:  playersOnline,
+		MaxPlayers:     maxPlayers,
+		Tps:            tps,
+		PlayerSample:   playerSample,
+		UpdatedAt:      timestamppb.Now(),
+	}, nil
+}
+
 // MockRunner is an in-memory test runner that simulates container lifecycle.
 type MockRunner struct {
 	Containers map[string]string
@@ -303,6 +456,31 @@ func (m *MockRunner) Logs(ctx context.Context, workloadID string, tail int, foll
 		out = "mock server log line\n"
 	}
 	return io.NopCloser(strings.NewReader(out)), nil
+}
+
+func (m *MockRunner) ListActiveWorkloadIDs(ctx context.Context) ([]string, error) {
+	var ids []string
+	for id := range m.Containers {
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func (m *MockRunner) GetMetrics(ctx context.Context, workloadID string) (*v1.WorkloadMetrics, error) {
+	return &v1.WorkloadMetrics{
+		WorkloadId:     workloadID,
+		CpuPercent:     12.5,
+		MemoryUsedMb:   512.0,
+		MemoryLimitMb:  2048.0,
+		DiskUsedBytes:  1048576,
+		NetworkRxBytes: 2048,
+		NetworkTxBytes: 4096,
+		PlayersOnline:  1,
+		MaxPlayers:     20,
+		Tps:            20.0,
+		PlayerSample:   []string{"Steve"},
+		UpdatedAt:      timestamppb.Now(),
+	}, nil
 }
 
 func isPortAvailable(port int) bool {

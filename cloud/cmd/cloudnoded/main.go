@@ -776,6 +776,29 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 							},
 						},
 					}
+
+				case *v1.ControlMessage_GetWorkloadMetrics:
+					req := p.GetWorkloadMetrics
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					metrics, err := runner.GetMetrics(ctx, req.WorkloadId)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_MetricsResult{
+							MetricsResult: &v1.AgentGetWorkloadMetricsResult{
+								CommandId:  req.CommandId,
+								WorkloadId: req.WorkloadId,
+								Success:    success,
+								Error:      errMsg,
+								Metrics:    metrics,
+							},
+						},
+					}
 				}
 			}
 		}()
@@ -797,10 +820,19 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 					break streamLoop
 				}
 			case <-ticker.C:
+				var wlMetrics []*v1.WorkloadMetrics
+				if wIDs, err := runner.ListActiveWorkloadIDs(ctx); err == nil {
+					for _, wid := range wIDs {
+						if m, err := runner.GetMetrics(ctx, wid); err == nil && m != nil {
+							wlMetrics = append(wlMetrics, m)
+						}
+					}
+				}
 				hb := &v1.AgentMessage{
 					Payload: &v1.AgentMessage_Heartbeat{
 						Heartbeat: &v1.AgentHeartbeat{
-							NodeId: id.NodeID,
+							NodeId:          id.NodeID,
+							WorkloadMetrics: wlMetrics,
 						},
 					},
 				}
@@ -809,7 +841,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 					ticker.Stop()
 					break streamLoop
 				}
-				logger.Info("heartbeat sent", "node_id", id.NodeID)
+				logger.Info("heartbeat sent", "node_id", id.NodeID, "workloads_sampled", len(wlMetrics))
 			}
 		}
 

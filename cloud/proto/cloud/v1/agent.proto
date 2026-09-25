@@ -54,6 +54,8 @@ message AgentHeartbeat {
   int32 container_count = 3;
   // Current allocation as computed by the agent.
   NodeAllocation allocation = 4;
+  // Real-time workload metrics for running workloads on this node.
+  repeated WorkloadMetrics workload_metrics = 5;
 }
 
 // AgentWorkloadStatus reports a workload transition observed on the node.
@@ -210,6 +212,21 @@ message AgentDeleteBackupResult {
   string error = 5;
 }
 
+
+// AgentGetWorkloadMetricsResult returns real-time telemetry for a workload.
+message AgentGetWorkloadMetricsResult {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Whether metrics collection succeeded.
+  bool success = 3;
+  // Error detail if failed.
+  string error = 4;
+  // Real-time metrics.
+  WorkloadMetrics metrics = 5;
+}
+
 // AgentMessage is anything the agent sends to the control plane.
 message AgentMessage {
   // Exactly one payload per message.
@@ -242,6 +259,8 @@ message AgentMessage {
     AgentRestoreBackupResult backup_restore_result = 13;
     // Backup delete result.
     AgentDeleteBackupResult backup_delete_result = 14;
+    // Workload metrics query result.
+    AgentGetWorkloadMetricsResult metrics_result = 15;
   }
 }
 
@@ -410,6 +429,15 @@ message ControlDeleteBackup {
   string backup_id = 3;
 }
 
+
+// ControlGetWorkloadMetrics requests real-time telemetry for a workload.
+message ControlGetWorkloadMetrics {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+}
+
 // ControlMessage is anything the control plane sends to an agent.
 message ControlMessage {
   // Exactly one payload per message.
@@ -446,6 +474,8 @@ message ControlMessage {
     ControlRestoreBackup restore_backup = 15;
     // Delete backup request.
     ControlDeleteBackup delete_backup = 16;
+    // Workload metrics query request.
+    ControlGetWorkloadMetrics get_workload_metrics = 17;
   }
 }
 

@@ -87,6 +87,9 @@ const (
 	// WorkloadServiceSetWorkloadBackupLockedProcedure is the fully-qualified name of the
 	// WorkloadService's SetWorkloadBackupLocked RPC.
 	WorkloadServiceSetWorkloadBackupLockedProcedure = "/cloud.v1.WorkloadService/SetWorkloadBackupLocked"
+	// WorkloadServiceGetWorkloadMetricsProcedure is the fully-qualified name of the WorkloadService's
+	// GetWorkloadMetrics RPC.
+	WorkloadServiceGetWorkloadMetricsProcedure = "/cloud.v1.WorkloadService/GetWorkloadMetrics"
 )
 
 // WorkloadServiceClient is a client for the cloud.v1.WorkloadService service.
@@ -128,6 +131,8 @@ type WorkloadServiceClient interface {
 	DeleteWorkloadBackup(context.Context, *connect.Request[v1.DeleteWorkloadBackupRequest]) (*connect.Response[v1.DeleteWorkloadBackupResponse], error)
 	// SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
 	SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error)
+	// GetWorkloadMetrics returns current real-time telemetry for a workload.
+	GetWorkloadMetrics(context.Context, *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error)
 }
 
 // NewWorkloadServiceClient constructs a client for the cloud.v1.WorkloadService service. By
@@ -249,6 +254,12 @@ func NewWorkloadServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(workloadServiceMethods.ByName("SetWorkloadBackupLocked")),
 			connect.WithClientOptions(opts...),
 		),
+		getWorkloadMetrics: connect.NewClient[v1.GetWorkloadMetricsRequest, v1.GetWorkloadMetricsResponse](
+			httpClient,
+			baseURL+WorkloadServiceGetWorkloadMetricsProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadMetrics")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -272,6 +283,7 @@ type workloadServiceClient struct {
 	restoreWorkloadBackup   *connect.Client[v1.RestoreWorkloadBackupRequest, v1.RestoreWorkloadBackupResponse]
 	deleteWorkloadBackup    *connect.Client[v1.DeleteWorkloadBackupRequest, v1.DeleteWorkloadBackupResponse]
 	setWorkloadBackupLocked *connect.Client[v1.SetWorkloadBackupLockedRequest, v1.SetWorkloadBackupLockedResponse]
+	getWorkloadMetrics      *connect.Client[v1.GetWorkloadMetricsRequest, v1.GetWorkloadMetricsResponse]
 }
 
 // ListWorkloads calls cloud.v1.WorkloadService.ListWorkloads.
@@ -364,6 +376,11 @@ func (c *workloadServiceClient) SetWorkloadBackupLocked(ctx context.Context, req
 	return c.setWorkloadBackupLocked.CallUnary(ctx, req)
 }
 
+// GetWorkloadMetrics calls cloud.v1.WorkloadService.GetWorkloadMetrics.
+func (c *workloadServiceClient) GetWorkloadMetrics(ctx context.Context, req *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error) {
+	return c.getWorkloadMetrics.CallUnary(ctx, req)
+}
+
 // WorkloadServiceHandler is an implementation of the cloud.v1.WorkloadService service.
 type WorkloadServiceHandler interface {
 	// ListWorkloads lists workloads in the active org.
@@ -403,6 +420,8 @@ type WorkloadServiceHandler interface {
 	DeleteWorkloadBackup(context.Context, *connect.Request[v1.DeleteWorkloadBackupRequest]) (*connect.Response[v1.DeleteWorkloadBackupResponse], error)
 	// SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
 	SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error)
+	// GetWorkloadMetrics returns current real-time telemetry for a workload.
+	GetWorkloadMetrics(context.Context, *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error)
 }
 
 // NewWorkloadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -520,6 +539,12 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 		connect.WithSchema(workloadServiceMethods.ByName("SetWorkloadBackupLocked")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workloadServiceGetWorkloadMetricsHandler := connect.NewUnaryHandler(
+		WorkloadServiceGetWorkloadMetricsProcedure,
+		svc.GetWorkloadMetrics,
+		connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/cloud.v1.WorkloadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkloadServiceListWorkloadsProcedure:
@@ -558,6 +583,8 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 			workloadServiceDeleteWorkloadBackupHandler.ServeHTTP(w, r)
 		case WorkloadServiceSetWorkloadBackupLockedProcedure:
 			workloadServiceSetWorkloadBackupLockedHandler.ServeHTTP(w, r)
+		case WorkloadServiceGetWorkloadMetricsProcedure:
+			workloadServiceGetWorkloadMetricsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -637,4 +664,8 @@ func (UnimplementedWorkloadServiceHandler) DeleteWorkloadBackup(context.Context,
 
 func (UnimplementedWorkloadServiceHandler) SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.SetWorkloadBackupLocked is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) GetWorkloadMetrics(context.Context, *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.GetWorkloadMetrics is not implemented"))
 }

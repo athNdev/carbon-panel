@@ -2412,6 +2412,243 @@ func (x *SetWorkloadBackupLockedResponse) GetBackup() *WorkloadBackup {
 	return nil
 }
 
+// WorkloadMetrics represents real-time resource usage and server metrics.
+type WorkloadMetrics struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Target workload ID.
+	WorkloadId string `protobuf:"bytes,1,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// CPU utilization percentage across assigned cores.
+	CpuPercent float64 `protobuf:"fixed64,2,opt,name=cpu_percent,json=cpuPercent,proto3" json:"cpu_percent,omitempty"`
+	// Current memory usage in MiB.
+	MemoryUsedMb float64 `protobuf:"fixed64,3,opt,name=memory_used_mb,json=memoryUsedMb,proto3" json:"memory_used_mb,omitempty"`
+	// Memory limit in MiB.
+	MemoryLimitMb float64 `protobuf:"fixed64,4,opt,name=memory_limit_mb,json=memoryLimitMb,proto3" json:"memory_limit_mb,omitempty"`
+	// Total disk used by workload data in bytes.
+	DiskUsedBytes int64 `protobuf:"varint,5,opt,name=disk_used_bytes,json=diskUsedBytes,proto3" json:"disk_used_bytes,omitempty"`
+	// Cumulative network bytes received.
+	NetworkRxBytes int64 `protobuf:"varint,6,opt,name=network_rx_bytes,json=networkRxBytes,proto3" json:"network_rx_bytes,omitempty"`
+	// Cumulative network bytes transmitted.
+	NetworkTxBytes int64 `protobuf:"varint,7,opt,name=network_tx_bytes,json=networkTxBytes,proto3" json:"network_tx_bytes,omitempty"`
+	// Current number of players online.
+	PlayersOnline int32 `protobuf:"varint,8,opt,name=players_online,json=playersOnline,proto3" json:"players_online,omitempty"`
+	// Maximum player capacity configured.
+	MaxPlayers int32 `protobuf:"varint,9,opt,name=max_players,json=maxPlayers,proto3" json:"max_players,omitempty"`
+	// Current ticks per second (TPS).
+	Tps float64 `protobuf:"fixed64,10,opt,name=tps,proto3" json:"tps,omitempty"`
+	// Sample of currently connected player names.
+	PlayerSample []string `protobuf:"bytes,11,rep,name=player_sample,json=playerSample,proto3" json:"player_sample,omitempty"`
+	// Timestamp when metrics were captured.
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkloadMetrics) Reset() {
+	*x = WorkloadMetrics{}
+	mi := &file_cloud_v1_workload_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkloadMetrics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkloadMetrics) ProtoMessage() {}
+
+func (x *WorkloadMetrics) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_workload_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkloadMetrics.ProtoReflect.Descriptor instead.
+func (*WorkloadMetrics) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_workload_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *WorkloadMetrics) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *WorkloadMetrics) GetCpuPercent() float64 {
+	if x != nil {
+		return x.CpuPercent
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetMemoryUsedMb() float64 {
+	if x != nil {
+		return x.MemoryUsedMb
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetMemoryLimitMb() float64 {
+	if x != nil {
+		return x.MemoryLimitMb
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetDiskUsedBytes() int64 {
+	if x != nil {
+		return x.DiskUsedBytes
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetNetworkRxBytes() int64 {
+	if x != nil {
+		return x.NetworkRxBytes
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetNetworkTxBytes() int64 {
+	if x != nil {
+		return x.NetworkTxBytes
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetPlayersOnline() int32 {
+	if x != nil {
+		return x.PlayersOnline
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetMaxPlayers() int32 {
+	if x != nil {
+		return x.MaxPlayers
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetTps() float64 {
+	if x != nil {
+		return x.Tps
+	}
+	return 0
+}
+
+func (x *WorkloadMetrics) GetPlayerSample() []string {
+	if x != nil {
+		return x.PlayerSample
+	}
+	return nil
+}
+
+func (x *WorkloadMetrics) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// GetWorkloadMetricsRequest queries metrics for a workload.
+type GetWorkloadMetricsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Target workload ID.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkloadMetricsRequest) Reset() {
+	*x = GetWorkloadMetricsRequest{}
+	mi := &file_cloud_v1_workload_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkloadMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkloadMetricsRequest) ProtoMessage() {}
+
+func (x *GetWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_workload_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkloadMetricsRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkloadMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_workload_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *GetWorkloadMetricsRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// GetWorkloadMetricsResponse returns real-time metrics.
+type GetWorkloadMetricsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Metrics for the workload.
+	Metrics       *WorkloadMetrics `protobuf:"bytes,1,opt,name=metrics,proto3" json:"metrics,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkloadMetricsResponse) Reset() {
+	*x = GetWorkloadMetricsResponse{}
+	mi := &file_cloud_v1_workload_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkloadMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkloadMetricsResponse) ProtoMessage() {}
+
+func (x *GetWorkloadMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_workload_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkloadMetricsResponse.ProtoReflect.Descriptor instead.
+func (*GetWorkloadMetricsResponse) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_workload_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *GetWorkloadMetricsResponse) GetMetrics() *WorkloadMetrics {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
 var File_cloud_v1_workload_proto protoreflect.FileDescriptor
 
 const file_cloud_v1_workload_proto_rawDesc = "" +
@@ -2590,7 +2827,29 @@ const file_cloud_v1_workload_proto_rawDesc = "" +
 	"\tbackup_id\x18\x02 \x01(\tR\bbackupId\x12\x16\n" +
 	"\x06locked\x18\x03 \x01(\bR\x06locked\"S\n" +
 	"\x1fSetWorkloadBackupLockedResponse\x120\n" +
-	"\x06backup\x18\x01 \x01(\v2\x18.cloud.v1.WorkloadBackupR\x06backup2\x95\r\n" +
+	"\x06backup\x18\x01 \x01(\v2\x18.cloud.v1.WorkloadBackupR\x06backup\"\xd7\x03\n" +
+	"\x0fWorkloadMetrics\x12\x1f\n" +
+	"\vworkload_id\x18\x01 \x01(\tR\n" +
+	"workloadId\x12\x1f\n" +
+	"\vcpu_percent\x18\x02 \x01(\x01R\n" +
+	"cpuPercent\x12$\n" +
+	"\x0ememory_used_mb\x18\x03 \x01(\x01R\fmemoryUsedMb\x12&\n" +
+	"\x0fmemory_limit_mb\x18\x04 \x01(\x01R\rmemoryLimitMb\x12&\n" +
+	"\x0fdisk_used_bytes\x18\x05 \x01(\x03R\rdiskUsedBytes\x12(\n" +
+	"\x10network_rx_bytes\x18\x06 \x01(\x03R\x0enetworkRxBytes\x12(\n" +
+	"\x10network_tx_bytes\x18\a \x01(\x03R\x0enetworkTxBytes\x12%\n" +
+	"\x0eplayers_online\x18\b \x01(\x05R\rplayersOnline\x12\x1f\n" +
+	"\vmax_players\x18\t \x01(\x05R\n" +
+	"maxPlayers\x12\x10\n" +
+	"\x03tps\x18\n" +
+	" \x01(\x01R\x03tps\x12#\n" +
+	"\rplayer_sample\x18\v \x03(\tR\fplayerSample\x129\n" +
+	"\n" +
+	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"+\n" +
+	"\x19GetWorkloadMetricsRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"Q\n" +
+	"\x1aGetWorkloadMetricsResponse\x123\n" +
+	"\ametrics\x18\x01 \x01(\v2\x19.cloud.v1.WorkloadMetricsR\ametrics2\xf6\r\n" +
 	"\x0fWorkloadService\x12P\n" +
 	"\rListWorkloads\x12\x1e.cloud.v1.ListWorkloadsRequest\x1a\x1f.cloud.v1.ListWorkloadsResponse\x12J\n" +
 	"\vGetWorkload\x12\x1c.cloud.v1.GetWorkloadRequest\x1a\x1d.cloud.v1.GetWorkloadResponse\x12S\n" +
@@ -2609,7 +2868,8 @@ const file_cloud_v1_workload_proto_rawDesc = "" +
 	"\x13ListWorkloadBackups\x12$.cloud.v1.ListWorkloadBackupsRequest\x1a%.cloud.v1.ListWorkloadBackupsResponse\x12h\n" +
 	"\x15RestoreWorkloadBackup\x12&.cloud.v1.RestoreWorkloadBackupRequest\x1a'.cloud.v1.RestoreWorkloadBackupResponse\x12e\n" +
 	"\x14DeleteWorkloadBackup\x12%.cloud.v1.DeleteWorkloadBackupRequest\x1a&.cloud.v1.DeleteWorkloadBackupResponse\x12n\n" +
-	"\x17SetWorkloadBackupLocked\x12(.cloud.v1.SetWorkloadBackupLockedRequest\x1a).cloud.v1.SetWorkloadBackupLockedResponseB<Z:github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1b\x06proto3"
+	"\x17SetWorkloadBackupLocked\x12(.cloud.v1.SetWorkloadBackupLockedRequest\x1a).cloud.v1.SetWorkloadBackupLockedResponse\x12_\n" +
+	"\x12GetWorkloadMetrics\x12#.cloud.v1.GetWorkloadMetricsRequest\x1a$.cloud.v1.GetWorkloadMetricsResponseB<Z:github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1b\x06proto3"
 
 var (
 	file_cloud_v1_workload_proto_rawDescOnce sync.Once
@@ -2623,7 +2883,7 @@ func file_cloud_v1_workload_proto_rawDescGZIP() []byte {
 	return file_cloud_v1_workload_proto_rawDescData
 }
 
-var file_cloud_v1_workload_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
+var file_cloud_v1_workload_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_cloud_v1_workload_proto_goTypes = []any{
 	(*WorkloadSpec)(nil),                    // 0: cloud.v1.WorkloadSpec
 	(*WorkloadEvent)(nil),                   // 1: cloud.v1.WorkloadEvent
@@ -2665,27 +2925,30 @@ var file_cloud_v1_workload_proto_goTypes = []any{
 	(*DeleteWorkloadBackupResponse)(nil),    // 37: cloud.v1.DeleteWorkloadBackupResponse
 	(*SetWorkloadBackupLockedRequest)(nil),  // 38: cloud.v1.SetWorkloadBackupLockedRequest
 	(*SetWorkloadBackupLockedResponse)(nil), // 39: cloud.v1.SetWorkloadBackupLockedResponse
-	nil,                                     // 40: cloud.v1.WorkloadSpec.EnvEntry
-	nil,                                     // 41: cloud.v1.GetWorkloadConfigResponse.PropertiesEntry
-	nil,                                     // 42: cloud.v1.UpdateWorkloadConfigRequest.PropertiesEntry
-	nil,                                     // 43: cloud.v1.UpdateWorkloadConfigResponse.PropertiesEntry
-	(*timestamppb.Timestamp)(nil),           // 44: google.protobuf.Timestamp
-	(WorkloadStatus)(0),                     // 45: cloud.v1.WorkloadStatus
-	(*PageRequest)(nil),                     // 46: cloud.v1.PageRequest
-	(*PageResponse)(nil),                    // 47: cloud.v1.PageResponse
+	(*WorkloadMetrics)(nil),                 // 40: cloud.v1.WorkloadMetrics
+	(*GetWorkloadMetricsRequest)(nil),       // 41: cloud.v1.GetWorkloadMetricsRequest
+	(*GetWorkloadMetricsResponse)(nil),      // 42: cloud.v1.GetWorkloadMetricsResponse
+	nil,                                     // 43: cloud.v1.WorkloadSpec.EnvEntry
+	nil,                                     // 44: cloud.v1.GetWorkloadConfigResponse.PropertiesEntry
+	nil,                                     // 45: cloud.v1.UpdateWorkloadConfigRequest.PropertiesEntry
+	nil,                                     // 46: cloud.v1.UpdateWorkloadConfigResponse.PropertiesEntry
+	(*timestamppb.Timestamp)(nil),           // 47: google.protobuf.Timestamp
+	(WorkloadStatus)(0),                     // 48: cloud.v1.WorkloadStatus
+	(*PageRequest)(nil),                     // 49: cloud.v1.PageRequest
+	(*PageResponse)(nil),                    // 50: cloud.v1.PageResponse
 }
 var file_cloud_v1_workload_proto_depIdxs = []int32{
-	40, // 0: cloud.v1.WorkloadSpec.env:type_name -> cloud.v1.WorkloadSpec.EnvEntry
-	44, // 1: cloud.v1.WorkloadEvent.created_at:type_name -> google.protobuf.Timestamp
+	43, // 0: cloud.v1.WorkloadSpec.env:type_name -> cloud.v1.WorkloadSpec.EnvEntry
+	47, // 1: cloud.v1.WorkloadEvent.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: cloud.v1.Workload.spec:type_name -> cloud.v1.WorkloadSpec
-	45, // 3: cloud.v1.Workload.status:type_name -> cloud.v1.WorkloadStatus
-	44, // 4: cloud.v1.Workload.created_at:type_name -> google.protobuf.Timestamp
-	44, // 5: cloud.v1.Workload.updated_at:type_name -> google.protobuf.Timestamp
-	44, // 6: cloud.v1.WorkloadLogLine.timestamp:type_name -> google.protobuf.Timestamp
-	45, // 7: cloud.v1.ListWorkloadsRequest.status:type_name -> cloud.v1.WorkloadStatus
-	46, // 8: cloud.v1.ListWorkloadsRequest.page:type_name -> cloud.v1.PageRequest
+	48, // 3: cloud.v1.Workload.status:type_name -> cloud.v1.WorkloadStatus
+	47, // 4: cloud.v1.Workload.created_at:type_name -> google.protobuf.Timestamp
+	47, // 5: cloud.v1.Workload.updated_at:type_name -> google.protobuf.Timestamp
+	47, // 6: cloud.v1.WorkloadLogLine.timestamp:type_name -> google.protobuf.Timestamp
+	48, // 7: cloud.v1.ListWorkloadsRequest.status:type_name -> cloud.v1.WorkloadStatus
+	49, // 8: cloud.v1.ListWorkloadsRequest.page:type_name -> cloud.v1.PageRequest
 	2,  // 9: cloud.v1.ListWorkloadsResponse.workloads:type_name -> cloud.v1.Workload
-	47, // 10: cloud.v1.ListWorkloadsResponse.page:type_name -> cloud.v1.PageResponse
+	50, // 10: cloud.v1.ListWorkloadsResponse.page:type_name -> cloud.v1.PageResponse
 	2,  // 11: cloud.v1.GetWorkloadResponse.workload:type_name -> cloud.v1.Workload
 	0,  // 12: cloud.v1.CreateWorkloadRequest.spec:type_name -> cloud.v1.WorkloadSpec
 	2,  // 13: cloud.v1.CreateWorkloadResponse.workload:type_name -> cloud.v1.Workload
@@ -2694,57 +2957,61 @@ var file_cloud_v1_workload_proto_depIdxs = []int32{
 	2,  // 16: cloud.v1.StartWorkloadResponse.workload:type_name -> cloud.v1.Workload
 	2,  // 17: cloud.v1.StopWorkloadResponse.workload:type_name -> cloud.v1.Workload
 	2,  // 18: cloud.v1.RestartWorkloadResponse.workload:type_name -> cloud.v1.Workload
-	46, // 19: cloud.v1.ListWorkloadEventsRequest.page:type_name -> cloud.v1.PageRequest
+	49, // 19: cloud.v1.ListWorkloadEventsRequest.page:type_name -> cloud.v1.PageRequest
 	1,  // 20: cloud.v1.ListWorkloadEventsResponse.events:type_name -> cloud.v1.WorkloadEvent
-	47, // 21: cloud.v1.ListWorkloadEventsResponse.page:type_name -> cloud.v1.PageResponse
-	41, // 22: cloud.v1.GetWorkloadConfigResponse.properties:type_name -> cloud.v1.GetWorkloadConfigResponse.PropertiesEntry
-	42, // 23: cloud.v1.UpdateWorkloadConfigRequest.properties:type_name -> cloud.v1.UpdateWorkloadConfigRequest.PropertiesEntry
-	43, // 24: cloud.v1.UpdateWorkloadConfigResponse.properties:type_name -> cloud.v1.UpdateWorkloadConfigResponse.PropertiesEntry
-	44, // 25: cloud.v1.WorkloadBackup.created_at:type_name -> google.protobuf.Timestamp
+	50, // 21: cloud.v1.ListWorkloadEventsResponse.page:type_name -> cloud.v1.PageResponse
+	44, // 22: cloud.v1.GetWorkloadConfigResponse.properties:type_name -> cloud.v1.GetWorkloadConfigResponse.PropertiesEntry
+	45, // 23: cloud.v1.UpdateWorkloadConfigRequest.properties:type_name -> cloud.v1.UpdateWorkloadConfigRequest.PropertiesEntry
+	46, // 24: cloud.v1.UpdateWorkloadConfigResponse.properties:type_name -> cloud.v1.UpdateWorkloadConfigResponse.PropertiesEntry
+	47, // 25: cloud.v1.WorkloadBackup.created_at:type_name -> google.protobuf.Timestamp
 	29, // 26: cloud.v1.CreateWorkloadBackupResponse.backup:type_name -> cloud.v1.WorkloadBackup
 	29, // 27: cloud.v1.ListWorkloadBackupsResponse.backups:type_name -> cloud.v1.WorkloadBackup
 	29, // 28: cloud.v1.SetWorkloadBackupLockedResponse.backup:type_name -> cloud.v1.WorkloadBackup
-	4,  // 29: cloud.v1.WorkloadService.ListWorkloads:input_type -> cloud.v1.ListWorkloadsRequest
-	6,  // 30: cloud.v1.WorkloadService.GetWorkload:input_type -> cloud.v1.GetWorkloadRequest
-	8,  // 31: cloud.v1.WorkloadService.CreateWorkload:input_type -> cloud.v1.CreateWorkloadRequest
-	10, // 32: cloud.v1.WorkloadService.UpdateWorkload:input_type -> cloud.v1.UpdateWorkloadRequest
-	12, // 33: cloud.v1.WorkloadService.DeleteWorkload:input_type -> cloud.v1.DeleteWorkloadRequest
-	14, // 34: cloud.v1.WorkloadService.StartWorkload:input_type -> cloud.v1.StartWorkloadRequest
-	16, // 35: cloud.v1.WorkloadService.StopWorkload:input_type -> cloud.v1.StopWorkloadRequest
-	18, // 36: cloud.v1.WorkloadService.RestartWorkload:input_type -> cloud.v1.RestartWorkloadRequest
-	20, // 37: cloud.v1.WorkloadService.StreamWorkloadLogs:input_type -> cloud.v1.StreamWorkloadLogsRequest
-	21, // 38: cloud.v1.WorkloadService.SendWorkloadCommand:input_type -> cloud.v1.SendWorkloadCommandRequest
-	23, // 39: cloud.v1.WorkloadService.ListWorkloadEvents:input_type -> cloud.v1.ListWorkloadEventsRequest
-	25, // 40: cloud.v1.WorkloadService.GetWorkloadConfig:input_type -> cloud.v1.GetWorkloadConfigRequest
-	27, // 41: cloud.v1.WorkloadService.UpdateWorkloadConfig:input_type -> cloud.v1.UpdateWorkloadConfigRequest
-	30, // 42: cloud.v1.WorkloadService.CreateWorkloadBackup:input_type -> cloud.v1.CreateWorkloadBackupRequest
-	32, // 43: cloud.v1.WorkloadService.ListWorkloadBackups:input_type -> cloud.v1.ListWorkloadBackupsRequest
-	34, // 44: cloud.v1.WorkloadService.RestoreWorkloadBackup:input_type -> cloud.v1.RestoreWorkloadBackupRequest
-	36, // 45: cloud.v1.WorkloadService.DeleteWorkloadBackup:input_type -> cloud.v1.DeleteWorkloadBackupRequest
-	38, // 46: cloud.v1.WorkloadService.SetWorkloadBackupLocked:input_type -> cloud.v1.SetWorkloadBackupLockedRequest
-	5,  // 47: cloud.v1.WorkloadService.ListWorkloads:output_type -> cloud.v1.ListWorkloadsResponse
-	7,  // 48: cloud.v1.WorkloadService.GetWorkload:output_type -> cloud.v1.GetWorkloadResponse
-	9,  // 49: cloud.v1.WorkloadService.CreateWorkload:output_type -> cloud.v1.CreateWorkloadResponse
-	11, // 50: cloud.v1.WorkloadService.UpdateWorkload:output_type -> cloud.v1.UpdateWorkloadResponse
-	13, // 51: cloud.v1.WorkloadService.DeleteWorkload:output_type -> cloud.v1.DeleteWorkloadResponse
-	15, // 52: cloud.v1.WorkloadService.StartWorkload:output_type -> cloud.v1.StartWorkloadResponse
-	17, // 53: cloud.v1.WorkloadService.StopWorkload:output_type -> cloud.v1.StopWorkloadResponse
-	19, // 54: cloud.v1.WorkloadService.RestartWorkload:output_type -> cloud.v1.RestartWorkloadResponse
-	3,  // 55: cloud.v1.WorkloadService.StreamWorkloadLogs:output_type -> cloud.v1.WorkloadLogLine
-	22, // 56: cloud.v1.WorkloadService.SendWorkloadCommand:output_type -> cloud.v1.SendWorkloadCommandResponse
-	24, // 57: cloud.v1.WorkloadService.ListWorkloadEvents:output_type -> cloud.v1.ListWorkloadEventsResponse
-	26, // 58: cloud.v1.WorkloadService.GetWorkloadConfig:output_type -> cloud.v1.GetWorkloadConfigResponse
-	28, // 59: cloud.v1.WorkloadService.UpdateWorkloadConfig:output_type -> cloud.v1.UpdateWorkloadConfigResponse
-	31, // 60: cloud.v1.WorkloadService.CreateWorkloadBackup:output_type -> cloud.v1.CreateWorkloadBackupResponse
-	33, // 61: cloud.v1.WorkloadService.ListWorkloadBackups:output_type -> cloud.v1.ListWorkloadBackupsResponse
-	35, // 62: cloud.v1.WorkloadService.RestoreWorkloadBackup:output_type -> cloud.v1.RestoreWorkloadBackupResponse
-	37, // 63: cloud.v1.WorkloadService.DeleteWorkloadBackup:output_type -> cloud.v1.DeleteWorkloadBackupResponse
-	39, // 64: cloud.v1.WorkloadService.SetWorkloadBackupLocked:output_type -> cloud.v1.SetWorkloadBackupLockedResponse
-	47, // [47:65] is the sub-list for method output_type
-	29, // [29:47] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	47, // 29: cloud.v1.WorkloadMetrics.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 30: cloud.v1.GetWorkloadMetricsResponse.metrics:type_name -> cloud.v1.WorkloadMetrics
+	4,  // 31: cloud.v1.WorkloadService.ListWorkloads:input_type -> cloud.v1.ListWorkloadsRequest
+	6,  // 32: cloud.v1.WorkloadService.GetWorkload:input_type -> cloud.v1.GetWorkloadRequest
+	8,  // 33: cloud.v1.WorkloadService.CreateWorkload:input_type -> cloud.v1.CreateWorkloadRequest
+	10, // 34: cloud.v1.WorkloadService.UpdateWorkload:input_type -> cloud.v1.UpdateWorkloadRequest
+	12, // 35: cloud.v1.WorkloadService.DeleteWorkload:input_type -> cloud.v1.DeleteWorkloadRequest
+	14, // 36: cloud.v1.WorkloadService.StartWorkload:input_type -> cloud.v1.StartWorkloadRequest
+	16, // 37: cloud.v1.WorkloadService.StopWorkload:input_type -> cloud.v1.StopWorkloadRequest
+	18, // 38: cloud.v1.WorkloadService.RestartWorkload:input_type -> cloud.v1.RestartWorkloadRequest
+	20, // 39: cloud.v1.WorkloadService.StreamWorkloadLogs:input_type -> cloud.v1.StreamWorkloadLogsRequest
+	21, // 40: cloud.v1.WorkloadService.SendWorkloadCommand:input_type -> cloud.v1.SendWorkloadCommandRequest
+	23, // 41: cloud.v1.WorkloadService.ListWorkloadEvents:input_type -> cloud.v1.ListWorkloadEventsRequest
+	25, // 42: cloud.v1.WorkloadService.GetWorkloadConfig:input_type -> cloud.v1.GetWorkloadConfigRequest
+	27, // 43: cloud.v1.WorkloadService.UpdateWorkloadConfig:input_type -> cloud.v1.UpdateWorkloadConfigRequest
+	30, // 44: cloud.v1.WorkloadService.CreateWorkloadBackup:input_type -> cloud.v1.CreateWorkloadBackupRequest
+	32, // 45: cloud.v1.WorkloadService.ListWorkloadBackups:input_type -> cloud.v1.ListWorkloadBackupsRequest
+	34, // 46: cloud.v1.WorkloadService.RestoreWorkloadBackup:input_type -> cloud.v1.RestoreWorkloadBackupRequest
+	36, // 47: cloud.v1.WorkloadService.DeleteWorkloadBackup:input_type -> cloud.v1.DeleteWorkloadBackupRequest
+	38, // 48: cloud.v1.WorkloadService.SetWorkloadBackupLocked:input_type -> cloud.v1.SetWorkloadBackupLockedRequest
+	41, // 49: cloud.v1.WorkloadService.GetWorkloadMetrics:input_type -> cloud.v1.GetWorkloadMetricsRequest
+	5,  // 50: cloud.v1.WorkloadService.ListWorkloads:output_type -> cloud.v1.ListWorkloadsResponse
+	7,  // 51: cloud.v1.WorkloadService.GetWorkload:output_type -> cloud.v1.GetWorkloadResponse
+	9,  // 52: cloud.v1.WorkloadService.CreateWorkload:output_type -> cloud.v1.CreateWorkloadResponse
+	11, // 53: cloud.v1.WorkloadService.UpdateWorkload:output_type -> cloud.v1.UpdateWorkloadResponse
+	13, // 54: cloud.v1.WorkloadService.DeleteWorkload:output_type -> cloud.v1.DeleteWorkloadResponse
+	15, // 55: cloud.v1.WorkloadService.StartWorkload:output_type -> cloud.v1.StartWorkloadResponse
+	17, // 56: cloud.v1.WorkloadService.StopWorkload:output_type -> cloud.v1.StopWorkloadResponse
+	19, // 57: cloud.v1.WorkloadService.RestartWorkload:output_type -> cloud.v1.RestartWorkloadResponse
+	3,  // 58: cloud.v1.WorkloadService.StreamWorkloadLogs:output_type -> cloud.v1.WorkloadLogLine
+	22, // 59: cloud.v1.WorkloadService.SendWorkloadCommand:output_type -> cloud.v1.SendWorkloadCommandResponse
+	24, // 60: cloud.v1.WorkloadService.ListWorkloadEvents:output_type -> cloud.v1.ListWorkloadEventsResponse
+	26, // 61: cloud.v1.WorkloadService.GetWorkloadConfig:output_type -> cloud.v1.GetWorkloadConfigResponse
+	28, // 62: cloud.v1.WorkloadService.UpdateWorkloadConfig:output_type -> cloud.v1.UpdateWorkloadConfigResponse
+	31, // 63: cloud.v1.WorkloadService.CreateWorkloadBackup:output_type -> cloud.v1.CreateWorkloadBackupResponse
+	33, // 64: cloud.v1.WorkloadService.ListWorkloadBackups:output_type -> cloud.v1.ListWorkloadBackupsResponse
+	35, // 65: cloud.v1.WorkloadService.RestoreWorkloadBackup:output_type -> cloud.v1.RestoreWorkloadBackupResponse
+	37, // 66: cloud.v1.WorkloadService.DeleteWorkloadBackup:output_type -> cloud.v1.DeleteWorkloadBackupResponse
+	39, // 67: cloud.v1.WorkloadService.SetWorkloadBackupLocked:output_type -> cloud.v1.SetWorkloadBackupLockedResponse
+	42, // 68: cloud.v1.WorkloadService.GetWorkloadMetrics:output_type -> cloud.v1.GetWorkloadMetricsResponse
+	50, // [50:69] is the sub-list for method output_type
+	31, // [31:50] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_cloud_v1_workload_proto_init() }
@@ -2760,7 +3027,7 @@ func file_cloud_v1_workload_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cloud_v1_workload_proto_rawDesc), len(file_cloud_v1_workload_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   44,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

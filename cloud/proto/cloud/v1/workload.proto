@@ -113,6 +113,8 @@ service WorkloadService {
   rpc DeleteWorkloadBackup(DeleteWorkloadBackupRequest) returns (DeleteWorkloadBackupResponse);
   // SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
   rpc SetWorkloadBackupLocked(SetWorkloadBackupLockedRequest) returns (SetWorkloadBackupLockedResponse);
+  // GetWorkloadMetrics returns current real-time telemetry for a workload.
+  rpc GetWorkloadMetrics(GetWorkloadMetricsRequest) returns (GetWorkloadMetricsResponse);
 }
 
 // WorkloadLogLine is one console line from a workload.
@@ -407,4 +409,44 @@ message SetWorkloadBackupLockedRequest {
 message SetWorkloadBackupLockedResponse {
   // Updated backup.
   WorkloadBackup backup = 1;
+}
+
+// WorkloadMetrics represents real-time resource usage and server metrics.
+message WorkloadMetrics {
+  // Target workload ID.
+  string workload_id = 1;
+  // CPU utilization percentage across assigned cores.
+  double cpu_percent = 2;
+  // Current memory usage in MiB.
+  double memory_used_mb = 3;
+  // Memory limit in MiB.
+  double memory_limit_mb = 4;
+  // Total disk used by workload data in bytes.
+  int64 disk_used_bytes = 5;
+  // Cumulative network bytes received.
+  int64 network_rx_bytes = 6;
+  // Cumulative network bytes transmitted.
+  int64 network_tx_bytes = 7;
+  // Current number of players online.
+  int32 players_online = 8;
+  // Maximum player capacity configured.
+  int32 max_players = 9;
+  // Current ticks per second (TPS).
+  double tps = 10;
+  // Sample of currently connected player names.
+  repeated string player_sample = 11;
+  // Timestamp when metrics were captured.
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// GetWorkloadMetricsRequest queries metrics for a workload.
+message GetWorkloadMetricsRequest {
+  // Target workload ID.
+  string id = 1;
+}
+
+// GetWorkloadMetricsResponse returns real-time metrics.
+message GetWorkloadMetricsResponse {
+  // Metrics for the workload.
+  WorkloadMetrics metrics = 1;
 }

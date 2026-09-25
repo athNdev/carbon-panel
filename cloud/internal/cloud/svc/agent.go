@@ -210,6 +210,10 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 			if s.dispatcher != nil {
 				s.dispatcher.ResolveDeleteBackup(payload.BackupDeleteResult)
 			}
+		case *v1.AgentMessage_MetricsResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveMetrics(payload.MetricsResult)
+			}
 		default:
 			// Unknown envelopes are ignored: old agents keep working.
 		}
@@ -277,6 +281,9 @@ func welcomeMsg(ctx context.Context, s *AgentService, hello *v1.AgentHello) *v1.
 func (s *AgentService) onHeartbeat(ctx context.Context, hb *v1.AgentHeartbeat) {
 	if hb == nil || hb.NodeId == "" {
 		return
+	}
+	if s.dispatcher != nil && len(hb.WorkloadMetrics) > 0 {
+		s.dispatcher.UpdateWorkloadMetrics(hb.WorkloadMetrics)
 	}
 	p, ok := principal.From(ctx)
 	if !ok || p.Kind != principal.KindNode {
