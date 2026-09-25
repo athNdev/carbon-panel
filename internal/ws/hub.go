@@ -11,6 +11,7 @@ package ws
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"sync"
@@ -171,8 +172,83 @@ func (c *Client) migrateSubscription(serverID, newContainerID string) {
 	}
 }
 
+// Pre-upgrade credential failures (MINE-164). The handshake is rejected
+// with 401 before a socket exists; the AUTH message path reports the same
+// failures over the socket it already holds.
+var (
+	errWSNoAuthProvider = errors.New("no authentication provider is enabled")
+	errWSInvalidToken   = errors.New("invalid token")
+	errWSAuthRequired   = errors.New("authentication required")
+)
+
+// authenticateToken applies the WS credential policy shared by the
+// pre-upgrade handshake check and the AUTH message path: explicit no-auth
+// mode, session/API tokens, then the anonymous fallback.
+func (h *Hub) authenticateToken(ctx context.Context, token string) (*auth.AuthenticatedUser, error) {
+	// If no auth providers are enabled the panel is running without
+	// authentication. That is only permitted when the operator explicitly
+	// opted in (auth.allow_no_auth); otherwise fail closed rather than grant
+	// every client admin.
+	if !h.authManager.IsAnyAuthEnabled() {
+		if !h.authManager.NoAuthAllowed() {
+			return nil, errWSNoAuthProvider
+		}
+		return &auth.AuthenticatedUser{
+			ID:       "admin",
+			Username: "admin",
+			Roles:    []string{"admin"},
+			Provider: "none",
+		}, nil
+	}
+
+	if token != "" {
+		var user *auth.AuthenticatedUser
+		var err error
+		if strings.HasPrefix(token, "dp_") {
+			user, err = h.authManager.ValidateAPIToken(ctx, token)
+		} else {
+			user, err = h.authManager.ValidateSession(ctx, token)
+		}
+		if err == nil {
+			return user, nil
+		}
+		// Try anonymous access
+		if h.authManager.IsAnonymousAccessEnabled() {
+			return h.authManager.AnonymousUser(), nil
+		}
+		return nil, errWSInvalidToken
+	}
+	if h.authManager.IsAnonymousAccessEnabled() {
+		return h.authManager.AnonymousUser(), nil
+	}
+	return nil, errWSAuthRequired
+}
+
+// handshakeToken extracts the pre-upgrade credential: explicit ?token=
+// query parameter first (what the web console sends), then the
+// Authorization header (Bearer session/dp_ token, same as the RPC API).
+func handshakeToken(r *http.Request) string {
+	if token := r.URL.Query().Get("token"); token != "" {
+		return token
+	}
+	if header := r.Header.Get("Authorization"); header != "" {
+		token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(header, "Bearer "), "bearer "))
+		return token
+	}
+	return ""
+}
+
 // ServeHTTP handles WebSocket upgrade requests
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Authenticate before upgrading (MINE-164): unauthenticated callers
+	// get 401 and never hold a socket. The credential policy matches the
+	// AUTH message path exactly (see authenticateToken).
+	user, err := h.authenticateToken(r.Context(), handshakeToken(r))
+	if err != nil {
+		http.Error(w, "unauthorized: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.log.Error("WebSocket upgrade failed: %v", err)
@@ -184,6 +260,10 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conn:          conn,
 		send:          make(chan []byte, 256),
 		subscriptions: make(map[string]*subscription),
+		// Pre-authenticated from the handshake; the client may still send
+		// AUTH to refresh its identity.
+		user:          user,
+		authenticated: true,
 	}
 
 	h.register <- client
@@ -276,64 +356,22 @@ func (c *Client) handleMessage(data []byte) {
 	}
 }
 
-// handleAuth authenticates the client
+// handleAuth (re-)authenticates the client over an existing socket using
+// the same policy as the pre-upgrade handshake check.
 func (c *Client) handleAuth(msg *v1.AuthMessage) {
 	if msg == nil {
 		c.sendAuthFail("missing auth message")
 		return
 	}
 
-	// If no auth providers are enabled the panel is running without
-	// authentication. That is only permitted when the operator explicitly
-	// opted in (auth.allow_no_auth); otherwise fail closed rather than grant
-	// every client admin.
-	if !c.hub.authManager.IsAnyAuthEnabled() {
-		if !c.hub.authManager.NoAuthAllowed() {
-			c.sendAuthFail("no authentication provider is enabled")
-			return
-		}
-		c.user = &auth.AuthenticatedUser{
-			ID:       "admin",
-			Username: "admin",
-			Roles:    []string{"admin"},
-			Provider: "none",
-		}
-		c.authenticated = true
-		c.sendAuthOk()
+	user, err := c.hub.authenticateToken(context.Background(), msg.Token)
+	if err != nil {
+		c.sendAuthFail(err.Error())
 		return
 	}
-
-	ctx := context.Background()
-
-	if msg.Token != "" {
-		var user *auth.AuthenticatedUser
-		var err error
-		if strings.HasPrefix(msg.Token, "dp_") {
-			user, err = c.hub.authManager.ValidateAPIToken(ctx, msg.Token)
-		} else {
-			user, err = c.hub.authManager.ValidateSession(ctx, msg.Token)
-		}
-		if err != nil {
-			// Try anonymous access
-			if c.hub.authManager.IsAnonymousAccessEnabled() {
-				c.user = c.hub.authManager.AnonymousUser()
-				c.authenticated = true
-				c.sendAuthOk()
-				return
-			}
-			c.sendAuthFail("invalid token")
-			return
-		}
-		c.user = user
-		c.authenticated = true
-		c.sendAuthOk()
-	} else if c.hub.authManager.IsAnonymousAccessEnabled() {
-		c.user = c.hub.authManager.AnonymousUser()
-		c.authenticated = true
-		c.sendAuthOk()
-	} else {
-		c.sendAuthFail("authentication required")
-	}
+	c.user = user
+	c.authenticated = true
+	c.sendAuthOk()
 }
 
 // handleSubscribe subscribes to server logs
