@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/config"
@@ -14,6 +15,9 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/protobuf/proto"
+
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 // newHandshakeTestHub builds a Hub with local auth enabled and a single
@@ -38,10 +42,10 @@ func newHandshakeTestHub(t *testing.T, anonymousAccess bool) (*Hub, string) {
 	t.Cleanup(func() { _ = store.Close() })
 
 	authManager, err := auth.NewManager(store, nil, &config.AuthConfig{
-		SessionTimeout: 3600,
-		JWTSecret:      "test-secret-value-0123456789",
-		Local:          config.LocalConfig{Enabled: true, AllowRegistration: false},
-		OIDC:           config.OIDCConfig{Enabled: false},
+		SessionTimeout:  3600,
+		JWTSecret:       "test-secret-value-0123456789",
+		Local:           config.LocalConfig{Enabled: true, AllowRegistration: false},
+		OIDC:            config.OIDCConfig{Enabled: false},
 		AnonymousAccess: anonymousAccess,
 	})
 	if err != nil {
@@ -161,4 +165,102 @@ func TestServeHTTP_AllowsAnonymousWhenEnabled(t *testing.T) {
 		t.Fatalf("anonymous dial failed: %v", err)
 	}
 	defer conn.Close()
+}
+
+func drainSend(t *testing.T, c *Client) [][]byte {
+	t.Helper()
+	var out [][]byte
+	for {
+		select {
+		case data := <-c.send:
+			out = append(out, data)
+		default:
+			return out
+		}
+	}
+}
+
+func unmarshalServerMessage(t *testing.T, data []byte) *v1.WebSocketServerMessage {
+	t.Helper()
+	msg := &v1.WebSocketServerMessage{}
+	if err := proto.Unmarshal(data, msg); err != nil {
+		t.Fatalf("failed to unmarshal server message: %v", err)
+	}
+	return msg
+}
+
+// Log lines dropped on a full buffer are counted and reported with a
+// sentinel before the next delivered line (MINE-165, research P2-1).
+func TestSendLog_DropCountingAndSentinel(t *testing.T) {
+	c := &Client{hub: &Hub{log: logger.New()}, send: make(chan []byte, 2)}
+
+	entry := func(text string) *v1.LogEntry { return &v1.LogEntry{Message: text} }
+
+	// Fill both buffer slots, then overflow twice.
+	c.sendLog("s1", entry("first"))
+	c.sendLog("s1", entry("second"))
+	c.sendLog("s1", entry("dropped-1"))
+	c.sendLog("s1", entry("dropped-2"))
+	if got := c.droppedLogs.Load(); got != 2 {
+		t.Fatalf("droppedLogs = %d, want 2", got)
+	}
+
+	// Drain the buffered lines; the next sendLog must deliver the sentinel
+	// first, then the fresh entry.
+	got := drainSend(t, c)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 buffered messages, got %d", len(got))
+	}
+	if text := unmarshalServerMessage(t, got[0]).GetLog().GetLog().GetMessage(); text != "first" {
+		t.Fatalf("buffered message = %q, want first", text)
+	}
+
+	c.sendLog("s1", entry("fresh"))
+	got = drainSend(t, c)
+	if len(got) != 2 {
+		t.Fatalf("expected sentinel + entry, got %d messages", len(got))
+	}
+	sentinel := unmarshalServerMessage(t, got[0]).GetLog().GetLog()
+	if !strings.Contains(sentinel.GetMessage(), "2 log lines skipped") {
+		t.Errorf("sentinel = %q, want skip notice for 2 lines", sentinel.GetMessage())
+	}
+	if sentinel.GetLevel() != "warn" {
+		t.Errorf("sentinel level = %q, want warn", sentinel.GetLevel())
+	}
+	if text := unmarshalServerMessage(t, got[1]).GetLog().GetLog().GetMessage(); text != "fresh" {
+		t.Errorf("entry after sentinel = %q, want fresh", text)
+	}
+	if got := c.droppedLogs.Load(); got != 0 {
+		t.Errorf("droppedLogs = %d after flush, want 0", got)
+	}
+}
+
+// Control messages wait for buffer space instead of dropping (MINE-165).
+func TestSendControl_WaitsForBufferSpace(t *testing.T) {
+	c := &Client{hub: &Hub{log: logger.New()}, send: make(chan []byte, 1)}
+	c.send <- []byte("filler")
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		c.sendError("boom")
+	}()
+
+	select {
+	case <-done:
+		t.Fatal("sendControl delivered while buffer full")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	<-c.send // free the slot; the blocked control message must land next
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("sendControl did not deliver after buffer drained")
+	}
+
+	msg := unmarshalServerMessage(t, <-c.send)
+	if msg.GetError().GetError() != "boom" {
+		t.Errorf("control payload = %q, want boom", msg.GetError().GetError())
+	}
 }
