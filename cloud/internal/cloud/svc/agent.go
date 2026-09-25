@@ -370,6 +370,9 @@ func (s *AgentService) onWorkloadStatus(ctx context.Context, st *v1.AgentWorkloa
 	if st.ContainerId != "" {
 		updates["container_id"] = st.ContainerId
 	}
+	if st.HostPort > 0 {
+		updates["host_port"] = st.HostPort
+	}
 	_ = q.Model(&db.Workload{}).Where("id = ?", st.WorkloadId).Updates(updates).Error
 	if eq, err := s.deps.Store.Org(ctx); err == nil {
 		_ = eq.Create(&db.WorkloadEvent{

@@ -28,11 +28,11 @@ if (typeof window !== 'undefined') {
 
 				if (name === 'SHA-1' || name === 'SHA1') {
 					const res = sha1(u8);
-					return res.buffer.slice(res.byteOffset, res.byteOffset + res.byteLength);
+					return res.buffer.slice(res.byteOffset, res.byteOffset + res.byteLength) as ArrayBuffer;
 				}
 				if (name === 'SHA-256' || name === 'SHA256') {
 					const res = sha256(u8);
-					return res.buffer.slice(res.byteOffset, res.byteOffset + res.byteLength);
+					return res.buffer.slice(res.byteOffset, res.byteOffset + res.byteLength) as ArrayBuffer;
 				}
 
 				throw new Error(`Unsupported digest algorithm in polyfill: ${name}`);

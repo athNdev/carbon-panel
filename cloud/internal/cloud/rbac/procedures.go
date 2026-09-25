@@ -89,6 +89,8 @@ var procedurePermissions = map[string]Permission{
 	cloudv1connect.WorkloadServiceDeleteWorkloadBackupProcedure:     PermWorkloadsWrite,
 	cloudv1connect.WorkloadServiceSetWorkloadBackupLockedProcedure: PermWorkloadsWrite,
 	cloudv1connect.WorkloadServiceGetWorkloadMetricsProcedure:      PermWorkloadsRead,
+	cloudv1connect.WorkloadServiceGetWorkloadNetworkingProcedure:   PermWorkloadsRead,
+	cloudv1connect.WorkloadServiceListNodePortsProcedure:             PermWorkloadsRead,
 	// FileService.
 	cloudv1connect.FileServiceListFilesProcedure:       PermWorkloadsRead,
 	cloudv1connect.FileServiceStatFileProcedure:        PermWorkloadsRead,
@@ -182,6 +184,8 @@ func AllProcedures() []string {
 		cloudv1connect.WorkloadServiceDeleteWorkloadBackupProcedure,
 		cloudv1connect.WorkloadServiceSetWorkloadBackupLockedProcedure,
 		cloudv1connect.WorkloadServiceGetWorkloadMetricsProcedure,
+		cloudv1connect.WorkloadServiceGetWorkloadNetworkingProcedure,
+		cloudv1connect.WorkloadServiceListNodePortsProcedure,
 		cloudv1connect.FileServiceListFilesProcedure,
 		cloudv1connect.FileServiceStatFileProcedure,
 		cloudv1connect.FileServiceReadFileProcedure,

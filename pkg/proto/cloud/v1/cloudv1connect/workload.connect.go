@@ -90,6 +90,12 @@ const (
 	// WorkloadServiceGetWorkloadMetricsProcedure is the fully-qualified name of the WorkloadService's
 	// GetWorkloadMetrics RPC.
 	WorkloadServiceGetWorkloadMetricsProcedure = "/cloud.v1.WorkloadService/GetWorkloadMetrics"
+	// WorkloadServiceGetWorkloadNetworkingProcedure is the fully-qualified name of the
+	// WorkloadService's GetWorkloadNetworking RPC.
+	WorkloadServiceGetWorkloadNetworkingProcedure = "/cloud.v1.WorkloadService/GetWorkloadNetworking"
+	// WorkloadServiceListNodePortsProcedure is the fully-qualified name of the WorkloadService's
+	// ListNodePorts RPC.
+	WorkloadServiceListNodePortsProcedure = "/cloud.v1.WorkloadService/ListNodePorts"
 )
 
 // WorkloadServiceClient is a client for the cloud.v1.WorkloadService service.
@@ -133,6 +139,10 @@ type WorkloadServiceClient interface {
 	SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error)
 	// GetWorkloadMetrics returns current real-time telemetry for a workload.
 	GetWorkloadMetrics(context.Context, *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error)
+	// GetWorkloadNetworking returns port bindings, host addressing, and DNS/SRV configuration.
+	GetWorkloadNetworking(context.Context, *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error)
+	// ListNodePorts lists allocated and available ports on a given node.
+	ListNodePorts(context.Context, *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error)
 }
 
 // NewWorkloadServiceClient constructs a client for the cloud.v1.WorkloadService service. By
@@ -260,6 +270,18 @@ func NewWorkloadServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadMetrics")),
 			connect.WithClientOptions(opts...),
 		),
+		getWorkloadNetworking: connect.NewClient[v1.GetWorkloadNetworkingRequest, v1.GetWorkloadNetworkingResponse](
+			httpClient,
+			baseURL+WorkloadServiceGetWorkloadNetworkingProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadNetworking")),
+			connect.WithClientOptions(opts...),
+		),
+		listNodePorts: connect.NewClient[v1.ListNodePortsRequest, v1.ListNodePortsResponse](
+			httpClient,
+			baseURL+WorkloadServiceListNodePortsProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("ListNodePorts")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -284,6 +306,8 @@ type workloadServiceClient struct {
 	deleteWorkloadBackup    *connect.Client[v1.DeleteWorkloadBackupRequest, v1.DeleteWorkloadBackupResponse]
 	setWorkloadBackupLocked *connect.Client[v1.SetWorkloadBackupLockedRequest, v1.SetWorkloadBackupLockedResponse]
 	getWorkloadMetrics      *connect.Client[v1.GetWorkloadMetricsRequest, v1.GetWorkloadMetricsResponse]
+	getWorkloadNetworking   *connect.Client[v1.GetWorkloadNetworkingRequest, v1.GetWorkloadNetworkingResponse]
+	listNodePorts           *connect.Client[v1.ListNodePortsRequest, v1.ListNodePortsResponse]
 }
 
 // ListWorkloads calls cloud.v1.WorkloadService.ListWorkloads.
@@ -381,6 +405,16 @@ func (c *workloadServiceClient) GetWorkloadMetrics(ctx context.Context, req *con
 	return c.getWorkloadMetrics.CallUnary(ctx, req)
 }
 
+// GetWorkloadNetworking calls cloud.v1.WorkloadService.GetWorkloadNetworking.
+func (c *workloadServiceClient) GetWorkloadNetworking(ctx context.Context, req *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error) {
+	return c.getWorkloadNetworking.CallUnary(ctx, req)
+}
+
+// ListNodePorts calls cloud.v1.WorkloadService.ListNodePorts.
+func (c *workloadServiceClient) ListNodePorts(ctx context.Context, req *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error) {
+	return c.listNodePorts.CallUnary(ctx, req)
+}
+
 // WorkloadServiceHandler is an implementation of the cloud.v1.WorkloadService service.
 type WorkloadServiceHandler interface {
 	// ListWorkloads lists workloads in the active org.
@@ -422,6 +456,10 @@ type WorkloadServiceHandler interface {
 	SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error)
 	// GetWorkloadMetrics returns current real-time telemetry for a workload.
 	GetWorkloadMetrics(context.Context, *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error)
+	// GetWorkloadNetworking returns port bindings, host addressing, and DNS/SRV configuration.
+	GetWorkloadNetworking(context.Context, *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error)
+	// ListNodePorts lists allocated and available ports on a given node.
+	ListNodePorts(context.Context, *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error)
 }
 
 // NewWorkloadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -545,6 +583,18 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 		connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workloadServiceGetWorkloadNetworkingHandler := connect.NewUnaryHandler(
+		WorkloadServiceGetWorkloadNetworkingProcedure,
+		svc.GetWorkloadNetworking,
+		connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadNetworking")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceListNodePortsHandler := connect.NewUnaryHandler(
+		WorkloadServiceListNodePortsProcedure,
+		svc.ListNodePorts,
+		connect.WithSchema(workloadServiceMethods.ByName("ListNodePorts")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/cloud.v1.WorkloadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkloadServiceListWorkloadsProcedure:
@@ -585,6 +635,10 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 			workloadServiceSetWorkloadBackupLockedHandler.ServeHTTP(w, r)
 		case WorkloadServiceGetWorkloadMetricsProcedure:
 			workloadServiceGetWorkloadMetricsHandler.ServeHTTP(w, r)
+		case WorkloadServiceGetWorkloadNetworkingProcedure:
+			workloadServiceGetWorkloadNetworkingHandler.ServeHTTP(w, r)
+		case WorkloadServiceListNodePortsProcedure:
+			workloadServiceListNodePortsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -668,4 +722,12 @@ func (UnimplementedWorkloadServiceHandler) SetWorkloadBackupLocked(context.Conte
 
 func (UnimplementedWorkloadServiceHandler) GetWorkloadMetrics(context.Context, *connect.Request[v1.GetWorkloadMetricsRequest]) (*connect.Response[v1.GetWorkloadMetricsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.GetWorkloadMetrics is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) GetWorkloadNetworking(context.Context, *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.GetWorkloadNetworking is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) ListNodePorts(context.Context, *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.ListNodePorts is not implemented"))
 }

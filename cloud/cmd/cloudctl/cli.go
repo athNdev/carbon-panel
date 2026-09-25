@@ -500,6 +500,30 @@ func (c *CLI) runNodes(ctx context.Context, args []string) error {
 		}
 		_, _ = fmt.Fprintf(c.Stdout, "Node %s deleted\n", args[1])
 		return nil
+	case "ports":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl nodes ports <node-id>")
+		}
+		resp, err := c.Client.Workload.ListNodePorts(ctx, connect.NewRequest(&v1.ListNodePortsRequest{NodeId: args[1]}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg, func(w io.Writer) error {
+			msg := resp.Msg
+			_, _ = fmt.Fprintf(w, "Port Allocations for Node %s:\n", msg.NodeId)
+			_, _ = fmt.Fprintf(w, "  Assignable Pool: %d - %d\n", msg.PortRangeMin, msg.PortRangeMax)
+			_, _ = fmt.Fprintf(w, "  Available Ports: %d\n\n", msg.AvailablePorts)
+			if len(msg.Allocations) == 0 {
+				_, _ = fmt.Fprintln(w, "No active port allocations.")
+				return nil
+			}
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "PORT\tWORKLOAD ID\tWORKLOAD NAME\tSTATUS\tHOSTNAME")
+			for _, al := range msg.Allocations {
+				_, _ = fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n", al.Port, al.WorkloadId, al.WorkloadName, al.Status, al.Hostname)
+			}
+			return tw.Flush()
+		})
 	default:
 		return fmt.Errorf("unknown nodes command: %s", args[0])
 	}
@@ -747,7 +771,7 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		}
 		return c.printOutput(resp.Msg.Workloads, func(w io.Writer) error {
 			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
-			_, _ = fmt.Fprintln(tw, "ID\tNAME\tSTATUS\tNODE ID\tVERSION\tALLOCATIONS")
+			_, _ = fmt.Fprintln(tw, "ID\tNAME\tSTATUS\tPORT\tNODE ID\tVERSION\tALLOCATIONS")
 			for _, wl := range resp.Msg.Workloads {
 				alloc := ""
 				version := ""
@@ -755,8 +779,8 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 					alloc = fmt.Sprintf("%d MB, %d mCPU", req.MemoryMb, req.CpuMillicores)
 					version = req.MinecraftVersion
 				}
-				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
-					wl.Id, wl.Name, wl.Status, wl.NodeId, version, alloc)
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+					wl.Id, wl.Name, wl.Status, wl.HostPort, wl.NodeId, version, alloc)
 			}
 			return tw.Flush()
 		})
@@ -774,8 +798,12 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		return c.printOutput(resp.Msg.Workload, func(w io.Writer) error {
 			wl := resp.Msg.Workload
 			_, _ = fmt.Fprintf(w, "Workload: %s (%s)\n", wl.Name, wl.Id)
-			_, _ = fmt.Fprintf(w, "  Status:  %s\n", wl.Status)
-			_, _ = fmt.Fprintf(w, "  Node ID: %s\n", wl.NodeId)
+			_, _ = fmt.Fprintf(w, "  Status:    %s\n", wl.Status)
+			_, _ = fmt.Fprintf(w, "  Node ID:   %s\n", wl.NodeId)
+			_, _ = fmt.Fprintf(w, "  Host Port: %d\n", wl.HostPort)
+			if wl.Hostname != "" {
+				_, _ = fmt.Fprintf(w, "  Hostname:  %s\n", wl.Hostname)
+			}
 			if wl.Spec != nil {
 				_, _ = fmt.Fprintf(w, "  Version: %s (%s)\n", wl.Spec.MinecraftVersion, wl.Spec.Loader)
 			}
@@ -789,6 +817,8 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		loader := fs.String("loader", "paper", "Loader type (e.g. paper, fabric, vanilla)")
 		mem := fs.Int64("memory", 2048, "Memory in MB")
 		cpu := fs.Int64("cpu", 1000, "CPU millicores")
+		port := fs.Int("port", 0, "Host port to allocate (optional, 0 for dynamic)")
+		hostname := fs.String("hostname", "", "Public hostname for workload (optional)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return err
 		}
@@ -803,12 +833,14 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 				Loader:           *loader,
 				MemoryMb:         *mem,
 				CpuMillicores:    *cpu,
+				HostPort:         int32(*port),
+				Hostname:         *hostname,
 			},
 		}))
 		if err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(c.Stdout, "Workload created: ID %s (status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.Status)
+		_, _ = fmt.Fprintf(c.Stdout, "Workload created: ID %s (port: %d, status: %s)\n", resp.Msg.Workload.Id, resp.Msg.Workload.HostPort, resp.Msg.Workload.Status)
 		return nil
 	case "start":
 		if len(args) < 2 {
@@ -1093,6 +1125,33 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		default:
 			return fmt.Errorf("unknown backup sub-command: %s", args[1])
 		}
+	case "networking", "net":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads networking <id>")
+		}
+		resp, err := c.Client.Workload.GetWorkloadNetworking(ctx, connect.NewRequest(&v1.GetWorkloadNetworkingRequest{Id: args[1]}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg, func(w io.Writer) error {
+			net := resp.Msg
+			_, _ = fmt.Fprintf(w, "Networking for Workload: %s\n", net.WorkloadId)
+			_, _ = fmt.Fprintf(w, "  Node ID:         %s\n", net.NodeId)
+			_, _ = fmt.Fprintf(w, "  Node Address:    %s\n", net.NodeAddress)
+			_, _ = fmt.Fprintf(w, "  Host Port:       %d\n", net.HostPort)
+			_, _ = fmt.Fprintf(w, "  Container Port:  %d\n", net.ContainerPort)
+			if net.Hostname != "" {
+				_, _ = fmt.Fprintf(w, "  Hostname:        %s\n", net.Hostname)
+			}
+			_, _ = fmt.Fprintf(w, "  Direct Connect:  %s\n", net.PrimaryAddress)
+			if net.SrvRecord != "" {
+				_, _ = fmt.Fprintf(w, "  DNS SRV Record:  %s\n", net.SrvRecord)
+			}
+			if net.PortConflict {
+				_, _ = fmt.Fprintf(w, "  WARNING: Port collision detected on this node!\n")
+			}
+			return nil
+		})
 	case "metrics", "top":
 		if len(args) < 2 {
 			return errors.New("usage: cloudctl workloads metrics <workload-id>")

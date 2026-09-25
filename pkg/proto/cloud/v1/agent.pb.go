@@ -307,7 +307,9 @@ type AgentWorkloadStatus struct {
 	// Container id, when one exists.
 	ContainerId string `protobuf:"bytes,4,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
 	// Detail for non-running states, e.g. the last error line.
-	Detail        string `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
+	Detail string `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
+	// Assigned or active host port on the node.
+	HostPort      int32 `protobuf:"varint,6,opt,name=host_port,json=hostPort,proto3" json:"host_port,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -375,6 +377,13 @@ func (x *AgentWorkloadStatus) GetDetail() string {
 		return x.Detail
 	}
 	return ""
+}
+
+func (x *AgentWorkloadStatus) GetHostPort() int32 {
+	if x != nil {
+		return x.HostPort
+	}
+	return 0
 }
 
 // AgentLogChunk is a batch of console lines for a workload.
@@ -3315,14 +3324,15 @@ const file_cloud_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"allocation\x18\x04 \x01(\v2\x18.cloud.v1.NodeAllocationR\n" +
 	"allocation\x12D\n" +
-	"\x10workload_metrics\x18\x05 \x03(\v2\x19.cloud.v1.WorkloadMetricsR\x0fworkloadMetrics\"\xbc\x01\n" +
+	"\x10workload_metrics\x18\x05 \x03(\v2\x19.cloud.v1.WorkloadMetricsR\x0fworkloadMetrics\"\xd9\x01\n" +
 	"\x13AgentWorkloadStatus\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1f\n" +
 	"\vworkload_id\x18\x02 \x01(\tR\n" +
 	"workloadId\x120\n" +
 	"\x06status\x18\x03 \x01(\x0e2\x18.cloud.v1.WorkloadStatusR\x06status\x12!\n" +
 	"\fcontainer_id\x18\x04 \x01(\tR\vcontainerId\x12\x16\n" +
-	"\x06detail\x18\x05 \x01(\tR\x06detail\"z\n" +
+	"\x06detail\x18\x05 \x01(\tR\x06detail\x12\x1b\n" +
+	"\thost_port\x18\x06 \x01(\x05R\bhostPort\"z\n" +
 	"\rAgentLogChunk\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1f\n" +
 	"\vworkload_id\x18\x02 \x01(\tR\n" +

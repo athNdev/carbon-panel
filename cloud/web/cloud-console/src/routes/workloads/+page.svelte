@@ -136,7 +136,7 @@
 					// Even if autostart was deferred, workload was created
 				}
 
-				pushToast(`Server "${serverName}" created successfully!`, 'success');
+				pushToast('success', `Server "${serverName}" created successfully!`);
 				deployOpen = false;
 				await goto(`/workloads/${res.workload.id}`);
 			} else {

@@ -146,6 +146,37 @@ func (m *mockWorkloadServer) ListWorkloadEvents(ctx context.Context, req *connec
 	}), nil
 }
 
+func (m *mockWorkloadServer) GetWorkloadNetworking(ctx context.Context, req *connect.Request[v1.GetWorkloadNetworkingRequest]) (*connect.Response[v1.GetWorkloadNetworkingResponse], error) {
+	return connect.NewResponse(&v1.GetWorkloadNetworkingResponse{
+		WorkloadId:     req.Msg.Id,
+		NodeId:         "node_123",
+		NodeAddress:    "192.168.0.102",
+		HostPort:       25566,
+		ContainerPort:  25565,
+		Hostname:       "beta.example.com",
+		PrimaryAddress: "192.168.0.102:25566",
+		SrvRecord:      "_minecraft._tcp.beta.example.com. 3600 IN SRV 0 5 25566 192.168.0.102.",
+	}), nil
+}
+
+func (m *mockWorkloadServer) ListNodePorts(ctx context.Context, req *connect.Request[v1.ListNodePortsRequest]) (*connect.Response[v1.ListNodePortsResponse], error) {
+	return connect.NewResponse(&v1.ListNodePortsResponse{
+		NodeId:         req.Msg.NodeId,
+		PortRangeMin:   25565,
+		PortRangeMax:   25700,
+		AvailablePorts: 135,
+		Allocations: []*v1.NodePortAllocation{
+			{
+				Port:         25565,
+				WorkloadId:   "wl_123",
+				WorkloadName: "survival",
+				Status:       "running",
+				Hostname:     "play.example.com",
+			},
+		},
+	}), nil
+}
+
 func (m *mockWorkloadServer) StreamWorkloadLogs(ctx context.Context, req *connect.Request[v1.StreamWorkloadLogsRequest], stream *connect.ServerStream[v1.WorkloadLogLine]) error {
 	_ = stream.Send(&v1.WorkloadLogLine{
 		Line:      "Starting minecraft server",
@@ -276,6 +307,20 @@ func TestCLI_NodesAndTokens(t *testing.T) {
 		require.Contains(t, stdout.String(), "is now draining")
 	})
 
+	t.Run("nodes ports", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"nodes", "ports", "node_123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Port Allocations for Node node_123:")
+		require.Contains(t, stdout.String(), "25565")
+		require.Contains(t, stdout.String(), "survival")
+	})
+
 	t.Run("tokens create", func(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		cli := &CLI{
@@ -355,6 +400,20 @@ func TestCLI_WorkloadsAndProvisions(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, stdout.String(), "Starting minecraft server")
 		require.Contains(t, stderr.String(), "[stderr] Server warning on startup")
+	})
+
+	t.Run("workloads networking", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Client: client,
+		}
+		err := cli.Run(context.Background(), []string{"workloads", "networking", "wl_123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Networking for Workload: wl_123")
+		require.Contains(t, stdout.String(), "192.168.0.102:25566")
+		require.Contains(t, stdout.String(), "SRV")
 	})
 
 	t.Run("provisions apply", func(t *testing.T) {

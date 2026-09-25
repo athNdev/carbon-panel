@@ -28,6 +28,8 @@ message WorkloadSpec {
   bool allow_byo_nodes = 8;
   // Extra JVM flags appended to the generated command line.
   repeated string jvm_flags = 9;
+  // Optional preferred host port on the node. If 0, dynamically allocated.
+  int32 host_port = 10;
 }
 
 // WorkloadEvent is an auditable lifecycle transition of a workload.
@@ -115,6 +117,10 @@ service WorkloadService {
   rpc SetWorkloadBackupLocked(SetWorkloadBackupLockedRequest) returns (SetWorkloadBackupLockedResponse);
   // GetWorkloadMetrics returns current real-time telemetry for a workload.
   rpc GetWorkloadMetrics(GetWorkloadMetricsRequest) returns (GetWorkloadMetricsResponse);
+  // GetWorkloadNetworking returns port bindings, host addressing, and DNS/SRV configuration.
+  rpc GetWorkloadNetworking(GetWorkloadNetworkingRequest) returns (GetWorkloadNetworkingResponse);
+  // ListNodePorts lists allocated and available ports on a given node.
+  rpc ListNodePorts(ListNodePortsRequest) returns (ListNodePortsResponse);
 }
 
 // WorkloadLogLine is one console line from a workload.
@@ -449,4 +455,66 @@ message GetWorkloadMetricsRequest {
 message GetWorkloadMetricsResponse {
   // Metrics for the workload.
   WorkloadMetrics metrics = 1;
+}
+
+// GetWorkloadNetworkingRequest queries network configuration and routing for a workload.
+message GetWorkloadNetworkingRequest {
+  // Target workload ID.
+  string id = 1;
+}
+
+// GetWorkloadNetworkingResponse returns network routing, ports, and DNS guidance.
+message GetWorkloadNetworkingResponse {
+  // Target workload ID.
+  string workload_id = 1;
+  // Node ID hosting the workload.
+  string node_id = 2;
+  // Node public/hostname address.
+  string node_address = 3;
+  // Host port bound on the node.
+  int32 host_port = 4;
+  // Container port inside the workload (default 25565).
+  int32 container_port = 5;
+  // Player-facing hostname if configured.
+  string hostname = 6;
+  // Direct connection string (e.g. "192.168.0.102:25566").
+  string primary_address = 7;
+  // Suggested DNS SRV record for custom domain routing without port.
+  string srv_record = 8;
+  // Whether a port collision was detected.
+  bool port_conflict = 9;
+}
+
+// NodePortAllocation describes a single active port lease on a node.
+message NodePortAllocation {
+  // The host port number.
+  int32 port = 1;
+  // Workload leasing the port.
+  string workload_id = 2;
+  // Display name of the workload.
+  string workload_name = 3;
+  // Workload lifecycle status.
+  string status = 4;
+  // Hostname configured for the workload.
+  string hostname = 5;
+}
+
+// ListNodePortsRequest queries port allocations for a node.
+message ListNodePortsRequest {
+  // Target node ID.
+  string node_id = 1;
+}
+
+// ListNodePortsResponse returns all active port leases and available range for a node.
+message ListNodePortsResponse {
+  // Target node ID.
+  string node_id = 1;
+  // Minimum port in the assignable range.
+  int32 port_range_min = 2;
+  // Maximum port in the assignable range.
+  int32 port_range_max = 3;
+  // All currently allocated ports.
+  repeated NodePortAllocation allocations = 4;
+  // Count of remaining unallocated ports in the range.
+  int32 available_ports = 5;
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/portalloc"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
@@ -38,6 +39,8 @@ func workloadToProto(w *db.Workload) *v1.Workload {
 		NodeId:       w.NodeID,
 		Name:         w.Name,
 		Status:       workloadStatusToProto(w.Status),
+		ContainerId:  w.ContainerID,
+		HostPort:     int32(w.HostPort),
 		StatusDetail: w.StatusDetail,
 		Hostname:     w.Hostname,
 		CreatedBy:    w.CreatedBy,
@@ -57,6 +60,7 @@ func workloadToProto(w *db.Workload) *v1.Workload {
 				MinecraftVersion: s.MinecraftVersion,
 				MemoryMb:         int64(s.MemoryMB),
 				Hostname:         s.Hostname,
+				HostPort:         int32(w.HostPort),
 			}
 		}
 	}
@@ -188,12 +192,31 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 		Status:     "pending",
 		CreatedBy:  p.UserID,
 	}
+
+	requestedPort := 0
+	if m.Spec != nil && m.Spec.HostPort > 0 {
+		requestedPort = int(m.Spec.HostPort)
+	}
+	alloc := portalloc.NewAllocator(0, 0)
+	allocatedPort, err := alloc.Allocate(ctx, q, w.NodeID, requestedPort, "")
+	if err != nil {
+		if errors.Is(err, portalloc.ErrPortConflict) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		}
+		if errors.Is(err, portalloc.ErrNoPortsAvailable) {
+			return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		}
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	w.HostPort = allocatedPort
+
 	if m.Spec != nil {
 		raw, _ := json.Marshal(map[string]any{
 			"loader":            m.Spec.Loader,
 			"minecraft_version": m.Spec.MinecraftVersion,
 			"memory_mb":         m.Spec.MemoryMb,
 			"hostname":          m.Spec.Hostname,
+			"host_port":         allocatedPort,
 		})
 		w.Spec = string(raw)
 		w.Hostname = m.Spec.Hostname
@@ -238,6 +261,10 @@ func (s *WorkloadService) UpdateWorkload(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
 	}
+	q, err := s.deps.Store.Org(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
+	}
 	updates := map[string]any{}
 	if req.Msg.Name != nil {
 		if v := strings.TrimSpace(*req.Msg.Name); v != "" {
@@ -245,21 +272,31 @@ func (s *WorkloadService) UpdateWorkload(ctx context.Context, req *connect.Reque
 		}
 	}
 	if req.Msg.Spec != nil {
+		newPort := w.HostPort
+		if req.Msg.Spec.HostPort > 0 && int(req.Msg.Spec.HostPort) != w.HostPort {
+			alloc := portalloc.NewAllocator(0, 0)
+			allocatedPort, err := alloc.Allocate(ctx, q, w.NodeID, int(req.Msg.Spec.HostPort), w.ID)
+			if err != nil {
+				if errors.Is(err, portalloc.ErrPortConflict) {
+					return nil, connect.NewError(connect.CodeAlreadyExists, err)
+				}
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
+			newPort = allocatedPort
+			updates["host_port"] = newPort
+		}
 		raw, _ := json.Marshal(map[string]any{
 			"loader":            req.Msg.Spec.Loader,
 			"minecraft_version": req.Msg.Spec.MinecraftVersion,
 			"memory_mb":         req.Msg.Spec.MemoryMb,
 			"hostname":          req.Msg.Spec.Hostname,
+			"host_port":         newPort,
 		})
 		updates["spec"] = string(raw)
 		updates["hostname"] = req.Msg.Spec.Hostname
 	}
 	if len(updates) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errOrgEmptyUpdate)
-	}
-	q, err := s.deps.Store.Org(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errNoOrgCtx)
 	}
 	if err := q.Model(&db.Workload{}).Where("id = ?", w.ID).Updates(updates).Error; err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errWorkloadUpdate)

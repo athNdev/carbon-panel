@@ -477,6 +477,7 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 									Status:      st,
 									ContainerId: cid,
 									Detail:      detail,
+									HostPort:    int32(port),
 								},
 							},
 						}

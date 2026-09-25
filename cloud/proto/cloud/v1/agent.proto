@@ -70,6 +70,8 @@ message AgentWorkloadStatus {
   string container_id = 4;
   // Detail for non-running states, e.g. the last error line.
   string detail = 5;
+  // Assigned or active host port on the node.
+  int32 host_port = 6;
 }
 
 // AgentLogChunk is a batch of console lines for a workload.
