@@ -47,6 +47,15 @@ func migrations() []*gormigrate.Migration {
 				return tx.AutoMigrate(&WorkloadBackup{})
 			},
 		},
+		{
+			ID: "0004_blueprints",
+			Migrate: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&Blueprint{}); err != nil {
+					return err
+				}
+				return tx.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_blueprints_org_name ON blueprints (org_id, name)`).Error
+			},
+		},
 	}
 }
 
@@ -76,6 +85,7 @@ func tenantModels() []any {
 		&Workload{},
 		&WorkloadEvent{},
 		&WorkloadBackup{},
+		&Blueprint{},
 		&AuditEvent{},
 		&RoleBinding{},
 	}

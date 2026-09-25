@@ -203,6 +203,62 @@ func (m *mockProvisionServer) ApplyProvision(ctx context.Context, req *connect.R
 	}), nil
 }
 
+
+type mockBlueprintServer struct {
+	cloudv1connect.UnimplementedBlueprintServiceHandler
+}
+
+func (m *mockBlueprintServer) ListBlueprints(context.Context, *connect.Request[v1.ListBlueprintsRequest]) (*connect.Response[v1.ListBlueprintsResponse], error) {
+	return connect.NewResponse(&v1.ListBlueprintsResponse{
+		Blueprints: []*v1.Blueprint{
+			{
+				Id:                   "paper",
+				Name:                 "PaperMC",
+				Loader:               "paper",
+				MinecraftVersion:     "1.21.4",
+				DefaultMemoryMb:      4096,
+				DefaultCpuMillicores: 2000,
+				Builtin:              true,
+			},
+		},
+	}), nil
+}
+
+func (m *mockBlueprintServer) GetBlueprint(ctx context.Context, req *connect.Request[v1.GetBlueprintRequest]) (*connect.Response[v1.GetBlueprintResponse], error) {
+	return connect.NewResponse(&v1.GetBlueprintResponse{
+		Blueprint: &v1.Blueprint{
+			Id:                   req.Msg.Id,
+			Name:                 "PaperMC",
+			Description:          "High performance server",
+			Loader:               "paper",
+			MinecraftVersion:     "1.21.4",
+			DockerImage:          "itzg/minecraft-server:latest",
+			DefaultMemoryMb:      4096,
+			DefaultCpuMillicores: 2000,
+			Builtin:              true,
+			DefaultEnv:           map[string]string{"TYPE": "PAPER"},
+			DefaultJvmFlags:      []string{"-XX:+UseG1GC"},
+		},
+	}), nil
+}
+
+func (m *mockBlueprintServer) CreateBlueprint(ctx context.Context, req *connect.Request[v1.CreateBlueprintRequest]) (*connect.Response[v1.CreateBlueprintResponse], error) {
+	return connect.NewResponse(&v1.CreateBlueprintResponse{
+		Blueprint: &v1.Blueprint{
+			Id:                   "custom-bp-123",
+			Name:                 req.Msg.Name,
+			Loader:               req.Msg.Loader,
+			MinecraftVersion:     req.Msg.MinecraftVersion,
+			DefaultMemoryMb:      req.Msg.DefaultMemoryMb,
+			DefaultCpuMillicores: req.Msg.DefaultCpuMillicores,
+		},
+	}), nil
+}
+
+func (m *mockBlueprintServer) DeleteBlueprint(ctx context.Context, req *connect.Request[v1.DeleteBlueprintRequest]) (*connect.Response[v1.DeleteBlueprintResponse], error) {
+	return connect.NewResponse(&v1.DeleteBlueprintResponse{}), nil
+}
+
 func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -210,11 +266,13 @@ func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	nodePath, nodeHandler := cloudv1connect.NewNodeServiceHandler(&mockNodeServer{})
 	workloadPath, workloadHandler := cloudv1connect.NewWorkloadServiceHandler(&mockWorkloadServer{})
 	provisionPath, provisionHandler := cloudv1connect.NewProvisionServiceHandler(&mockProvisionServer{})
+	bpPath, bpHandler := cloudv1connect.NewBlueprintServiceHandler(&mockBlueprintServer{})
 
 	mux.Handle(sysPath, sysHandler)
 	mux.Handle(nodePath, nodeHandler)
 	mux.Handle(workloadPath, workloadHandler)
 	mux.Handle(provisionPath, provisionHandler)
+	mux.Handle(bpPath, bpHandler)
 
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -462,4 +520,56 @@ func TestCLI_Config(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "https://cloud.carbon.dev", cfg.Endpoint)
 	require.Equal(t, "cca_live_1234567890", cfg.APIKey)
+}
+
+func TestCLI_Blueprints(t *testing.T) {
+	_, client := setupTestServer(t)
+
+	t.Run("blueprints list", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"blueprints", "list"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "paper")
+		require.Contains(t, out, "PaperMC")
+		require.Contains(t, out, "4096M")
+	})
+
+	t.Run("blueprints get", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"blueprints", "get", "paper"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "Blueprint: paper")
+		require.Contains(t, out, "PaperMC")
+		require.Contains(t, out, "TYPE: PAPER")
+		require.Contains(t, out, "-XX:+UseG1GC")
+	})
+
+	t.Run("blueprints create", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"blueprints", "create", "-name", "My Custom Preset", "-loader", "fabric"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "Blueprint created: ID custom-bp-123")
+	})
+
+	t.Run("blueprints delete", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"blueprints", "delete", "custom-bp-123"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Blueprint custom-bp-123 deleted")
+	})
+
+	t.Run("workloads create with blueprint", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"workloads", "create", "-name", "preset-srv", "-blueprint", "paper"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Workload created:")
+	})
 }

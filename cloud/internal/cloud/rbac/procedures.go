@@ -98,6 +98,12 @@ var procedurePermissions = map[string]Permission{
 	cloudv1connect.FileServiceWriteFileProcedure:       PermWorkloadsWrite,
 	cloudv1connect.FileServiceDeleteFileProcedure:      PermWorkloadsWrite,
 	cloudv1connect.FileServiceCreateDirectoryProcedure: PermWorkloadsWrite,
+	// BlueprintService.
+	cloudv1connect.BlueprintServiceListBlueprintsProcedure:   PermWorkloadsRead,
+	cloudv1connect.BlueprintServiceGetBlueprintProcedure:    PermWorkloadsRead,
+	cloudv1connect.BlueprintServiceCreateBlueprintProcedure: PermWorkloadsWrite,
+	cloudv1connect.BlueprintServiceUpdateBlueprintProcedure: PermWorkloadsWrite,
+	cloudv1connect.BlueprintServiceDeleteBlueprintProcedure: PermWorkloadsWrite,
 }
 
 // PermissionForProcedure returns the permission required by a Connect
@@ -192,6 +198,11 @@ func AllProcedures() []string {
 		cloudv1connect.FileServiceWriteFileProcedure,
 		cloudv1connect.FileServiceDeleteFileProcedure,
 		cloudv1connect.FileServiceCreateDirectoryProcedure,
+		cloudv1connect.BlueprintServiceListBlueprintsProcedure,
+		cloudv1connect.BlueprintServiceGetBlueprintProcedure,
+		cloudv1connect.BlueprintServiceCreateBlueprintProcedure,
+		cloudv1connect.BlueprintServiceUpdateBlueprintProcedure,
+		cloudv1connect.BlueprintServiceDeleteBlueprintProcedure,
 	}
 }
 

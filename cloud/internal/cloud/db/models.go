@@ -286,3 +286,25 @@ type WorkloadBackup struct {
 }
 
 func (WorkloadBackup) TableName() string { return "workload_backups" }
+
+// Blueprint is an organization-owned custom server blueprint/preset (MINE-162).
+type Blueprint struct {
+	TenantBase
+	Name                 string `gorm:"not null"`
+	Description          string `gorm:"default:''"`
+	Loader               string `gorm:"not null"`
+	MinecraftVersion     string `gorm:"not null"`
+	DockerImage          string `gorm:"default:''"`
+	DefaultMemoryMB      int64  `gorm:"not null;default:2048"`
+	DefaultCPUMillicores int64  `gorm:"not null;default:1000"`
+	DefaultEnv           string `gorm:"type:text;default:'{}'"` // JSON map[string]string
+	DefaultJVMFlags      string `gorm:"type:text;default:'[]'"` // JSON []string
+}
+
+func (Blueprint) TableName() string              { return "blueprints" }
+func (b *Blueprint) BeforeCreate(*gorm.DB) error { b.setID(); return nil }
+func (b *Blueprint) setID() {
+	if b.ID == "" {
+		b.ID = newID()
+	}
+}

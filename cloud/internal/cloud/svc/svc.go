@@ -62,6 +62,7 @@ type Services struct {
 	Workload   *WorkloadService
 	Agent      *AgentService
 	File       *FileService
+	Blueprint  *BlueprintService
 	Dispatcher *AgentDispatcher
 }
 
@@ -102,6 +103,7 @@ func New(deps Deps) (*Services, error) {
 		Workload:   &WorkloadService{deps: deps, dispatcher: deps.Dispatcher},
 		Agent:      &AgentService{deps: deps, dispatcher: deps.Dispatcher},
 		File:       &FileService{deps: deps, dispatcher: deps.Dispatcher},
+		Blueprint:  NewBlueprintService(deps),
 		Dispatcher: deps.Dispatcher,
 	}, nil
 }

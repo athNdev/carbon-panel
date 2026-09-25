@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/blueprint"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/portalloc"
@@ -49,18 +50,26 @@ func workloadToProto(w *db.Workload) *v1.Workload {
 	}
 	if w.Spec != "" {
 		var s struct {
-			Loader           string `json:"loader"`
-			MinecraftVersion string `json:"minecraft_version"`
-			MemoryMB         int    `json:"memory_mb"`
-			Hostname         string `json:"hostname"`
+			Loader           string            `json:"loader"`
+			MinecraftVersion string            `json:"minecraft_version"`
+			MemoryMB         int64             `json:"memory_mb"`
+			CPUMillicores    int64             `json:"cpu_millicores"`
+			Hostname         string            `json:"hostname"`
+			BlueprintID      string            `json:"blueprint_id"`
+			Env              map[string]string `json:"env"`
+			JVMFlags         []string          `json:"jvm_flags"`
 		}
 		if json.Unmarshal([]byte(w.Spec), &s) == nil {
 			out.Spec = &v1.WorkloadSpec{
 				Loader:           s.Loader,
 				MinecraftVersion: s.MinecraftVersion,
-				MemoryMb:         int64(s.MemoryMB),
+				MemoryMb:         s.MemoryMB,
+				CpuMillicores:    s.CPUMillicores,
 				Hostname:         s.Hostname,
 				HostPort:         int32(w.HostPort),
+				BlueprintId:      s.BlueprintID,
+				Env:              s.Env,
+				JvmFlags:         s.JVMFlags,
 			}
 		}
 	}
@@ -166,6 +175,64 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 
 	orgID := principal.OrgID(ctx)
 
+	// Resolve blueprint if specified (MINE-162)
+	var bp *v1.Blueprint
+	if m.Spec != nil && strings.TrimSpace(m.Spec.BlueprintId) != "" {
+		bpID := strings.TrimSpace(m.Spec.BlueprintId)
+		bp = blueprint.FindBuiltin(bpID)
+		if bp == nil {
+			var custom db.Blueprint
+			bpQuery, err := s.deps.Store.Org(ctx)
+			if err == nil {
+				if err := bpQuery.Model(&db.Blueprint{}).Where("id = ? OR LOWER(name) = ?", bpID, strings.ToLower(bpID)).First(&custom).Error; err == nil {
+					bp = blueprintToProto(&custom)
+				}
+			}
+		}
+		if bp == nil {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("blueprint %q not found", bpID))
+		}
+	}
+
+	if bp != nil {
+		if m.Spec == nil {
+			m.Spec = &v1.WorkloadSpec{}
+		}
+		if m.Spec.Loader == "" {
+			m.Spec.Loader = bp.Loader
+		}
+		if m.Spec.MinecraftVersion == "" {
+			m.Spec.MinecraftVersion = bp.MinecraftVersion
+		}
+		if m.Spec.MemoryMb <= 0 {
+			m.Spec.MemoryMb = bp.DefaultMemoryMb
+		}
+		if m.Spec.CpuMillicores <= 0 {
+			m.Spec.CpuMillicores = bp.DefaultCpuMillicores
+		}
+		if len(bp.DefaultEnv) > 0 {
+			if m.Spec.Env == nil {
+				m.Spec.Env = make(map[string]string)
+			}
+			for k, v := range bp.DefaultEnv {
+				if _, exists := m.Spec.Env[k]; !exists {
+					m.Spec.Env[k] = v
+				}
+			}
+		}
+		if len(bp.DefaultJvmFlags) > 0 && len(m.Spec.JvmFlags) == 0 {
+			m.Spec.JvmFlags = append([]string(nil), bp.DefaultJvmFlags...)
+		}
+		if bp.DockerImage != "" {
+			if m.Spec.Env == nil {
+				m.Spec.Env = make(map[string]string)
+			}
+			if _, exists := m.Spec.Env["DOCKER_IMAGE"]; !exists {
+				m.Spec.Env["DOCKER_IMAGE"] = bp.DockerImage
+			}
+		}
+	}
+
 	// Enforce quota if billing is active
 	if s.deps.Billing != nil {
 		var org db.Org
@@ -215,8 +282,12 @@ func (s *WorkloadService) CreateWorkload(ctx context.Context, req *connect.Reque
 			"loader":            m.Spec.Loader,
 			"minecraft_version": m.Spec.MinecraftVersion,
 			"memory_mb":         m.Spec.MemoryMb,
+			"cpu_millicores":    m.Spec.CpuMillicores,
 			"hostname":          m.Spec.Hostname,
 			"host_port":         allocatedPort,
+			"blueprint_id":      m.Spec.BlueprintId,
+			"env":               m.Spec.Env,
+			"jvm_flags":         m.Spec.JvmFlags,
 		})
 		w.Spec = string(raw)
 		w.Hostname = m.Spec.Hostname
@@ -289,8 +360,12 @@ func (s *WorkloadService) UpdateWorkload(ctx context.Context, req *connect.Reque
 			"loader":            req.Msg.Spec.Loader,
 			"minecraft_version": req.Msg.Spec.MinecraftVersion,
 			"memory_mb":         req.Msg.Spec.MemoryMb,
+			"cpu_millicores":    req.Msg.Spec.CpuMillicores,
 			"hostname":          req.Msg.Spec.Hostname,
 			"host_port":         newPort,
+			"blueprint_id":      req.Msg.Spec.BlueprintId,
+			"env":               req.Msg.Spec.Env,
+			"jvm_flags":         req.Msg.Spec.JvmFlags,
 		})
 		updates["spec"] = string(raw)
 		updates["hostname"] = req.Msg.Spec.Hostname

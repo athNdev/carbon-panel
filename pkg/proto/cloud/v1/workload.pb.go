@@ -45,7 +45,9 @@ type WorkloadSpec struct {
 	// Extra JVM flags appended to the generated command line.
 	JvmFlags []string `protobuf:"bytes,9,rep,name=jvm_flags,json=jvmFlags,proto3" json:"jvm_flags,omitempty"`
 	// Optional preferred host port on the node. If 0, dynamically allocated.
-	HostPort      int32 `protobuf:"varint,10,opt,name=host_port,json=hostPort,proto3" json:"host_port,omitempty"`
+	HostPort int32 `protobuf:"varint,10,opt,name=host_port,json=hostPort,proto3" json:"host_port,omitempty"`
+	// Optional blueprint/preset ID to inherit server configuration from (MINE-162).
+	BlueprintId   string `protobuf:"bytes,11,opt,name=blueprint_id,json=blueprintId,proto3" json:"blueprint_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -148,6 +150,13 @@ func (x *WorkloadSpec) GetHostPort() int32 {
 		return x.HostPort
 	}
 	return 0
+}
+
+func (x *WorkloadSpec) GetBlueprintId() string {
+	if x != nil {
+		return x.BlueprintId
+	}
+	return ""
 }
 
 // WorkloadEvent is an auditable lifecycle transition of a workload.
@@ -3036,7 +3045,7 @@ var File_cloud_v1_workload_proto protoreflect.FileDescriptor
 
 const file_cloud_v1_workload_proto_rawDesc = "" +
 	"\n" +
-	"\x17cloud/v1/workload.proto\x12\bcloud.v1\x1a\x15cloud/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x99\x03\n" +
+	"\x17cloud/v1/workload.proto\x12\bcloud.v1\x1a\x15cloud/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x03\n" +
 	"\fWorkloadSpec\x12\x16\n" +
 	"\x06loader\x18\x01 \x01(\tR\x06loader\x12+\n" +
 	"\x11minecraft_version\x18\x02 \x01(\tR\x10minecraftVersion\x12\x1b\n" +
@@ -3048,7 +3057,8 @@ const file_cloud_v1_workload_proto_rawDesc = "" +
 	"\x0fallow_byo_nodes\x18\b \x01(\bR\rallowByoNodes\x12\x1b\n" +
 	"\tjvm_flags\x18\t \x03(\tR\bjvmFlags\x12\x1b\n" +
 	"\thost_port\x18\n" +
-	" \x01(\x05R\bhostPort\x1a6\n" +
+	" \x01(\x05R\bhostPort\x12!\n" +
+	"\fblueprint_id\x18\v \x01(\tR\vblueprintId\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa9\x01\n" +

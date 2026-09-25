@@ -63,7 +63,8 @@ func (a *Allocator) PortRange() (int, int) {
 // GetAllocations queries the DB for all non-terminated workloads with an allocated host port on a node.
 func (a *Allocator) GetAllocations(ctx context.Context, tx *gorm.DB, nodeID string) ([]PortAllocation, error) {
 	var workloads []db.Workload
-	err := tx.WithContext(ctx).
+	err := tx.Session(&gorm.Session{}).WithContext(ctx).
+		Table("workloads").
 		Where("node_id = ? AND status NOT IN ('terminated', 'deleted') AND host_port > 0", nodeID).
 		Find(&workloads).Error
 	if err != nil {

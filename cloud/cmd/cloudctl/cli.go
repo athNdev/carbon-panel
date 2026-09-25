@@ -96,6 +96,7 @@ type Client struct {
 	Audit     cloudv1connect.AuditServiceClient
 	Org       cloudv1connect.OrgServiceClient
 	File      cloudv1connect.FileServiceClient
+	Blueprint cloudv1connect.BlueprintServiceClient
 }
 
 type authInterceptor struct {
@@ -157,6 +158,7 @@ func NewClient(endpoint, token, orgID string, httpClient *http.Client) *Client {
 		Audit:     cloudv1connect.NewAuditServiceClient(httpClient, endpoint, opts),
 		Org:       cloudv1connect.NewOrgServiceClient(httpClient, endpoint, opts),
 		File:      cloudv1connect.NewFileServiceClient(httpClient, endpoint, opts),
+		Blueprint: cloudv1connect.NewBlueprintServiceClient(httpClient, endpoint, opts),
 	}
 }
 
@@ -293,6 +295,8 @@ func (c *CLI) Run(ctx context.Context, args []string) error {
 		return c.runOrgs(ctx, subArgs)
 	case "files":
 		return c.runFiles(ctx, subArgs)
+	case "blueprints":
+		return c.runBlueprints(ctx, subArgs)
 	default:
 		return fmt.Errorf("unknown command: %s (run 'cloudctl help' for usage)", cmd)
 	}
@@ -324,6 +328,7 @@ Commands:
   audit              View audit trail (list, get)
   orgs               Manage organizations (list, get)
   files              Manage workload files (list, cat, put, rm, mkdir, stat)
+  blueprints         Manage server blueprints & presets (list, get, create, delete)
 `
 	_, err := fmt.Fprint(c.Stdout, help)
 	return err
@@ -813,10 +818,11 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		fs := flag.NewFlagSet("workloads create", flag.ContinueOnError)
 		name := fs.String("name", "", "Workload display name (required)")
 		nodeID := fs.String("node", "", "Node ID to pin workload to (optional)")
-		version := fs.String("version", "1.20.4", "Minecraft version")
-		loader := fs.String("loader", "paper", "Loader type (e.g. paper, fabric, vanilla)")
-		mem := fs.Int64("memory", 2048, "Memory in MB")
-		cpu := fs.Int64("cpu", 1000, "CPU millicores")
+		version := fs.String("version", "", "Minecraft version (defaults to blueprint/1.21.4)")
+		loader := fs.String("loader", "", "Loader type (defaults to blueprint/paper)")
+		blueprint := fs.String("blueprint", "", "Server preset/blueprint to provision from (e.g. paper, vanilla, fabric)")
+		mem := fs.Int64("memory", 0, "Memory in MB (0 to inherit blueprint default)")
+		cpu := fs.Int64("cpu", 0, "CPU millicores (0 to inherit blueprint default)")
 		port := fs.Int("port", 0, "Host port to allocate (optional, 0 for dynamic)")
 		hostname := fs.String("hostname", "", "Public hostname for workload (optional)")
 		if err := fs.Parse(args[1:]); err != nil {
@@ -825,14 +831,32 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 		if *name == "" {
 			return errors.New("flag -name is required")
 		}
+		defaultLoader := *loader
+		defaultVersion := *version
+		if *blueprint == "" && defaultLoader == "" {
+			defaultLoader = "paper"
+		}
+		if *blueprint == "" && defaultVersion == "" {
+			defaultVersion = "1.21.4"
+		}
+		defaultMem := *mem
+		if *blueprint == "" && defaultMem <= 0 {
+			defaultMem = 2048
+		}
+		defaultCpu := *cpu
+		if *blueprint == "" && defaultCpu <= 0 {
+			defaultCpu = 1000
+		}
+
 		resp, err := c.Client.Workload.CreateWorkload(ctx, connect.NewRequest(&v1.CreateWorkloadRequest{
 			Name:   *name,
 			NodeId: *nodeID,
 			Spec: &v1.WorkloadSpec{
-				MinecraftVersion: *version,
-				Loader:           *loader,
-				MemoryMb:         *mem,
-				CpuMillicores:    *cpu,
+				BlueprintId:      *blueprint,
+				MinecraftVersion: defaultVersion,
+				Loader:           defaultLoader,
+				MemoryMb:         defaultMem,
+				CpuMillicores:    defaultCpu,
 				HostPort:         int32(*port),
 				Hostname:         *hostname,
 			},
@@ -1556,4 +1580,121 @@ func maskKey(k string) string {
 		return "***"
 	}
 	return k[:4] + "..." + k[len(k)-4:]
+}
+
+func (c *CLI) runBlueprints(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: cloudctl blueprints <list|get|create|delete>")
+	}
+
+	switch args[0] {
+	case "list":
+		fs := flag.NewFlagSet("blueprints list", flag.ContinueOnError)
+		loader := fs.String("loader", "", "Filter by server loader (e.g. paper, fabric, vanilla)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		resp, err := c.Client.Blueprint.ListBlueprints(ctx, connect.NewRequest(&v1.ListBlueprintsRequest{
+			Loader: *loader,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Blueprints, func(w io.Writer) error {
+			tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "ID\tNAME\tLOADER\tVERSION\tMEMORY\tCPU\tBUILTIN")
+			for _, bp := range resp.Msg.Blueprints {
+				bStr := "no"
+				if bp.Builtin {
+					bStr = "yes"
+				}
+				_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%dM\t%dm\t%s\n",
+					bp.Id, bp.Name, bp.Loader, bp.MinecraftVersion, bp.DefaultMemoryMb, bp.DefaultCpuMillicores, bStr)
+			}
+			return tw.Flush()
+		})
+
+	case "get":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl blueprints get <id>")
+		}
+		id := args[1]
+		resp, err := c.Client.Blueprint.GetBlueprint(ctx, connect.NewRequest(&v1.GetBlueprintRequest{Id: id}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Blueprint, func(w io.Writer) error {
+			bp := resp.Msg.Blueprint
+			_, _ = fmt.Fprintf(w, "Blueprint: %s\n", bp.Id)
+			_, _ = fmt.Fprintf(w, "  Name:            %s\n", bp.Name)
+			_, _ = fmt.Fprintf(w, "  Description:     %s\n", bp.Description)
+			_, _ = fmt.Fprintf(w, "  Loader:          %s\n", bp.Loader)
+			_, _ = fmt.Fprintf(w, "  MC Version:      %s\n", bp.MinecraftVersion)
+			_, _ = fmt.Fprintf(w, "  Docker Image:    %s\n", bp.DockerImage)
+			_, _ = fmt.Fprintf(w, "  Default Memory:  %d MB\n", bp.DefaultMemoryMb)
+			_, _ = fmt.Fprintf(w, "  Default CPU:     %d millicores\n", bp.DefaultCpuMillicores)
+			bStr := "no"
+			if bp.Builtin {
+				bStr = "yes"
+			}
+			_, _ = fmt.Fprintf(w, "  Builtin:         %s\n", bStr)
+			if bp.OrgId != "" {
+				_, _ = fmt.Fprintf(w, "  Org ID:          %s\n", bp.OrgId)
+			}
+			if len(bp.DefaultEnv) > 0 {
+				_, _ = fmt.Fprintf(w, "  Default Env:\n")
+				for k, v := range bp.DefaultEnv {
+					_, _ = fmt.Fprintf(w, "    %s: %s\n", k, v)
+				}
+			}
+			if len(bp.DefaultJvmFlags) > 0 {
+				_, _ = fmt.Fprintf(w, "  Default JVM Flags: %s\n", strings.Join(bp.DefaultJvmFlags, " "))
+			}
+			return nil
+		})
+
+	case "create":
+		fs := flag.NewFlagSet("blueprints create", flag.ContinueOnError)
+		name := fs.String("name", "", "Blueprint display name (required)")
+		desc := fs.String("desc", "", "Description (optional)")
+		loader := fs.String("loader", "paper", "Server loader (e.g. paper, fabric, forge)")
+		version := fs.String("version", "1.21.4", "Target Minecraft version")
+		image := fs.String("image", "itzg/minecraft-server:latest", "Docker container image")
+		mem := fs.Int64("memory", 4096, "Default memory in MB")
+		cpu := fs.Int64("cpu", 2000, "Default CPU in millicores")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if *name == "" {
+			return errors.New("flag -name is required")
+		}
+		resp, err := c.Client.Blueprint.CreateBlueprint(ctx, connect.NewRequest(&v1.CreateBlueprintRequest{
+			Name:                 *name,
+			Description:          *desc,
+			Loader:               *loader,
+			MinecraftVersion:     *version,
+			DockerImage:          *image,
+			DefaultMemoryMb:      *mem,
+			DefaultCpuMillicores: *cpu,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Blueprint created: ID %s (%s, loader: %s)\n", resp.Msg.Blueprint.Id, resp.Msg.Blueprint.Name, resp.Msg.Blueprint.Loader)
+		return nil
+
+	case "delete":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl blueprints delete <id>")
+		}
+		id := args[1]
+		_, err := c.Client.Blueprint.DeleteBlueprint(ctx, connect.NewRequest(&v1.DeleteBlueprintRequest{Id: id}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Blueprint %s deleted\n", id)
+		return nil
+
+	default:		return fmt.Errorf("unknown blueprints command: %s (usage: list, get, create, delete)", args[0])
+	}
 }

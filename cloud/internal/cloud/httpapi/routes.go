@@ -51,4 +51,8 @@ func (s *Server) routes() {
 	mount(path, h)
 	path, h = cloudv1connect.NewFileServiceHandler(svcs.File, chain)
 	mount(path, h)
+	if svcs.Blueprint != nil {
+		path, h = cloudv1connect.NewBlueprintServiceHandler(svcs.Blueprint, chain)
+		mount(path, h)
+	}
 }

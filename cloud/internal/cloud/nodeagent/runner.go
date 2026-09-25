@@ -150,8 +150,13 @@ func (r *DockerRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (
 		},
 	}
 
+	imageName := "itzg/minecraft-server:latest"
+	if w.Spec != nil && w.Spec.Env != nil && w.Spec.Env["DOCKER_IMAGE"] != "" {
+		imageName = w.Spec.Env["DOCKER_IMAGE"]
+	}
+
 	cfg := &container.Config{
-		Image: "itzg/minecraft-server:latest",
+		Image: imageName,
 		Env:   env,
 		Labels: map[string]string{
 			"carbon.workload.id":   w.Id,

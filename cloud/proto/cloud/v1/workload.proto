@@ -30,6 +30,8 @@ message WorkloadSpec {
   repeated string jvm_flags = 9;
   // Optional preferred host port on the node. If 0, dynamically allocated.
   int32 host_port = 10;
+  // Optional blueprint/preset ID to inherit server configuration from (MINE-162).
+  string blueprint_id = 11;
 }
 
 // WorkloadEvent is an auditable lifecycle transition of a workload.
