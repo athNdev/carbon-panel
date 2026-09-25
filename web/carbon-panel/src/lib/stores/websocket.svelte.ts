@@ -82,7 +82,10 @@ class WebSocketClient {
 		this.state.error = null;
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		const wsUrl = `${protocol}//${window.location.host}/ws`;
+		// Pre-upgrade credential (MINE-164): the server rejects handshakes
+		// without a valid token before a socket exists.
+		const preAuth = get(authStore).token || '';
+		const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(preAuth)}`;
 
 		try {
 			this.socket = new WebSocket(wsUrl);
