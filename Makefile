@@ -51,7 +51,7 @@ prod: build-frontend
 # Build frontend for production
 build-frontend:
 	@echo "Building frontend..."
-	cd $(FRONTEND_DIR) && bun run build
+	cd $(FRONTEND_DIR) && NODE_OPTIONS="--max-old-space-size=4096" bun run build
 
 # Build backend with embedded frontend
 build: build-frontend
