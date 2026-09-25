@@ -7,10 +7,11 @@ import (
 	"os"
 
 	shellparse "github.com/arkady-emelyanov/go-shellparse"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
+	"net/netip"
 	"github.com/athNdev/carbon-panel/internal/alias"
 	"github.com/athNdev/carbon-panel/internal/config"
 	models "github.com/athNdev/carbon-panel/internal/db"
@@ -56,8 +57,8 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 	c.log.Debug("Creating container for module %s with image %s", module.ID, imageName)
 
 	// Build exposed ports and port bindings from module.Ports
-	exposedPorts := nat.PortSet{}
-	portBindings := nat.PortMap{}
+	exposedPorts := network.PortSet{}
+	portBindings := network.PortMap{}
 
 	for _, port := range module.Ports {
 		if port == nil || port.ContainerPort == 0 {
@@ -69,13 +70,13 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 			dockerProto = "udp"
 		}
 
-		natPort := nat.Port(fmt.Sprintf("%d/%s", port.ContainerPort, dockerProto))
+		natPort := network.MustParsePort(fmt.Sprintf("%d/%s", port.ContainerPort, dockerProto))
 		exposedPorts[natPort] = struct{}{}
 
 		// Bind host port when proxy is not enabled for this port
 		if port.HostPort > 0 && !port.ProxyEnabled {
-			portBindings[natPort] = []nat.PortBinding{
-				{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", port.HostPort)},
+			portBindings[natPort] = []network.PortBinding{
+				{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: fmt.Sprintf("%d", port.HostPort)},
 			}
 		}
 
@@ -290,22 +291,25 @@ func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount) []mount.Moun
 
 // GetModuleContainerIP gets the IP address of a module container on the Carbon Panel network
 func (c *Client) GetModuleContainerIP(ctx context.Context, containerID string) (string, error) {
-	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	inspectRes, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return "", err
 	}
+	inspect := inspectRes.Container
 
 	// Try to get IP from the configured network
-	if c.config.NetworkName != "" {
-		if endpoint, ok := inspect.NetworkSettings.Networks[c.config.NetworkName]; ok {
-			return endpoint.IPAddress, nil
+	if c.config.NetworkName != "" && inspect.NetworkSettings != nil {
+		if endpoint, ok := inspect.NetworkSettings.Networks[c.config.NetworkName]; ok && endpoint.IPAddress.IsValid() && !endpoint.IPAddress.IsUnspecified() {
+			return endpoint.IPAddress.String(), nil
 		}
 	}
 
 	// Fallback to any available network
-	for _, endpoint := range inspect.NetworkSettings.Networks {
-		if endpoint.IPAddress != "" {
-			return endpoint.IPAddress, nil
+	if inspect.NetworkSettings != nil {
+		for _, endpoint := range inspect.NetworkSettings.Networks {
+			if endpoint.IPAddress.IsValid() && !endpoint.IPAddress.IsUnspecified() {
+				return endpoint.IPAddress.String(), nil
+			}
 		}
 	}
 

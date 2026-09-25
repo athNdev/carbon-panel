@@ -24,6 +24,7 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/moby/moby/client"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -607,14 +608,14 @@ func (s *SupportService) addSystemInfoToBundle(ctx context.Context, tarWriter *t
 		// Get Docker version and info
 		dockerClient := s.docker.GetDockerClient()
 		if dockerClient != nil {
-			info, err := dockerClient.Info(ctx)
+			res, err := dockerClient.Info(ctx, client.InfoOptions{})
 			if err == nil {
 				dockerInfo = &v1.DockerInfo{
-					Version:     info.ServerVersion,
-					Containers:  int32(info.Containers),
-					Images:      int32(info.Images),
-					MemoryLimit: info.MemTotal,
-					Cpus:        int32(info.NCPU),
+					Version:     res.Info.ServerVersion,
+					Containers:  int32(res.Info.Containers),
+					Images:      int32(res.Info.Images),
+					MemoryLimit: res.Info.MemTotal,
+					Cpus:        int32(res.Info.NCPU),
 				}
 			}
 		}

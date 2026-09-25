@@ -3,6 +3,8 @@ package blueprint
 import (
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 )
 
@@ -148,18 +150,7 @@ func FindBuiltin(id string) *v1.Blueprint {
 	clean := strings.ToLower(strings.TrimSpace(id))
 	for _, b := range BuiltinBlueprints() {
 		if strings.ToLower(b.Id) == clean || strings.ToLower(b.Loader) == clean {
-			// Return a copy so caller mutations don't affect standard catalog
-			cp := *b
-			if b.DefaultEnv != nil {
-				cp.DefaultEnv = make(map[string]string, len(b.DefaultEnv))
-				for k, v := range b.DefaultEnv {
-					cp.DefaultEnv[k] = v
-				}
-			}
-			if len(b.DefaultJvmFlags) > 0 {
-				cp.DefaultJvmFlags = append([]string(nil), b.DefaultJvmFlags...)
-			}
-			return &cp
+			return proto.Clone(b).(*v1.Blueprint)
 		}
 	}
 	return nil

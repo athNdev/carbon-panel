@@ -8,9 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -193,14 +192,15 @@ func (ls *LogStreamer) streamLogs(ctx context.Context, stream *ContainerLogStrea
 	}
 
 	// Check if container has TTY enabled
-	inspect, err := dock.ContainerInspect(ctx, stream.containerID)
+	inspectRes, err := dock.ContainerInspect(ctx, stream.containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		ls.log.Error("Failed to inspect container %s: %v", stream.containerID, err)
 		return
 	}
+	inspect := inspectRes.Container
 
 	// Log streaming config
-	options := container.LogsOptions{
+	options := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,

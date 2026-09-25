@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/client"
 	"github.com/athNdev/carbon-panel/internal/command"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -501,7 +500,7 @@ func (c *Collector) collectSLPData() {
 		}
 
 		// Get container IP
-		var cli client.CommonAPIClient
+		var cli proxy.ContainerInspector
 		if dockerCli != nil {
 			cli = dockerCli.GetDockerClient()
 		}

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/docker/go-connections/tlsconfig"
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -373,23 +373,24 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 			return nil, fmt.Errorf("failed to prepare TLS certs: %w", err)
 		}
 
-		tlsOpt := func(c *client.Client) error {
+		if node.TLSSkipVerify {
 			tlsConf, err := tlsconfig.Client(tlsconfig.Options{
 				CAFile:             caFile,
 				CertFile:           certFile,
 				KeyFile:            keyFile,
-				InsecureSkipVerify: node.TLSSkipVerify,
+				InsecureSkipVerify: true,
 				ExclusiveRootPools: caFile != "",
 			})
 			if err != nil {
-				return fmt.Errorf("failed to build TLS config: %w", err)
+				return nil, fmt.Errorf("failed to build TLS config: %w", err)
 			}
-			if tr, ok := c.HTTPClient().Transport.(*http.Transport); ok {
-				tr.TLSClientConfig = tlsConf
+			tr := &http.Transport{
+				TLSClientConfig: tlsConf,
 			}
-			return nil
+			opts = append(opts, client.WithHTTPClient(&http.Client{Transport: tr}))
+		} else {
+			opts = append(opts, client.WithTLSClientConfig(caFile, certFile, keyFile))
 		}
-		opts = append(opts, tlsOpt)
 	}
 
 	dockerCli, err := client.NewClientWithOpts(opts...)

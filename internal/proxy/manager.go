@@ -7,13 +7,19 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	db "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 // Manager handles the lifecycle of the proxy and manages routes
+// ContainerInspector defines the minimal Docker client interface needed to inspect containers.
+type ContainerInspector interface {
+	ContainerInspect(ctx context.Context, containerID string, options client.ContainerInspectOptions) (client.ContainerInspectResult, error)
+	Close() error
+}
+
 type Manager struct {
 	proxies          map[int]Proxier // Map of port -> Proxy instance (TCP or UDP)
 	store            *db.Store
@@ -21,7 +27,7 @@ type Manager struct {
 	logger           *logger.Logger
 	mu               sync.Mutex
 	networkName      string
-	dockerClient     client.CommonAPIClient
+	dockerClient     ContainerInspector
 	ownsDockerClient bool
 	wakeHandler      WakeHandler
 	activityHandler  ActivityHandler
@@ -30,7 +36,7 @@ type Manager struct {
 }
 
 // NewManager creates a new proxy manager
-func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...client.CommonAPIClient) *Manager {
+func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...ContainerInspector) *Manager {
 	m := &Manager{
 		proxies:     make(map[int]Proxier),
 		store:       store,
@@ -858,7 +864,7 @@ func (m *Manager) GetContainerIP(containerID string) (string, error) {
 }
 
 // GetContainerIP gets the IP address of a container on the specified network using the provided Docker client
-func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName string) (string, error) {
+func GetContainerIP(cli ContainerInspector, containerID string, networkName string) (string, error) {
 	if cli == nil {
 		c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
@@ -869,22 +875,25 @@ func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName 
 	}
 
 	ctx := context.Background()
-	containerInfo, err := cli.ContainerInspect(ctx, containerID)
+	res, err := cli.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to inspect container: %w", err)
 	}
+	containerInfo := res.Container
 
 	// Look for the IP on the specified network
-	if networkName != "" {
-		if network, ok := containerInfo.NetworkSettings.Networks[networkName]; ok && network.IPAddress != "" {
-			return network.IPAddress, nil
+	if networkName != "" && containerInfo.NetworkSettings != nil {
+		if network, ok := containerInfo.NetworkSettings.Networks[networkName]; ok && network.IPAddress.IsValid() && !network.IPAddress.IsUnspecified() {
+			return network.IPAddress.String(), nil
 		}
 	}
 
 	// Fallback to any available IP
-	for _, network := range containerInfo.NetworkSettings.Networks {
-		if network.IPAddress != "" {
-			return network.IPAddress, nil
+	if containerInfo.NetworkSettings != nil {
+		for _, network := range containerInfo.NetworkSettings.Networks {
+			if network.IPAddress.IsValid() && !network.IPAddress.IsUnspecified() {
+				return network.IPAddress.String(), nil
+			}
 		}
 	}
 

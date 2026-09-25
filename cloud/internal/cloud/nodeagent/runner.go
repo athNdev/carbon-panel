@@ -16,11 +16,11 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/minecraft"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
+	"net/netip"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -77,19 +77,29 @@ func (r *DockerRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (
 	containerName := "carbon-workload-" + w.Id
 
 	// Check if container already exists
-	inspect, err := r.cli.ContainerInspect(ctx, containerName)
+	mcPort := network.MustParsePort("25565/tcp")
+	inspectRes, err := r.cli.ContainerInspect(ctx, containerName, client.ContainerInspectOptions{})
 	if err == nil {
-		r.logger.Info("workload container already exists", "workload_id", w.Id, "container_id", inspect.ID, "status", inspect.State.Status)
-		if start && !inspect.State.Running {
-			if startErr := r.cli.ContainerStart(ctx, inspect.ID, container.StartOptions{}); startErr != nil {
+		inspect := inspectRes.Container
+		status := ""
+		running := false
+		if inspect.State != nil {
+			status = string(inspect.State.Status)
+			running = inspect.State.Running
+		}
+		r.logger.Info("workload container already exists", "workload_id", w.Id, "container_id", inspect.ID, "status", status)
+		if start && !running {
+			if _, startErr := r.cli.ContainerStart(ctx, inspect.ID, client.ContainerStartOptions{}); startErr != nil {
 				return inspect.ID, 0, fmt.Errorf("start existing container: %w", startErr)
 			}
 		}
 		var port int32
-		if bindings, ok := inspect.NetworkSettings.Ports["25565/tcp"]; ok && len(bindings) > 0 {
-			var p int
-			if _, err := fmt.Sscanf(bindings[0].HostPort, "%d", &p); err == nil {
-				port = int32(p)
+		if inspect.NetworkSettings != nil && inspect.NetworkSettings.Ports != nil {
+			if bindings, ok := inspect.NetworkSettings.Ports[mcPort]; ok && len(bindings) > 0 {
+				var p int
+				if _, err := fmt.Sscanf(bindings[0].HostPort, "%d", &p); err == nil {
+					port = int32(p)
+				}
 			}
 		}
 		return inspect.ID, port, nil
@@ -143,10 +153,10 @@ func (r *DockerRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (
 		hostPortStr = "0" // allocate dynamic ephemeral port if 25565 is occupied
 	}
 
-	portBindings := nat.PortMap{
-		"25565/tcp": []nat.PortBinding{
+	portBindings := network.PortMap{
+		mcPort: []network.PortBinding{
 			{
-				HostIP:   "0.0.0.0",
+				HostIP:   netip.MustParseAddr("0.0.0.0"),
 				HostPort: hostPortStr,
 			},
 		},
@@ -165,8 +175,8 @@ func (r *DockerRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (
 			"carbon.workload.name": w.Name,
 			"carbon.org.id":        w.OrgId,
 		},
-		ExposedPorts: nat.PortSet{
-			"25565/tcp": struct{}{},
+		ExposedPorts: network.PortSet{
+			mcPort: struct{}{},
 		},
 	}
 
@@ -182,7 +192,11 @@ func (r *DockerRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (
 		},
 	}
 
-	resp, err := r.cli.ContainerCreate(ctx, cfg, hostCfg, nil, nil, containerName)
+	resp, err := r.cli.ContainerCreate(ctx, client.ContainerCreateOptions{
+		Config:     cfg,
+		HostConfig: hostCfg,
+		Name:       containerName,
+	})
 	if err != nil {
 		return "", 0, fmt.Errorf("create container: %w", err)
 	}
@@ -190,18 +204,21 @@ func (r *DockerRunner) Assign(ctx context.Context, w *v1.Workload, start bool) (
 	r.logger.Info("created workload container", "workload_id", w.Id, "container_id", resp.ID)
 
 	if start {
-		if err := r.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		if _, err := r.cli.ContainerStart(ctx, resp.ID, client.ContainerStartOptions{}); err != nil {
 			return resp.ID, 0, fmt.Errorf("start container: %w", err)
 		}
 		r.logger.Info("started workload container", "workload_id", w.Id, "container_id", resp.ID)
 	}
 
 	var assignedPort int32
-	if insp, err := r.cli.ContainerInspect(ctx, resp.ID); err == nil {
-		if bindings, ok := insp.NetworkSettings.Ports["25565/tcp"]; ok && len(bindings) > 0 {
-			var p int
-			if _, err := fmt.Sscanf(bindings[0].HostPort, "%d", &p); err == nil {
-				assignedPort = int32(p)
+	if inspRes, err := r.cli.ContainerInspect(ctx, resp.ID, client.ContainerInspectOptions{}); err == nil {
+		insp := inspRes.Container
+		if insp.NetworkSettings != nil && insp.NetworkSettings.Ports != nil {
+			if bindings, ok := insp.NetworkSettings.Ports[mcPort]; ok && len(bindings) > 0 {
+				var p int
+				if _, err := fmt.Sscanf(bindings[0].HostPort, "%d", &p); err == nil {
+					assignedPort = int32(p)
+				}
 			}
 		}
 	}
@@ -215,13 +232,14 @@ func (r *DockerRunner) Stop(ctx context.Context, workloadID string, timeoutSec i
 	if timeoutSec <= 0 {
 		timeoutSec = 15
 	}
-	return r.cli.ContainerStop(ctx, containerName, container.StopOptions{Timeout: &timeoutSec})
+	_, err := r.cli.ContainerStop(ctx, containerName, client.ContainerStopOptions{Timeout: &timeoutSec})
+	return err
 }
 
 // Delete removes the container and optionally scrubs the on-disk directory.
 func (r *DockerRunner) Delete(ctx context.Context, workloadID string, deleteData bool) error {
 	containerName := "carbon-workload-" + workloadID
-	_ = r.cli.ContainerRemove(ctx, containerName, container.RemoveOptions{Force: true})
+	_, _ = r.cli.ContainerRemove(ctx, containerName, client.ContainerRemoveOptions{Force: true})
 	if deleteData {
 		hostDataDir := filepath.Join(r.dataDir, "workloads", workloadID)
 		_ = os.RemoveAll(hostDataDir)
@@ -232,43 +250,53 @@ func (r *DockerRunner) Delete(ctx context.Context, workloadID string, deleteData
 // Hibernate pauses or deep-sleeps the workload container.
 func (r *DockerRunner) Hibernate(ctx context.Context, workloadID, mode string) error {
 	containerName := "carbon-workload-" + workloadID
-	inspect, err := r.cli.ContainerInspect(ctx, containerName)
+	inspectRes, err := r.cli.ContainerInspect(ctx, containerName, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("inspect container for hibernate: %w", err)
 	}
+	inspect := inspectRes.Container
 
 	mode = strings.ToLower(strings.TrimSpace(mode))
 	if mode == "deep_sleep" || mode == "stop" {
-		if inspect.State.Running {
+		if inspect.State != nil && inspect.State.Running {
 			timeout := 15
-			return r.cli.ContainerStop(ctx, containerName, container.StopOptions{Timeout: &timeout})
+			_, err := r.cli.ContainerStop(ctx, containerName, client.ContainerStopOptions{Timeout: &timeout})
+			return err
 		}
 		return nil
 	}
 
 	// Default: pause (cgroup freeze)
-	if inspect.State.Paused {
+	if inspect.State != nil && inspect.State.Paused {
 		return nil
 	}
-	if !inspect.State.Running {
-		return fmt.Errorf("container is not running (status: %s)", inspect.State.Status)
+	if inspect.State == nil || !inspect.State.Running {
+		status := ""
+		if inspect.State != nil {
+			status = string(inspect.State.Status)
+		}
+		return fmt.Errorf("container is not running (status: %s)", status)
 	}
-	return r.cli.ContainerPause(ctx, containerName)
+	_, err = r.cli.ContainerPause(ctx, containerName, client.ContainerPauseOptions{})
+	return err
 }
 
 // Wake unpauses or starts a hibernated workload container.
 func (r *DockerRunner) Wake(ctx context.Context, workloadID string) error {
 	containerName := "carbon-workload-" + workloadID
-	inspect, err := r.cli.ContainerInspect(ctx, containerName)
+	inspectRes, err := r.cli.ContainerInspect(ctx, containerName, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("inspect container for wake: %w", err)
 	}
+	inspect := inspectRes.Container
 
-	if inspect.State.Paused {
-		return r.cli.ContainerUnpause(ctx, containerName)
+	if inspect.State != nil && inspect.State.Paused {
+		_, err := r.cli.ContainerUnpause(ctx, containerName, client.ContainerUnpauseOptions{})
+		return err
 	}
-	if !inspect.State.Running {
-		return r.cli.ContainerStart(ctx, inspect.ID, container.StartOptions{})
+	if inspect.State != nil && !inspect.State.Running {
+		_, err := r.cli.ContainerStart(ctx, inspect.ID, client.ContainerStartOptions{})
+		return err
 	}
 	return nil
 }
@@ -276,17 +304,16 @@ func (r *DockerRunner) Wake(ctx context.Context, workloadID string) error {
 // RunCommand executes a command via rcon-cli inside the workload container.
 func (r *DockerRunner) RunCommand(ctx context.Context, workloadID, command string) (string, error) {
 	containerName := "carbon-workload-" + workloadID
-	execCfg := container.ExecOptions{
+	execResp, err := r.cli.ExecCreate(ctx, containerName, client.ExecCreateOptions{
 		Cmd:          []string{"rcon-cli", command},
 		AttachStdout: true,
 		AttachStderr: true,
-	}
-	execResp, err := r.cli.ContainerExecCreate(ctx, containerName, execCfg)
+	})
 	if err != nil {
 		return "", fmt.Errorf("create exec: %w", err)
 	}
 
-	attachResp, err := r.cli.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{})
+	attachResp, err := r.cli.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return "", fmt.Errorf("attach exec: %w", err)
 	}
@@ -299,7 +326,7 @@ func (r *DockerRunner) RunCommand(ctx context.Context, workloadID, command strin
 		stdout.Write(raw)
 	}
 
-	insp, err := r.cli.ContainerExecInspect(ctx, execResp.ID)
+	insp, err := r.cli.ExecInspect(ctx, execResp.ID, client.ExecInspectOptions{})
 	out := strings.TrimSpace(stdout.String())
 	errOut := strings.TrimSpace(stderr.String())
 	if err == nil && insp.ExitCode != 0 {
@@ -322,25 +349,29 @@ func (r *DockerRunner) Logs(ctx context.Context, workloadID string, tail int, fo
 	if tail > 0 {
 		tailStr = fmt.Sprintf("%d", tail)
 	}
-	opts := container.LogsOptions{
+	opts := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     follow,
 		Tail:       tailStr,
 	}
-	return r.cli.ContainerLogs(ctx, containerName, opts)
+	res, err := r.cli.ContainerLogs(ctx, containerName, opts)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // ListActiveWorkloadIDs returns all workload IDs that currently exist as Docker containers on this node.
 func (r *DockerRunner) ListActiveWorkloadIDs(ctx context.Context) ([]string, error) {
-	containers, err := r.cli.ContainerList(ctx, container.ListOptions{
-		Filters: filters.NewArgs(filters.Arg("label", "carbon.workload.id")),
+	res, err := r.cli.ContainerList(ctx, client.ContainerListOptions{
+		Filters: client.Filters{}.Add("label", "carbon.workload.id"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list workload containers: %w", err)
 	}
 	var ids []string
-	for _, c := range containers {
+	for _, c := range res.Items {
 		if id, ok := c.Labels["carbon.workload.id"]; ok && id != "" {
 			ids = append(ids, id)
 		}
@@ -383,7 +414,7 @@ func (r *DockerRunner) getWorkloadDiskUsage(workloadID string) int64 {
 func (r *DockerRunner) GetMetrics(ctx context.Context, workloadID string) (*v1.WorkloadMetrics, error) {
 	containerName := "carbon-workload-" + workloadID
 
-	statsResp, err := r.cli.ContainerStats(ctx, containerName, false)
+	statsResp, err := r.cli.ContainerStats(ctx, containerName, client.ContainerStatsOptions{Stream: false})
 	if err != nil {
 		return nil, fmt.Errorf("container stats: %w", err)
 	}

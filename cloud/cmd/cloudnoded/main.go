@@ -35,7 +35,7 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/obs"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/cloud/v1/cloudv1connect"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -3,7 +3,7 @@ package docker
 import (
 	"context"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	models "github.com/athNdev/carbon-panel/internal/db"
 )
