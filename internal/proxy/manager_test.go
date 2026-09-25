@@ -8,12 +8,13 @@ package proxy
 
 import (
 	"context"
+	"net/netip"
 	"fmt"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
@@ -22,16 +23,17 @@ import (
 )
 
 type mockDockerClient struct {
-	client.CommonAPIClient
-	inspectFunc func(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	DockerInspector
+	inspectFunc func(ctx context.Context, containerID string) (container.InspectResponse, error)
 	closed      bool
 }
 
-func (m *mockDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (m *mockDockerClient) ContainerInspect(ctx context.Context, containerID string, _ client.ContainerInspectOptions) (client.ContainerInspectResult, error) {
 	if m.inspectFunc != nil {
-		return m.inspectFunc(ctx, containerID)
+		resp, err := m.inspectFunc(ctx, containerID)
+		return client.ContainerInspectResult{Container: resp}, err
 	}
-	return types.ContainerJSON{}, fmt.Errorf("not implemented")
+	return client.ContainerInspectResult{}, fmt.Errorf("not implemented")
 }
 
 func (m *mockDockerClient) Close() error {
@@ -59,15 +61,15 @@ func setupTestStore(t *testing.T) *db.Store {
 
 func TestGetContainerIP_SpecificNetwork(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"bridge": {
-							IPAddress: "172.17.0.2",
+							IPAddress: netip.MustParseAddr("172.17.0.2"),
 						},
 						"carbon-panel-net": {
-							IPAddress: "172.20.0.5",
+							IPAddress: netip.MustParseAddr("172.20.0.5"),
 						},
 					},
 				},
@@ -86,12 +88,12 @@ func TestGetContainerIP_SpecificNetwork(t *testing.T) {
 
 func TestGetContainerIP_FallbackNetwork(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"other-net": {
-							IPAddress: "10.0.0.2",
+							IPAddress: netip.MustParseAddr("10.0.0.2"),
 						},
 					},
 				},
@@ -110,13 +112,11 @@ func TestGetContainerIP_FallbackNetwork(t *testing.T) {
 
 func TestGetContainerIP_NoIPFound(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
-						"empty-net": {
-							IPAddress: "",
-						},
+						"empty-net": {},
 					},
 				},
 			}, nil
@@ -131,12 +131,12 @@ func TestGetContainerIP_NoIPFound(t *testing.T) {
 
 func TestManager_GetContainerIP_UsesConfiguredClient(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"test-net": {
-							IPAddress: "192.168.1.100",
+							IPAddress: netip.MustParseAddr("192.168.1.100"),
 						},
 					},
 				},
@@ -166,12 +166,12 @@ func TestManager_GetContainerIP_UsesConfiguredClient(t *testing.T) {
 
 func TestManager_AddAndRemoveModuleRoute(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"test-net": {
-							IPAddress: "172.28.0.10",
+							IPAddress: netip.MustParseAddr("172.28.0.10"),
 						},
 					},
 				},
