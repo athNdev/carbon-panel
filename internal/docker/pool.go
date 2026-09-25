@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/docker/go-connections/tlsconfig"
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -377,30 +377,29 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 		opts = append(opts, client.WithHost(host))
 	}
 
-	// TLS configuration
+	// TLS configuration. The SDK no longer exposes the underlying transport,
+	// so build the TLS config here and hand the client a transport carrying
+	// it (this branch only runs for TCP hosts, where DefaultTransport
+	// semantics apply).
 	if node.TLSEnabled || node.TLSCert != "" || node.TLSCACert != "" || node.TLSSkipVerify {
 		caFile, certFile, keyFile, err := resolveTLSCertFiles(node)
 		if err != nil {
 			return nil, fmt.Errorf("failed to prepare TLS certs: %w", err)
 		}
 
-		tlsOpt := func(c *client.Client) error {
-			tlsConf, err := tlsconfig.Client(tlsconfig.Options{
-				CAFile:             caFile,
-				CertFile:           certFile,
-				KeyFile:            keyFile,
-				InsecureSkipVerify: node.TLSSkipVerify,
-				ExclusiveRootPools: caFile != "",
-			})
-			if err != nil {
-				return fmt.Errorf("failed to build TLS config: %w", err)
-			}
-			if tr, ok := c.HTTPClient().Transport.(*http.Transport); ok {
-				tr.TLSClientConfig = tlsConf
-			}
-			return nil
+		tlsConf, err := tlsconfig.Client(tlsconfig.Options{
+			CAFile:             caFile,
+			CertFile:           certFile,
+			KeyFile:            keyFile,
+			InsecureSkipVerify: node.TLSSkipVerify,
+			ExclusiveRootPools: caFile != "",
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to build TLS config: %w", err)
 		}
-		opts = append(opts, tlsOpt)
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = tlsConf
+		opts = append(opts, client.WithHTTPClient(&http.Client{Transport: transport}))
 	}
 
 	dockerCli, err := NewAPIClient(opts...)
