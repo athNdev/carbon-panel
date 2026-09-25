@@ -197,7 +197,12 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-2">
-			<CarbonButton kind="primary" size="md" href="/servers/new" class="justify-center gap-2">
+			<CarbonButton
+				kind="primary"
+				size="md"
+				href={resolve('/servers/new')}
+				class="justify-center gap-2"
+			>
 				<Plus class="h-4 w-4" />
 				<span>Create Server</span>
 			</CarbonButton>
@@ -318,7 +323,7 @@
 				<CarbonButton
 					kind="primary"
 					size="md"
-					href="/servers/new"
+					href={resolve('/servers/new')}
 					class="inline-flex justify-center gap-2"
 				>
 					<Plus class="h-4 w-4" />

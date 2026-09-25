@@ -14,14 +14,12 @@
 		RefreshCcw,
 		MoreVertical,
 		Package,
-		Activity,
 		Loader2,
 		Copy,
 		ExternalLink,
 		Trash2,
 		Cpu,
 		Info,
-		Network,
 		ArrowLeft,
 		HardDrive,
 		Terminal,
@@ -53,9 +51,9 @@
 		RestartServerRequestSchema,
 		RecreateServerRequestSchema
 	} from '$lib/proto/carbonpanel/v1/server_pb';
-	import { formatBytes, enumToString } from '$lib/utils';
+	import { enumToString } from '$lib/utils';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
-	import { CarbonTag, CarbonButton, CarbonTabs } from '$lib/components/carbon';
+	import { CarbonTag, CarbonTabs } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
 	import ServerSettings from '$lib/components/server-settings.svelte';
@@ -290,7 +288,7 @@
 		>
 			<div class="flex items-center gap-4">
 				<a
-					href="/servers"
+					href={resolve('/servers')}
 					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 					title="Back to Servers"
 				>
@@ -730,7 +728,7 @@
 		<div class="rounded-none border border-[#393939] bg-[#262626] p-8 text-center">
 			<p class="font-mono text-sm text-[#ff8389]">Server instance not found</p>
 			<a
-				href="/servers"
+				href={resolve('/servers')}
 				class="mt-4 inline-flex h-8 items-center rounded-none bg-[#393939] px-4 font-sans text-xs text-white transition-colors hover:bg-[#4c4c4c]"
 			>
 				Back to servers

@@ -26,6 +26,7 @@
 </script>
 
 {#if href}
+	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href is caller-provided; callers pass resolve()d paths -->
 	<a {href} class="{baseClasses} {hoverClasses} block {className}">
 		{@render children?.()}
 	</a>
