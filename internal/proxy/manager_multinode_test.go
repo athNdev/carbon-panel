@@ -8,10 +8,11 @@ package proxy
 
 import (
 	"context"
+	"net/netip"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
@@ -20,12 +21,12 @@ import (
 
 func TestResolveBackend_LocalServer(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"bridge": {
-							IPAddress: "172.17.0.4",
+							IPAddress: netip.MustParseAddr("172.17.0.4"),
 						},
 					},
 				},
@@ -65,9 +66,9 @@ func TestResolveBackend_LocalServer(t *testing.T) {
 func TestResolveBackend_RemoteServer(t *testing.T) {
 	// mockCli inspectFunc will fail if called, verifying remote nodes bypass Docker inspect
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			t.Fatal("docker inspect should not be called for remote node!")
-			return types.ContainerJSON{}, nil
+			return container.InspectResponse{}, nil
 		},
 	}
 
