@@ -25,6 +25,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { Plus, Trash2, Settings, RefreshCw, Layers } from '@lucide/svelte';
 	import ModuleTemplateCreateDialog from '$lib/components/server/ModuleTemplateCreateDialog.svelte';
 	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let templates = $state<ModuleTemplate[]>([]);
 	let loading = $state(true);
@@ -73,7 +74,7 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	let categories = $derived.by(() => {
-		const cats = new Set<string>();
+		const cats = new SvelteSet<string>();
 		templates.forEach((t) => {
 			if (t.category) cats.add(t.category);
 		});
@@ -94,7 +95,7 @@ one at https://mozilla.org/MPL/2.0/.
 			<div class="w-36">
 				<CarbonSelect bind:value={selectedCategory}>
 					<option value="">All Categories</option>
-					{#each categories as cat}
+					{#each categories as cat (cat)}
 						<option value={cat}>{cat}</option>
 					{/each}
 				</CarbonSelect>

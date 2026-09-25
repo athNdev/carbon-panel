@@ -16,8 +16,6 @@ one at https://mozilla.org/MPL/2.0/.
 		Upload,
 		Download,
 		Trash2,
-		ToggleLeft,
-		ToggleRight,
 		Package,
 		FileText,
 		X,

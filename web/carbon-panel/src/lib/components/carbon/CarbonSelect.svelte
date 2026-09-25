@@ -14,7 +14,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		label?: string;
 		helperText?: string;
 		error?: string;
-		value?: any;
+		value?: string | number;
 		class?: string;
 		children?: Snippet;
 	}

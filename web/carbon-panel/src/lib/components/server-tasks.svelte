@@ -174,7 +174,6 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 	});
 
-	let taskConfig = $state('');
 	let eventTriggers = $state<TriggeredEventType[]>([TriggeredEventType.SERVER_START]);
 
 	// Form state â€” webhook
@@ -394,7 +393,6 @@ one at https://mozilla.org/MPL/2.0/.
 		backupMinBackups = 3;
 		backupMaxBackups = 0;
 		activeSection = 'general';
-		taskConfig = '';
 		eventTriggers = [TriggeredEventType.SERVER_START];
 		webhookUrl = '';
 		webhookSecret = '';
@@ -452,7 +450,6 @@ one at https://mozilla.org/MPL/2.0/.
 		backupMinBackups = typeof parsed.min_backups === 'number' ? parsed.min_backups : 0;
 		backupMaxBackups = typeof parsed.max_backups === 'number' ? parsed.max_backups : 0;
 
-		taskConfig = task.config;
 		eventTriggers =
 			task.eventTriggers && task.eventTriggers.length > 0
 				? [...task.eventTriggers]
@@ -539,7 +536,7 @@ one at https://mozilla.org/MPL/2.0/.
 	function buildWebhookConfig(): string {
 		// The backend just renders payload_template, so always send a concrete
 		// template: the user's custom one, or the preset resolved from the URL.
-		const cfg: Record<string, any> = {
+		const cfg: Record<string, unknown> = {
 			url: webhookUrl,
 			payload_template: customizePayload ? payloadTemplate : getDefaultTemplate(webhookUrl),
 			max_retries: webhookMaxRetries,
@@ -553,7 +550,9 @@ one at https://mozilla.org/MPL/2.0/.
 			try {
 				const prev = JSON.parse(selectedTask.config || '{}');
 				if (prev.secret) cfg.secret = prev.secret;
-			} catch {}
+			} catch {
+				// Previous config is not JSON — the secret simply stays unset.
+			}
 		}
 		return JSON.stringify(cfg);
 	}
@@ -950,7 +949,7 @@ one at https://mozilla.org/MPL/2.0/.
 											{getTaskTypeLabel(task.taskType)}
 										</Badge>
 										{#if task.schedule === ScheduleType.EVENT}
-											{#each task.eventTriggers as trigger}
+											{#each task.eventTriggers as trigger (trigger)}
 												<Badge variant="outline" class="flex items-center gap-1 text-xs">
 													<Zap class="h-3 w-3" />
 													{getEventTypeLabel(trigger)}
@@ -1403,7 +1402,7 @@ one at https://mozilla.org/MPL/2.0/.
 								<div class={!customizePayload ? 'pointer-events-none opacity-40' : ''}>
 									<p class="mb-1.5 text-sm font-medium text-muted-foreground">Presets</p>
 									<div class="flex flex-wrap gap-1">
-										{#each Object.keys(presetLabels) as key}
+										{#each Object.keys(presetLabels) as key (key)}
 											{#if webhookTemplatePresets[key]}
 												<Button
 													variant="outline"
@@ -1435,7 +1434,7 @@ one at https://mozilla.org/MPL/2.0/.
 									<div
 										class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 rounded border border-border/50 bg-muted/20 p-2 font-mono text-xs text-muted-foreground"
 									>
-										{#each [['{{.event}}', 'Event name'], ['{{.timestamp}}', 'ISO 8601 timestamp'], ['{{.title}}', 'Event title'], ['{{.color}}', 'Color (int, for Discord)'], ['{{.server_id}}', 'Server ID'], ['{{.server_name}}', 'Server name'], ['{{.server_status}}', 'Server status'], ['{{.server_mc_version}}', 'MC version'], ['{{.server_mod_loader}}', 'Mod loader'], ['{{.server_players}}', 'Player count'], ['{{.server_max_players}}', 'Max players'], ['{{.server_port}}', 'Server port'], ['{{.player}}', 'Player name (player join/leave events)']] as [variable, description]}
+										{#each [['{{.event}}', 'Event name'], ['{{.timestamp}}', 'ISO 8601 timestamp'], ['{{.title}}', 'Event title'], ['{{.color}}', 'Color (int, for Discord)'], ['{{.server_id}}', 'Server ID'], ['{{.server_name}}', 'Server name'], ['{{.server_status}}', 'Server status'], ['{{.server_mc_version}}', 'MC version'], ['{{.server_mod_loader}}', 'Mod loader'], ['{{.server_players}}', 'Player count'], ['{{.server_max_players}}', 'Max players'], ['{{.server_port}}', 'Server port'], ['{{.player}}', 'Player name (player join/leave events)']] as [variable, description] (variable)}
 											<button
 												class="cursor-pointer text-left transition-colors hover:text-foreground"
 												title="Copy {variable}"
@@ -1521,7 +1520,7 @@ one at https://mozilla.org/MPL/2.0/.
 										<div
 											class="grid grid-cols-1 gap-2 rounded-lg border border-border/50 bg-muted/20 p-3"
 										>
-											{#each SERVER_EVENT_TYPES as { type, label, description }}
+											{#each SERVER_EVENT_TYPES as { type, label, description } (type)}
 												<label
 													class="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-muted/40"
 												>

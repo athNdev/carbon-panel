@@ -61,6 +61,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 </script>
 
 {#if href}
+	<!-- eslint-disable svelte/no-navigation-without-resolve -- href is caller-provided; callers pass resolve()d paths -->
 	<a
 		{href}
 		aria-busy={loading ? 'true' : undefined}
@@ -77,6 +78,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		{/if}
 		{@render children?.()}
 	</a>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
 {:else}
 	<button
 		type="button"
