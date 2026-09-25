@@ -12,9 +12,11 @@ package ws
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
@@ -26,6 +28,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -40,6 +43,10 @@ const (
 
 	// Maximum message size allowed from peer
 	maxMessageSize = 512 * 1024 // 512KB
+
+	// controlSendTimeout bounds how long a control message waits for
+	// buffer space before being dropped with a warning (MINE-165).
+	controlSendTimeout = 5 * time.Second
 )
 
 // Hub manages WebSocket connections and log subscriptions
@@ -77,6 +84,11 @@ type Client struct {
 	// it was registered under in the log streamer)
 	subscriptions   map[string]*subscription
 	subscriptionsMu sync.RWMutex
+
+	// droppedLogs counts log lines discarded by sendLog when the client's
+	// send buffer is full (MINE-165). Control messages never use this path.
+	// Multiple forwardLogs goroutines (one per subscription) share it.
+	droppedLogs atomic.Int64
 }
 
 // subscription tracks a client's log subscription for a server. The
@@ -551,8 +563,36 @@ func (c *Client) cleanup() {
 	c.subscriptions = make(map[string]*subscription)
 }
 
-// sendMessage marshals and sends a server message
+// sendMessage marshals and best-effort enqueues a server message,
+// dropping it if the client's send buffer is full. Log lines use this
+// (see sendLog); control messages must use sendControl instead.
 func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
+		return
+	}
+	c.trySend(data)
+}
+
+// trySend enqueues one marshalled message, reporting whether buffer space
+// was available. Single non-blocking select shared by the log path so drop
+// accounting stays exact under concurrent forwardLogs goroutines.
+func (c *Client) trySend(data []byte) bool {
+	select {
+	case c.send <- data:
+		return true
+	default:
+		return false
+	}
+}
+
+// sendControl marshals and delivers a control message (auth, acks, errors,
+// command results, history batches), waiting up to controlSendTimeout for
+// buffer space instead of dropping it like log lines. A stuck socket can
+// delay the caller briefly but control traffic is tiny and rare, while a
+// dropped AUTH_OK or error would leave the console in a wrong state.
+func (c *Client) sendControl(msg *v1.WebSocketServerMessage) {
 	data, err := proto.Marshal(msg)
 	if err != nil {
 		c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
@@ -561,8 +601,8 @@ func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 
 	select {
 	case c.send <- data:
-	default:
-		// Channel full, skip
+	case <-time.After(controlSendTimeout):
+		c.hub.log.Warn("Dropped control message to slow WebSocket client (buffer full for %v)", controlSendTimeout)
 	}
 }
 
@@ -573,7 +613,7 @@ func (c *Client) sendAuthOk() {
 		userId = c.user.ID
 		username = c.user.Username
 	}
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_AUTH_OK,
 		Payload: &v1.WebSocketServerMessage_AuthOk{
 			AuthOk: &v1.AuthOkMessage{
@@ -585,7 +625,7 @@ func (c *Client) sendAuthOk() {
 }
 
 func (c *Client) sendAuthFail(errMsg string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_AUTH_FAIL,
 		Payload: &v1.WebSocketServerMessage_AuthFail{
 			AuthFail: &v1.AuthFailMessage{
@@ -596,7 +636,7 @@ func (c *Client) sendAuthFail(errMsg string) {
 }
 
 func (c *Client) sendSubscribed(serverId string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_SUBSCRIBED,
 		Payload: &v1.WebSocketServerMessage_Subscribed{
 			Subscribed: &v1.SubscribedMessage{
@@ -607,7 +647,7 @@ func (c *Client) sendSubscribed(serverId string) {
 }
 
 func (c *Client) sendUnsubscribed(serverId string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_UNSUBSCRIBED,
 		Payload: &v1.WebSocketServerMessage_Unsubscribed{
 			Unsubscribed: &v1.UnsubscribedMessage{
@@ -618,7 +658,7 @@ func (c *Client) sendUnsubscribed(serverId string) {
 }
 
 func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOGS,
 		Payload: &v1.WebSocketServerMessage_Logs{
 			Logs: &v1.LogsMessage{
@@ -630,7 +670,32 @@ func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
 }
 
 func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	// Flush a pending skip notice first so the gap is visible in the
+	// console instead of vanishing silently (MINE-165). If the notice
+	// itself drops, the count is re-armed and reported with the next
+	// delivered line.
+	if skipped := c.droppedLogs.Swap(0); skipped > 0 {
+		if notice, err := proto.Marshal(&v1.WebSocketServerMessage{
+			Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
+			Payload: &v1.WebSocketServerMessage_Log{
+				Log: &v1.LogMessage{
+					ServerId: serverId,
+					Log: &v1.LogEntry{
+						Timestamp: timestamppb.New(time.Now()),
+						Message:   fmt.Sprintf("… %d log lines skipped (client slow, buffer full) …", skipped),
+						Level:     "warn",
+						Source:    "panel",
+					},
+				},
+			},
+		}); err != nil {
+			c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
+		} else if !c.trySend(notice) {
+			c.droppedLogs.Add(skipped)
+		}
+	}
+
+	data, err := proto.Marshal(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
 		Payload: &v1.WebSocketServerMessage_Log{
 			Log: &v1.LogMessage{
@@ -639,10 +704,18 @@ func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
 			},
 		},
 	})
+	if err != nil {
+		c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
+		return
+	}
+
+	if !c.trySend(data) {
+		c.droppedLogs.Add(1)
+	}
 }
 
 func (c *Client) sendCommandResult(serverId string, success bool, output, errMsg string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_COMMAND_RESULT,
 		Payload: &v1.WebSocketServerMessage_CommandResult{
 			CommandResult: &v1.CommandResultMessage{
@@ -656,7 +729,7 @@ func (c *Client) sendCommandResult(serverId string, success bool, output, errMsg
 }
 
 func (c *Client) sendError(errMsg string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_ERROR,
 		Payload: &v1.WebSocketServerMessage_Error{
 			Error: &v1.ErrorMessage{
@@ -667,7 +740,7 @@ func (c *Client) sendError(errMsg string) {
 }
 
 func (c *Client) sendPong() {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_PONG,
 	})
 }
