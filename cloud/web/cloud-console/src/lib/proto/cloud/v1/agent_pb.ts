@@ -20,7 +20,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file cloud/v1/agent.proto.
  */
 export const file_cloud_v1_agent: GenFile = /*@__PURE__*/
-  fileDesc("ChRjbG91ZC92MS9hZ2VudC5wcm90bxIIY2xvdWQudjEi0gEKDE5vZGVJZGVudGl0eRIPCgdub2RlX2lkGAEgASgJEg4KBm9yZ19pZBgCIAEoCRIeChZjb250cm9sX3BsYW5lX2VuZHBvaW50GAMgASgJEhcKD2NsaWVudF9jZXJ0X3BlbRgEIAEoCRIWCg5jbGllbnRfa2V5X3BlbRgFIAEoCRITCgtjYV9jZXJ0X3BlbRgGIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYByABKAMSIgoaaGVhcnRiZWF0X2ludGVydmFsX3NlY29uZHMYCCABKAUiiAEKCkFnZW50SGVsbG8SDwoHbm9kZV9pZBgBIAEoCRIVCg1hZ2VudF92ZXJzaW9uGAIgASgJEhYKDmRvY2tlcl92ZXJzaW9uGAMgASgJEhAKCGhvc3RuYW1lGAQgASgJEigKCGNhcGFjaXR5GAUgASgLMhYuY2xvdWQudjEuTm9kZUNhcGFjaXR5IsUBCg5BZ2VudEhlYXJ0YmVhdBIPCgdub2RlX2lkGAEgASgJEiYKB21ldHJpY3MYAiABKAsyFS5jbG91ZC52MS5Ob2RlTWV0cmljcxIXCg9jb250YWluZXJfY291bnQYAyABKAUSLAoKYWxsb2NhdGlvbhgEIAEoCzIYLmNsb3VkLnYxLk5vZGVBbGxvY2F0aW9uEjMKEHdvcmtsb2FkX21ldHJpY3MYBSADKAsyGS5jbG91ZC52MS5Xb3JrbG9hZE1ldHJpY3MingEKE0FnZW50V29ya2xvYWRTdGF0dXMSDwoHbm9kZV9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIoCgZzdGF0dXMYAyABKA4yGC5jbG91ZC52MS5Xb3JrbG9hZFN0YXR1cxIUCgxjb250YWluZXJfaWQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCWhvc3RfcG9ydBgGIAEoBSJfCg1BZ2VudExvZ0NodW5rEg8KB25vZGVfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSKAoFbGluZXMYAyADKAsyGS5jbG91ZC52MS5Xb3JrbG9hZExvZ0xpbmUiWAoSQWdlbnRDb21tYW5kUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCRIOCgZvdXRwdXQYBCABKAkibAoTQWdlbnRGaWxlTGlzdFJlc3VsdBISCgpjb21tYW5kX2lkGAEgASgJEg8KB3N1Y2Nlc3MYAiABKAgSDQoFZXJyb3IYAyABKAkSIQoFZmlsZXMYBCADKAsyEi5jbG91ZC52MS5GaWxlSW5mbyJ8ChJBZ2VudFJlYWRGaWxlQ2h1bmsSEgoKY29tbWFuZF9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg0KBWVycm9yGAMgASgJEg0KBWNodW5rGAQgASgMEg8KB2lzX2xhc3QYBSABKAgSEgoKdG90YWxfc2l6ZRgGIAEoAyJhChRBZ2VudFdyaXRlRmlsZVJlc3VsdBISCgpjb21tYW5kX2lkGAEgASgJEg8KB3N1Y2Nlc3MYAiABKAgSDQoFZXJyb3IYAyABKAkSFQoNYnl0ZXNfd3JpdHRlbhgEIAEoAyJLChVBZ2VudERlbGV0ZUZpbGVSZXN1bHQSEgoKY29tbWFuZF9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg0KBWVycm9yGAMgASgJIlAKGkFnZW50Q3JlYXRlRGlyZWN0b3J5UmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCSJrChNBZ2VudFN0YXRGaWxlUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCRIgCgRpbmZvGAQgASgLMhIuY2xvdWQudjEuRmlsZUluZm8imQEKF0FnZW50Q3JlYXRlQmFja3VwUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSEQoJYmFja3VwX2lkGAMgASgJEg8KB3N1Y2Nlc3MYFCABKAgSDQoFZXJyb3IYBCABKAkSEgoKc2l6ZV9ieXRlcxgFIAEoAxIOCgZzaGEyNTYYBiABKAkidgoYQWdlbnRSZXN0b3JlQmFja3VwUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSEQoJYmFja3VwX2lkGAMgASgJEg8KB3N1Y2Nlc3MYBCABKAgSDQoFZXJyb3IYBSABKAkidQoXQWdlbnREZWxldGVCYWNrdXBSZXN1bHQSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIRCgliYWNrdXBfaWQYAyABKAkSDwoHc3VjY2VzcxgEIAEoCBINCgVlcnJvchgFIAEoCSKUAQodQWdlbnRHZXRXb3JrbG9hZE1ldHJpY3NSZXN1bHQSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIPCgdzdWNjZXNzGAMgASgIEg0KBWVycm9yGAQgASgJEioKB21ldHJpY3MYBSABKAsyGS5jbG91ZC52MS5Xb3JrbG9hZE1ldHJpY3MihgcKDEFnZW50TWVzc2FnZRIlCgVoZWxsbxgBIAEoCzIULmNsb3VkLnYxLkFnZW50SGVsbG9IABItCgloZWFydGJlYXQYAiABKAsyGC5jbG91ZC52MS5BZ2VudEhlYXJ0YmVhdEgAEjgKD3dvcmtsb2FkX3N0YXR1cxgDIAEoCzIdLmNsb3VkLnYxLkFnZW50V29ya2xvYWRTdGF0dXNIABInCgRsb2dzGAQgASgLMhcuY2xvdWQudjEuQWdlbnRMb2dDaHVua0gAEjYKDmNvbW1hbmRfcmVzdWx0GAUgASgLMhwuY2xvdWQudjEuQWdlbnRDb21tYW5kUmVzdWx0SAASOQoQZmlsZV9saXN0X3Jlc3VsdBgGIAEoCzIdLmNsb3VkLnYxLkFnZW50RmlsZUxpc3RSZXN1bHRIABI3Cg9maWxlX3JlYWRfY2h1bmsYByABKAsyHC5jbG91ZC52MS5BZ2VudFJlYWRGaWxlQ2h1bmtIABI7ChFmaWxlX3dyaXRlX3Jlc3VsdBgIIAEoCzIeLmNsb3VkLnYxLkFnZW50V3JpdGVGaWxlUmVzdWx0SAASPQoSZmlsZV9kZWxldGVfcmVzdWx0GAkgASgLMh8uY2xvdWQudjEuQWdlbnREZWxldGVGaWxlUmVzdWx0SAASQQoRZGlyX2NyZWF0ZV9yZXN1bHQYCiABKAsyJC5jbG91ZC52MS5BZ2VudENyZWF0ZURpcmVjdG9yeVJlc3VsdEgAEjkKEGZpbGVfc3RhdF9yZXN1bHQYCyABKAsyHS5jbG91ZC52MS5BZ2VudFN0YXRGaWxlUmVzdWx0SAASQQoUYmFja3VwX2NyZWF0ZV9yZXN1bHQYDCABKAsyIS5jbG91ZC52MS5BZ2VudENyZWF0ZUJhY2t1cFJlc3VsdEgAEkMKFWJhY2t1cF9yZXN0b3JlX3Jlc3VsdBgNIAEoCzIiLmNsb3VkLnYxLkFnZW50UmVzdG9yZUJhY2t1cFJlc3VsdEgAEkEKFGJhY2t1cF9kZWxldGVfcmVzdWx0GA4gASgLMiEuY2xvdWQudjEuQWdlbnREZWxldGVCYWNrdXBSZXN1bHRIABJBCg5tZXRyaWNzX3Jlc3VsdBgPIAEoCzInLmNsb3VkLnYxLkFnZW50R2V0V29ya2xvYWRNZXRyaWNzUmVzdWx0SABCCQoHcGF5bG9hZCJ3Cg5Db250cm9sV2VsY29tZRIvCgtzZXJ2ZXJfdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASIgoaaGVhcnRiZWF0X2ludGVydmFsX3NlY29uZHMYAiABKAUSEAoIZHJhaW5pbmcYAyABKAgiZAoZQ29udHJvbFdvcmtsb2FkQXNzaWdubWVudBISCgpjb21tYW5kX2lkGAEgASgJEiQKCHdvcmtsb2FkGAIgASgLMhIuY2xvdWQudjEuV29ya2xvYWQSDQoFc3RhcnQYAyABKAgiVwoTQ29udHJvbFdvcmtsb2FkU3RvcBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEhcKD3RpbWVvdXRfc2Vjb25kcxgDIAEoBSJVChVDb250cm9sV29ya2xvYWREZWxldGUSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRITCgtkZWxldGVfZGF0YRgDIAEoCCJNChFDb250cm9sUnVuQ29tbWFuZBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEg8KB2NvbW1hbmQYAyABKAkiIgoMQ29udHJvbFByb2JlEhIKCmNvbW1hbmRfaWQYASABKAkiRAoRQ29udHJvbERpc2Nvbm5lY3QSHwoXcmVjb25uZWN0X2FmdGVyX3NlY29uZHMYASABKAUSDgoGcmVhc29uGAIgASgJIkgKD0NvbnRyb2xGaWxlTGlzdBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBHBhdGgYAyABKAkiSAoPQ29udHJvbFJlYWRGaWxlEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSDAoEcGF0aBgDIAEoCSJ8ChVDb250cm9sV3JpdGVGaWxlQ2h1bmsSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIMCgRwYXRoGAMgASgJEg0KBWNodW5rGAQgASgMEg8KB2lzX2xhc3QYBSABKAgSDAoEbW9kZRgGIAEoDSJdChFDb250cm9sRGVsZXRlRmlsZRISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBHBhdGgYAyABKAkSEQoJcmVjdXJzaXZlGAQgASgIIk8KFkNvbnRyb2xDcmVhdGVEaXJlY3RvcnkSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIMCgRwYXRoGAMgASgJIkgKD0NvbnRyb2xTdGF0RmlsZRISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBHBhdGgYAyABKAkiXwoTQ29udHJvbENyZWF0ZUJhY2t1cBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEhEKCWJhY2t1cF9pZBgDIAEoCRIMCgRuYW1lGAQgASgJIlIKFENvbnRyb2xSZXN0b3JlQmFja3VwEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSEQoJYmFja3VwX2lkGAMgASgJIlEKE0NvbnRyb2xEZWxldGVCYWNrdXASEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIRCgliYWNrdXBfaWQYAyABKAkiRAoZQ29udHJvbEdldFdvcmtsb2FkTWV0cmljcxISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJIq4HCg5Db250cm9sTWVzc2FnZRIrCgd3ZWxjb21lGAEgASgLMhguY2xvdWQudjEuQ29udHJvbFdlbGNvbWVIABI+Cg9hc3NpZ25fd29ya2xvYWQYAiABKAsyIy5jbG91ZC52MS5Db250cm9sV29ya2xvYWRBc3NpZ25tZW50SAASNgoNc3RvcF93b3JrbG9hZBgDIAEoCzIdLmNsb3VkLnYxLkNvbnRyb2xXb3JrbG9hZFN0b3BIABI6Cg9kZWxldGVfd29ya2xvYWQYBCABKAsyHy5jbG91ZC52MS5Db250cm9sV29ya2xvYWREZWxldGVIABIyCgtydW5fY29tbWFuZBgFIAEoCzIbLmNsb3VkLnYxLkNvbnRyb2xSdW5Db21tYW5kSAASJwoFcHJvYmUYBiABKAsyFi5jbG91ZC52MS5Db250cm9sUHJvYmVIABIxCgpkaXNjb25uZWN0GAcgASgLMhsuY2xvdWQudjEuQ29udHJvbERpc2Nvbm5lY3RIABIuCglmaWxlX2xpc3QYCCABKAsyGS5jbG91ZC52MS5Db250cm9sRmlsZUxpc3RIABIuCglmaWxlX3JlYWQYCSABKAsyGS5jbG91ZC52MS5Db250cm9sUmVhZEZpbGVIABI1CgpmaWxlX3dyaXRlGAogASgLMh8uY2xvdWQudjEuQ29udHJvbFdyaXRlRmlsZUNodW5rSAASMgoLZmlsZV9kZWxldGUYCyABKAsyGy5jbG91ZC52MS5Db250cm9sRGVsZXRlRmlsZUgAEjYKCmRpcl9jcmVhdGUYDCABKAsyIC5jbG91ZC52MS5Db250cm9sQ3JlYXRlRGlyZWN0b3J5SAASLgoJZmlsZV9zdGF0GA0gASgLMhkuY2xvdWQudjEuQ29udHJvbFN0YXRGaWxlSAASNgoNY3JlYXRlX2JhY2t1cBgOIAEoCzIdLmNsb3VkLnYxLkNvbnRyb2xDcmVhdGVCYWNrdXBIABI4Cg5yZXN0b3JlX2JhY2t1cBgPIAEoCzIeLmNsb3VkLnYxLkNvbnRyb2xSZXN0b3JlQmFja3VwSAASNgoNZGVsZXRlX2JhY2t1cBgQIAEoCzIdLmNsb3VkLnYxLkNvbnRyb2xEZWxldGVCYWNrdXBIABJDChRnZXRfd29ya2xvYWRfbWV0cmljcxgRIAEoCzIjLmNsb3VkLnYxLkNvbnRyb2xHZXRXb3JrbG9hZE1ldHJpY3NIAEIJCgdwYXlsb2FkIpwBCg9Kb2luTm9kZVJlcXVlc3QSDQoFdG9rZW4YASABKAkSEAoIaG9zdG5hbWUYAiABKAkSFQoNYWdlbnRfdmVyc2lvbhgDIAEoCRIWCg5kb2NrZXJfdmVyc2lvbhgEIAEoCRIoCghjYXBhY2l0eRgFIAEoCzIWLmNsb3VkLnYxLk5vZGVDYXBhY2l0eRIPCgdjc3JfcGVtGAYgASgJIloKEEpvaW5Ob2RlUmVzcG9uc2USKAoIaWRlbnRpdHkYASABKAsyFi5jbG91ZC52MS5Ob2RlSWRlbnRpdHkSHAoEbm9kZRgCIAEoCzIOLmNsb3VkLnYxLk5vZGUiKgoXUmVuZXdDcmVkZW50aWFsc1JlcXVlc3QSDwoHY3NyX3BlbRgBIAEoCSJEChhSZW5ld0NyZWRlbnRpYWxzUmVzcG9uc2USKAoIaWRlbnRpdHkYASABKAsyFi5jbG91ZC52MS5Ob2RlSWRlbnRpdHky7QEKDEFnZW50U2VydmljZRJBCghKb2luTm9kZRIZLmNsb3VkLnYxLkpvaW5Ob2RlUmVxdWVzdBoaLmNsb3VkLnYxLkpvaW5Ob2RlUmVzcG9uc2USPwoHQ29ubmVjdBIWLmNsb3VkLnYxLkFnZW50TWVzc2FnZRoYLmNsb3VkLnYxLkNvbnRyb2xNZXNzYWdlKAEwARJZChBSZW5ld0NyZWRlbnRpYWxzEiEuY2xvdWQudjEuUmVuZXdDcmVkZW50aWFsc1JlcXVlc3QaIi5jbG91ZC52MS5SZW5ld0NyZWRlbnRpYWxzUmVzcG9uc2VCPFo6Z2l0aHViLmNvbS9hdGhOZGV2L2NhcmJvbi1wYW5lbC9wa2cvcHJvdG8vY2xvdWQvdjE7Y2xvdWR2MWIGcHJvdG8z", [file_cloud_v1_common, file_cloud_v1_file, file_cloud_v1_node, file_cloud_v1_workload, file_google_protobuf_timestamp]);
+  fileDesc("ChRjbG91ZC92MS9hZ2VudC5wcm90bxIIY2xvdWQudjEi0gEKDE5vZGVJZGVudGl0eRIPCgdub2RlX2lkGAEgASgJEg4KBm9yZ19pZBgCIAEoCRIeChZjb250cm9sX3BsYW5lX2VuZHBvaW50GAMgASgJEhcKD2NsaWVudF9jZXJ0X3BlbRgEIAEoCRIWCg5jbGllbnRfa2V5X3BlbRgFIAEoCRITCgtjYV9jZXJ0X3BlbRgGIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYByABKAMSIgoaaGVhcnRiZWF0X2ludGVydmFsX3NlY29uZHMYCCABKAUiiAEKCkFnZW50SGVsbG8SDwoHbm9kZV9pZBgBIAEoCRIVCg1hZ2VudF92ZXJzaW9uGAIgASgJEhYKDmRvY2tlcl92ZXJzaW9uGAMgASgJEhAKCGhvc3RuYW1lGAQgASgJEigKCGNhcGFjaXR5GAUgASgLMhYuY2xvdWQudjEuTm9kZUNhcGFjaXR5IsUBCg5BZ2VudEhlYXJ0YmVhdBIPCgdub2RlX2lkGAEgASgJEiYKB21ldHJpY3MYAiABKAsyFS5jbG91ZC52MS5Ob2RlTWV0cmljcxIXCg9jb250YWluZXJfY291bnQYAyABKAUSLAoKYWxsb2NhdGlvbhgEIAEoCzIYLmNsb3VkLnYxLk5vZGVBbGxvY2F0aW9uEjMKEHdvcmtsb2FkX21ldHJpY3MYBSADKAsyGS5jbG91ZC52MS5Xb3JrbG9hZE1ldHJpY3MingEKE0FnZW50V29ya2xvYWRTdGF0dXMSDwoHbm9kZV9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIoCgZzdGF0dXMYAyABKA4yGC5jbG91ZC52MS5Xb3JrbG9hZFN0YXR1cxIUCgxjb250YWluZXJfaWQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCWhvc3RfcG9ydBgGIAEoBSJfCg1BZ2VudExvZ0NodW5rEg8KB25vZGVfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSKAoFbGluZXMYAyADKAsyGS5jbG91ZC52MS5Xb3JrbG9hZExvZ0xpbmUiWAoSQWdlbnRDb21tYW5kUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCRIOCgZvdXRwdXQYBCABKAkibAoTQWdlbnRGaWxlTGlzdFJlc3VsdBISCgpjb21tYW5kX2lkGAEgASgJEg8KB3N1Y2Nlc3MYAiABKAgSDQoFZXJyb3IYAyABKAkSIQoFZmlsZXMYBCADKAsyEi5jbG91ZC52MS5GaWxlSW5mbyJ8ChJBZ2VudFJlYWRGaWxlQ2h1bmsSEgoKY29tbWFuZF9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg0KBWVycm9yGAMgASgJEg0KBWNodW5rGAQgASgMEg8KB2lzX2xhc3QYBSABKAgSEgoKdG90YWxfc2l6ZRgGIAEoAyJhChRBZ2VudFdyaXRlRmlsZVJlc3VsdBISCgpjb21tYW5kX2lkGAEgASgJEg8KB3N1Y2Nlc3MYAiABKAgSDQoFZXJyb3IYAyABKAkSFQoNYnl0ZXNfd3JpdHRlbhgEIAEoAyJLChVBZ2VudERlbGV0ZUZpbGVSZXN1bHQSEgoKY29tbWFuZF9pZBgBIAEoCRIPCgdzdWNjZXNzGAIgASgIEg0KBWVycm9yGAMgASgJIlAKGkFnZW50Q3JlYXRlRGlyZWN0b3J5UmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCSJrChNBZ2VudFN0YXRGaWxlUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCRIgCgRpbmZvGAQgASgLMhIuY2xvdWQudjEuRmlsZUluZm8iSwoVQWdlbnRGaWxlUmVuYW1lUmVzdWx0EhIKCmNvbW1hbmRfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBINCgVlcnJvchgDIAEoCSKZAQoXQWdlbnRDcmVhdGVCYWNrdXBSZXN1bHQSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIRCgliYWNrdXBfaWQYAyABKAkSDwoHc3VjY2VzcxgUIAEoCBINCgVlcnJvchgEIAEoCRISCgpzaXplX2J5dGVzGAUgASgDEg4KBnNoYTI1NhgGIAEoCSJ2ChhBZ2VudFJlc3RvcmVCYWNrdXBSZXN1bHQSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIRCgliYWNrdXBfaWQYAyABKAkSDwoHc3VjY2VzcxgEIAEoCBINCgVlcnJvchgFIAEoCSJ1ChdBZ2VudERlbGV0ZUJhY2t1cFJlc3VsdBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEhEKCWJhY2t1cF9pZBgDIAEoCRIPCgdzdWNjZXNzGAQgASgIEg0KBWVycm9yGAUgASgJIpQBCh1BZ2VudEdldFdvcmtsb2FkTWV0cmljc1Jlc3VsdBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDQoFZXJyb3IYBCABKAkSKgoHbWV0cmljcxgFIAEoCzIZLmNsb3VkLnYxLldvcmtsb2FkTWV0cmljcyLFBwoMQWdlbnRNZXNzYWdlEiUKBWhlbGxvGAEgASgLMhQuY2xvdWQudjEuQWdlbnRIZWxsb0gAEi0KCWhlYXJ0YmVhdBgCIAEoCzIYLmNsb3VkLnYxLkFnZW50SGVhcnRiZWF0SAASOAoPd29ya2xvYWRfc3RhdHVzGAMgASgLMh0uY2xvdWQudjEuQWdlbnRXb3JrbG9hZFN0YXR1c0gAEicKBGxvZ3MYBCABKAsyFy5jbG91ZC52MS5BZ2VudExvZ0NodW5rSAASNgoOY29tbWFuZF9yZXN1bHQYBSABKAsyHC5jbG91ZC52MS5BZ2VudENvbW1hbmRSZXN1bHRIABI5ChBmaWxlX2xpc3RfcmVzdWx0GAYgASgLMh0uY2xvdWQudjEuQWdlbnRGaWxlTGlzdFJlc3VsdEgAEjcKD2ZpbGVfcmVhZF9jaHVuaxgHIAEoCzIcLmNsb3VkLnYxLkFnZW50UmVhZEZpbGVDaHVua0gAEjsKEWZpbGVfd3JpdGVfcmVzdWx0GAggASgLMh4uY2xvdWQudjEuQWdlbnRXcml0ZUZpbGVSZXN1bHRIABI9ChJmaWxlX2RlbGV0ZV9yZXN1bHQYCSABKAsyHy5jbG91ZC52MS5BZ2VudERlbGV0ZUZpbGVSZXN1bHRIABJBChFkaXJfY3JlYXRlX3Jlc3VsdBgKIAEoCzIkLmNsb3VkLnYxLkFnZW50Q3JlYXRlRGlyZWN0b3J5UmVzdWx0SAASOQoQZmlsZV9zdGF0X3Jlc3VsdBgLIAEoCzIdLmNsb3VkLnYxLkFnZW50U3RhdEZpbGVSZXN1bHRIABJBChRiYWNrdXBfY3JlYXRlX3Jlc3VsdBgMIAEoCzIhLmNsb3VkLnYxLkFnZW50Q3JlYXRlQmFja3VwUmVzdWx0SAASQwoVYmFja3VwX3Jlc3RvcmVfcmVzdWx0GA0gASgLMiIuY2xvdWQudjEuQWdlbnRSZXN0b3JlQmFja3VwUmVzdWx0SAASQQoUYmFja3VwX2RlbGV0ZV9yZXN1bHQYDiABKAsyIS5jbG91ZC52MS5BZ2VudERlbGV0ZUJhY2t1cFJlc3VsdEgAEkEKDm1ldHJpY3NfcmVzdWx0GA8gASgLMicuY2xvdWQudjEuQWdlbnRHZXRXb3JrbG9hZE1ldHJpY3NSZXN1bHRIABI9ChJmaWxlX3JlbmFtZV9yZXN1bHQYECABKAsyHy5jbG91ZC52MS5BZ2VudEZpbGVSZW5hbWVSZXN1bHRIAEIJCgdwYXlsb2FkIncKDkNvbnRyb2xXZWxjb21lEi8KC3NlcnZlcl90aW1lGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIiChpoZWFydGJlYXRfaW50ZXJ2YWxfc2Vjb25kcxgCIAEoBRIQCghkcmFpbmluZxgDIAEoCCJkChlDb250cm9sV29ya2xvYWRBc3NpZ25tZW50EhIKCmNvbW1hbmRfaWQYASABKAkSJAoId29ya2xvYWQYAiABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZBINCgVzdGFydBgDIAEoCCJXChNDb250cm9sV29ya2xvYWRTdG9wEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSFwoPdGltZW91dF9zZWNvbmRzGAMgASgFIlUKFUNvbnRyb2xXb3JrbG9hZERlbGV0ZRISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEhMKC2RlbGV0ZV9kYXRhGAMgASgIIk0KEUNvbnRyb2xSdW5Db21tYW5kEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSDwoHY29tbWFuZBgDIAEoCSIiCgxDb250cm9sUHJvYmUSEgoKY29tbWFuZF9pZBgBIAEoCSJEChFDb250cm9sRGlzY29ubmVjdBIfChdyZWNvbm5lY3RfYWZ0ZXJfc2Vjb25kcxgBIAEoBRIOCgZyZWFzb24YAiABKAkiSAoPQ29udHJvbEZpbGVMaXN0EhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSDAoEcGF0aBgDIAEoCSJICg9Db250cm9sUmVhZEZpbGUSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIMCgRwYXRoGAMgASgJInwKFUNvbnRyb2xXcml0ZUZpbGVDaHVuaxISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBHBhdGgYAyABKAkSDQoFY2h1bmsYBCABKAwSDwoHaXNfbGFzdBgFIAEoCBIMCgRtb2RlGAYgASgNIl0KEUNvbnRyb2xEZWxldGVGaWxlEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSDAoEcGF0aBgDIAEoCRIRCglyZWN1cnNpdmUYBCABKAgiTwoWQ29udHJvbENyZWF0ZURpcmVjdG9yeRISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBHBhdGgYAyABKAkiSAoPQ29udHJvbFN0YXRGaWxlEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSDAoEcGF0aBgDIAEoCSJgChFDb250cm9sRmlsZVJlbmFtZRISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEhAKCG9sZF9wYXRoGAMgASgJEhAKCG5ld19wYXRoGAQgASgJIl8KE0NvbnRyb2xDcmVhdGVCYWNrdXASEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIRCgliYWNrdXBfaWQYAyABKAkSDAoEbmFtZRgEIAEoCSJSChRDb250cm9sUmVzdG9yZUJhY2t1cBISCgpjb21tYW5kX2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEhEKCWJhY2t1cF9pZBgDIAEoCSJRChNDb250cm9sRGVsZXRlQmFja3VwEhIKCmNvbW1hbmRfaWQYASABKAkSEwoLd29ya2xvYWRfaWQYAiABKAkSEQoJYmFja3VwX2lkGAMgASgJIkQKGUNvbnRyb2xHZXRXb3JrbG9hZE1ldHJpY3MSEgoKY29tbWFuZF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCSLiBwoOQ29udHJvbE1lc3NhZ2USKwoHd2VsY29tZRgBIAEoCzIYLmNsb3VkLnYxLkNvbnRyb2xXZWxjb21lSAASPgoPYXNzaWduX3dvcmtsb2FkGAIgASgLMiMuY2xvdWQudjEuQ29udHJvbFdvcmtsb2FkQXNzaWdubWVudEgAEjYKDXN0b3Bfd29ya2xvYWQYAyABKAsyHS5jbG91ZC52MS5Db250cm9sV29ya2xvYWRTdG9wSAASOgoPZGVsZXRlX3dvcmtsb2FkGAQgASgLMh8uY2xvdWQudjEuQ29udHJvbFdvcmtsb2FkRGVsZXRlSAASMgoLcnVuX2NvbW1hbmQYBSABKAsyGy5jbG91ZC52MS5Db250cm9sUnVuQ29tbWFuZEgAEicKBXByb2JlGAYgASgLMhYuY2xvdWQudjEuQ29udHJvbFByb2JlSAASMQoKZGlzY29ubmVjdBgHIAEoCzIbLmNsb3VkLnYxLkNvbnRyb2xEaXNjb25uZWN0SAASLgoJZmlsZV9saXN0GAggASgLMhkuY2xvdWQudjEuQ29udHJvbEZpbGVMaXN0SAASLgoJZmlsZV9yZWFkGAkgASgLMhkuY2xvdWQudjEuQ29udHJvbFJlYWRGaWxlSAASNQoKZmlsZV93cml0ZRgKIAEoCzIfLmNsb3VkLnYxLkNvbnRyb2xXcml0ZUZpbGVDaHVua0gAEjIKC2ZpbGVfZGVsZXRlGAsgASgLMhsuY2xvdWQudjEuQ29udHJvbERlbGV0ZUZpbGVIABI2CgpkaXJfY3JlYXRlGAwgASgLMiAuY2xvdWQudjEuQ29udHJvbENyZWF0ZURpcmVjdG9yeUgAEi4KCWZpbGVfc3RhdBgNIAEoCzIZLmNsb3VkLnYxLkNvbnRyb2xTdGF0RmlsZUgAEjYKDWNyZWF0ZV9iYWNrdXAYDiABKAsyHS5jbG91ZC52MS5Db250cm9sQ3JlYXRlQmFja3VwSAASOAoOcmVzdG9yZV9iYWNrdXAYDyABKAsyHi5jbG91ZC52MS5Db250cm9sUmVzdG9yZUJhY2t1cEgAEjYKDWRlbGV0ZV9iYWNrdXAYECABKAsyHS5jbG91ZC52MS5Db250cm9sRGVsZXRlQmFja3VwSAASQwoUZ2V0X3dvcmtsb2FkX21ldHJpY3MYESABKAsyIy5jbG91ZC52MS5Db250cm9sR2V0V29ya2xvYWRNZXRyaWNzSAASMgoLZmlsZV9yZW5hbWUYEiABKAsyGy5jbG91ZC52MS5Db250cm9sRmlsZVJlbmFtZUgAQgkKB3BheWxvYWQinAEKD0pvaW5Ob2RlUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIQCghob3N0bmFtZRgCIAEoCRIVCg1hZ2VudF92ZXJzaW9uGAMgASgJEhYKDmRvY2tlcl92ZXJzaW9uGAQgASgJEigKCGNhcGFjaXR5GAUgASgLMhYuY2xvdWQudjEuTm9kZUNhcGFjaXR5Eg8KB2Nzcl9wZW0YBiABKAkiWgoQSm9pbk5vZGVSZXNwb25zZRIoCghpZGVudGl0eRgBIAEoCzIWLmNsb3VkLnYxLk5vZGVJZGVudGl0eRIcCgRub2RlGAIgASgLMg4uY2xvdWQudjEuTm9kZSIqChdSZW5ld0NyZWRlbnRpYWxzUmVxdWVzdBIPCgdjc3JfcGVtGAEgASgJIkQKGFJlbmV3Q3JlZGVudGlhbHNSZXNwb25zZRIoCghpZGVudGl0eRgBIAEoCzIWLmNsb3VkLnYxLk5vZGVJZGVudGl0eTLtAQoMQWdlbnRTZXJ2aWNlEkEKCEpvaW5Ob2RlEhkuY2xvdWQudjEuSm9pbk5vZGVSZXF1ZXN0GhouY2xvdWQudjEuSm9pbk5vZGVSZXNwb25zZRI/CgdDb25uZWN0EhYuY2xvdWQudjEuQWdlbnRNZXNzYWdlGhguY2xvdWQudjEuQ29udHJvbE1lc3NhZ2UoATABElkKEFJlbmV3Q3JlZGVudGlhbHMSIS5jbG91ZC52MS5SZW5ld0NyZWRlbnRpYWxzUmVxdWVzdBoiLmNsb3VkLnYxLlJlbmV3Q3JlZGVudGlhbHNSZXNwb25zZUI8WjpnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jbG91ZC92MTtjbG91ZHYxYgZwcm90bzM", [file_cloud_v1_common, file_cloud_v1_file, file_cloud_v1_node, file_cloud_v1_workload, file_google_protobuf_timestamp]);
 
 /**
  * NodeIdentity is the credential material a node receives after joining.
@@ -576,6 +576,41 @@ export const AgentStatFileResultSchema: GenMessage<AgentStatFileResult> = /*@__P
   messageDesc(file_cloud_v1_agent, 11);
 
 /**
+ * AgentFileRenameResult acknowledges file renaming.
+ *
+ * @generated from message cloud.v1.AgentFileRenameResult
+ */
+export type AgentFileRenameResult = Message<"cloud.v1.AgentFileRenameResult"> & {
+  /**
+   * Correlation id.
+   *
+   * @generated from field: string command_id = 1;
+   */
+  commandId: string;
+
+  /**
+   * Whether rename succeeded.
+   *
+   * @generated from field: bool success = 2;
+   */
+  success: boolean;
+
+  /**
+   * Error detail when it did not.
+   *
+   * @generated from field: string error = 3;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message cloud.v1.AgentFileRenameResult.
+ * Use `create(AgentFileRenameResultSchema)` to create a new message.
+ */
+export const AgentFileRenameResultSchema: GenMessage<AgentFileRenameResult> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_agent, 12);
+
+/**
  * AgentCreateBackupResult acknowledges snapshot creation.
  *
  * @generated from message cloud.v1.AgentCreateBackupResult
@@ -636,7 +671,7 @@ export type AgentCreateBackupResult = Message<"cloud.v1.AgentCreateBackupResult"
  * Use `create(AgentCreateBackupResultSchema)` to create a new message.
  */
 export const AgentCreateBackupResultSchema: GenMessage<AgentCreateBackupResult> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 12);
+  messageDesc(file_cloud_v1_agent, 13);
 
 /**
  * AgentRestoreBackupResult acknowledges snapshot restoration.
@@ -685,7 +720,7 @@ export type AgentRestoreBackupResult = Message<"cloud.v1.AgentRestoreBackupResul
  * Use `create(AgentRestoreBackupResultSchema)` to create a new message.
  */
 export const AgentRestoreBackupResultSchema: GenMessage<AgentRestoreBackupResult> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 13);
+  messageDesc(file_cloud_v1_agent, 14);
 
 /**
  * AgentDeleteBackupResult acknowledges snapshot deletion.
@@ -734,7 +769,7 @@ export type AgentDeleteBackupResult = Message<"cloud.v1.AgentDeleteBackupResult"
  * Use `create(AgentDeleteBackupResultSchema)` to create a new message.
  */
 export const AgentDeleteBackupResultSchema: GenMessage<AgentDeleteBackupResult> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 14);
+  messageDesc(file_cloud_v1_agent, 15);
 
 /**
  * AgentGetWorkloadMetricsResult returns real-time telemetry for a workload.
@@ -783,7 +818,7 @@ export type AgentGetWorkloadMetricsResult = Message<"cloud.v1.AgentGetWorkloadMe
  * Use `create(AgentGetWorkloadMetricsResultSchema)` to create a new message.
  */
 export const AgentGetWorkloadMetricsResultSchema: GenMessage<AgentGetWorkloadMetricsResult> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 15);
+  messageDesc(file_cloud_v1_agent, 16);
 
 /**
  * AgentMessage is anything the agent sends to the control plane.
@@ -916,6 +951,14 @@ export type AgentMessage = Message<"cloud.v1.AgentMessage"> & {
      */
     value: AgentGetWorkloadMetricsResult;
     case: "metricsResult";
+  } | {
+    /**
+     * File rename result.
+     *
+     * @generated from field: cloud.v1.AgentFileRenameResult file_rename_result = 16;
+     */
+    value: AgentFileRenameResult;
+    case: "fileRenameResult";
   } | { case: undefined; value?: undefined };
 };
 
@@ -924,7 +967,7 @@ export type AgentMessage = Message<"cloud.v1.AgentMessage"> & {
  * Use `create(AgentMessageSchema)` to create a new message.
  */
 export const AgentMessageSchema: GenMessage<AgentMessage> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 16);
+  messageDesc(file_cloud_v1_agent, 17);
 
 /**
  * ControlWelcome acknowledges a connection and reports control-plane state.
@@ -959,7 +1002,7 @@ export type ControlWelcome = Message<"cloud.v1.ControlWelcome"> & {
  * Use `create(ControlWelcomeSchema)` to create a new message.
  */
 export const ControlWelcomeSchema: GenMessage<ControlWelcome> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 17);
+  messageDesc(file_cloud_v1_agent, 18);
 
 /**
  * ControlWorkloadAssignment asks the agent to materialise or change a workload.
@@ -994,7 +1037,7 @@ export type ControlWorkloadAssignment = Message<"cloud.v1.ControlWorkloadAssignm
  * Use `create(ControlWorkloadAssignmentSchema)` to create a new message.
  */
 export const ControlWorkloadAssignmentSchema: GenMessage<ControlWorkloadAssignment> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 18);
+  messageDesc(file_cloud_v1_agent, 19);
 
 /**
  * ControlWorkloadStop asks the agent to stop a workload's container.
@@ -1029,7 +1072,7 @@ export type ControlWorkloadStop = Message<"cloud.v1.ControlWorkloadStop"> & {
  * Use `create(ControlWorkloadStopSchema)` to create a new message.
  */
 export const ControlWorkloadStopSchema: GenMessage<ControlWorkloadStop> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 19);
+  messageDesc(file_cloud_v1_agent, 20);
 
 /**
  * ControlWorkloadDelete asks the agent to remove a workload's container.
@@ -1064,7 +1107,7 @@ export type ControlWorkloadDelete = Message<"cloud.v1.ControlWorkloadDelete"> & 
  * Use `create(ControlWorkloadDeleteSchema)` to create a new message.
  */
 export const ControlWorkloadDeleteSchema: GenMessage<ControlWorkloadDelete> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 20);
+  messageDesc(file_cloud_v1_agent, 21);
 
 /**
  * ControlRunCommand asks the agent to run a console command via RCON.
@@ -1099,7 +1142,7 @@ export type ControlRunCommand = Message<"cloud.v1.ControlRunCommand"> & {
  * Use `create(ControlRunCommandSchema)` to create a new message.
  */
 export const ControlRunCommandSchema: GenMessage<ControlRunCommand> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 21);
+  messageDesc(file_cloud_v1_agent, 22);
 
 /**
  * ControlProbe asks the agent to refresh and report its telemetry.
@@ -1120,7 +1163,7 @@ export type ControlProbe = Message<"cloud.v1.ControlProbe"> & {
  * Use `create(ControlProbeSchema)` to create a new message.
  */
 export const ControlProbeSchema: GenMessage<ControlProbe> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 22);
+  messageDesc(file_cloud_v1_agent, 23);
 
 /**
  * ControlDisconnect tells the agent to reconnect after a delay, e.g. to pick up
@@ -1149,7 +1192,7 @@ export type ControlDisconnect = Message<"cloud.v1.ControlDisconnect"> & {
  * Use `create(ControlDisconnectSchema)` to create a new message.
  */
 export const ControlDisconnectSchema: GenMessage<ControlDisconnect> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 23);
+  messageDesc(file_cloud_v1_agent, 24);
 
 /**
  * ControlFileList requests directory contents from a workload on the node.
@@ -1184,7 +1227,7 @@ export type ControlFileList = Message<"cloud.v1.ControlFileList"> & {
  * Use `create(ControlFileListSchema)` to create a new message.
  */
 export const ControlFileListSchema: GenMessage<ControlFileList> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 24);
+  messageDesc(file_cloud_v1_agent, 25);
 
 /**
  * ControlReadFile requests chunks of a file on the node.
@@ -1219,7 +1262,7 @@ export type ControlReadFile = Message<"cloud.v1.ControlReadFile"> & {
  * Use `create(ControlReadFileSchema)` to create a new message.
  */
 export const ControlReadFileSchema: GenMessage<ControlReadFile> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 25);
+  messageDesc(file_cloud_v1_agent, 26);
 
 /**
  * ControlWriteFileChunk writes a chunk (max 64KB) of a file on the node.
@@ -1275,7 +1318,7 @@ export type ControlWriteFileChunk = Message<"cloud.v1.ControlWriteFileChunk"> & 
  * Use `create(ControlWriteFileChunkSchema)` to create a new message.
  */
 export const ControlWriteFileChunkSchema: GenMessage<ControlWriteFileChunk> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 26);
+  messageDesc(file_cloud_v1_agent, 27);
 
 /**
  * ControlDeleteFile deletes a file or directory on the node.
@@ -1317,7 +1360,7 @@ export type ControlDeleteFile = Message<"cloud.v1.ControlDeleteFile"> & {
  * Use `create(ControlDeleteFileSchema)` to create a new message.
  */
 export const ControlDeleteFileSchema: GenMessage<ControlDeleteFile> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 27);
+  messageDesc(file_cloud_v1_agent, 28);
 
 /**
  * ControlCreateDirectory creates a directory on the node.
@@ -1352,7 +1395,7 @@ export type ControlCreateDirectory = Message<"cloud.v1.ControlCreateDirectory"> 
  * Use `create(ControlCreateDirectorySchema)` to create a new message.
  */
 export const ControlCreateDirectorySchema: GenMessage<ControlCreateDirectory> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 28);
+  messageDesc(file_cloud_v1_agent, 29);
 
 /**
  * ControlStatFile queries metadata for a path on the node.
@@ -1387,7 +1430,49 @@ export type ControlStatFile = Message<"cloud.v1.ControlStatFile"> & {
  * Use `create(ControlStatFileSchema)` to create a new message.
  */
 export const ControlStatFileSchema: GenMessage<ControlStatFile> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 29);
+  messageDesc(file_cloud_v1_agent, 30);
+
+/**
+ * ControlFileRename renames a file or directory on the node.
+ *
+ * @generated from message cloud.v1.ControlFileRename
+ */
+export type ControlFileRename = Message<"cloud.v1.ControlFileRename"> & {
+  /**
+   * Correlation id.
+   *
+   * @generated from field: string command_id = 1;
+   */
+  commandId: string;
+
+  /**
+   * Workload id.
+   *
+   * @generated from field: string workload_id = 2;
+   */
+  workloadId: string;
+
+  /**
+   * Old path relative to workload root.
+   *
+   * @generated from field: string old_path = 3;
+   */
+  oldPath: string;
+
+  /**
+   * New path relative to workload root.
+   *
+   * @generated from field: string new_path = 4;
+   */
+  newPath: string;
+};
+
+/**
+ * Describes the message cloud.v1.ControlFileRename.
+ * Use `create(ControlFileRenameSchema)` to create a new message.
+ */
+export const ControlFileRenameSchema: GenMessage<ControlFileRename> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_agent, 31);
 
 /**
  * ControlCreateBackup requests snapshot creation on the node.
@@ -1429,7 +1514,7 @@ export type ControlCreateBackup = Message<"cloud.v1.ControlCreateBackup"> & {
  * Use `create(ControlCreateBackupSchema)` to create a new message.
  */
 export const ControlCreateBackupSchema: GenMessage<ControlCreateBackup> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 30);
+  messageDesc(file_cloud_v1_agent, 32);
 
 /**
  * ControlRestoreBackup requests snapshot restore on the node.
@@ -1464,7 +1549,7 @@ export type ControlRestoreBackup = Message<"cloud.v1.ControlRestoreBackup"> & {
  * Use `create(ControlRestoreBackupSchema)` to create a new message.
  */
 export const ControlRestoreBackupSchema: GenMessage<ControlRestoreBackup> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 31);
+  messageDesc(file_cloud_v1_agent, 33);
 
 /**
  * ControlDeleteBackup requests snapshot deletion on the node.
@@ -1499,7 +1584,7 @@ export type ControlDeleteBackup = Message<"cloud.v1.ControlDeleteBackup"> & {
  * Use `create(ControlDeleteBackupSchema)` to create a new message.
  */
 export const ControlDeleteBackupSchema: GenMessage<ControlDeleteBackup> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 32);
+  messageDesc(file_cloud_v1_agent, 34);
 
 /**
  * ControlGetWorkloadMetrics requests real-time telemetry for a workload.
@@ -1527,7 +1612,7 @@ export type ControlGetWorkloadMetrics = Message<"cloud.v1.ControlGetWorkloadMetr
  * Use `create(ControlGetWorkloadMetricsSchema)` to create a new message.
  */
 export const ControlGetWorkloadMetricsSchema: GenMessage<ControlGetWorkloadMetrics> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 33);
+  messageDesc(file_cloud_v1_agent, 35);
 
 /**
  * ControlMessage is anything the control plane sends to an agent.
@@ -1676,6 +1761,14 @@ export type ControlMessage = Message<"cloud.v1.ControlMessage"> & {
      */
     value: ControlGetWorkloadMetrics;
     case: "getWorkloadMetrics";
+  } | {
+    /**
+     * File rename request.
+     *
+     * @generated from field: cloud.v1.ControlFileRename file_rename = 18;
+     */
+    value: ControlFileRename;
+    case: "fileRename";
   } | { case: undefined; value?: undefined };
 };
 
@@ -1684,7 +1777,7 @@ export type ControlMessage = Message<"cloud.v1.ControlMessage"> & {
  * Use `create(ControlMessageSchema)` to create a new message.
  */
 export const ControlMessageSchema: GenMessage<ControlMessage> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 34);
+  messageDesc(file_cloud_v1_agent, 36);
 
 /**
  * JoinNodeRequest redeems a join token. It is the only call a node makes before
@@ -1743,7 +1836,7 @@ export type JoinNodeRequest = Message<"cloud.v1.JoinNodeRequest"> & {
  * Use `create(JoinNodeRequestSchema)` to create a new message.
  */
 export const JoinNodeRequestSchema: GenMessage<JoinNodeRequest> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 35);
+  messageDesc(file_cloud_v1_agent, 37);
 
 /**
  * JoinNodeResponse returns the node's identity and credential.
@@ -1771,7 +1864,7 @@ export type JoinNodeResponse = Message<"cloud.v1.JoinNodeResponse"> & {
  * Use `create(JoinNodeResponseSchema)` to create a new message.
  */
 export const JoinNodeResponseSchema: GenMessage<JoinNodeResponse> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 36);
+  messageDesc(file_cloud_v1_agent, 38);
 
 /**
  * RenewCredentialsRequest asks for a fresh certificate from the same CSR flow.
@@ -1792,7 +1885,7 @@ export type RenewCredentialsRequest = Message<"cloud.v1.RenewCredentialsRequest"
  * Use `create(RenewCredentialsRequestSchema)` to create a new message.
  */
 export const RenewCredentialsRequestSchema: GenMessage<RenewCredentialsRequest> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 37);
+  messageDesc(file_cloud_v1_agent, 39);
 
 /**
  * RenewCredentialsResponse returns the new identity material.
@@ -1813,7 +1906,7 @@ export type RenewCredentialsResponse = Message<"cloud.v1.RenewCredentialsRespons
  * Use `create(RenewCredentialsResponseSchema)` to create a new message.
  */
 export const RenewCredentialsResponseSchema: GenMessage<RenewCredentialsResponse> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_agent, 38);
+  messageDesc(file_cloud_v1_agent, 40);
 
 /**
  * AgentService is the node-facing API. Every method except JoinNode requires the

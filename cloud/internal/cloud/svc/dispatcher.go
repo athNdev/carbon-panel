@@ -1,8 +1,10 @@
 package svc
 
 import (
+	"context"
 	"log/slog"
 	"sync"
+	"time"
 
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 )
@@ -11,6 +13,7 @@ import (
 type NodeSession struct {
 	NodeID string
 	sendCh chan *v1.ControlMessage
+	done   chan struct{}
 }
 
 // NextMessage returns a channel of outbound control envelopes for the node.
@@ -33,6 +36,7 @@ type AgentDispatcher struct {
 	fileDeleteWaiters map[string]chan *v1.AgentDeleteFileResult
 	dirCreateWaiters  map[string]chan *v1.AgentCreateDirectoryResult
 	fileStatWaiters   map[string]chan *v1.AgentStatFileResult
+	fileRenameWaiters map[string]chan *v1.AgentFileRenameResult
 	backupMu            sync.RWMutex
 	backupCreateWaiters map[string]chan *v1.AgentCreateBackupResult
 	backupRestoreWaiters map[string]chan *v1.AgentRestoreBackupResult
@@ -58,6 +62,7 @@ func NewAgentDispatcher(logger *slog.Logger) *AgentDispatcher {
 		fileDeleteWaiters: make(map[string]chan *v1.AgentDeleteFileResult),
 		dirCreateWaiters:  make(map[string]chan *v1.AgentCreateDirectoryResult),
 		fileStatWaiters:   make(map[string]chan *v1.AgentStatFileResult),
+		fileRenameWaiters: make(map[string]chan *v1.AgentFileRenameResult),
 		backupCreateWaiters:  make(map[string]chan *v1.AgentCreateBackupResult),
 		backupRestoreWaiters: make(map[string]chan *v1.AgentRestoreBackupResult),
 		backupDeleteWaiters:  make(map[string]chan *v1.AgentDeleteBackupResult),
@@ -72,11 +77,13 @@ func (d *AgentDispatcher) Register(nodeID string) *NodeSession {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if old, exists := d.nodes[nodeID]; exists {
+		close(old.done)
 		close(old.sendCh)
 	}
 	sess := &NodeSession{
 		NodeID: nodeID,
-		sendCh: make(chan *v1.ControlMessage, 64),
+		sendCh: make(chan *v1.ControlMessage, 256),
+		done:   make(chan struct{}),
 	}
 	d.nodes[nodeID] = sess
 	d.logger.Info("node agent registered in dispatcher", "node_id", nodeID)
@@ -88,14 +95,53 @@ func (d *AgentDispatcher) Unregister(nodeID string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if sess, exists := d.nodes[nodeID]; exists {
+		close(sess.done)
 		close(sess.sendCh)
 		delete(d.nodes, nodeID)
 		d.logger.Info("node agent unregistered from dispatcher", "node_id", nodeID)
 	}
 }
 
-// Dispatch queues a control message to be sent to a connected node.
+// Dispatch queues a control message to be sent to a connected node, waiting up to 10s if buffer is full.
 func (d *AgentDispatcher) Dispatch(nodeID string, msg *v1.ControlMessage) bool {
+	return d.DispatchTimeout(nodeID, msg, 10*time.Second)
+}
+
+// DispatchTimeout queues a control message, waiting up to timeout if buffer is full.
+func (d *AgentDispatcher) DispatchTimeout(nodeID string, msg *v1.ControlMessage, timeout time.Duration) bool {
+	d.mu.RLock()
+	sess, exists := d.nodes[nodeID]
+	d.mu.RUnlock()
+	if !exists {
+		d.logger.Debug("cannot dispatch control message: node not connected", "node_id", nodeID)
+		return false
+	}
+	if timeout <= 0 {
+		select {
+		case <-sess.done:
+			return false
+		case sess.sendCh <- msg:
+			return true
+		default:
+			d.logger.Warn("control message buffer full for node", "node_id", nodeID)
+			return false
+		}
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-sess.done:
+		return false
+	case sess.sendCh <- msg:
+		return true
+	case <-timer.C:
+		d.logger.Warn("control message dispatch timed out (buffer full) for node", "node_id", nodeID)
+		return false
+	}
+}
+
+// DispatchContext queues a control message, blocking until space is available or ctx is done.
+func (d *AgentDispatcher) DispatchContext(ctx context.Context, nodeID string, msg *v1.ControlMessage) bool {
 	d.mu.RLock()
 	sess, exists := d.nodes[nodeID]
 	d.mu.RUnlock()
@@ -104,11 +150,12 @@ func (d *AgentDispatcher) Dispatch(nodeID string, msg *v1.ControlMessage) bool {
 		return false
 	}
 	select {
+	case <-sess.done:
+		return false
+	case <-ctx.Done():
+		return false
 	case sess.sendCh <- msg:
 		return true
-	default:
-		d.logger.Warn("control message buffer full for node", "node_id", nodeID)
-		return false
 	}
 }
 
@@ -344,6 +391,37 @@ func (d *AgentDispatcher) CancelFileStat(commandID string) {
 	d.fileMu.Unlock()
 }
 
+// ExpectFileRename registers a channel waiting for file rename.
+func (d *AgentDispatcher) ExpectFileRename(commandID string) chan *v1.AgentFileRenameResult {
+	ch := make(chan *v1.AgentFileRenameResult, 1)
+	d.fileMu.Lock()
+	d.fileRenameWaiters[commandID] = ch
+	d.fileMu.Unlock()
+	return ch
+}
+
+// ResolveFileRename delivers file rename result to a waiting caller.
+func (d *AgentDispatcher) ResolveFileRename(res *v1.AgentFileRenameResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.fileMu.Lock()
+	ch, exists := d.fileRenameWaiters[res.CommandId]
+	if exists {
+		delete(d.fileRenameWaiters, res.CommandId)
+	}
+	d.fileMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelFileRename cleans up an abandoned file rename waiter.
+func (d *AgentDispatcher) CancelFileRename(commandID string) {
+	d.fileMu.Lock()
+	delete(d.fileRenameWaiters, commandID)
+	d.fileMu.Unlock()
+}
 
 // ExpectCreateBackup registers a channel waiting for backup creation.
 func (d *AgentDispatcher) ExpectCreateBackup(commandID string) chan *v1.AgentCreateBackupResult {

@@ -98,7 +98,9 @@ func (m *FileManager) ListFiles(workloadID, relPath string) ([]*v1.FileInfo, err
 		}
 
 		childRel := filepath.ToSlash(filepath.Join(relPath, entry.Name()))
-		childRel = strings.TrimPrefix(childRel, "/")
+		if relPath == "" || relPath == "." || relPath == "/" {
+			childRel = entry.Name()
+		}
 
 		results = append(results, &v1.FileInfo{
 			Name:           entry.Name(),
@@ -106,14 +108,14 @@ func (m *FileManager) ListFiles(workloadID, relPath string) ([]*v1.FileInfo, err
 			IsDir:          entry.IsDir(),
 			Size:           eInfo.Size(),
 			ModifiedAtUnix: eInfo.ModTime().Unix(),
-			Mode:           uint32(eInfo.Mode().Perm()),
+			Mode:           uint32(eInfo.Mode()),
 		})
 	}
 
 	return results, nil
 }
 
-// Stat returns metadata for a single file or directory.
+// Stat returns metadata for a file or directory.
 func (m *FileManager) Stat(workloadID, relPath string) (*v1.FileInfo, error) {
 	_, targetPath, err := m.resolveWorkloadPath(workloadID, relPath)
 	if err != nil {
@@ -125,74 +127,75 @@ func (m *FileManager) Stat(workloadID, relPath string) (*v1.FileInfo, error) {
 		return nil, err
 	}
 
-	cleanRel := strings.TrimPrefix(filepath.ToSlash(filepath.Clean("/"+relPath)), "/")
-
 	return &v1.FileInfo{
-		Name:           info.Name(),
-		Path:           cleanRel,
+		Name:           filepath.Base(targetPath),
+		Path:           filepath.ToSlash(relPath),
 		IsDir:          info.IsDir(),
 		Size:           info.Size(),
 		ModifiedAtUnix: info.ModTime().Unix(),
-		Mode:           uint32(info.Mode().Perm()),
+		Mode:           uint32(info.Mode()),
 	}, nil
 }
 
-// ReadFile streams a file in bounded 64KB chunks to chunkFunc.
+// ReadFile streams chunks of a file via chunkFunc callback.
 func (m *FileManager) ReadFile(workloadID, relPath string, chunkFunc func(chunk []byte, isLast bool, totalSize int64) error) error {
 	_, targetPath, err := m.resolveWorkloadPath(workloadID, relPath)
 	if err != nil {
 		return err
 	}
 
+	info, err := os.Stat(targetPath)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return errors.New("cannot read directory as file")
+	}
+
 	file, err := os.Open(targetPath)
 	if err != nil {
-		return fmt.Errorf("open file: %w", err)
+		return err
 	}
 	defer file.Close()
 
-	stat, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("stat file: %w", err)
-	}
-	if stat.IsDir() {
-		return fmt.Errorf("cannot read directory as file: %s", relPath)
-	}
+	totalSize := info.Size()
+	buf := make([]byte, MaxChunkSize)
 
-	totalSize := stat.Size()
 	if totalSize == 0 {
 		return chunkFunc([]byte{}, true, 0)
 	}
 
-	buf := make([]byte, MaxChunkSize)
-	var readBytes int64
-
+	var bytesRead int64
 	for {
 		n, rErr := file.Read(buf)
 		if n > 0 {
-			readBytes += int64(n)
-			isLast := (rErr == io.EOF) || (readBytes >= totalSize)
+			bytesRead += int64(n)
+			isLast := bytesRead >= totalSize || errors.Is(rErr, io.EOF)
 			chunkCopy := make([]byte, n)
 			copy(chunkCopy, buf[:n])
 			if err := chunkFunc(chunkCopy, isLast, totalSize); err != nil {
 				return err
+			}
+			if isLast {
+				break
 			}
 		}
 		if rErr != nil {
 			if errors.Is(rErr, io.EOF) {
 				break
 			}
-			return fmt.Errorf("read file chunk: %w", rErr)
+			return rErr
 		}
 	}
 
 	return nil
 }
 
-// WriteChunk writes a chunk of data for commandID. When isLast is true, it finalizes
-// the atomic write by syncing and renaming the temp file.
+// WriteChunk writes a bounded chunk to a temporary file. When isLast is true,
+// the temporary file is atomically renamed to targetPath.
 func (m *FileManager) WriteChunk(commandID, workloadID, relPath string, chunk []byte, isLast bool, mode uint32) (int64, error) {
-	if strings.TrimSpace(commandID) == "" {
-		return 0, errors.New("command_id is required")
+	if len(chunk) > MaxChunkSize {
+		return 0, fmt.Errorf("chunk exceeds maximum permitted size of %d bytes", MaxChunkSize)
 	}
 
 	m.mu.Lock()
@@ -206,42 +209,37 @@ func (m *FileManager) WriteChunk(commandID, workloadID, relPath string, chunk []
 
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 			m.mu.Unlock()
-			return 0, fmt.Errorf("create parent dir: %w", err)
+			return 0, fmt.Errorf("create parent directory: %w", err)
 		}
 
-		tmpDir := filepath.Join(baseDir, ".tmp")
-		if err := os.MkdirAll(tmpDir, 0700); err != nil {
-			m.mu.Unlock()
-			return 0, fmt.Errorf("create tmp dir: %w", err)
+		fMode := os.FileMode(0644)
+		if mode > 0 {
+			fMode = os.FileMode(mode)
 		}
 
-		tmpFile, err := os.CreateTemp(tmpDir, "upload-*.tmp")
+		tmpFile, err := os.CreateTemp(baseDir, ".upload-*")
 		if err != nil {
 			m.mu.Unlock()
-			return 0, fmt.Errorf("create temp file: %w", err)
-		}
-
-		perm := os.FileMode(0644)
-		if mode > 0 {
-			perm = os.FileMode(mode)
+			return 0, fmt.Errorf("create temporary file: %w", err)
 		}
 
 		writer = &activeWriter{
 			file:       tmpFile,
 			tmpPath:    tmpFile.Name(),
 			targetPath: targetPath,
-			mode:       perm,
+			mode:       fMode,
 		}
 		m.writers[commandID] = writer
 	}
 	m.mu.Unlock()
 
-	// Write chunk
+	var n int
+	var wErr error
 	if len(chunk) > 0 {
-		n, err := writer.file.Write(chunk)
-		if err != nil {
+		n, wErr = writer.file.Write(chunk)
+		if wErr != nil {
 			m.cleanupWriter(commandID)
-			return 0, fmt.Errorf("write chunk: %w", err)
+			return int64(n), fmt.Errorf("write chunk: %w", wErr)
 		}
 		writer.written += int64(n)
 	}
@@ -250,42 +248,41 @@ func (m *FileManager) WriteChunk(commandID, workloadID, relPath string, chunk []
 		defer m.cleanupWriter(commandID)
 
 		if err := writer.file.Sync(); err != nil {
-			return 0, fmt.Errorf("sync temp file: %w", err)
+			return writer.written, fmt.Errorf("sync temp file: %w", err)
 		}
 		if err := writer.file.Close(); err != nil {
-			return 0, fmt.Errorf("close temp file: %w", err)
+			return writer.written, fmt.Errorf("close temp file: %w", err)
 		}
-		writer.file = nil
 
 		if err := os.Chmod(writer.tmpPath, writer.mode); err != nil {
-			_ = os.Remove(writer.tmpPath)
-			return 0, fmt.Errorf("chmod file: %w", err)
+			return writer.written, fmt.Errorf("chmod: %w", err)
 		}
 
 		if err := os.Rename(writer.tmpPath, writer.targetPath); err != nil {
-			_ = os.Remove(writer.tmpPath)
-			return 0, fmt.Errorf("atomic rename to target: %w", err)
+			return writer.written, fmt.Errorf("atomic rename: %w", err)
 		}
-
-		return writer.written, nil
 	}
 
 	return writer.written, nil
 }
 
-// AbortWrite cancels and removes an in-progress temp file.
+// AbortWrite cancels an in-progress file write.
 func (m *FileManager) AbortWrite(commandID string) {
 	m.cleanupWriter(commandID)
 }
 
 func (m *FileManager) cleanupWriter(commandID string) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	writer, exists := m.writers[commandID]
-	if !exists {
+	writer, ok := m.writers[commandID]
+	if ok {
+		delete(m.writers, commandID)
+	}
+	m.mu.Unlock()
+
+	if !ok || writer == nil {
 		return
 	}
-	delete(m.writers, commandID)
+
 	if writer.file != nil {
 		_ = writer.file.Close()
 	}
@@ -318,4 +315,27 @@ func (m *FileManager) CreateDirectory(workloadID, relPath string) error {
 	}
 
 	return os.MkdirAll(targetPath, 0755)
+}
+
+// RenameFile renames or moves a file or directory within the workload sandbox.
+func (m *FileManager) RenameFile(workloadID, oldRelPath, newRelPath string) error {
+	baseDir, oldPath, err := m.resolveWorkloadPath(workloadID, oldRelPath)
+	if err != nil {
+		return err
+	}
+	_, newPath, err := m.resolveWorkloadPath(workloadID, newRelPath)
+	if err != nil {
+		return err
+	}
+
+	if oldPath == baseDir || newPath == baseDir {
+		return errors.New("cannot rename workload root directory")
+	}
+
+	destDir := filepath.Dir(newPath)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("create destination directory: %w", err)
+	}
+
+	return os.Rename(oldPath, newPath)
 }

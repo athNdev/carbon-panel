@@ -63,6 +63,7 @@ type Services struct {
 	Agent      *AgentService
 	File       *FileService
 	Blueprint  *BlueprintService
+	Addon      *AddonService
 	Dispatcher *AgentDispatcher
 }
 
@@ -104,6 +105,7 @@ func New(deps Deps) (*Services, error) {
 		Agent:      &AgentService{deps: deps, dispatcher: deps.Dispatcher},
 		File:       &FileService{deps: deps, dispatcher: deps.Dispatcher},
 		Blueprint:  NewBlueprintService(deps),
+		Addon:      NewAddonService(deps, deps.Dispatcher, nil, nil),
 		Dispatcher: deps.Dispatcher,
 	}, nil
 }

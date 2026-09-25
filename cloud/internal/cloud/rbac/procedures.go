@@ -98,6 +98,14 @@ var procedurePermissions = map[string]Permission{
 	cloudv1connect.FileServiceWriteFileProcedure:       PermWorkloadsWrite,
 	cloudv1connect.FileServiceDeleteFileProcedure:      PermWorkloadsWrite,
 	cloudv1connect.FileServiceCreateDirectoryProcedure: PermWorkloadsWrite,
+	cloudv1connect.FileServiceRenameFileProcedure:      PermWorkloadsWrite,
+	// AddonService.
+	cloudv1connect.AddonServiceListWorkloadAddonsProcedure: PermWorkloadsRead,
+	cloudv1connect.AddonServiceInstallAddonProcedure:      PermWorkloadsWrite,
+	cloudv1connect.AddonServiceToggleAddonProcedure:       PermWorkloadsWrite,
+	cloudv1connect.AddonServiceUninstallAddonProcedure:    PermWorkloadsWrite,
+	cloudv1connect.AddonServiceSearchAddonsProcedure:      PermWorkloadsRead,
+	cloudv1connect.AddonServiceGetAddonDetailsProcedure:   PermWorkloadsRead,
 	// BlueprintService.
 	cloudv1connect.BlueprintServiceListBlueprintsProcedure:   PermWorkloadsRead,
 	cloudv1connect.BlueprintServiceGetBlueprintProcedure:    PermWorkloadsRead,
@@ -203,6 +211,13 @@ func AllProcedures() []string {
 		cloudv1connect.BlueprintServiceCreateBlueprintProcedure,
 		cloudv1connect.BlueprintServiceUpdateBlueprintProcedure,
 		cloudv1connect.BlueprintServiceDeleteBlueprintProcedure,
+		cloudv1connect.FileServiceRenameFileProcedure,
+		cloudv1connect.AddonServiceListWorkloadAddonsProcedure,
+		cloudv1connect.AddonServiceInstallAddonProcedure,
+		cloudv1connect.AddonServiceToggleAddonProcedure,
+		cloudv1connect.AddonServiceUninstallAddonProcedure,
+		cloudv1connect.AddonServiceSearchAddonsProcedure,
+		cloudv1connect.AddonServiceGetAddonDetailsProcedure,
 	}
 }
 

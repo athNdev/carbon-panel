@@ -700,6 +700,27 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 						},
 					}
 
+				case *v1.ControlMessage_FileRename:
+					req := p.FileRename
+					if req == nil || req.WorkloadId == "" {
+						continue
+					}
+					err := files.RenameFile(req.WorkloadId, req.OldPath, req.NewPath)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_FileRenameResult{
+							FileRenameResult: &v1.AgentFileRenameResult{
+								CommandId: req.CommandId,
+								Success:   success,
+								Error:     errMsg,
+							},
+						},
+					}
+
 				case *v1.ControlMessage_CreateBackup:
 					req := p.CreateBackup
 					if req == nil || req.WorkloadId == "" || req.BackupId == "" {

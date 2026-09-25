@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file cloud/v1/file.proto.
  */
 export const file_cloud_v1_file: GenFile = /*@__PURE__*/
-  fileDesc("ChNjbG91ZC92MS9maWxlLnByb3RvEghjbG91ZC52MSJsCghGaWxlSW5mbxIMCgRuYW1lGAEgASgJEgwKBHBhdGgYAiABKAkSDgoGaXNfZGlyGAMgASgIEgwKBHNpemUYBCABKAMSGAoQbW9kaWZpZWRfYXRfdW5peBgFIAEoAxIMCgRtb2RlGAYgASgNIjUKEExpc3RGaWxlc1JlcXVlc3QSEwoLd29ya2xvYWRfaWQYASABKAkSDAoEcGF0aBgCIAEoCSI2ChFMaXN0RmlsZXNSZXNwb25zZRIhCgVmaWxlcxgBIAMoCzISLmNsb3VkLnYxLkZpbGVJbmZvIjQKD1N0YXRGaWxlUmVxdWVzdBITCgt3b3JrbG9hZF9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIjQKEFN0YXRGaWxlUmVzcG9uc2USIAoEaW5mbxgBIAEoCzISLmNsb3VkLnYxLkZpbGVJbmZvIjQKD1JlYWRGaWxlUmVxdWVzdBITCgt3b3JrbG9hZF9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIkYKEFJlYWRGaWxlUmVzcG9uc2USDQoFY2h1bmsYASABKAwSDwoHaXNfbGFzdBgCIAEoCBISCgp0b3RhbF9zaXplGAMgASgDImMKEFdyaXRlRmlsZVJlcXVlc3QSEwoLd29ya2xvYWRfaWQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVjaHVuaxgDIAEoDBIPCgdpc19sYXN0GAQgASgIEgwKBG1vZGUYBSABKA0iOAoRV3JpdGVGaWxlUmVzcG9uc2USFQoNYnl0ZXNfd3JpdHRlbhgBIAEoAxIMCgRwYXRoGAIgASgJIkkKEURlbGV0ZUZpbGVSZXF1ZXN0EhMKC3dvcmtsb2FkX2lkGAEgASgJEgwKBHBhdGgYAiABKAkSEQoJcmVjdXJzaXZlGAMgASgIIhQKEkRlbGV0ZUZpbGVSZXNwb25zZSI7ChZDcmVhdGVEaXJlY3RvcnlSZXF1ZXN0EhMKC3dvcmtsb2FkX2lkGAEgASgJEgwKBHBhdGgYAiABKAkiGQoXQ3JlYXRlRGlyZWN0b3J5UmVzcG9uc2UyxAMKC0ZpbGVTZXJ2aWNlEkQKCUxpc3RGaWxlcxIaLmNsb3VkLnYxLkxpc3RGaWxlc1JlcXVlc3QaGy5jbG91ZC52MS5MaXN0RmlsZXNSZXNwb25zZRJBCghTdGF0RmlsZRIZLmNsb3VkLnYxLlN0YXRGaWxlUmVxdWVzdBoaLmNsb3VkLnYxLlN0YXRGaWxlUmVzcG9uc2USQwoIUmVhZEZpbGUSGS5jbG91ZC52MS5SZWFkRmlsZVJlcXVlc3QaGi5jbG91ZC52MS5SZWFkRmlsZVJlc3BvbnNlMAESRgoJV3JpdGVGaWxlEhouY2xvdWQudjEuV3JpdGVGaWxlUmVxdWVzdBobLmNsb3VkLnYxLldyaXRlRmlsZVJlc3BvbnNlKAESRwoKRGVsZXRlRmlsZRIbLmNsb3VkLnYxLkRlbGV0ZUZpbGVSZXF1ZXN0GhwuY2xvdWQudjEuRGVsZXRlRmlsZVJlc3BvbnNlElYKD0NyZWF0ZURpcmVjdG9yeRIgLmNsb3VkLnYxLkNyZWF0ZURpcmVjdG9yeVJlcXVlc3QaIS5jbG91ZC52MS5DcmVhdGVEaXJlY3RvcnlSZXNwb25zZUI8WjpnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jbG91ZC92MTtjbG91ZHYxYgZwcm90bzM");
+  fileDesc("ChNjbG91ZC92MS9maWxlLnByb3RvEghjbG91ZC52MSJsCghGaWxlSW5mbxIMCgRuYW1lGAEgASgJEgwKBHBhdGgYAiABKAkSDgoGaXNfZGlyGAMgASgIEgwKBHNpemUYBCABKAMSGAoQbW9kaWZpZWRfYXRfdW5peBgFIAEoAxIMCgRtb2RlGAYgASgNIjUKEExpc3RGaWxlc1JlcXVlc3QSEwoLd29ya2xvYWRfaWQYASABKAkSDAoEcGF0aBgCIAEoCSI2ChFMaXN0RmlsZXNSZXNwb25zZRIhCgVmaWxlcxgBIAMoCzISLmNsb3VkLnYxLkZpbGVJbmZvIjQKD1N0YXRGaWxlUmVxdWVzdBITCgt3b3JrbG9hZF9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIjQKEFN0YXRGaWxlUmVzcG9uc2USIAoEaW5mbxgBIAEoCzISLmNsb3VkLnYxLkZpbGVJbmZvIjQKD1JlYWRGaWxlUmVxdWVzdBITCgt3b3JrbG9hZF9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIkYKEFJlYWRGaWxlUmVzcG9uc2USDQoFY2h1bmsYASABKAwSDwoHaXNfbGFzdBgCIAEoCBISCgp0b3RhbF9zaXplGAMgASgDImMKEFdyaXRlRmlsZVJlcXVlc3QSEwoLd29ya2xvYWRfaWQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVjaHVuaxgDIAEoDBIPCgdpc19sYXN0GAQgASgIEgwKBG1vZGUYBSABKA0iOAoRV3JpdGVGaWxlUmVzcG9uc2USFQoNYnl0ZXNfd3JpdHRlbhgBIAEoAxIMCgRwYXRoGAIgASgJIkkKEURlbGV0ZUZpbGVSZXF1ZXN0EhMKC3dvcmtsb2FkX2lkGAEgASgJEgwKBHBhdGgYAiABKAkSEQoJcmVjdXJzaXZlGAMgASgIIhQKEkRlbGV0ZUZpbGVSZXNwb25zZSI7ChZDcmVhdGVEaXJlY3RvcnlSZXF1ZXN0EhMKC3dvcmtsb2FkX2lkGAEgASgJEgwKBHBhdGgYAiABKAkiGQoXQ3JlYXRlRGlyZWN0b3J5UmVzcG9uc2UiTAoRUmVuYW1lRmlsZVJlcXVlc3QSEwoLd29ya2xvYWRfaWQYASABKAkSEAoIb2xkX3BhdGgYAiABKAkSEAoIbmV3X3BhdGgYAyABKAkiFAoSUmVuYW1lRmlsZVJlc3BvbnNlMo0ECgtGaWxlU2VydmljZRJECglMaXN0RmlsZXMSGi5jbG91ZC52MS5MaXN0RmlsZXNSZXF1ZXN0GhsuY2xvdWQudjEuTGlzdEZpbGVzUmVzcG9uc2USQQoIU3RhdEZpbGUSGS5jbG91ZC52MS5TdGF0RmlsZVJlcXVlc3QaGi5jbG91ZC52MS5TdGF0RmlsZVJlc3BvbnNlEkMKCFJlYWRGaWxlEhkuY2xvdWQudjEuUmVhZEZpbGVSZXF1ZXN0GhouY2xvdWQudjEuUmVhZEZpbGVSZXNwb25zZTABEkYKCVdyaXRlRmlsZRIaLmNsb3VkLnYxLldyaXRlRmlsZVJlcXVlc3QaGy5jbG91ZC52MS5Xcml0ZUZpbGVSZXNwb25zZSgBEkcKCkRlbGV0ZUZpbGUSGy5jbG91ZC52MS5EZWxldGVGaWxlUmVxdWVzdBocLmNsb3VkLnYxLkRlbGV0ZUZpbGVSZXNwb25zZRJWCg9DcmVhdGVEaXJlY3RvcnkSIC5jbG91ZC52MS5DcmVhdGVEaXJlY3RvcnlSZXF1ZXN0GiEuY2xvdWQudjEuQ3JlYXRlRGlyZWN0b3J5UmVzcG9uc2USRwoKUmVuYW1lRmlsZRIbLmNsb3VkLnYxLlJlbmFtZUZpbGVSZXF1ZXN0GhwuY2xvdWQudjEuUmVuYW1lRmlsZVJlc3BvbnNlQjxaOmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2Nsb3VkL3YxO2Nsb3VkdjFiBnByb3RvMw");
 
 /**
  * FileInfo describes a file or directory on a workload filesystem.
@@ -400,6 +400,56 @@ export const CreateDirectoryResponseSchema: GenMessage<CreateDirectoryResponse> 
   messageDesc(file_cloud_v1_file, 12);
 
 /**
+ * RenameFileRequest renames or moves a file or directory.
+ *
+ * @generated from message cloud.v1.RenameFileRequest
+ */
+export type RenameFileRequest = Message<"cloud.v1.RenameFileRequest"> & {
+  /**
+   * Workload id.
+   *
+   * @generated from field: string workload_id = 1;
+   */
+  workloadId: string;
+
+  /**
+   * Current path relative to workload root.
+   *
+   * @generated from field: string old_path = 2;
+   */
+  oldPath: string;
+
+  /**
+   * New path relative to workload root.
+   *
+   * @generated from field: string new_path = 3;
+   */
+  newPath: string;
+};
+
+/**
+ * Describes the message cloud.v1.RenameFileRequest.
+ * Use `create(RenameFileRequestSchema)` to create a new message.
+ */
+export const RenameFileRequestSchema: GenMessage<RenameFileRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_file, 13);
+
+/**
+ * RenameFileResponse acknowledges file rename.
+ *
+ * @generated from message cloud.v1.RenameFileResponse
+ */
+export type RenameFileResponse = Message<"cloud.v1.RenameFileResponse"> & {
+};
+
+/**
+ * Describes the message cloud.v1.RenameFileResponse.
+ * Use `create(RenameFileResponseSchema)` to create a new message.
+ */
+export const RenameFileResponseSchema: GenMessage<RenameFileResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_file, 14);
+
+/**
  * FileService provides remote file management for workloads.
  *
  * @generated from service cloud.v1.FileService
@@ -464,6 +514,16 @@ export const FileService: GenService<{
     methodKind: "unary";
     input: typeof CreateDirectoryRequestSchema;
     output: typeof CreateDirectoryResponseSchema;
+  },
+  /**
+   * RenameFile renames or moves a file or directory in a workload.
+   *
+   * @generated from rpc cloud.v1.FileService.RenameFile
+   */
+  renameFile: {
+    methodKind: "unary";
+    input: typeof RenameFileRequestSchema;
+    output: typeof RenameFileResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_cloud_v1_file, 0);

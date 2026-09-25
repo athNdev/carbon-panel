@@ -168,6 +168,16 @@ message AgentStatFileResult {
   FileInfo info = 4;
 }
 
+// AgentFileRenameResult acknowledges file renaming.
+message AgentFileRenameResult {
+  // Correlation id.
+  string command_id = 1;
+  // Whether rename succeeded.
+  bool success = 2;
+  // Error detail when it did not.
+  string error = 3;
+}
+
 // AgentCreateBackupResult acknowledges snapshot creation.
 message AgentCreateBackupResult {
   // Correlation id.
@@ -263,6 +273,8 @@ message AgentMessage {
     AgentDeleteBackupResult backup_delete_result = 14;
     // Workload metrics query result.
     AgentGetWorkloadMetricsResult metrics_result = 15;
+    // File rename result.
+    AgentFileRenameResult file_rename_result = 16;
   }
 }
 
@@ -399,6 +411,18 @@ message ControlStatFile {
   string path = 3;
 }
 
+// ControlFileRename renames a file or directory on the node.
+message ControlFileRename {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Old path relative to workload root.
+  string old_path = 3;
+  // New path relative to workload root.
+  string new_path = 4;
+}
+
 // ControlCreateBackup requests snapshot creation on the node.
 message ControlCreateBackup {
   // Correlation id.
@@ -478,6 +502,8 @@ message ControlMessage {
     ControlDeleteBackup delete_backup = 16;
     // Workload metrics query request.
     ControlGetWorkloadMetrics get_workload_metrics = 17;
+    // File rename request.
+    ControlFileRename file_rename = 18;
   }
 }
 

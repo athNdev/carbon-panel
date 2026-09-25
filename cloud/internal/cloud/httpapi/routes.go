@@ -55,4 +55,8 @@ func (s *Server) routes() {
 		path, h = cloudv1connect.NewBlueprintServiceHandler(svcs.Blueprint, chain)
 		mount(path, h)
 	}
+	if svcs.Addon != nil {
+		path, h = cloudv1connect.NewAddonServiceHandler(svcs.Addon, chain)
+		mount(path, h)
+	}
 }

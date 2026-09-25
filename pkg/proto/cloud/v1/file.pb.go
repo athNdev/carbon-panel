@@ -763,6 +763,107 @@ func (*CreateDirectoryResponse) Descriptor() ([]byte, []int) {
 	return file_cloud_v1_file_proto_rawDescGZIP(), []int{12}
 }
 
+// RenameFileRequest renames or moves a file or directory.
+type RenameFileRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Workload id.
+	WorkloadId string `protobuf:"bytes,1,opt,name=workload_id,json=workloadId,proto3" json:"workload_id,omitempty"`
+	// Current path relative to workload root.
+	OldPath string `protobuf:"bytes,2,opt,name=old_path,json=oldPath,proto3" json:"old_path,omitempty"`
+	// New path relative to workload root.
+	NewPath       string `protobuf:"bytes,3,opt,name=new_path,json=newPath,proto3" json:"new_path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenameFileRequest) Reset() {
+	*x = RenameFileRequest{}
+	mi := &file_cloud_v1_file_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenameFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenameFileRequest) ProtoMessage() {}
+
+func (x *RenameFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_file_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenameFileRequest.ProtoReflect.Descriptor instead.
+func (*RenameFileRequest) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_file_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RenameFileRequest) GetWorkloadId() string {
+	if x != nil {
+		return x.WorkloadId
+	}
+	return ""
+}
+
+func (x *RenameFileRequest) GetOldPath() string {
+	if x != nil {
+		return x.OldPath
+	}
+	return ""
+}
+
+func (x *RenameFileRequest) GetNewPath() string {
+	if x != nil {
+		return x.NewPath
+	}
+	return ""
+}
+
+// RenameFileResponse acknowledges file rename.
+type RenameFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenameFileResponse) Reset() {
+	*x = RenameFileResponse{}
+	mi := &file_cloud_v1_file_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenameFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenameFileResponse) ProtoMessage() {}
+
+func (x *RenameFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cloud_v1_file_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenameFileResponse.ProtoReflect.Descriptor instead.
+func (*RenameFileResponse) Descriptor() ([]byte, []int) {
+	return file_cloud_v1_file_proto_rawDescGZIP(), []int{14}
+}
+
 var File_cloud_v1_file_proto protoreflect.FileDescriptor
 
 const file_cloud_v1_file_proto_rawDesc = "" +
@@ -816,7 +917,13 @@ const file_cloud_v1_file_proto_rawDesc = "" +
 	"\vworkload_id\x18\x01 \x01(\tR\n" +
 	"workloadId\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\"\x19\n" +
-	"\x17CreateDirectoryResponse2\xc4\x03\n" +
+	"\x17CreateDirectoryResponse\"j\n" +
+	"\x11RenameFileRequest\x12\x1f\n" +
+	"\vworkload_id\x18\x01 \x01(\tR\n" +
+	"workloadId\x12\x19\n" +
+	"\bold_path\x18\x02 \x01(\tR\aoldPath\x12\x19\n" +
+	"\bnew_path\x18\x03 \x01(\tR\anewPath\"\x14\n" +
+	"\x12RenameFileResponse2\x8d\x04\n" +
 	"\vFileService\x12D\n" +
 	"\tListFiles\x12\x1a.cloud.v1.ListFilesRequest\x1a\x1b.cloud.v1.ListFilesResponse\x12A\n" +
 	"\bStatFile\x12\x19.cloud.v1.StatFileRequest\x1a\x1a.cloud.v1.StatFileResponse\x12C\n" +
@@ -824,7 +931,9 @@ const file_cloud_v1_file_proto_rawDesc = "" +
 	"\tWriteFile\x12\x1a.cloud.v1.WriteFileRequest\x1a\x1b.cloud.v1.WriteFileResponse(\x01\x12G\n" +
 	"\n" +
 	"DeleteFile\x12\x1b.cloud.v1.DeleteFileRequest\x1a\x1c.cloud.v1.DeleteFileResponse\x12V\n" +
-	"\x0fCreateDirectory\x12 .cloud.v1.CreateDirectoryRequest\x1a!.cloud.v1.CreateDirectoryResponseB<Z:github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1b\x06proto3"
+	"\x0fCreateDirectory\x12 .cloud.v1.CreateDirectoryRequest\x1a!.cloud.v1.CreateDirectoryResponse\x12G\n" +
+	"\n" +
+	"RenameFile\x12\x1b.cloud.v1.RenameFileRequest\x1a\x1c.cloud.v1.RenameFileResponseB<Z:github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1b\x06proto3"
 
 var (
 	file_cloud_v1_file_proto_rawDescOnce sync.Once
@@ -838,7 +947,7 @@ func file_cloud_v1_file_proto_rawDescGZIP() []byte {
 	return file_cloud_v1_file_proto_rawDescData
 }
 
-var file_cloud_v1_file_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_cloud_v1_file_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_cloud_v1_file_proto_goTypes = []any{
 	(*FileInfo)(nil),                // 0: cloud.v1.FileInfo
 	(*ListFilesRequest)(nil),        // 1: cloud.v1.ListFilesRequest
@@ -853,6 +962,8 @@ var file_cloud_v1_file_proto_goTypes = []any{
 	(*DeleteFileResponse)(nil),      // 10: cloud.v1.DeleteFileResponse
 	(*CreateDirectoryRequest)(nil),  // 11: cloud.v1.CreateDirectoryRequest
 	(*CreateDirectoryResponse)(nil), // 12: cloud.v1.CreateDirectoryResponse
+	(*RenameFileRequest)(nil),       // 13: cloud.v1.RenameFileRequest
+	(*RenameFileResponse)(nil),      // 14: cloud.v1.RenameFileResponse
 }
 var file_cloud_v1_file_proto_depIdxs = []int32{
 	0,  // 0: cloud.v1.ListFilesResponse.files:type_name -> cloud.v1.FileInfo
@@ -863,14 +974,16 @@ var file_cloud_v1_file_proto_depIdxs = []int32{
 	7,  // 5: cloud.v1.FileService.WriteFile:input_type -> cloud.v1.WriteFileRequest
 	9,  // 6: cloud.v1.FileService.DeleteFile:input_type -> cloud.v1.DeleteFileRequest
 	11, // 7: cloud.v1.FileService.CreateDirectory:input_type -> cloud.v1.CreateDirectoryRequest
-	2,  // 8: cloud.v1.FileService.ListFiles:output_type -> cloud.v1.ListFilesResponse
-	4,  // 9: cloud.v1.FileService.StatFile:output_type -> cloud.v1.StatFileResponse
-	6,  // 10: cloud.v1.FileService.ReadFile:output_type -> cloud.v1.ReadFileResponse
-	8,  // 11: cloud.v1.FileService.WriteFile:output_type -> cloud.v1.WriteFileResponse
-	10, // 12: cloud.v1.FileService.DeleteFile:output_type -> cloud.v1.DeleteFileResponse
-	12, // 13: cloud.v1.FileService.CreateDirectory:output_type -> cloud.v1.CreateDirectoryResponse
-	8,  // [8:14] is the sub-list for method output_type
-	2,  // [2:8] is the sub-list for method input_type
+	13, // 8: cloud.v1.FileService.RenameFile:input_type -> cloud.v1.RenameFileRequest
+	2,  // 9: cloud.v1.FileService.ListFiles:output_type -> cloud.v1.ListFilesResponse
+	4,  // 10: cloud.v1.FileService.StatFile:output_type -> cloud.v1.StatFileResponse
+	6,  // 11: cloud.v1.FileService.ReadFile:output_type -> cloud.v1.ReadFileResponse
+	8,  // 12: cloud.v1.FileService.WriteFile:output_type -> cloud.v1.WriteFileResponse
+	10, // 13: cloud.v1.FileService.DeleteFile:output_type -> cloud.v1.DeleteFileResponse
+	12, // 14: cloud.v1.FileService.CreateDirectory:output_type -> cloud.v1.CreateDirectoryResponse
+	14, // 15: cloud.v1.FileService.RenameFile:output_type -> cloud.v1.RenameFileResponse
+	9,  // [9:16] is the sub-list for method output_type
+	2,  // [2:9] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -887,7 +1000,7 @@ func file_cloud_v1_file_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cloud_v1_file_proto_rawDesc), len(file_cloud_v1_file_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

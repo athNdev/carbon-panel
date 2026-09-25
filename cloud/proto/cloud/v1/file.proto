@@ -112,6 +112,19 @@ message CreateDirectoryRequest {
 // CreateDirectoryResponse acknowledges directory creation.
 message CreateDirectoryResponse {}
 
+// RenameFileRequest renames or moves a file or directory.
+message RenameFileRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Current path relative to workload root.
+  string old_path = 2;
+  // New path relative to workload root.
+  string new_path = 3;
+}
+
+// RenameFileResponse acknowledges file rename.
+message RenameFileResponse {}
+
 // FileService provides remote file management for workloads.
 service FileService {
   // ListFiles lists directory contents for a workload.
@@ -126,4 +139,6 @@ service FileService {
   rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
   // CreateDirectory creates a directory (and parents) in a workload.
   rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
+  // RenameFile renames or moves a file or directory in a workload.
+  rpc RenameFile(RenameFileRequest) returns (RenameFileResponse);
 }

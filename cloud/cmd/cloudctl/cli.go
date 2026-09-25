@@ -97,6 +97,7 @@ type Client struct {
 	Org       cloudv1connect.OrgServiceClient
 	File      cloudv1connect.FileServiceClient
 	Blueprint cloudv1connect.BlueprintServiceClient
+	Addon     cloudv1connect.AddonServiceClient
 }
 
 type authInterceptor struct {
@@ -136,7 +137,7 @@ func (a *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 // NewClient initializes a client with endpoint and auth headers.
 func NewClient(endpoint, token, orgID string, httpClient *http.Client) *Client {
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 30 * time.Second}
+		httpClient = &http.Client{Timeout: 120 * time.Second}
 	}
 	endpoint = strings.TrimRight(endpoint, "/")
 	interceptor := &authInterceptor{token: token, orgID: orgID}
@@ -159,6 +160,7 @@ func NewClient(endpoint, token, orgID string, httpClient *http.Client) *Client {
 		Org:       cloudv1connect.NewOrgServiceClient(httpClient, endpoint, opts),
 		File:      cloudv1connect.NewFileServiceClient(httpClient, endpoint, opts),
 		Blueprint: cloudv1connect.NewBlueprintServiceClient(httpClient, endpoint, opts),
+		Addon:     cloudv1connect.NewAddonServiceClient(httpClient, endpoint, opts),
 	}
 }
 
@@ -297,6 +299,8 @@ func (c *CLI) Run(ctx context.Context, args []string) error {
 		return c.runFiles(ctx, subArgs)
 	case "blueprints":
 		return c.runBlueprints(ctx, subArgs)
+	case "addons":
+		return c.runAddons(ctx, subArgs)
 	default:
 		return fmt.Errorf("unknown command: %s (run 'cloudctl help' for usage)", cmd)
 	}
@@ -814,6 +818,8 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 			}
 			return nil
 		})
+	case "addons":
+		return c.runWorkloadAddons(ctx, args[1:])
 	case "create":
 		fs := flag.NewFlagSet("workloads create", flag.ContinueOnError)
 		name := fs.String("name", "", "Workload display name (required)")
@@ -1527,6 +1533,24 @@ func (c *CLI) runFiles(ctx context.Context, args []string) error {
 		_, _ = fmt.Fprintf(c.Stdout, "Uploaded %d bytes to %s\n", resp.Msg.BytesWritten, resp.Msg.Path)
 		return nil
 
+	case "rename", "mv":
+		if len(args) < 4 {
+			return errors.New("usage: cloudctl files rename <workload-id> <old-path> <new-path>")
+		}
+		workloadID := args[1]
+		oldPath := args[2]
+		newPath := args[3]
+		_, err := c.Client.File.RenameFile(ctx, connect.NewRequest(&v1.RenameFileRequest{
+			WorkloadId: workloadID,
+			OldPath:    oldPath,
+			NewPath:    newPath,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Renamed %s -> %s on workload %s\n", oldPath, newPath, workloadID)
+		return nil
+
 	case "rm":
 		fs := flag.NewFlagSet("files rm", flag.ContinueOnError)
 		recursive := fs.Bool("r", false, "Remove recursively")
@@ -1696,5 +1720,316 @@ func (c *CLI) runBlueprints(ctx context.Context, args []string) error {
 		return nil
 
 	default:		return fmt.Errorf("unknown blueprints command: %s (usage: list, get, create, delete)", args[0])
+	}
+}
+
+func (c *CLI) runAddons(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: cloudctl addons <search|info|list|install|enable|disable|uninstall>")
+	}
+	switch args[0] {
+	case "search":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl addons search <query> [-type plugin|mod] [-loader <loader>] [-version <mc-version>] [-limit <n>]")
+		}
+		query := args[1]
+		fs := flag.NewFlagSet("addons search", flag.ContinueOnError)
+		aTypeStr := fs.String("type", "", "Addon type: plugin or mod")
+		loader := fs.String("loader", "", "Mod loader: paper, fabric, forge, velocity...")
+		mcVer := fs.String("version", "", "Minecraft version: e.g. 1.21.4")
+		limit := fs.Int("limit", 10, "Max search results")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		aType := v1.AddonType_ADDON_TYPE_UNSPECIFIED
+		if strings.EqualFold(*aTypeStr, "plugin") {
+			aType = v1.AddonType_ADDON_TYPE_PLUGIN
+		} else if strings.EqualFold(*aTypeStr, "mod") {
+			aType = v1.AddonType_ADDON_TYPE_MOD
+		}
+		resp, err := c.Client.Addon.SearchAddons(ctx, connect.NewRequest(&v1.SearchAddonsRequest{
+			Query:       query,
+			AddonType:   aType,
+			Loader:      *loader,
+			GameVersion: *mcVer,
+			Limit:       int32(*limit),
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Hits, func(w io.Writer) error {
+			if len(resp.Msg.Hits) == 0 {
+				_, _ = fmt.Fprintln(w, "No addons found matching query.")
+				return nil
+			}
+			tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "ID/SLUG	TITLE	TYPE	DOWNLOADS	LATEST	AUTHOR	DESCRIPTION")
+			for _, hit := range resp.Msg.Hits {
+				typeStr := "plugin"
+				if hit.AddonType == v1.AddonType_ADDON_TYPE_MOD {
+					typeStr = "mod"
+				}
+				desc := hit.Description
+				if len(desc) > 50 {
+					desc = desc[:47] + "..."
+				}
+				_, _ = fmt.Fprintf(tw, "%s	%s	%s	%d	%s	%s	%s\n",
+					hit.Slug, hit.Title, typeStr, hit.Downloads, hit.LatestVersion, hit.Author, desc)
+			}
+			return tw.Flush()
+		})
+
+	case "info":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl addons info <project-id-or-slug> [-loader <loader>] [-version <mc-version>]")
+		}
+		projectID := args[1]
+		fs := flag.NewFlagSet("addons info", flag.ContinueOnError)
+		loader := fs.String("loader", "", "Mod loader filter")
+		mcVer := fs.String("version", "", "Minecraft version filter")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		resp, err := c.Client.Addon.GetAddonDetails(ctx, connect.NewRequest(&v1.GetAddonDetailsRequest{
+			ProjectIdOrSlug: projectID,
+			Loader:          *loader,
+			GameVersion:     *mcVer,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Details, func(w io.Writer) error {
+			d := resp.Msg.Details
+			typeStr := "plugin"
+			if d.AddonType == v1.AddonType_ADDON_TYPE_MOD {
+				typeStr = "mod"
+			}
+			_, _ = fmt.Fprintf(w, "Addon: %s (%s)\n", d.Title, d.ProjectId)
+			_, _ = fmt.Fprintf(w, "  Type:        %s\n", typeStr)
+			_, _ = fmt.Fprintf(w, "  Slug:        %s\n", d.Slug)
+			_, _ = fmt.Fprintf(w, "  Downloads:   %d\n", d.Downloads)
+			_, _ = fmt.Fprintf(w, "  Description: %s\n", d.Description)
+			if len(d.Categories) > 0 {
+				_, _ = fmt.Fprintf(w, "  Categories:  %s\n", strings.Join(d.Categories, ", "))
+			}
+			if len(d.Loaders) > 0 {
+				_, _ = fmt.Fprintf(w, "  Loaders:     %s\n", strings.Join(d.Loaders, ", "))
+			}
+			if len(resp.Msg.Versions) > 0 {
+				_, _ = fmt.Fprintf(w, "\nCompatible Versions (%d):\n", len(resp.Msg.Versions))
+				for i, v := range resp.Msg.Versions {
+					if i >= 5 {
+						_, _ = fmt.Fprintf(w, "  ... and %d more versions\n", len(resp.Msg.Versions)-5)
+						break
+					}
+					var files []string
+					for _, f := range v.Files {
+						files = append(files, fmt.Sprintf("%s (%.1f KB)", f.Filename, float64(f.Size)/1024.0))
+					}
+					_, _ = fmt.Fprintf(w, "  - [%s] %s (%s) -> %s\n", v.Id, v.VersionNumber, v.Name, strings.Join(files, ", "))
+				}
+			}
+			return nil
+		})
+
+	case "list":
+		return c.runWorkloadAddons(ctx, append([]string{"list"}, args[1:]...))
+	case "install":
+		return c.runWorkloadAddons(ctx, append([]string{"install"}, args[1:]...))
+	case "enable":
+		return c.runWorkloadAddons(ctx, append([]string{"enable"}, args[1:]...))
+	case "disable":
+		return c.runWorkloadAddons(ctx, append([]string{"disable"}, args[1:]...))
+	case "uninstall", "delete", "rm":
+		return c.runWorkloadAddons(ctx, append([]string{"uninstall"}, args[1:]...))
+
+	default:		return fmt.Errorf("unknown addons command: %s", args[0])
+	}
+}
+
+func (c *CLI) runWorkloadAddons(ctx context.Context, args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: cloudctl workloads addons <list|install|enable|disable|uninstall>")
+	}
+	switch args[0] {
+	case "list":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads addons list <workload-id> [--type plugin|mod]")
+		}
+		workloadID := args[1]
+		fs := flag.NewFlagSet("workloads addons list", flag.ContinueOnError)
+		aTypeStr := fs.String("type", "", "Filter addon type: plugin or mod")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		aType := v1.AddonType_ADDON_TYPE_UNSPECIFIED
+		if strings.EqualFold(*aTypeStr, "plugin") {
+			aType = v1.AddonType_ADDON_TYPE_PLUGIN
+		} else if strings.EqualFold(*aTypeStr, "mod") {
+			aType = v1.AddonType_ADDON_TYPE_MOD
+		}
+		resp, err := c.Client.Addon.ListWorkloadAddons(ctx, connect.NewRequest(&v1.ListWorkloadAddonsRequest{
+			WorkloadId: workloadID,
+			AddonType:  aType,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Addons, func(w io.Writer) error {
+			if len(resp.Msg.Addons) == 0 {
+				_, _ = fmt.Fprintln(w, "No addons installed.")
+				return nil
+			}
+			tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+			_, _ = fmt.Fprintln(tw, "FILENAME	NAME	TYPE	ENABLED	SIZE	MODIFIED")
+			for _, a := range resp.Msg.Addons {
+				typeStr := "plugin"
+				if a.AddonType == v1.AddonType_ADDON_TYPE_MOD {
+					typeStr = "mod"
+				}
+				enStr := "yes"
+				if !a.Enabled {
+					enStr = "no (disabled)"
+				}
+				modTime := time.Unix(a.ModifiedAtUnix, 0).Format(time.RFC3339)
+				sizeKB := float64(a.SizeBytes) / 1024.0
+				_, _ = fmt.Fprintf(tw, "%s	%s	%s	%s	%.1f KB	%s\n", a.Filename, a.Name, typeStr, enStr, sizeKB, modTime)
+			}
+			return tw.Flush()
+		})
+
+	case "install":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads addons install <workload-id> [-modrinth <project-id-or-slug>] [-version <version-id>] [-url <url>] [-type plugin|mod] [-name <filename>]")
+		}
+		workloadID := args[1]
+		fs := flag.NewFlagSet("workloads addons install", flag.ContinueOnError)
+		modrinthID := fs.String("modrinth", "", "Modrinth project ID or slug")
+		versionID := fs.String("version", "", "Modrinth version ID (optional)")
+		downloadURL := fs.String("url", "", "Direct download URL (optional)")
+		aTypeStr := fs.String("type", "", "Addon type: plugin or mod (optional)")
+		filename := fs.String("name", "", "Custom filename (optional)")
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
+		aType := v1.AddonType_ADDON_TYPE_UNSPECIFIED
+		if strings.EqualFold(*aTypeStr, "plugin") {
+			aType = v1.AddonType_ADDON_TYPE_PLUGIN
+		} else if strings.EqualFold(*aTypeStr, "mod") {
+			aType = v1.AddonType_ADDON_TYPE_MOD
+		}
+		resp, err := c.Client.Addon.InstallAddon(ctx, connect.NewRequest(&v1.InstallAddonRequest{
+			WorkloadId:        workloadID,
+			ModrinthProjectId: *modrinthID,
+			ModrinthVersionId: *versionID,
+			DownloadUrl:       *downloadURL,
+			AddonType:         aType,
+			Filename:          *filename,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Addon, func(w io.Writer) error {
+			a := resp.Msg.Addon
+			typeStr := "plugin"
+			if a.AddonType == v1.AddonType_ADDON_TYPE_MOD {
+				typeStr = "mod"
+			}
+			_, _ = fmt.Fprintf(w, "Successfully installed %s: %s (%.1f KB)\n", typeStr, a.Filename, float64(a.SizeBytes)/1024.0)
+			return nil
+		})
+
+	case "enable":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl workloads addons enable <workload-id> <filename> [--type plugin|mod]")
+		}
+		workloadID := args[1]
+		filename := args[2]
+		fs := flag.NewFlagSet("workloads addons enable", flag.ContinueOnError)
+		aTypeStr := fs.String("type", "", "Addon type: plugin or mod")
+		if err := fs.Parse(args[3:]); err != nil {
+			return err
+		}
+		aType := v1.AddonType_ADDON_TYPE_UNSPECIFIED
+		if strings.EqualFold(*aTypeStr, "plugin") {
+			aType = v1.AddonType_ADDON_TYPE_PLUGIN
+		} else if strings.EqualFold(*aTypeStr, "mod") {
+			aType = v1.AddonType_ADDON_TYPE_MOD
+		}
+		resp, err := c.Client.Addon.ToggleAddon(ctx, connect.NewRequest(&v1.ToggleAddonRequest{
+			WorkloadId: workloadID,
+			Filename:   filename,
+			AddonType:  aType,
+			Enable:     true,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Addon, func(w io.Writer) error {
+			_, _ = fmt.Fprintf(w, "Enabled addon: %s\n", resp.Msg.Addon.Filename)
+			return nil
+		})
+
+	case "disable":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl workloads addons disable <workload-id> <filename> [--type plugin|mod]")
+		}
+		workloadID := args[1]
+		filename := args[2]
+		fs := flag.NewFlagSet("workloads addons disable", flag.ContinueOnError)
+		aTypeStr := fs.String("type", "", "Addon type: plugin or mod")
+		if err := fs.Parse(args[3:]); err != nil {
+			return err
+		}
+		aType := v1.AddonType_ADDON_TYPE_UNSPECIFIED
+		if strings.EqualFold(*aTypeStr, "plugin") {
+			aType = v1.AddonType_ADDON_TYPE_PLUGIN
+		} else if strings.EqualFold(*aTypeStr, "mod") {
+			aType = v1.AddonType_ADDON_TYPE_MOD
+		}
+		resp, err := c.Client.Addon.ToggleAddon(ctx, connect.NewRequest(&v1.ToggleAddonRequest{
+			WorkloadId: workloadID,
+			Filename:   filename,
+			AddonType:  aType,
+			Enable:     false,
+		}))
+		if err != nil {
+			return err
+		}
+		return c.printOutput(resp.Msg.Addon, func(w io.Writer) error {
+			_, _ = fmt.Fprintf(w, "Disabled addon: %s\n", resp.Msg.Addon.Filename)
+			return nil
+		})
+
+	case "uninstall", "delete", "rm":
+		if len(args) < 3 {
+			return errors.New("usage: cloudctl workloads addons uninstall <workload-id> <filename> [--type plugin|mod]")
+		}
+		workloadID := args[1]
+		filename := args[2]
+		fs := flag.NewFlagSet("workloads addons uninstall", flag.ContinueOnError)
+		aTypeStr := fs.String("type", "", "Addon type: plugin or mod")
+		if err := fs.Parse(args[3:]); err != nil {
+			return err
+		}
+		aType := v1.AddonType_ADDON_TYPE_UNSPECIFIED
+		if strings.EqualFold(*aTypeStr, "plugin") {
+			aType = v1.AddonType_ADDON_TYPE_PLUGIN
+		} else if strings.EqualFold(*aTypeStr, "mod") {
+			aType = v1.AddonType_ADDON_TYPE_MOD
+		}
+		_, err := c.Client.Addon.UninstallAddon(ctx, connect.NewRequest(&v1.UninstallAddonRequest{
+			WorkloadId: workloadID,
+			Filename:   filename,
+			AddonType:  aType,
+		}))
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(c.Stdout, "Uninstalled addon: %s\n", filename)
+		return nil
+
+	default:
+		return fmt.Errorf("unknown workloads addons command: %s", args[0])
 	}
 }

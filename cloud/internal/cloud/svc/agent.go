@@ -198,6 +198,10 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 			if s.dispatcher != nil {
 				s.dispatcher.ResolveFileStat(payload.FileStatResult)
 			}
+		case *v1.AgentMessage_FileRenameResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveFileRename(payload.FileRenameResult)
+			}
 		case *v1.AgentMessage_BackupCreateResult:
 			if s.dispatcher != nil {
 				s.dispatcher.ResolveCreateBackup(payload.BackupCreateResult)

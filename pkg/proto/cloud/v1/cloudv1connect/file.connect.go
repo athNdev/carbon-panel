@@ -46,6 +46,8 @@ const (
 	// FileServiceCreateDirectoryProcedure is the fully-qualified name of the FileService's
 	// CreateDirectory RPC.
 	FileServiceCreateDirectoryProcedure = "/cloud.v1.FileService/CreateDirectory"
+	// FileServiceRenameFileProcedure is the fully-qualified name of the FileService's RenameFile RPC.
+	FileServiceRenameFileProcedure = "/cloud.v1.FileService/RenameFile"
 )
 
 // FileServiceClient is a client for the cloud.v1.FileService service.
@@ -62,6 +64,8 @@ type FileServiceClient interface {
 	DeleteFile(context.Context, *connect.Request[v1.DeleteFileRequest]) (*connect.Response[v1.DeleteFileResponse], error)
 	// CreateDirectory creates a directory (and parents) in a workload.
 	CreateDirectory(context.Context, *connect.Request[v1.CreateDirectoryRequest]) (*connect.Response[v1.CreateDirectoryResponse], error)
+	// RenameFile renames or moves a file or directory in a workload.
+	RenameFile(context.Context, *connect.Request[v1.RenameFileRequest]) (*connect.Response[v1.RenameFileResponse], error)
 }
 
 // NewFileServiceClient constructs a client for the cloud.v1.FileService service. By default, it
@@ -111,6 +115,12 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(fileServiceMethods.ByName("CreateDirectory")),
 			connect.WithClientOptions(opts...),
 		),
+		renameFile: connect.NewClient[v1.RenameFileRequest, v1.RenameFileResponse](
+			httpClient,
+			baseURL+FileServiceRenameFileProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("RenameFile")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -122,6 +132,7 @@ type fileServiceClient struct {
 	writeFile       *connect.Client[v1.WriteFileRequest, v1.WriteFileResponse]
 	deleteFile      *connect.Client[v1.DeleteFileRequest, v1.DeleteFileResponse]
 	createDirectory *connect.Client[v1.CreateDirectoryRequest, v1.CreateDirectoryResponse]
+	renameFile      *connect.Client[v1.RenameFileRequest, v1.RenameFileResponse]
 }
 
 // ListFiles calls cloud.v1.FileService.ListFiles.
@@ -154,6 +165,11 @@ func (c *fileServiceClient) CreateDirectory(ctx context.Context, req *connect.Re
 	return c.createDirectory.CallUnary(ctx, req)
 }
 
+// RenameFile calls cloud.v1.FileService.RenameFile.
+func (c *fileServiceClient) RenameFile(ctx context.Context, req *connect.Request[v1.RenameFileRequest]) (*connect.Response[v1.RenameFileResponse], error) {
+	return c.renameFile.CallUnary(ctx, req)
+}
+
 // FileServiceHandler is an implementation of the cloud.v1.FileService service.
 type FileServiceHandler interface {
 	// ListFiles lists directory contents for a workload.
@@ -168,6 +184,8 @@ type FileServiceHandler interface {
 	DeleteFile(context.Context, *connect.Request[v1.DeleteFileRequest]) (*connect.Response[v1.DeleteFileResponse], error)
 	// CreateDirectory creates a directory (and parents) in a workload.
 	CreateDirectory(context.Context, *connect.Request[v1.CreateDirectoryRequest]) (*connect.Response[v1.CreateDirectoryResponse], error)
+	// RenameFile renames or moves a file or directory in a workload.
+	RenameFile(context.Context, *connect.Request[v1.RenameFileRequest]) (*connect.Response[v1.RenameFileResponse], error)
 }
 
 // NewFileServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -213,6 +231,12 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(fileServiceMethods.ByName("CreateDirectory")),
 		connect.WithHandlerOptions(opts...),
 	)
+	fileServiceRenameFileHandler := connect.NewUnaryHandler(
+		FileServiceRenameFileProcedure,
+		svc.RenameFile,
+		connect.WithSchema(fileServiceMethods.ByName("RenameFile")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/cloud.v1.FileService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case FileServiceListFilesProcedure:
@@ -227,6 +251,8 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 			fileServiceDeleteFileHandler.ServeHTTP(w, r)
 		case FileServiceCreateDirectoryProcedure:
 			fileServiceCreateDirectoryHandler.ServeHTTP(w, r)
+		case FileServiceRenameFileProcedure:
+			fileServiceRenameFileHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -258,4 +284,8 @@ func (UnimplementedFileServiceHandler) DeleteFile(context.Context, *connect.Requ
 
 func (UnimplementedFileServiceHandler) CreateDirectory(context.Context, *connect.Request[v1.CreateDirectoryRequest]) (*connect.Response[v1.CreateDirectoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.FileService.CreateDirectory is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) RenameFile(context.Context, *connect.Request[v1.RenameFileRequest]) (*connect.Response[v1.RenameFileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.FileService.RenameFile is not implemented"))
 }

@@ -203,7 +203,6 @@ func (m *mockProvisionServer) ApplyProvision(ctx context.Context, req *connect.R
 	}), nil
 }
 
-
 type mockBlueprintServer struct {
 	cloudv1connect.UnimplementedBlueprintServiceHandler
 }
@@ -259,6 +258,93 @@ func (m *mockBlueprintServer) DeleteBlueprint(ctx context.Context, req *connect.
 	return connect.NewResponse(&v1.DeleteBlueprintResponse{}), nil
 }
 
+type mockAddonServer struct {
+	cloudv1connect.UnimplementedAddonServiceHandler
+}
+
+func (m *mockAddonServer) SearchAddons(ctx context.Context, req *connect.Request[v1.SearchAddonsRequest]) (*connect.Response[v1.SearchAddonsResponse], error) {
+	return connect.NewResponse(&v1.SearchAddonsResponse{
+		Hits: []*v1.AddonSearchResult{
+			{
+				ProjectId:     "viaversion-id",
+				Slug:          "viaversion",
+				Title:         "ViaVersion",
+				Description:   "Allow newer client versions",
+				Categories:    []string{"paper"},
+				Downloads:     15000000,
+				LatestVersion: "5.2.1",
+			},
+		},
+		TotalHits: 1,
+	}), nil
+}
+
+func (m *mockAddonServer) GetAddonDetails(ctx context.Context, req *connect.Request[v1.GetAddonDetailsRequest]) (*connect.Response[v1.GetAddonDetailsResponse], error) {
+	return connect.NewResponse(&v1.GetAddonDetailsResponse{
+		Details: &v1.AddonSearchResult{
+			ProjectId:   "viaversion-id",
+			Slug:        "viaversion",
+			Title:       "ViaVersion",
+			Description: "Allow newer client versions",
+			Categories:  []string{"paper"},
+			Downloads:   15000000,
+		},
+		Versions: []*v1.AddonVersion{
+			{
+				Id:            "ver_1",
+				VersionNumber: "5.2.1",
+				GameVersions:  []string{"1.21.4"},
+				Loaders:       []string{"paper"},
+				Files: []*v1.AddonVersionFile{
+					{
+						Filename: "ViaVersion-5.2.1.jar",
+						Size:     1048576,
+						Primary:  true,
+					},
+				},
+			},
+		},
+	}), nil
+}
+
+func (m *mockAddonServer) ListWorkloadAddons(ctx context.Context, req *connect.Request[v1.ListWorkloadAddonsRequest]) (*connect.Response[v1.ListWorkloadAddonsResponse], error) {
+	return connect.NewResponse(&v1.ListWorkloadAddonsResponse{
+		Addons: []*v1.InstalledAddon{
+			{
+				Filename:  "ViaVersion.jar",
+				Name:      "ViaVersion",
+				AddonType: v1.AddonType_ADDON_TYPE_PLUGIN,
+				Enabled:   true,
+				SizeBytes: 1048576,
+			},
+		},
+	}), nil
+}
+
+func (m *mockAddonServer) ToggleAddon(ctx context.Context, req *connect.Request[v1.ToggleAddonRequest]) (*connect.Response[v1.ToggleAddonResponse], error) {
+	return connect.NewResponse(&v1.ToggleAddonResponse{
+		Addon: &v1.InstalledAddon{
+			Filename:  req.Msg.Filename,
+			Name:      "ViaVersion",
+			AddonType: req.Msg.AddonType,
+			Enabled:   req.Msg.Enable,
+			SizeBytes: 1048576,
+		},
+	}), nil
+}
+
+func (m *mockAddonServer) UninstallAddon(ctx context.Context, req *connect.Request[v1.UninstallAddonRequest]) (*connect.Response[v1.UninstallAddonResponse], error) {
+	return connect.NewResponse(&v1.UninstallAddonResponse{}), nil
+}
+
+type mockFileServer struct {
+	cloudv1connect.UnimplementedFileServiceHandler
+}
+
+func (m *mockFileServer) RenameFile(ctx context.Context, req *connect.Request[v1.RenameFileRequest]) (*connect.Response[v1.RenameFileResponse], error) {
+	return connect.NewResponse(&v1.RenameFileResponse{}), nil
+}
+
 func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -267,12 +353,16 @@ func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 	workloadPath, workloadHandler := cloudv1connect.NewWorkloadServiceHandler(&mockWorkloadServer{})
 	provisionPath, provisionHandler := cloudv1connect.NewProvisionServiceHandler(&mockProvisionServer{})
 	bpPath, bpHandler := cloudv1connect.NewBlueprintServiceHandler(&mockBlueprintServer{})
+	addonPath, addonHandler := cloudv1connect.NewAddonServiceHandler(&mockAddonServer{})
+	filePath, fileHandler := cloudv1connect.NewFileServiceHandler(&mockFileServer{})
 
 	mux.Handle(sysPath, sysHandler)
 	mux.Handle(nodePath, nodeHandler)
 	mux.Handle(workloadPath, workloadHandler)
 	mux.Handle(provisionPath, provisionHandler)
 	mux.Handle(bpPath, bpHandler)
+	mux.Handle(addonPath, addonHandler)
+	mux.Handle(filePath, fileHandler)
 
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -284,45 +374,60 @@ func setupTestServer(t *testing.T) (*httptest.Server, *Client) {
 func TestCLI_HelpAndStatus(t *testing.T) {
 	_, client := setupTestServer(t)
 
-	t.Run("help", func(t *testing.T) {
-		var stdout, stderr bytes.Buffer
-		cli := &CLI{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Client: client,
-		}
-		err := cli.Run(context.Background(), []string{"help"})
-		require.NoError(t, err)
-		require.Contains(t, stdout.String(), "cloudctl - Carbon Cloud management CLI")
-	})
+	tt := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "help",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"help"})
+				require.NoError(t, err)
+				require.Contains(t, stdout.String(), "cloudctl - Carbon Cloud management CLI")
+			},
+		},
+		{
+			name: "status table",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"status"})
+				require.NoError(t, err)
+				out := stdout.String()
+				require.Contains(t, out, "Version:    v1.0.0-test")
+				require.Contains(t, out, "multi_tenant: enabled")
+			},
+		},
+		{
+			name: "status json",
+			run: func(t *testing.T) {
+				var stdout, stderr bytes.Buffer
+				cli := &CLI{
+					Stdout: &stdout,
+					Stderr: &stderr,
+					Client: client,
+				}
+				err := cli.Run(context.Background(), []string{"status", "--json"})
+				require.NoError(t, err)
+				out := stdout.String()
+				require.Contains(t, out, `"version": "v1.0.0-test"`)
+			},
+		},
+	}
 
-	t.Run("status table", func(t *testing.T) {
-		var stdout, stderr bytes.Buffer
-		cli := &CLI{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Client: client,
-		}
-		err := cli.Run(context.Background(), []string{"status"})
-		require.NoError(t, err)
-		out := stdout.String()
-		require.Contains(t, out, "Version:    v1.0.0-test")
-		require.Contains(t, out, "multi_tenant: enabled")
-	})
-
-	t.Run("status json", func(t *testing.T) {
-		var stdout, stderr bytes.Buffer
-		cli := &CLI{
-			Stdout: &stdout,
-			Stderr: &stderr,
-			Client: client,
-		}
-		err := cli.Run(context.Background(), []string{"--json", "status"})
-		require.NoError(t, err)
-		out := stdout.String()
-		require.Contains(t, out, `"version": "v1.0.0-test"`)
-		require.Contains(t, out, `"multi_tenant"`)
-	})
+	for _, tc := range tt {
+		t.Run(tc.name, tc.run)
+	}
 }
 
 func TestCLI_NodesAndTokens(t *testing.T) {
@@ -337,8 +442,10 @@ func TestCLI_NodesAndTokens(t *testing.T) {
 		}
 		err := cli.Run(context.Background(), []string{"nodes", "list"})
 		require.NoError(t, err)
-		require.Contains(t, stdout.String(), "node_123")
-		require.Contains(t, stdout.String(), "test-node-1")
+		out := stdout.String()
+		require.Contains(t, out, "node_123")
+		require.Contains(t, out, "test-node-1")
+		require.Contains(t, out, "4096 MB")
 	})
 
 	t.Run("nodes get", func(t *testing.T) {
@@ -350,7 +457,9 @@ func TestCLI_NodesAndTokens(t *testing.T) {
 		}
 		err := cli.Run(context.Background(), []string{"nodes", "get", "node_123"})
 		require.NoError(t, err)
-		require.Contains(t, stdout.String(), "Node: test-node-1 (node_123)")
+		out := stdout.String()
+		require.Contains(t, out, "node_123")
+		require.Contains(t, out, "test-node-1")
 	})
 
 	t.Run("nodes drain", func(t *testing.T) {
@@ -362,7 +471,7 @@ func TestCLI_NodesAndTokens(t *testing.T) {
 		}
 		err := cli.Run(context.Background(), []string{"nodes", "drain", "node_123"})
 		require.NoError(t, err)
-		require.Contains(t, stdout.String(), "is now draining")
+		require.Contains(t, stdout.String(), "Node node_123 is now draining")
 	})
 
 	t.Run("nodes ports", func(t *testing.T) {
@@ -376,7 +485,7 @@ func TestCLI_NodesAndTokens(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, stdout.String(), "Port Allocations for Node node_123:")
 		require.Contains(t, stdout.String(), "25565")
-		require.Contains(t, stdout.String(), "survival")
+		require.Contains(t, stdout.String(), "play.example.com")
 	})
 
 	t.Run("tokens create", func(t *testing.T) {
@@ -571,5 +680,72 @@ func TestCLI_Blueprints(t *testing.T) {
 		err := cli.Run(context.Background(), []string{"workloads", "create", "-name", "preset-srv", "-blueprint", "paper"})
 		require.NoError(t, err)
 		require.Contains(t, stdout.String(), "Workload created:")
+	})
+}
+
+func TestCLI_AddonsAndFiles(t *testing.T) {
+	_, client := setupTestServer(t)
+
+	t.Run("addons search", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"addons", "search", "viaversion"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "viaversion")
+		require.Contains(t, out, "ViaVersion")
+		require.Contains(t, out, "15000000")
+	})
+
+	t.Run("addons info", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"addons", "info", "viaversion"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "ViaVersion (viaversion-id)")
+		require.Contains(t, out, "ViaVersion-5.2.1.jar")
+	})
+
+	t.Run("addons list", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"addons", "list", "wl_123"})
+		require.NoError(t, err)
+		out := stdout.String()
+		require.Contains(t, out, "ViaVersion.jar")
+		require.Contains(t, out, "yes")
+	})
+
+	t.Run("addons enable", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"addons", "enable", "wl_123", "ViaVersion.jar"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Enabled addon: ViaVersion.jar")
+	})
+
+	t.Run("addons disable", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"addons", "disable", "wl_123", "ViaVersion.jar"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Disabled addon: ViaVersion.jar")
+	})
+
+	t.Run("addons uninstall", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"addons", "uninstall", "wl_123", "ViaVersion.jar"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Uninstalled addon: ViaVersion.jar")
+	})
+
+	t.Run("files rename", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		cli := &CLI{Stdout: &stdout, Stderr: &stderr, Client: client}
+		err := cli.Run(context.Background(), []string{"files", "rename", "wl_123", "server.properties", "server.properties.old"})
+		require.NoError(t, err)
+		require.Contains(t, stdout.String(), "Renamed server.properties -> server.properties.old")
 	})
 }

@@ -166,7 +166,7 @@ func (s *FileService) ReadFile(ctx context.Context, req *connect.Request[v1.Read
 		case <-ctx.Done():
 			return connect.NewError(connect.CodeCanceled, ctx.Err())
 		case <-time.After(30 * time.Second):
-			return connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out waiting for file chunk from node agent"))
+			return connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out waiting for file chunks from node agent"))
 		case chunk, ok := <-chunkCh:
 			if !ok {
 				return nil
@@ -215,7 +215,7 @@ func (s *FileService) WriteFile(ctx context.Context, stream *connect.ClientStrea
 	defer s.dispatcher.CancelFileWrite(commandID)
 
 	// Send first chunk
-	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+	ok := s.dispatcher.DispatchContext(ctx, w.NodeID, &v1.ControlMessage{
 		Payload: &v1.ControlMessage_FileWrite{
 			FileWrite: &v1.ControlWriteFileChunk{
 				CommandId:  commandID,
@@ -235,7 +235,7 @@ func (s *FileService) WriteFile(ctx context.Context, stream *connect.ClientStrea
 	if !first.IsLast {
 		for stream.Receive() {
 			chunkMsg := stream.Msg()
-			ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			ok := s.dispatcher.DispatchContext(ctx, w.NodeID, &v1.ControlMessage{
 				Payload: &v1.ControlMessage_FileWrite{
 					FileWrite: &v1.ControlWriteFileChunk{
 						CommandId:  commandID,
@@ -360,5 +360,49 @@ func (s *FileService) CreateDirectory(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("create directory failed: %s", res.Error))
 		}
 		return connect.NewResponse(&v1.CreateDirectoryResponse{}), nil
+	}
+}
+
+// RenameFile renames or moves a file or directory within a workload.
+func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.RenameFileRequest]) (*connect.Response[v1.RenameFileResponse], error) {
+	if req.Msg.WorkloadId == "" || req.Msg.OldPath == "" || req.Msg.NewPath == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("workload_id, old_path, and new_path are required"))
+	}
+	w, err := s.load(ctx, req.Msg.WorkloadId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
+	}
+	if err := s.checkWorkloadNode(w); err != nil {
+		return nil, err
+	}
+
+	commandID := uuid.NewString()
+	waitCh := s.dispatcher.ExpectFileRename(commandID)
+	defer s.dispatcher.CancelFileRename(commandID)
+
+	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+		Payload: &v1.ControlMessage_FileRename{
+			FileRename: &v1.ControlFileRename{
+				CommandId:  commandID,
+				WorkloadId: w.ID,
+				OldPath:    req.Msg.OldPath,
+				NewPath:    req.Msg.NewPath,
+			},
+		},
+	})
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch rename to node agent"))
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
+	case <-time.After(15 * time.Second):
+		return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out waiting for rename from node agent"))
+	case res := <-waitCh:
+		if !res.Success {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("rename failed: %s", res.Error))
+		}
+		return connect.NewResponse(&v1.RenameFileResponse{}), nil
 	}
 }
