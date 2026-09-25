@@ -9,6 +9,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		CarbonButton,
 		CarbonTile,
@@ -140,9 +141,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success(
 				`Exported ${format === 'mrpack' ? '.mrpack' : format === 'packwiz' ? 'Packwiz .zip' : 'CurseForge .zip'}`
 			);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to export modpack:', err);
-			toast.error(`Export failed: ${err.message || 'Unauthorized or server error'}`);
+			toast.error(
+				`Export failed: ${(err instanceof Error ? err.message : undefined) || 'Unauthorized or server error'}`
+			);
 		} finally {
 			exportingPack = null;
 		}
@@ -188,10 +191,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			const created = await res.json();
 			toast.success(`Created modpack project "${created.name}"`);
 			createDialogOpen = false;
-			goto(`/modpacks/studio/${created.id}`);
-		} catch (err: any) {
+			goto(resolve(`/modpacks/studio/${created.id}`));
+		} catch (err) {
 			console.error('Failed to create pack:', err);
-			toast.error(err.message || 'Failed to create pack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to create pack');
 		} finally {
 			creating = false;
 		}
@@ -230,10 +233,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			importFile = null;
 			importName = '';
 			await loadPacks();
-			goto(`/modpacks/studio/${imported.id}`);
-		} catch (err: any) {
+			goto(resolve(`/modpacks/studio/${imported.id}`));
+		} catch (err) {
 			console.error('Import failed:', err);
-			toast.error(err.message || 'Failed to import modpack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to import modpack');
 		} finally {
 			importing = false;
 		}
@@ -250,10 +253,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			const cloned = await res.json();
 			toast.success(`Duplicated "${pack.name}"`);
 			await loadPacks();
-			goto(`/modpacks/studio/${cloned.id}`);
-		} catch (err: any) {
+			goto(resolve(`/modpacks/studio/${cloned.id}`));
+		} catch (err) {
 			console.error('Clone failed:', err);
-			toast.error(err.message || 'Failed to duplicate pack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to duplicate pack');
 		}
 	}
 
@@ -267,9 +270,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success(`Deleted modpack "${pack.name}"`);
 			packs = packs.filter((p) => p.id !== pack.id);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to delete pack:', err);
-			toast.error(err.message || 'Failed to delete modpack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to delete modpack');
 		}
 	}
 
@@ -305,7 +308,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				kind="ghost"
 				size="md"
 				iconOnly
-				onclick={() => goto('/modpacks')}
+				onclick={() => goto(resolve('/modpacks'))}
 				class="rounded-none text-[#c6c6c6] hover:text-white"
 				title="Back to Modpacks"
 			>
@@ -401,7 +404,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 							<div class="min-w-0 flex-1 space-y-1">
 								<h3 class="truncate text-lg font-semibold">
 									<a
-										href={`/modpacks/studio/${pack.id}`}
+										href={resolve(`/modpacks/studio/${pack.id}`)}
 										class="text-white transition-colors hover:text-[#0f62fe]"
 									>
 										{pack.name}
@@ -489,7 +492,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								kind="primary"
 								size="sm"
 								class="h-8 rounded-none text-xs"
-								onclick={() => goto(`/modpacks/studio/${pack.id}`)}
+								onclick={() => goto(resolve(`/modpacks/studio/${pack.id}`))}
 							>
 								Open Studio
 							</CarbonButton>
@@ -534,7 +537,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 		<div class="grid grid-cols-2 gap-4">
 			<CarbonSelect label="Minecraft Version" bind:value={newMcVersion} disabled={creating}>
-				{#each MC_VERSIONS as v}
+				{#each MC_VERSIONS as v (v)}
 					<option value={v}>{v}</option>
 				{/each}
 			</CarbonSelect>
@@ -553,7 +556,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			disabled={creating}
 			helperText={loadingLoaderVersions ? 'Fetching compatible loader versions...' : undefined}
 		>
-			{#each availableLoaderVersions as v}
+			{#each availableLoaderVersions as v (v)}
 				<option value={v}>{v}</option>
 			{/each}
 		</CarbonSelect>

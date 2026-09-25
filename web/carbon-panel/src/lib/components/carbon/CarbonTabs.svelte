@@ -47,8 +47,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	}
 
 	$effect(() => {
-		tabs;
-		selectedTab;
+		// Re-run measurement when the tab list or selection changes.
+		const _deps = [tabs, selectedTab];
 		tick().then(() => requestAnimationFrame(measure));
 	});
 
@@ -69,7 +69,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	role="tablist"
 	class="relative flex items-center border-b border-[#393939] bg-[#161616] font-sans {className}"
 >
-	{#each tabs as tab}
+	{#each tabs as tab (tab.id)}
 		<button
 			type="button"
 			role="tab"

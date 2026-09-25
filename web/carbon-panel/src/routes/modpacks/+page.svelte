@@ -45,8 +45,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import type {
 		IndexedModpack,
 		SearchModpacksRequest,
-		SearchModpacksResponse,
-		GetIndexerStatusResponse
+		SearchModpacksResponse
 	} from '$lib/proto/carbonpanel/v1/modpack_pb';
 	import { SearchModpacksRequestSchema } from '$lib/proto/carbonpanel/v1/modpack_pb';
 	import { NodeStatus } from '$lib/proto/carbonpanel/v1/node_pb';
@@ -74,7 +73,6 @@ one at https://mozilla.org/MPL/2.0/.
 	let showFavorites = $state(false);
 	let showUploaded = $state(false);
 	let showManifestInspector = $state(false);
-	let indexerStatus = $state<GetIndexerStatusResponse | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let uploading = $state(false);
 	let uploadProgress = $state<UploadProgress | null>(null);
@@ -92,19 +90,14 @@ one at https://mozilla.org/MPL/2.0/.
 	let remoteModLoader = $state('');
 	let remoteAuthToken = $state('');
 
-	// Dynamic game versions and mod loaders from API
+	// Dynamic game versions from API
 	let gameVersions = $state<string[]>([]);
-	let modLoaders = $state<Array<{ value: string; label: string }>>([
-		{ value: '', label: 'All Loaders' }
-	]);
 
 	onMount(async () => {
 		await Promise.all([
-			checkIndexerStatus(),
 			loadFavorites(),
 			loadUploadedPacks(),
 			loadMinecraftVersions(),
-			loadModLoaders(),
 			searchModpacks()
 		]);
 
@@ -119,31 +112,6 @@ one at https://mozilla.org/MPL/2.0/.
 			gameVersions = response.versions.map((v) => v.id);
 		} catch (error) {
 			console.error('Failed to load Minecraft versions:', error);
-		}
-	}
-
-	async function loadModLoaders() {
-		try {
-			const response = await rpcClient.minecraft.getModLoaders({});
-			const loaders = response.modloaders || [];
-			modLoaders = [
-				{ value: '', label: 'All Loaders' },
-				...loaders.map((loader) => ({
-					value: loader.name,
-					label: loader.displayName || loader.name
-				}))
-			];
-		} catch (error) {
-			console.error('Failed to load mod loaders:', error);
-		}
-	}
-
-	async function checkIndexerStatus() {
-		try {
-			const response = await rpcClient.modpack.getIndexerStatus({});
-			indexerStatus = response;
-		} catch (error) {
-			console.error('Failed to check indexer status:', error);
 		}
 	}
 
@@ -503,7 +471,7 @@ one at https://mozilla.org/MPL/2.0/.
 				kind="ghost"
 				size="sm"
 				class="h-7 rounded-none text-xs"
-				href="/settings?tab=api-keys"
+				href={resolve('/settings?tab=api-keys')}
 			>
 				<Settings class="mr-1 h-3.5 w-3.5" />
 				Custom API Key
@@ -527,7 +495,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<div class="md:col-span-2">
 					<CarbonSelect bind:value={searchParams.gameVersion} disabled={loading}>
 						<option value="">All MC Versions</option>
-						{#each gameVersions as version}
+						{#each gameVersions as version (version)}
 							<option value={version}>{version}</option>
 						{/each}
 					</CarbonSelect>
@@ -734,6 +702,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<div class="mt-4 flex items-center justify-between gap-2 border-t border-[#393939] pt-3">
 					<div class="flex items-center gap-1">
 						{#if modpack.websiteUrl}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external modpack homepage URL used directly; resolve() throws on non-absolute pathnames -->
 							<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
 								<CarbonButton kind="ghost" size="sm" class="rounded-none">
 									<ExternalLink class="mr-1 h-3 w-3" />

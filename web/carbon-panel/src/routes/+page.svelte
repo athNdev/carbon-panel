@@ -11,6 +11,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { formatBytes, getStringForEnum } from '$lib/utils';
 	import {
@@ -254,7 +255,7 @@ one at https://mozilla.org/MPL/2.0/.
 			</div>
 		</div>
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			{#each [0, 1, 2, 3] as _}
+			{#each [0, 1, 2, 3] as _ (_)}
 				<div
 					class="cds--tile flex h-[140px] flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 select-none"
 				>
@@ -301,7 +302,12 @@ one at https://mozilla.org/MPL/2.0/.
 					<RefreshCw class="h-4 w-4 {isRefreshing ? 'animate-spin' : ''}" />
 					<span>Refresh</span>
 				</CarbonButton>
-				<CarbonButton kind="primary" size="md" class="justify-center gap-2" href="/servers/new">
+				<CarbonButton
+					kind="primary"
+					size="md"
+					class="justify-center gap-2"
+					href={resolve('/servers/new')}
+				>
 					<Plus class="h-4 w-4" />
 					<span>Create Server</span>
 				</CarbonButton>
@@ -510,7 +516,7 @@ one at https://mozilla.org/MPL/2.0/.
 					</div>
 				</div>
 				<a
-					href="/servers"
+					href={resolve('/servers')}
 					class="flex shrink-0 items-center gap-1 font-mono text-xs tracking-wider text-[#78a9ff] uppercase hover:text-white"
 				>
 					<span>Inspect Servers</span>
@@ -537,7 +543,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</p>
 						</div>
 						<a
-							href="/servers"
+							href={resolve('/servers')}
 							class="inline-flex h-8 items-center gap-1 px-3 font-mono text-xs tracking-wider text-[#78a9ff] uppercase transition-colors hover:bg-[#353535] hover:text-white"
 						>
 							<span>View All ({dashboardServers.length})</span>
@@ -560,7 +566,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<CarbonButton
 								kind="primary"
 								size="sm"
-								href="/servers/new"
+								href={resolve('/servers/new')}
 								class="inline-flex justify-center gap-2"
 							>
 								<Plus class="h-3.5 w-3.5" />
@@ -604,7 +610,7 @@ one at https://mozilla.org/MPL/2.0/.
 										<tr class="group transition-colors hover:bg-[#353535]">
 											<td class="px-4 py-3 align-middle">
 												<a
-													href="/servers/{server.id}"
+													href={resolve(`/servers/${server.id}`)}
 													class="block transition-colors hover:text-[#78a9ff]"
 												>
 													<div class="text-sm font-medium text-[#f4f4f4]">{server.name}</div>
@@ -668,7 +674,7 @@ one at https://mozilla.org/MPL/2.0/.
 														</button>
 													{/if}
 													<a
-														href="/servers/{server.id}"
+														href={resolve(`/servers/${server.id}`)}
 														class="inline-flex h-7 items-center px-2.5 font-mono text-xs tracking-wider text-[#78a9ff] uppercase transition-colors hover:bg-[#393939] hover:text-white"
 													>
 														Manage
@@ -765,7 +771,7 @@ one at https://mozilla.org/MPL/2.0/.
 					</div>
 					<div class="mt-4 space-y-2">
 						<a
-							href="/servers/new"
+							href={resolve('/servers/new')}
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">
@@ -775,7 +781,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
 						<a
-							href="/modpacks/studio"
+							href={resolve('/modpacks/studio')}
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">
@@ -785,7 +791,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
 						<a
-							href="/settings?tab=routing"
+							href={resolve('/settings?tab=routing')}
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">

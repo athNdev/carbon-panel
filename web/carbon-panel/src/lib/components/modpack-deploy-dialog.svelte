@@ -18,7 +18,6 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { RadioGroup, RadioGroupItem } from '$lib/components/ui/radio-group';
 	import { Label } from '$lib/components/ui/label';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import {
@@ -104,9 +103,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			if (onSuccess) {
 				onSuccess();
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to deploy modpack:', err);
-			toast.error(err.message || 'Deployment failed');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Deployment failed');
 		} finally {
 			deploying = false;
 		}
