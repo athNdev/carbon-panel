@@ -103,6 +103,16 @@ service WorkloadService {
   rpc GetWorkloadConfig(GetWorkloadConfigRequest) returns (GetWorkloadConfigResponse);
   // UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
   rpc UpdateWorkloadConfig(UpdateWorkloadConfigRequest) returns (UpdateWorkloadConfigResponse);
+  // CreateWorkloadBackup creates an atomic snapshot of workload data.
+  rpc CreateWorkloadBackup(CreateWorkloadBackupRequest) returns (CreateWorkloadBackupResponse);
+  // ListWorkloadBackups lists snapshots created for a workload.
+  rpc ListWorkloadBackups(ListWorkloadBackupsRequest) returns (ListWorkloadBackupsResponse);
+  // RestoreWorkloadBackup restores a snapshot onto the workload data directory.
+  rpc RestoreWorkloadBackup(RestoreWorkloadBackupRequest) returns (RestoreWorkloadBackupResponse);
+  // DeleteWorkloadBackup removes a backup snapshot.
+  rpc DeleteWorkloadBackup(DeleteWorkloadBackupRequest) returns (DeleteWorkloadBackupResponse);
+  // SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
+  rpc SetWorkloadBackupLocked(SetWorkloadBackupLockedRequest) returns (SetWorkloadBackupLockedResponse);
 }
 
 // WorkloadLogLine is one console line from a workload.
@@ -172,7 +182,7 @@ message UpdateWorkloadRequest {
   // New display name, when set.
   optional string name = 2;
   // New spec fields, when set.
-  WorkloadSpec spec = 3;
+  optional WorkloadSpec spec = 3;
 }
 
 // UpdateWorkloadResponse returns the updated workload.
@@ -185,11 +195,11 @@ message UpdateWorkloadResponse {
 message DeleteWorkloadRequest {
   // Workload id.
   string id = 1;
-  // When true, requests the node agent to erase the workload's data dir.
+  // When true, world data is deleted with the container.
   bool delete_data = 2;
 }
 
-// DeleteWorkloadResponse confirms deletion.
+// DeleteWorkloadResponse acknowledges deletion.
 message DeleteWorkloadResponse {}
 
 // StartWorkloadRequest starts a workload.
@@ -252,7 +262,7 @@ message SendWorkloadCommandResponse {
   string output = 1;
 }
 
-// ListWorkloadEventsRequest lists events.
+// ListWorkloadEventsRequest lists lifecycle events.
 message ListWorkloadEventsRequest {
   // Workload id.
   string id = 1;
@@ -262,46 +272,36 @@ message ListWorkloadEventsRequest {
 
 // ListWorkloadEventsResponse lists events.
 message ListWorkloadEventsResponse {
-  // Events in reverse chronological order.
+  // Events, newest first.
   repeated WorkloadEvent events = 1;
   // Pagination cursor.
   PageResponse page = 2;
 }
 
-// WorkloadConfigProperty represents a single configuration key-value entry.
-message WorkloadConfigProperty {
-  // Configuration key (e.g. "motd", "difficulty", "server-port").
-  string key = 1;
-  // Current string value.
-  string value = 2;
-  // File where this property is defined (defaults to "server.properties").
-  string file = 3;
-}
-
-// GetWorkloadConfigRequest requests configuration properties.
+// GetWorkloadConfigRequest requests parsed config properties.
 message GetWorkloadConfigRequest {
-  // Workload id.
+  // Target workload id.
   string id = 1;
   // Target config file (defaults to "server.properties" if empty).
   string file = 2;
 }
 
-// GetWorkloadConfigResponse returns parsed properties.
+// GetWorkloadConfigResponse returns parsed key-value properties.
 message GetWorkloadConfigResponse {
-  // Properties mapped by key.
+  // Parsed configuration map.
   map<string, string> properties = 1;
-  // Raw file contents for complete fidelity or non-KV files.
-  string raw_content = 2;
+  // Raw file content.
+  string raw = 2;
 }
 
 // UpdateWorkloadConfigRequest modifies configuration properties.
 message UpdateWorkloadConfigRequest {
-  // Workload id.
+  // Target workload id.
   string id = 1;
-  // Key-value updates to apply.
+  // Key-value properties to update or insert.
   map<string, string> properties = 2;
-  // Optional raw file content replacement (if set, takes precedence over properties map).
-  optional string raw_content = 3;
+  // Keys to remove from configuration.
+  repeated string remove_keys = 3;
   // Target config file (defaults to "server.properties" if empty).
   string file = 4;
   // If true, trigger a console reload or graceful restart.
@@ -314,4 +314,97 @@ message UpdateWorkloadConfigResponse {
   map<string, string> properties = 1;
   // Action taken to apply changes ("saved", "reloaded", "restarted").
   string action_taken = 2;
+}
+
+// WorkloadBackup represents a snapshot of a workload's persistent data.
+message WorkloadBackup {
+  // Backup snapshot ID.
+  string id = 1;
+  // Workload ID.
+  string workload_id = 2;
+  // Node ID where the snapshot was taken.
+  string node_id = 3;
+  // Human-readable backup name or label.
+  string name = 4;
+  // Size of archive in bytes.
+  int64 size_bytes = 5;
+  // SHA-256 checksum of the backup archive.
+  string sha256 = 6;
+  // Whether this backup is locked against automated pruning or deletion.
+  bool locked = 7;
+  // Current status of backup ("completed", "failed", "in_progress").
+  string status = 8;
+  // Error message if backup creation failed.
+  string error = 9;
+  // Creation timestamp.
+  google.protobuf.Timestamp created_at = 10;
+}
+
+// CreateWorkloadBackupRequest creates a snapshot.
+message CreateWorkloadBackupRequest {
+  // Target workload ID.
+  string id = 1;
+  // Optional backup name or description.
+  string name = 2;
+}
+
+// CreateWorkloadBackupResponse returns the created backup record.
+message CreateWorkloadBackupResponse {
+  // The backup metadata.
+  WorkloadBackup backup = 1;
+}
+
+// ListWorkloadBackupsRequest lists backups for a workload.
+message ListWorkloadBackupsRequest {
+  // Target workload ID.
+  string id = 1;
+}
+
+// ListWorkloadBackupsResponse returns available backups.
+message ListWorkloadBackupsResponse {
+  // List of backups.
+  repeated WorkloadBackup backups = 1;
+}
+
+// RestoreWorkloadBackupRequest restores a snapshot.
+message RestoreWorkloadBackupRequest {
+  // Target workload ID.
+  string id = 1;
+  // Backup ID to restore.
+  string backup_id = 2;
+}
+
+// RestoreWorkloadBackupResponse confirms restore completion.
+message RestoreWorkloadBackupResponse {
+  // Success indicator.
+  bool success = 1;
+  // Detail message.
+  string message = 2;
+}
+
+// DeleteWorkloadBackupRequest deletes a snapshot.
+message DeleteWorkloadBackupRequest {
+  // Target workload ID.
+  string id = 1;
+  // Backup ID to delete.
+  string backup_id = 2;
+}
+
+// DeleteWorkloadBackupResponse confirms deletion.
+message DeleteWorkloadBackupResponse {}
+
+// SetWorkloadBackupLockedRequest sets the lock flag on a backup.
+message SetWorkloadBackupLockedRequest {
+  // Target workload ID.
+  string id = 1;
+  // Backup ID.
+  string backup_id = 2;
+  // New lock status.
+  bool locked = 3;
+}
+
+// SetWorkloadBackupLockedResponse returns updated backup.
+message SetWorkloadBackupLockedResponse {
+  // Updated backup.
+  WorkloadBackup backup = 1;
 }

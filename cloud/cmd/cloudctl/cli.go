@@ -319,7 +319,7 @@ Commands:
   tokens             Manage node join tokens (create, list, revoke)
   nodetypes          List node types catalog
   provisions         Manage cloud provisions (list, get, plan, apply, create, destroy, logs)
-  workloads          Manage workloads (list, get, create, start, stop, restart, delete, logs, exec, events)
+  workloads          Manage workloads (list, get, create, start, stop, restart, delete, logs, exec, events, config, backup)
   apikeys            Manage organization API keys (list, create, revoke)
   audit              View audit trail (list, get)
   orgs               Manage organizations (list, get)
@@ -986,6 +986,112 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 			return nil
 		default:
 			return fmt.Errorf("unknown config sub-command: %s", args[1])
+		}
+	case "backup":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads backup <create|list|restore|delete|lock> <workload-id> [args...]")
+		}
+		switch args[1] {
+		case "create":
+			if len(args) < 3 {
+				return errors.New("usage: cloudctl workloads backup create <workload-id> [--name <name>]")
+			}
+			id := args[2]
+			fs := flag.NewFlagSet("workloads backup create", flag.ContinueOnError)
+			name := fs.String("name", "", "Human-readable label for backup")
+			if err := fs.Parse(args[3:]); err != nil {
+				return err
+			}
+			resp, err := c.Client.Workload.CreateWorkloadBackup(ctx, connect.NewRequest(&v1.CreateWorkloadBackupRequest{
+				Id:   id,
+				Name: *name,
+			}))
+			if err != nil {
+				return err
+			}
+			b := resp.Msg.Backup
+			_, _ = fmt.Fprintf(c.Stdout, "Created backup: %s (%s, %d bytes)\n", b.Name, b.Id, b.SizeBytes)
+			return nil
+		case "list":
+			if len(args) < 3 {
+				return errors.New("usage: cloudctl workloads backup list <workload-id>")
+			}
+			id := args[2]
+			resp, err := c.Client.Workload.ListWorkloadBackups(ctx, connect.NewRequest(&v1.ListWorkloadBackupsRequest{
+				Id: id,
+			}))
+			if err != nil {
+				return err
+			}
+			return c.printOutput(resp.Msg, func(w io.Writer) error {
+				tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+				_, _ = fmt.Fprintln(tw, "BACKUP ID\tNAME\tSIZE\tLOCKED\tSTATUS\tCREATED")
+				for _, b := range resp.Msg.Backups {
+					created := ""
+					if b.CreatedAt != nil {
+						created = b.CreatedAt.AsTime().Format(time.RFC3339)
+					}
+					_, _ = fmt.Fprintf(tw, "%s\t%s\t%d bytes\t%t\t%s\t%s\n", b.Id, b.Name, b.SizeBytes, b.Locked, b.Status, created)
+				}
+				return tw.Flush()
+			})
+		case "restore":
+			if len(args) < 4 {
+				return errors.New("usage: cloudctl workloads backup restore <workload-id> <backup-id>")
+			}
+			id := args[2]
+			backupID := args[3]
+			resp, err := c.Client.Workload.RestoreWorkloadBackup(ctx, connect.NewRequest(&v1.RestoreWorkloadBackupRequest{
+				Id:       id,
+				BackupId: backupID,
+			}))
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(c.Stdout, "%s\n", resp.Msg.Message)
+			return nil
+		case "delete":
+			if len(args) < 4 {
+				return errors.New("usage: cloudctl workloads backup delete <workload-id> <backup-id>")
+			}
+			id := args[2]
+			backupID := args[3]
+			_, err := c.Client.Workload.DeleteWorkloadBackup(ctx, connect.NewRequest(&v1.DeleteWorkloadBackupRequest{
+				Id:       id,
+				BackupId: backupID,
+			}))
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(c.Stdout, "Deleted backup %s\n", backupID)
+			return nil
+		case "lock":
+			if len(args) < 4 {
+				return errors.New("usage: cloudctl workloads backup lock <workload-id> <backup-id> [--locked=true|false]")
+			}
+			id := args[2]
+			backupID := args[3]
+			fs := flag.NewFlagSet("workloads backup lock", flag.ContinueOnError)
+			locked := fs.Bool("locked", true, "Whether to lock or unlock the backup")
+			if err := fs.Parse(args[4:]); err != nil {
+				return err
+			}
+			resp, err := c.Client.Workload.SetWorkloadBackupLocked(ctx, connect.NewRequest(&v1.SetWorkloadBackupLockedRequest{
+				Id:       id,
+				BackupId: backupID,
+				Locked:   *locked,
+			}))
+			if err != nil {
+				return err
+			}
+			lockWord := "unlocked"
+			if resp.Msg.Backup.Locked {
+				lockWord = "locked"
+			}
+			_, _ = fmt.Fprintf(c.Stdout, "Backup %s is now %s\n", backupID, lockWord)
+			return nil
+		default:
+			return fmt.Errorf("unknown backup sub-command: %s", args[1])
 		}
 	default:
 		return fmt.Errorf("unknown workloads command: %s", args[0])

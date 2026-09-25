@@ -72,6 +72,21 @@ const (
 	// WorkloadServiceUpdateWorkloadConfigProcedure is the fully-qualified name of the WorkloadService's
 	// UpdateWorkloadConfig RPC.
 	WorkloadServiceUpdateWorkloadConfigProcedure = "/cloud.v1.WorkloadService/UpdateWorkloadConfig"
+	// WorkloadServiceCreateWorkloadBackupProcedure is the fully-qualified name of the WorkloadService's
+	// CreateWorkloadBackup RPC.
+	WorkloadServiceCreateWorkloadBackupProcedure = "/cloud.v1.WorkloadService/CreateWorkloadBackup"
+	// WorkloadServiceListWorkloadBackupsProcedure is the fully-qualified name of the WorkloadService's
+	// ListWorkloadBackups RPC.
+	WorkloadServiceListWorkloadBackupsProcedure = "/cloud.v1.WorkloadService/ListWorkloadBackups"
+	// WorkloadServiceRestoreWorkloadBackupProcedure is the fully-qualified name of the
+	// WorkloadService's RestoreWorkloadBackup RPC.
+	WorkloadServiceRestoreWorkloadBackupProcedure = "/cloud.v1.WorkloadService/RestoreWorkloadBackup"
+	// WorkloadServiceDeleteWorkloadBackupProcedure is the fully-qualified name of the WorkloadService's
+	// DeleteWorkloadBackup RPC.
+	WorkloadServiceDeleteWorkloadBackupProcedure = "/cloud.v1.WorkloadService/DeleteWorkloadBackup"
+	// WorkloadServiceSetWorkloadBackupLockedProcedure is the fully-qualified name of the
+	// WorkloadService's SetWorkloadBackupLocked RPC.
+	WorkloadServiceSetWorkloadBackupLockedProcedure = "/cloud.v1.WorkloadService/SetWorkloadBackupLocked"
 )
 
 // WorkloadServiceClient is a client for the cloud.v1.WorkloadService service.
@@ -103,6 +118,16 @@ type WorkloadServiceClient interface {
 	GetWorkloadConfig(context.Context, *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error)
 	// UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
 	UpdateWorkloadConfig(context.Context, *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error)
+	// CreateWorkloadBackup creates an atomic snapshot of workload data.
+	CreateWorkloadBackup(context.Context, *connect.Request[v1.CreateWorkloadBackupRequest]) (*connect.Response[v1.CreateWorkloadBackupResponse], error)
+	// ListWorkloadBackups lists snapshots created for a workload.
+	ListWorkloadBackups(context.Context, *connect.Request[v1.ListWorkloadBackupsRequest]) (*connect.Response[v1.ListWorkloadBackupsResponse], error)
+	// RestoreWorkloadBackup restores a snapshot onto the workload data directory.
+	RestoreWorkloadBackup(context.Context, *connect.Request[v1.RestoreWorkloadBackupRequest]) (*connect.Response[v1.RestoreWorkloadBackupResponse], error)
+	// DeleteWorkloadBackup removes a backup snapshot.
+	DeleteWorkloadBackup(context.Context, *connect.Request[v1.DeleteWorkloadBackupRequest]) (*connect.Response[v1.DeleteWorkloadBackupResponse], error)
+	// SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
+	SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error)
 }
 
 // NewWorkloadServiceClient constructs a client for the cloud.v1.WorkloadService service. By
@@ -194,24 +219,59 @@ func NewWorkloadServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(workloadServiceMethods.ByName("UpdateWorkloadConfig")),
 			connect.WithClientOptions(opts...),
 		),
+		createWorkloadBackup: connect.NewClient[v1.CreateWorkloadBackupRequest, v1.CreateWorkloadBackupResponse](
+			httpClient,
+			baseURL+WorkloadServiceCreateWorkloadBackupProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("CreateWorkloadBackup")),
+			connect.WithClientOptions(opts...),
+		),
+		listWorkloadBackups: connect.NewClient[v1.ListWorkloadBackupsRequest, v1.ListWorkloadBackupsResponse](
+			httpClient,
+			baseURL+WorkloadServiceListWorkloadBackupsProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("ListWorkloadBackups")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreWorkloadBackup: connect.NewClient[v1.RestoreWorkloadBackupRequest, v1.RestoreWorkloadBackupResponse](
+			httpClient,
+			baseURL+WorkloadServiceRestoreWorkloadBackupProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("RestoreWorkloadBackup")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteWorkloadBackup: connect.NewClient[v1.DeleteWorkloadBackupRequest, v1.DeleteWorkloadBackupResponse](
+			httpClient,
+			baseURL+WorkloadServiceDeleteWorkloadBackupProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("DeleteWorkloadBackup")),
+			connect.WithClientOptions(opts...),
+		),
+		setWorkloadBackupLocked: connect.NewClient[v1.SetWorkloadBackupLockedRequest, v1.SetWorkloadBackupLockedResponse](
+			httpClient,
+			baseURL+WorkloadServiceSetWorkloadBackupLockedProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("SetWorkloadBackupLocked")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // workloadServiceClient implements WorkloadServiceClient.
 type workloadServiceClient struct {
-	listWorkloads        *connect.Client[v1.ListWorkloadsRequest, v1.ListWorkloadsResponse]
-	getWorkload          *connect.Client[v1.GetWorkloadRequest, v1.GetWorkloadResponse]
-	createWorkload       *connect.Client[v1.CreateWorkloadRequest, v1.CreateWorkloadResponse]
-	updateWorkload       *connect.Client[v1.UpdateWorkloadRequest, v1.UpdateWorkloadResponse]
-	deleteWorkload       *connect.Client[v1.DeleteWorkloadRequest, v1.DeleteWorkloadResponse]
-	startWorkload        *connect.Client[v1.StartWorkloadRequest, v1.StartWorkloadResponse]
-	stopWorkload         *connect.Client[v1.StopWorkloadRequest, v1.StopWorkloadResponse]
-	restartWorkload      *connect.Client[v1.RestartWorkloadRequest, v1.RestartWorkloadResponse]
-	streamWorkloadLogs   *connect.Client[v1.StreamWorkloadLogsRequest, v1.WorkloadLogLine]
-	sendWorkloadCommand  *connect.Client[v1.SendWorkloadCommandRequest, v1.SendWorkloadCommandResponse]
-	listWorkloadEvents   *connect.Client[v1.ListWorkloadEventsRequest, v1.ListWorkloadEventsResponse]
-	getWorkloadConfig    *connect.Client[v1.GetWorkloadConfigRequest, v1.GetWorkloadConfigResponse]
-	updateWorkloadConfig *connect.Client[v1.UpdateWorkloadConfigRequest, v1.UpdateWorkloadConfigResponse]
+	listWorkloads           *connect.Client[v1.ListWorkloadsRequest, v1.ListWorkloadsResponse]
+	getWorkload             *connect.Client[v1.GetWorkloadRequest, v1.GetWorkloadResponse]
+	createWorkload          *connect.Client[v1.CreateWorkloadRequest, v1.CreateWorkloadResponse]
+	updateWorkload          *connect.Client[v1.UpdateWorkloadRequest, v1.UpdateWorkloadResponse]
+	deleteWorkload          *connect.Client[v1.DeleteWorkloadRequest, v1.DeleteWorkloadResponse]
+	startWorkload           *connect.Client[v1.StartWorkloadRequest, v1.StartWorkloadResponse]
+	stopWorkload            *connect.Client[v1.StopWorkloadRequest, v1.StopWorkloadResponse]
+	restartWorkload         *connect.Client[v1.RestartWorkloadRequest, v1.RestartWorkloadResponse]
+	streamWorkloadLogs      *connect.Client[v1.StreamWorkloadLogsRequest, v1.WorkloadLogLine]
+	sendWorkloadCommand     *connect.Client[v1.SendWorkloadCommandRequest, v1.SendWorkloadCommandResponse]
+	listWorkloadEvents      *connect.Client[v1.ListWorkloadEventsRequest, v1.ListWorkloadEventsResponse]
+	getWorkloadConfig       *connect.Client[v1.GetWorkloadConfigRequest, v1.GetWorkloadConfigResponse]
+	updateWorkloadConfig    *connect.Client[v1.UpdateWorkloadConfigRequest, v1.UpdateWorkloadConfigResponse]
+	createWorkloadBackup    *connect.Client[v1.CreateWorkloadBackupRequest, v1.CreateWorkloadBackupResponse]
+	listWorkloadBackups     *connect.Client[v1.ListWorkloadBackupsRequest, v1.ListWorkloadBackupsResponse]
+	restoreWorkloadBackup   *connect.Client[v1.RestoreWorkloadBackupRequest, v1.RestoreWorkloadBackupResponse]
+	deleteWorkloadBackup    *connect.Client[v1.DeleteWorkloadBackupRequest, v1.DeleteWorkloadBackupResponse]
+	setWorkloadBackupLocked *connect.Client[v1.SetWorkloadBackupLockedRequest, v1.SetWorkloadBackupLockedResponse]
 }
 
 // ListWorkloads calls cloud.v1.WorkloadService.ListWorkloads.
@@ -279,6 +339,31 @@ func (c *workloadServiceClient) UpdateWorkloadConfig(ctx context.Context, req *c
 	return c.updateWorkloadConfig.CallUnary(ctx, req)
 }
 
+// CreateWorkloadBackup calls cloud.v1.WorkloadService.CreateWorkloadBackup.
+func (c *workloadServiceClient) CreateWorkloadBackup(ctx context.Context, req *connect.Request[v1.CreateWorkloadBackupRequest]) (*connect.Response[v1.CreateWorkloadBackupResponse], error) {
+	return c.createWorkloadBackup.CallUnary(ctx, req)
+}
+
+// ListWorkloadBackups calls cloud.v1.WorkloadService.ListWorkloadBackups.
+func (c *workloadServiceClient) ListWorkloadBackups(ctx context.Context, req *connect.Request[v1.ListWorkloadBackupsRequest]) (*connect.Response[v1.ListWorkloadBackupsResponse], error) {
+	return c.listWorkloadBackups.CallUnary(ctx, req)
+}
+
+// RestoreWorkloadBackup calls cloud.v1.WorkloadService.RestoreWorkloadBackup.
+func (c *workloadServiceClient) RestoreWorkloadBackup(ctx context.Context, req *connect.Request[v1.RestoreWorkloadBackupRequest]) (*connect.Response[v1.RestoreWorkloadBackupResponse], error) {
+	return c.restoreWorkloadBackup.CallUnary(ctx, req)
+}
+
+// DeleteWorkloadBackup calls cloud.v1.WorkloadService.DeleteWorkloadBackup.
+func (c *workloadServiceClient) DeleteWorkloadBackup(ctx context.Context, req *connect.Request[v1.DeleteWorkloadBackupRequest]) (*connect.Response[v1.DeleteWorkloadBackupResponse], error) {
+	return c.deleteWorkloadBackup.CallUnary(ctx, req)
+}
+
+// SetWorkloadBackupLocked calls cloud.v1.WorkloadService.SetWorkloadBackupLocked.
+func (c *workloadServiceClient) SetWorkloadBackupLocked(ctx context.Context, req *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error) {
+	return c.setWorkloadBackupLocked.CallUnary(ctx, req)
+}
+
 // WorkloadServiceHandler is an implementation of the cloud.v1.WorkloadService service.
 type WorkloadServiceHandler interface {
 	// ListWorkloads lists workloads in the active org.
@@ -308,6 +393,16 @@ type WorkloadServiceHandler interface {
 	GetWorkloadConfig(context.Context, *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error)
 	// UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
 	UpdateWorkloadConfig(context.Context, *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error)
+	// CreateWorkloadBackup creates an atomic snapshot of workload data.
+	CreateWorkloadBackup(context.Context, *connect.Request[v1.CreateWorkloadBackupRequest]) (*connect.Response[v1.CreateWorkloadBackupResponse], error)
+	// ListWorkloadBackups lists snapshots created for a workload.
+	ListWorkloadBackups(context.Context, *connect.Request[v1.ListWorkloadBackupsRequest]) (*connect.Response[v1.ListWorkloadBackupsResponse], error)
+	// RestoreWorkloadBackup restores a snapshot onto the workload data directory.
+	RestoreWorkloadBackup(context.Context, *connect.Request[v1.RestoreWorkloadBackupRequest]) (*connect.Response[v1.RestoreWorkloadBackupResponse], error)
+	// DeleteWorkloadBackup removes a backup snapshot.
+	DeleteWorkloadBackup(context.Context, *connect.Request[v1.DeleteWorkloadBackupRequest]) (*connect.Response[v1.DeleteWorkloadBackupResponse], error)
+	// SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
+	SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error)
 }
 
 // NewWorkloadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -395,6 +490,36 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 		connect.WithSchema(workloadServiceMethods.ByName("UpdateWorkloadConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workloadServiceCreateWorkloadBackupHandler := connect.NewUnaryHandler(
+		WorkloadServiceCreateWorkloadBackupProcedure,
+		svc.CreateWorkloadBackup,
+		connect.WithSchema(workloadServiceMethods.ByName("CreateWorkloadBackup")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceListWorkloadBackupsHandler := connect.NewUnaryHandler(
+		WorkloadServiceListWorkloadBackupsProcedure,
+		svc.ListWorkloadBackups,
+		connect.WithSchema(workloadServiceMethods.ByName("ListWorkloadBackups")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceRestoreWorkloadBackupHandler := connect.NewUnaryHandler(
+		WorkloadServiceRestoreWorkloadBackupProcedure,
+		svc.RestoreWorkloadBackup,
+		connect.WithSchema(workloadServiceMethods.ByName("RestoreWorkloadBackup")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceDeleteWorkloadBackupHandler := connect.NewUnaryHandler(
+		WorkloadServiceDeleteWorkloadBackupProcedure,
+		svc.DeleteWorkloadBackup,
+		connect.WithSchema(workloadServiceMethods.ByName("DeleteWorkloadBackup")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceSetWorkloadBackupLockedHandler := connect.NewUnaryHandler(
+		WorkloadServiceSetWorkloadBackupLockedProcedure,
+		svc.SetWorkloadBackupLocked,
+		connect.WithSchema(workloadServiceMethods.ByName("SetWorkloadBackupLocked")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/cloud.v1.WorkloadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkloadServiceListWorkloadsProcedure:
@@ -423,6 +548,16 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 			workloadServiceGetWorkloadConfigHandler.ServeHTTP(w, r)
 		case WorkloadServiceUpdateWorkloadConfigProcedure:
 			workloadServiceUpdateWorkloadConfigHandler.ServeHTTP(w, r)
+		case WorkloadServiceCreateWorkloadBackupProcedure:
+			workloadServiceCreateWorkloadBackupHandler.ServeHTTP(w, r)
+		case WorkloadServiceListWorkloadBackupsProcedure:
+			workloadServiceListWorkloadBackupsHandler.ServeHTTP(w, r)
+		case WorkloadServiceRestoreWorkloadBackupProcedure:
+			workloadServiceRestoreWorkloadBackupHandler.ServeHTTP(w, r)
+		case WorkloadServiceDeleteWorkloadBackupProcedure:
+			workloadServiceDeleteWorkloadBackupHandler.ServeHTTP(w, r)
+		case WorkloadServiceSetWorkloadBackupLockedProcedure:
+			workloadServiceSetWorkloadBackupLockedHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -482,4 +617,24 @@ func (UnimplementedWorkloadServiceHandler) GetWorkloadConfig(context.Context, *c
 
 func (UnimplementedWorkloadServiceHandler) UpdateWorkloadConfig(context.Context, *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.UpdateWorkloadConfig is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) CreateWorkloadBackup(context.Context, *connect.Request[v1.CreateWorkloadBackupRequest]) (*connect.Response[v1.CreateWorkloadBackupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.CreateWorkloadBackup is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) ListWorkloadBackups(context.Context, *connect.Request[v1.ListWorkloadBackupsRequest]) (*connect.Response[v1.ListWorkloadBackupsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.ListWorkloadBackups is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) RestoreWorkloadBackup(context.Context, *connect.Request[v1.RestoreWorkloadBackupRequest]) (*connect.Response[v1.RestoreWorkloadBackupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.RestoreWorkloadBackup is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) DeleteWorkloadBackup(context.Context, *connect.Request[v1.DeleteWorkloadBackupRequest]) (*connect.Response[v1.DeleteWorkloadBackupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.DeleteWorkloadBackup is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) SetWorkloadBackupLocked(context.Context, *connect.Request[v1.SetWorkloadBackupLockedRequest]) (*connect.Response[v1.SetWorkloadBackupLockedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.SetWorkloadBackupLocked is not implemented"))
 }

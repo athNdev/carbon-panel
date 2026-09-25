@@ -592,7 +592,7 @@ DoneRead:
 
 	return connect.NewResponse(&v1.GetWorkloadConfigResponse{
 		Properties: props.ToMap(),
-		RawContent: raw,
+		Raw:        raw,
 	}), nil
 }
 
@@ -617,67 +617,61 @@ func (s *WorkloadService) UpdateWorkloadConfig(ctx context.Context, req *connect
 		targetFile = "server.properties"
 	}
 
-	var newRawContent string
-	var resultingProps map[string]string
+	// Read current file first to preserve comments and structure
+	readCmdID := uuid.NewString()
+	chunkCh := s.dispatcher.ExpectFileChunk(readCmdID)
+	defer s.dispatcher.CancelFileChunk(readCmdID)
 
-	if req.Msg.RawContent != nil && *req.Msg.RawContent != "" {
-		newRawContent = *req.Msg.RawContent
-		props := ParseProperties(newRawContent)
-		resultingProps = props.ToMap()
-	} else {
-		// Read current file first to preserve comments and structure
-		readCmdID := uuid.NewString()
-		chunkCh := s.dispatcher.ExpectFileChunk(readCmdID)
-		defer s.dispatcher.CancelFileChunk(readCmdID)
-
-		ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
-			Payload: &v1.ControlMessage_FileRead{
-				FileRead: &v1.ControlReadFile{
-					CommandId:  readCmdID,
-					WorkloadId: w.ID,
-					Path:       targetFile,
-				},
+	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+		Payload: &v1.ControlMessage_FileRead{
+			FileRead: &v1.ControlReadFile{
+				CommandId:  readCmdID,
+				WorkloadId: w.ID,
+				Path:       targetFile,
 			},
-		})
-		if !ok {
-			return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch read request to node agent"))
-		}
+		},
+	})
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch read request to node agent"))
+	}
 
-		var currentBuilder strings.Builder
-		for {
-			select {
-			case <-ctx.Done():
-				return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
-			case <-time.After(15 * time.Second):
-				return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out reading existing config from node agent"))
-			case chunk, ok := <-chunkCh:
-				if !ok {
-					goto DoneCurrentRead
-				}
-				if chunk.Success {
-					currentBuilder.Write(chunk.Chunk)
-				}
-				if chunk.IsLast {
-					goto DoneCurrentRead
-				}
+	var currentBuilder strings.Builder
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
+		case <-time.After(15 * time.Second):
+			return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out reading existing config from node agent"))
+		case chunk, ok := <-chunkCh:
+			if !ok {
+				goto DoneCurrentRead
+			}
+			if chunk.Success {
+				currentBuilder.Write(chunk.Chunk)
+			}
+			if chunk.IsLast {
+				goto DoneCurrentRead
 			}
 		}
-
-	DoneCurrentRead:
-		props := ParseProperties(currentBuilder.String())
-		for k, v := range req.Msg.Properties {
-			props.Set(k, v)
-		}
-		newRawContent = props.Serialize()
-		resultingProps = props.ToMap()
 	}
+
+DoneCurrentRead:
+	props := ParseProperties(currentBuilder.String())
+	for k, v := range req.Msg.Properties {
+		props.Set(k, v)
+	}
+	for _, k := range req.Msg.RemoveKeys {
+		props.Delete(k)
+	}
+	newRawContent := props.Serialize()
+	resultingProps := props.ToMap()
 
 	// Write updated file back to the workload
 	writeCmdID := uuid.NewString()
 	writeCh := s.dispatcher.ExpectFileWrite(writeCmdID)
 	defer s.dispatcher.CancelFileWrite(writeCmdID)
 
-	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+	ok = s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
 		Payload: &v1.ControlMessage_FileWrite{
 			FileWrite: &v1.ControlWriteFileChunk{
 				CommandId:  writeCmdID,

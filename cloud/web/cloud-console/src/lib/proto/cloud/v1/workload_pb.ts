@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file cloud/v1/workload.proto.
  */
 export const file_cloud_v1_workload: GenFile = /*@__PURE__*/
-  fileDesc("ChdjbG91ZC92MS93b3JrbG9hZC5wcm90bxIIY2xvdWQudjEijQIKDFdvcmtsb2FkU3BlYxIOCgZsb2FkZXIYASABKAkSGQoRbWluZWNyYWZ0X3ZlcnNpb24YAiABKAkSEQoJbWVtb3J5X21iGAMgASgDEhYKDmNwdV9taWxsaWNvcmVzGAQgASgDEg8KB2Rpc2tfZ2IYBSABKAUSLAoDZW52GAYgAygLMh8uY2xvdWQudjEuV29ya2xvYWRTcGVjLkVudkVudHJ5EhAKCGhvc3RuYW1lGAcgASgJEhcKD2FsbG93X2J5b19ub2RlcxgIIAEoCBIRCglqdm1fZmxhZ3MYCSADKAkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ/Cg1Xb3JrbG9hZEV2ZW50EgoKAmlkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBGtpbmQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLbAgoIV29ya2xvYWQSCgoCaWQYASABKAkSDgoGb3JnX2lkGAIgASgJEg8KB25vZGVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRIkCgRzcGVjGAUgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjEigKBnN0YXR1cxgGIAEoDjIYLmNsb3VkLnYxLldvcmtsb2FkU3RhdHVzEhQKDGNvbnRhaW5lcl9pZBgHIAEoCRIRCglob3N0X3BvcnQYCCABKAUSEAoIaG9zdG5hbWUYCSABKAkSFQoNc3RhdHVzX2RldGFpbBgKIAEoCRISCgpjcmVhdGVkX2J5GAsgASgJEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm4KD1dvcmtsb2FkTG9nTGluZRIOCgZzb3VyY2UYASABKAkSDAoEbGluZRgCIAEoCRIOCgZzdGRlcnIYAyABKAgSLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKNAQoUTGlzdFdvcmtsb2Fkc1JlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCRIoCgZzdGF0dXMYAiABKA4yGC5jbG91ZC52MS5Xb3JrbG9hZFN0YXR1cxIVCg1uYW1lX2NvbnRhaW5zGAMgASgJEiMKBHBhZ2UYBCABKAsyFS5jbG91ZC52MS5QYWdlUmVxdWVzdCJkChVMaXN0V29ya2xvYWRzUmVzcG9uc2USJQoJd29ya2xvYWRzGAEgAygLMhIuY2xvdWQudjEuV29ya2xvYWQSJAoEcGFnZRgCIAEoCzIWLmNsb3VkLnYxLlBhZ2VSZXNwb25zZSIgChJHZXRXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkiOwoTR2V0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIlwKFUNyZWF0ZVdvcmtsb2FkUmVxdWVzdBIMCgRuYW1lGAEgASgJEg8KB25vZGVfaWQYAiABKAkSJAoEc3BlYxgDIAEoCzIWLmNsb3VkLnYxLldvcmtsb2FkU3BlYyI+ChZDcmVhdGVXb3JrbG9hZFJlc3BvbnNlEiQKCHdvcmtsb2FkGAEgASgLMhIuY2xvdWQudjEuV29ya2xvYWQiZQoVVXBkYXRlV29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIkCgRzcGVjGAMgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjQgcKBV9uYW1lIj4KFlVwZGF0ZVdvcmtsb2FkUmVzcG9uc2USJAoId29ya2xvYWQYASABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZCI4ChVEZWxldGVXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkSEwoLZGVsZXRlX2RhdGEYAiABKAgiGAoWRGVsZXRlV29ya2xvYWRSZXNwb25zZSIiChRTdGFydFdvcmtsb2FkUmVxdWVzdBIKCgJpZBgBIAEoCSI9ChVTdGFydFdvcmtsb2FkUmVzcG9uc2USJAoId29ya2xvYWQYASABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZCI6ChNTdG9wV29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJEhcKD3RpbWVvdXRfc2Vjb25kcxgCIAEoBSI8ChRTdG9wV29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIiQKFlJlc3RhcnRXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkiPwoXUmVzdGFydFdvcmtsb2FkUmVzcG9uc2USJAoId29ya2xvYWQYASABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZCI7ChlTdHJlYW1Xb3JrbG9hZExvZ3NSZXF1ZXN0EgoKAmlkGAEgASgJEhIKCnRhaWxfbGluZXMYAiABKAUiOQoaU2VuZFdvcmtsb2FkQ29tbWFuZFJlcXVlc3QSCgoCaWQYASABKAkSDwoHY29tbWFuZBgCIAEoCSItChtTZW5kV29ya2xvYWRDb21tYW5kUmVzcG9uc2USDgoGb3V0cHV0GAEgASgJIkwKGUxpc3RXb3JrbG9hZEV2ZW50c1JlcXVlc3QSCgoCaWQYASABKAkSIwoEcGFnZRgCIAEoCzIVLmNsb3VkLnYxLlBhZ2VSZXF1ZXN0ImsKGkxpc3RXb3JrbG9hZEV2ZW50c1Jlc3BvbnNlEicKBmV2ZW50cxgBIAMoCzIXLmNsb3VkLnYxLldvcmtsb2FkRXZlbnQSJAoEcGFnZRgCIAEoCzIWLmNsb3VkLnYxLlBhZ2VSZXNwb25zZSJCChZXb3JrbG9hZENvbmZpZ1Byb3BlcnR5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCRIMCgRmaWxlGAMgASgJIjQKGEdldFdvcmtsb2FkQ29uZmlnUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgRmaWxlGAIgASgJIqwBChlHZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlEkcKCnByb3BlcnRpZXMYASADKAsyMy5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlLlByb3BlcnRpZXNFbnRyeRITCgtyYXdfY29udGVudBgCIAEoCRoxCg9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASL6AQobVXBkYXRlV29ya2xvYWRDb25maWdSZXF1ZXN0EgoKAmlkGAEgASgJEkkKCnByb3BlcnRpZXMYAiADKAsyNS5jbG91ZC52MS5VcGRhdGVXb3JrbG9hZENvbmZpZ1JlcXVlc3QuUHJvcGVydGllc0VudHJ5EhgKC3Jhd19jb250ZW50GAMgASgJSACIAQESDAoEZmlsZRgEIAEoCRIZChFyZXN0YXJ0X29yX3JlbG9hZBgFIAEoCBoxCg9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIOCgxfcmF3X2NvbnRlbnQiswEKHFVwZGF0ZVdvcmtsb2FkQ29uZmlnUmVzcG9uc2USSgoKcHJvcGVydGllcxgBIAMoCzI2LmNsb3VkLnYxLlVwZGF0ZVdvcmtsb2FkQ29uZmlnUmVzcG9uc2UuUHJvcGVydGllc0VudHJ5EhQKDGFjdGlvbl90YWtlbhgCIAEoCRoxCg9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATKJCQoPV29ya2xvYWRTZXJ2aWNlElAKDUxpc3RXb3JrbG9hZHMSHi5jbG91ZC52MS5MaXN0V29ya2xvYWRzUmVxdWVzdBofLmNsb3VkLnYxLkxpc3RXb3JrbG9hZHNSZXNwb25zZRJKCgtHZXRXb3JrbG9hZBIcLmNsb3VkLnYxLkdldFdvcmtsb2FkUmVxdWVzdBodLmNsb3VkLnYxLkdldFdvcmtsb2FkUmVzcG9uc2USUwoOQ3JlYXRlV29ya2xvYWQSHy5jbG91ZC52MS5DcmVhdGVXb3JrbG9hZFJlcXVlc3QaIC5jbG91ZC52MS5DcmVhdGVXb3JrbG9hZFJlc3BvbnNlElMKDlVwZGF0ZVdvcmtsb2FkEh8uY2xvdWQudjEuVXBkYXRlV29ya2xvYWRSZXF1ZXN0GiAuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRSZXNwb25zZRJTCg5EZWxldGVXb3JrbG9hZBIfLmNsb3VkLnYxLkRlbGV0ZVdvcmtsb2FkUmVxdWVzdBogLmNsb3VkLnYxLkRlbGV0ZVdvcmtsb2FkUmVzcG9uc2USUAoNU3RhcnRXb3JrbG9hZBIeLmNsb3VkLnYxLlN0YXJ0V29ya2xvYWRSZXF1ZXN0Gh8uY2xvdWQudjEuU3RhcnRXb3JrbG9hZFJlc3BvbnNlEk0KDFN0b3BXb3JrbG9hZBIdLmNsb3VkLnYxLlN0b3BXb3JrbG9hZFJlcXVlc3QaHi5jbG91ZC52MS5TdG9wV29ya2xvYWRSZXNwb25zZRJWCg9SZXN0YXJ0V29ya2xvYWQSIC5jbG91ZC52MS5SZXN0YXJ0V29ya2xvYWRSZXF1ZXN0GiEuY2xvdWQudjEuUmVzdGFydFdvcmtsb2FkUmVzcG9uc2USVgoSU3RyZWFtV29ya2xvYWRMb2dzEiMuY2xvdWQudjEuU3RyZWFtV29ya2xvYWRMb2dzUmVxdWVzdBoZLmNsb3VkLnYxLldvcmtsb2FkTG9nTGluZTABEmIKE1NlbmRXb3JrbG9hZENvbW1hbmQSJC5jbG91ZC52MS5TZW5kV29ya2xvYWRDb21tYW5kUmVxdWVzdBolLmNsb3VkLnYxLlNlbmRXb3JrbG9hZENvbW1hbmRSZXNwb25zZRJfChJMaXN0V29ya2xvYWRFdmVudHMSIy5jbG91ZC52MS5MaXN0V29ya2xvYWRFdmVudHNSZXF1ZXN0GiQuY2xvdWQudjEuTGlzdFdvcmtsb2FkRXZlbnRzUmVzcG9uc2USXAoRR2V0V29ya2xvYWRDb25maWcSIi5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1JlcXVlc3QaIy5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlEmUKFFVwZGF0ZVdvcmtsb2FkQ29uZmlnEiUuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRDb25maWdSZXF1ZXN0GiYuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRDb25maWdSZXNwb25zZUI8WjpnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jbG91ZC92MTtjbG91ZHYxYgZwcm90bzM", [file_cloud_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChdjbG91ZC92MS93b3JrbG9hZC5wcm90bxIIY2xvdWQudjEijQIKDFdvcmtsb2FkU3BlYxIOCgZsb2FkZXIYASABKAkSGQoRbWluZWNyYWZ0X3ZlcnNpb24YAiABKAkSEQoJbWVtb3J5X21iGAMgASgDEhYKDmNwdV9taWxsaWNvcmVzGAQgASgDEg8KB2Rpc2tfZ2IYBSABKAUSLAoDZW52GAYgAygLMh8uY2xvdWQudjEuV29ya2xvYWRTcGVjLkVudkVudHJ5EhAKCGhvc3RuYW1lGAcgASgJEhcKD2FsbG93X2J5b19ub2RlcxgIIAEoCBIRCglqdm1fZmxhZ3MYCSADKAkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ/Cg1Xb3JrbG9hZEV2ZW50EgoKAmlkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBGtpbmQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLbAgoIV29ya2xvYWQSCgoCaWQYASABKAkSDgoGb3JnX2lkGAIgASgJEg8KB25vZGVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRIkCgRzcGVjGAUgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjEigKBnN0YXR1cxgGIAEoDjIYLmNsb3VkLnYxLldvcmtsb2FkU3RhdHVzEhQKDGNvbnRhaW5lcl9pZBgHIAEoCRIRCglob3N0X3BvcnQYCCABKAUSEAoIaG9zdG5hbWUYCSABKAkSFQoNc3RhdHVzX2RldGFpbBgKIAEoCRISCgpjcmVhdGVkX2J5GAsgASgJEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm4KD1dvcmtsb2FkTG9nTGluZRIOCgZzb3VyY2UYASABKAkSDAoEbGluZRgCIAEoCRIOCgZzdGRlcnIYAyABKAgSLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKNAQoUTGlzdFdvcmtsb2Fkc1JlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCRIoCgZzdGF0dXMYAiABKA4yGC5jbG91ZC52MS5Xb3JrbG9hZFN0YXR1cxIVCg1uYW1lX2NvbnRhaW5zGAMgASgJEiMKBHBhZ2UYBCABKAsyFS5jbG91ZC52MS5QYWdlUmVxdWVzdCJkChVMaXN0V29ya2xvYWRzUmVzcG9uc2USJQoJd29ya2xvYWRzGAEgAygLMhIuY2xvdWQudjEuV29ya2xvYWQSJAoEcGFnZRgCIAEoCzIWLmNsb3VkLnYxLlBhZ2VSZXNwb25zZSIgChJHZXRXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkiOwoTR2V0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIlwKFUNyZWF0ZVdvcmtsb2FkUmVxdWVzdBIMCgRuYW1lGAEgASgJEg8KB25vZGVfaWQYAiABKAkSJAoEc3BlYxgDIAEoCzIWLmNsb3VkLnYxLldvcmtsb2FkU3BlYyI+ChZDcmVhdGVXb3JrbG9hZFJlc3BvbnNlEiQKCHdvcmtsb2FkGAEgASgLMhIuY2xvdWQudjEuV29ya2xvYWQicwoVVXBkYXRlV29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIpCgRzcGVjGAMgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjSAGIAQFCBwoFX25hbWVCBwoFX3NwZWMiPgoWVXBkYXRlV29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIjgKFURlbGV0ZVdvcmtsb2FkUmVxdWVzdBIKCgJpZBgBIAEoCRITCgtkZWxldGVfZGF0YRgCIAEoCCIYChZEZWxldGVXb3JrbG9hZFJlc3BvbnNlIiIKFFN0YXJ0V29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJIj0KFVN0YXJ0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIjoKE1N0b3BXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkSFwoPdGltZW91dF9zZWNvbmRzGAIgASgFIjwKFFN0b3BXb3JrbG9hZFJlc3BvbnNlEiQKCHdvcmtsb2FkGAEgASgLMhIuY2xvdWQudjEuV29ya2xvYWQiJAoWUmVzdGFydFdvcmtsb2FkUmVxdWVzdBIKCgJpZBgBIAEoCSI/ChdSZXN0YXJ0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIjsKGVN0cmVhbVdvcmtsb2FkTG9nc1JlcXVlc3QSCgoCaWQYASABKAkSEgoKdGFpbF9saW5lcxgCIAEoBSI5ChpTZW5kV29ya2xvYWRDb21tYW5kUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdjb21tYW5kGAIgASgJIi0KG1NlbmRXb3JrbG9hZENvbW1hbmRSZXNwb25zZRIOCgZvdXRwdXQYASABKAkiTAoZTGlzdFdvcmtsb2FkRXZlbnRzUmVxdWVzdBIKCgJpZBgBIAEoCRIjCgRwYWdlGAIgASgLMhUuY2xvdWQudjEuUGFnZVJlcXVlc3QiawoaTGlzdFdvcmtsb2FkRXZlbnRzUmVzcG9uc2USJwoGZXZlbnRzGAEgAygLMhcuY2xvdWQudjEuV29ya2xvYWRFdmVudBIkCgRwYWdlGAIgASgLMhYuY2xvdWQudjEuUGFnZVJlc3BvbnNlIjQKGEdldFdvcmtsb2FkQ29uZmlnUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgRmaWxlGAIgASgJIqQBChlHZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlEkcKCnByb3BlcnRpZXMYASADKAsyMy5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlLlByb3BlcnRpZXNFbnRyeRILCgNyYXcYAiABKAkaMQoPUHJvcGVydGllc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi5QEKG1VwZGF0ZVdvcmtsb2FkQ29uZmlnUmVxdWVzdBIKCgJpZBgBIAEoCRJJCgpwcm9wZXJ0aWVzGAIgAygLMjUuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRDb25maWdSZXF1ZXN0LlByb3BlcnRpZXNFbnRyeRITCgtyZW1vdmVfa2V5cxgDIAMoCRIMCgRmaWxlGAQgASgJEhkKEXJlc3RhcnRfb3JfcmVsb2FkGAUgASgIGjEKD1Byb3BlcnRpZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrMBChxVcGRhdGVXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlEkoKCnByb3BlcnRpZXMYASADKAsyNi5jbG91ZC52MS5VcGRhdGVXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlLlByb3BlcnRpZXNFbnRyeRIUCgxhY3Rpb25fdGFrZW4YAiABKAkaMQoPUHJvcGVydGllc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi0wEKDldvcmtsb2FkQmFja3VwEgoKAmlkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEg8KB25vZGVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRISCgpzaXplX2J5dGVzGAUgASgDEg4KBnNoYTI1NhgGIAEoCRIOCgZsb2NrZWQYByABKAgSDgoGc3RhdHVzGAggASgJEg0KBWVycm9yGAkgASgJEi4KCmNyZWF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIjcKG0NyZWF0ZVdvcmtsb2FkQmFja3VwUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJIkgKHENyZWF0ZVdvcmtsb2FkQmFja3VwUmVzcG9uc2USKAoGYmFja3VwGAEgASgLMhguY2xvdWQudjEuV29ya2xvYWRCYWNrdXAiKAoaTGlzdFdvcmtsb2FkQmFja3Vwc1JlcXVlc3QSCgoCaWQYASABKAkiSAobTGlzdFdvcmtsb2FkQmFja3Vwc1Jlc3BvbnNlEikKB2JhY2t1cHMYASADKAsyGC5jbG91ZC52MS5Xb3JrbG9hZEJhY2t1cCI9ChxSZXN0b3JlV29ya2xvYWRCYWNrdXBSZXF1ZXN0EgoKAmlkGAEgASgJEhEKCWJhY2t1cF9pZBgCIAEoCSJBCh1SZXN0b3JlV29ya2xvYWRCYWNrdXBSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB21lc3NhZ2UYAiABKAkiPAobRGVsZXRlV29ya2xvYWRCYWNrdXBSZXF1ZXN0EgoKAmlkGAEgASgJEhEKCWJhY2t1cF9pZBgCIAEoCSIeChxEZWxldGVXb3JrbG9hZEJhY2t1cFJlc3BvbnNlIk8KHlNldFdvcmtsb2FkQmFja3VwTG9ja2VkUmVxdWVzdBIKCgJpZBgBIAEoCRIRCgliYWNrdXBfaWQYAiABKAkSDgoGbG9ja2VkGAMgASgIIksKH1NldFdvcmtsb2FkQmFja3VwTG9ja2VkUmVzcG9uc2USKAoGYmFja3VwGAEgASgLMhguY2xvdWQudjEuV29ya2xvYWRCYWNrdXAylQ0KD1dvcmtsb2FkU2VydmljZRJQCg1MaXN0V29ya2xvYWRzEh4uY2xvdWQudjEuTGlzdFdvcmtsb2Fkc1JlcXVlc3QaHy5jbG91ZC52MS5MaXN0V29ya2xvYWRzUmVzcG9uc2USSgoLR2V0V29ya2xvYWQSHC5jbG91ZC52MS5HZXRXb3JrbG9hZFJlcXVlc3QaHS5jbG91ZC52MS5HZXRXb3JrbG9hZFJlc3BvbnNlElMKDkNyZWF0ZVdvcmtsb2FkEh8uY2xvdWQudjEuQ3JlYXRlV29ya2xvYWRSZXF1ZXN0GiAuY2xvdWQudjEuQ3JlYXRlV29ya2xvYWRSZXNwb25zZRJTCg5VcGRhdGVXb3JrbG9hZBIfLmNsb3VkLnYxLlVwZGF0ZVdvcmtsb2FkUmVxdWVzdBogLmNsb3VkLnYxLlVwZGF0ZVdvcmtsb2FkUmVzcG9uc2USUwoORGVsZXRlV29ya2xvYWQSHy5jbG91ZC52MS5EZWxldGVXb3JrbG9hZFJlcXVlc3QaIC5jbG91ZC52MS5EZWxldGVXb3JrbG9hZFJlc3BvbnNlElAKDVN0YXJ0V29ya2xvYWQSHi5jbG91ZC52MS5TdGFydFdvcmtsb2FkUmVxdWVzdBofLmNsb3VkLnYxLlN0YXJ0V29ya2xvYWRSZXNwb25zZRJNCgxTdG9wV29ya2xvYWQSHS5jbG91ZC52MS5TdG9wV29ya2xvYWRSZXF1ZXN0Gh4uY2xvdWQudjEuU3RvcFdvcmtsb2FkUmVzcG9uc2USVgoPUmVzdGFydFdvcmtsb2FkEiAuY2xvdWQudjEuUmVzdGFydFdvcmtsb2FkUmVxdWVzdBohLmNsb3VkLnYxLlJlc3RhcnRXb3JrbG9hZFJlc3BvbnNlElYKElN0cmVhbVdvcmtsb2FkTG9ncxIjLmNsb3VkLnYxLlN0cmVhbVdvcmtsb2FkTG9nc1JlcXVlc3QaGS5jbG91ZC52MS5Xb3JrbG9hZExvZ0xpbmUwARJiChNTZW5kV29ya2xvYWRDb21tYW5kEiQuY2xvdWQudjEuU2VuZFdvcmtsb2FkQ29tbWFuZFJlcXVlc3QaJS5jbG91ZC52MS5TZW5kV29ya2xvYWRDb21tYW5kUmVzcG9uc2USXwoSTGlzdFdvcmtsb2FkRXZlbnRzEiMuY2xvdWQudjEuTGlzdFdvcmtsb2FkRXZlbnRzUmVxdWVzdBokLmNsb3VkLnYxLkxpc3RXb3JrbG9hZEV2ZW50c1Jlc3BvbnNlElwKEUdldFdvcmtsb2FkQ29uZmlnEiIuY2xvdWQudjEuR2V0V29ya2xvYWRDb25maWdSZXF1ZXN0GiMuY2xvdWQudjEuR2V0V29ya2xvYWRDb25maWdSZXNwb25zZRJlChRVcGRhdGVXb3JrbG9hZENvbmZpZxIlLmNsb3VkLnYxLlVwZGF0ZVdvcmtsb2FkQ29uZmlnUmVxdWVzdBomLmNsb3VkLnYxLlVwZGF0ZVdvcmtsb2FkQ29uZmlnUmVzcG9uc2USZQoUQ3JlYXRlV29ya2xvYWRCYWNrdXASJS5jbG91ZC52MS5DcmVhdGVXb3JrbG9hZEJhY2t1cFJlcXVlc3QaJi5jbG91ZC52MS5DcmVhdGVXb3JrbG9hZEJhY2t1cFJlc3BvbnNlEmIKE0xpc3RXb3JrbG9hZEJhY2t1cHMSJC5jbG91ZC52MS5MaXN0V29ya2xvYWRCYWNrdXBzUmVxdWVzdBolLmNsb3VkLnYxLkxpc3RXb3JrbG9hZEJhY2t1cHNSZXNwb25zZRJoChVSZXN0b3JlV29ya2xvYWRCYWNrdXASJi5jbG91ZC52MS5SZXN0b3JlV29ya2xvYWRCYWNrdXBSZXF1ZXN0GicuY2xvdWQudjEuUmVzdG9yZVdvcmtsb2FkQmFja3VwUmVzcG9uc2USZQoURGVsZXRlV29ya2xvYWRCYWNrdXASJS5jbG91ZC52MS5EZWxldGVXb3JrbG9hZEJhY2t1cFJlcXVlc3QaJi5jbG91ZC52MS5EZWxldGVXb3JrbG9hZEJhY2t1cFJlc3BvbnNlEm4KF1NldFdvcmtsb2FkQmFja3VwTG9ja2VkEiguY2xvdWQudjEuU2V0V29ya2xvYWRCYWNrdXBMb2NrZWRSZXF1ZXN0GikuY2xvdWQudjEuU2V0V29ya2xvYWRCYWNrdXBMb2NrZWRSZXNwb25zZUI8WjpnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jbG91ZC92MTtjbG91ZHYxYgZwcm90bzM", [file_cloud_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * WorkloadSpec is the declarative description of a Minecraft server. It is the
@@ -481,7 +481,7 @@ export type UpdateWorkloadRequest = Message<"cloud.v1.UpdateWorkloadRequest"> & 
   /**
    * New spec fields, when set.
    *
-   * @generated from field: cloud.v1.WorkloadSpec spec = 3;
+   * @generated from field: optional cloud.v1.WorkloadSpec spec = 3;
    */
   spec?: WorkloadSpec | undefined;
 };
@@ -528,7 +528,7 @@ export type DeleteWorkloadRequest = Message<"cloud.v1.DeleteWorkloadRequest"> & 
   id: string;
 
   /**
-   * When true, requests the node agent to erase the workload's data dir.
+   * When true, world data is deleted with the container.
    *
    * @generated from field: bool delete_data = 2;
    */
@@ -543,7 +543,7 @@ export const DeleteWorkloadRequestSchema: GenMessage<DeleteWorkloadRequest> = /*
   messageDesc(file_cloud_v1_workload, 12);
 
 /**
- * DeleteWorkloadResponse confirms deletion.
+ * DeleteWorkloadResponse acknowledges deletion.
  *
  * @generated from message cloud.v1.DeleteWorkloadResponse
  */
@@ -768,7 +768,7 @@ export const SendWorkloadCommandResponseSchema: GenMessage<SendWorkloadCommandRe
   messageDesc(file_cloud_v1_workload, 22);
 
 /**
- * ListWorkloadEventsRequest lists events.
+ * ListWorkloadEventsRequest lists lifecycle events.
  *
  * @generated from message cloud.v1.ListWorkloadEventsRequest
  */
@@ -802,7 +802,7 @@ export const ListWorkloadEventsRequestSchema: GenMessage<ListWorkloadEventsReque
  */
 export type ListWorkloadEventsResponse = Message<"cloud.v1.ListWorkloadEventsResponse"> & {
   /**
-   * Events in reverse chronological order.
+   * Events, newest first.
    *
    * @generated from field: repeated cloud.v1.WorkloadEvent events = 1;
    */
@@ -824,48 +824,13 @@ export const ListWorkloadEventsResponseSchema: GenMessage<ListWorkloadEventsResp
   messageDesc(file_cloud_v1_workload, 24);
 
 /**
- * WorkloadConfigProperty represents a single configuration key-value entry.
- *
- * @generated from message cloud.v1.WorkloadConfigProperty
- */
-export type WorkloadConfigProperty = Message<"cloud.v1.WorkloadConfigProperty"> & {
-  /**
-   * Configuration key (e.g. "motd", "difficulty", "server-port").
-   *
-   * @generated from field: string key = 1;
-   */
-  key: string;
-
-  /**
-   * Current string value.
-   *
-   * @generated from field: string value = 2;
-   */
-  value: string;
-
-  /**
-   * File where this property is defined (defaults to "server.properties").
-   *
-   * @generated from field: string file = 3;
-   */
-  file: string;
-};
-
-/**
- * Describes the message cloud.v1.WorkloadConfigProperty.
- * Use `create(WorkloadConfigPropertySchema)` to create a new message.
- */
-export const WorkloadConfigPropertySchema: GenMessage<WorkloadConfigProperty> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_workload, 25);
-
-/**
- * GetWorkloadConfigRequest requests configuration properties.
+ * GetWorkloadConfigRequest requests parsed config properties.
  *
  * @generated from message cloud.v1.GetWorkloadConfigRequest
  */
 export type GetWorkloadConfigRequest = Message<"cloud.v1.GetWorkloadConfigRequest"> & {
   /**
-   * Workload id.
+   * Target workload id.
    *
    * @generated from field: string id = 1;
    */
@@ -884,27 +849,27 @@ export type GetWorkloadConfigRequest = Message<"cloud.v1.GetWorkloadConfigReques
  * Use `create(GetWorkloadConfigRequestSchema)` to create a new message.
  */
 export const GetWorkloadConfigRequestSchema: GenMessage<GetWorkloadConfigRequest> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_workload, 26);
+  messageDesc(file_cloud_v1_workload, 25);
 
 /**
- * GetWorkloadConfigResponse returns parsed properties.
+ * GetWorkloadConfigResponse returns parsed key-value properties.
  *
  * @generated from message cloud.v1.GetWorkloadConfigResponse
  */
 export type GetWorkloadConfigResponse = Message<"cloud.v1.GetWorkloadConfigResponse"> & {
   /**
-   * Properties mapped by key.
+   * Parsed configuration map.
    *
    * @generated from field: map<string, string> properties = 1;
    */
   properties: { [key: string]: string };
 
   /**
-   * Raw file contents for complete fidelity or non-KV files.
+   * Raw file content.
    *
-   * @generated from field: string raw_content = 2;
+   * @generated from field: string raw = 2;
    */
-  rawContent: string;
+  raw: string;
 };
 
 /**
@@ -912,7 +877,7 @@ export type GetWorkloadConfigResponse = Message<"cloud.v1.GetWorkloadConfigRespo
  * Use `create(GetWorkloadConfigResponseSchema)` to create a new message.
  */
 export const GetWorkloadConfigResponseSchema: GenMessage<GetWorkloadConfigResponse> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_workload, 27);
+  messageDesc(file_cloud_v1_workload, 26);
 
 /**
  * UpdateWorkloadConfigRequest modifies configuration properties.
@@ -921,25 +886,25 @@ export const GetWorkloadConfigResponseSchema: GenMessage<GetWorkloadConfigRespon
  */
 export type UpdateWorkloadConfigRequest = Message<"cloud.v1.UpdateWorkloadConfigRequest"> & {
   /**
-   * Workload id.
+   * Target workload id.
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Key-value updates to apply.
+   * Key-value properties to update or insert.
    *
    * @generated from field: map<string, string> properties = 2;
    */
   properties: { [key: string]: string };
 
   /**
-   * Optional raw file content replacement (if set, takes precedence over properties map).
+   * Keys to remove from configuration.
    *
-   * @generated from field: optional string raw_content = 3;
+   * @generated from field: repeated string remove_keys = 3;
    */
-  rawContent?: string | undefined;
+  removeKeys: string[];
 
   /**
    * Target config file (defaults to "server.properties" if empty).
@@ -961,7 +926,7 @@ export type UpdateWorkloadConfigRequest = Message<"cloud.v1.UpdateWorkloadConfig
  * Use `create(UpdateWorkloadConfigRequestSchema)` to create a new message.
  */
 export const UpdateWorkloadConfigRequestSchema: GenMessage<UpdateWorkloadConfigRequest> = /*@__PURE__*/
-  messageDesc(file_cloud_v1_workload, 28);
+  messageDesc(file_cloud_v1_workload, 27);
 
 /**
  * UpdateWorkloadConfigResponse confirms updates.
@@ -989,7 +954,337 @@ export type UpdateWorkloadConfigResponse = Message<"cloud.v1.UpdateWorkloadConfi
  * Use `create(UpdateWorkloadConfigResponseSchema)` to create a new message.
  */
 export const UpdateWorkloadConfigResponseSchema: GenMessage<UpdateWorkloadConfigResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 28);
+
+/**
+ * WorkloadBackup represents a snapshot of a workload's persistent data.
+ *
+ * @generated from message cloud.v1.WorkloadBackup
+ */
+export type WorkloadBackup = Message<"cloud.v1.WorkloadBackup"> & {
+  /**
+   * Backup snapshot ID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Workload ID.
+   *
+   * @generated from field: string workload_id = 2;
+   */
+  workloadId: string;
+
+  /**
+   * Node ID where the snapshot was taken.
+   *
+   * @generated from field: string node_id = 3;
+   */
+  nodeId: string;
+
+  /**
+   * Human-readable backup name or label.
+   *
+   * @generated from field: string name = 4;
+   */
+  name: string;
+
+  /**
+   * Size of archive in bytes.
+   *
+   * @generated from field: int64 size_bytes = 5;
+   */
+  sizeBytes: bigint;
+
+  /**
+   * SHA-256 checksum of the backup archive.
+   *
+   * @generated from field: string sha256 = 6;
+   */
+  sha256: string;
+
+  /**
+   * Whether this backup is locked against automated pruning or deletion.
+   *
+   * @generated from field: bool locked = 7;
+   */
+  locked: boolean;
+
+  /**
+   * Current status of backup ("completed", "failed", "in_progress").
+   *
+   * @generated from field: string status = 8;
+   */
+  status: string;
+
+  /**
+   * Error message if backup creation failed.
+   *
+   * @generated from field: string error = 9;
+   */
+  error: string;
+
+  /**
+   * Creation timestamp.
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   */
+  createdAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message cloud.v1.WorkloadBackup.
+ * Use `create(WorkloadBackupSchema)` to create a new message.
+ */
+export const WorkloadBackupSchema: GenMessage<WorkloadBackup> = /*@__PURE__*/
   messageDesc(file_cloud_v1_workload, 29);
+
+/**
+ * CreateWorkloadBackupRequest creates a snapshot.
+ *
+ * @generated from message cloud.v1.CreateWorkloadBackupRequest
+ */
+export type CreateWorkloadBackupRequest = Message<"cloud.v1.CreateWorkloadBackupRequest"> & {
+  /**
+   * Target workload ID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Optional backup name or description.
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message cloud.v1.CreateWorkloadBackupRequest.
+ * Use `create(CreateWorkloadBackupRequestSchema)` to create a new message.
+ */
+export const CreateWorkloadBackupRequestSchema: GenMessage<CreateWorkloadBackupRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 30);
+
+/**
+ * CreateWorkloadBackupResponse returns the created backup record.
+ *
+ * @generated from message cloud.v1.CreateWorkloadBackupResponse
+ */
+export type CreateWorkloadBackupResponse = Message<"cloud.v1.CreateWorkloadBackupResponse"> & {
+  /**
+   * The backup metadata.
+   *
+   * @generated from field: cloud.v1.WorkloadBackup backup = 1;
+   */
+  backup?: WorkloadBackup | undefined;
+};
+
+/**
+ * Describes the message cloud.v1.CreateWorkloadBackupResponse.
+ * Use `create(CreateWorkloadBackupResponseSchema)` to create a new message.
+ */
+export const CreateWorkloadBackupResponseSchema: GenMessage<CreateWorkloadBackupResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 31);
+
+/**
+ * ListWorkloadBackupsRequest lists backups for a workload.
+ *
+ * @generated from message cloud.v1.ListWorkloadBackupsRequest
+ */
+export type ListWorkloadBackupsRequest = Message<"cloud.v1.ListWorkloadBackupsRequest"> & {
+  /**
+   * Target workload ID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message cloud.v1.ListWorkloadBackupsRequest.
+ * Use `create(ListWorkloadBackupsRequestSchema)` to create a new message.
+ */
+export const ListWorkloadBackupsRequestSchema: GenMessage<ListWorkloadBackupsRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 32);
+
+/**
+ * ListWorkloadBackupsResponse returns available backups.
+ *
+ * @generated from message cloud.v1.ListWorkloadBackupsResponse
+ */
+export type ListWorkloadBackupsResponse = Message<"cloud.v1.ListWorkloadBackupsResponse"> & {
+  /**
+   * List of backups.
+   *
+   * @generated from field: repeated cloud.v1.WorkloadBackup backups = 1;
+   */
+  backups: WorkloadBackup[];
+};
+
+/**
+ * Describes the message cloud.v1.ListWorkloadBackupsResponse.
+ * Use `create(ListWorkloadBackupsResponseSchema)` to create a new message.
+ */
+export const ListWorkloadBackupsResponseSchema: GenMessage<ListWorkloadBackupsResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 33);
+
+/**
+ * RestoreWorkloadBackupRequest restores a snapshot.
+ *
+ * @generated from message cloud.v1.RestoreWorkloadBackupRequest
+ */
+export type RestoreWorkloadBackupRequest = Message<"cloud.v1.RestoreWorkloadBackupRequest"> & {
+  /**
+   * Target workload ID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Backup ID to restore.
+   *
+   * @generated from field: string backup_id = 2;
+   */
+  backupId: string;
+};
+
+/**
+ * Describes the message cloud.v1.RestoreWorkloadBackupRequest.
+ * Use `create(RestoreWorkloadBackupRequestSchema)` to create a new message.
+ */
+export const RestoreWorkloadBackupRequestSchema: GenMessage<RestoreWorkloadBackupRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 34);
+
+/**
+ * RestoreWorkloadBackupResponse confirms restore completion.
+ *
+ * @generated from message cloud.v1.RestoreWorkloadBackupResponse
+ */
+export type RestoreWorkloadBackupResponse = Message<"cloud.v1.RestoreWorkloadBackupResponse"> & {
+  /**
+   * Success indicator.
+   *
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * Detail message.
+   *
+   * @generated from field: string message = 2;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message cloud.v1.RestoreWorkloadBackupResponse.
+ * Use `create(RestoreWorkloadBackupResponseSchema)` to create a new message.
+ */
+export const RestoreWorkloadBackupResponseSchema: GenMessage<RestoreWorkloadBackupResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 35);
+
+/**
+ * DeleteWorkloadBackupRequest deletes a snapshot.
+ *
+ * @generated from message cloud.v1.DeleteWorkloadBackupRequest
+ */
+export type DeleteWorkloadBackupRequest = Message<"cloud.v1.DeleteWorkloadBackupRequest"> & {
+  /**
+   * Target workload ID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Backup ID to delete.
+   *
+   * @generated from field: string backup_id = 2;
+   */
+  backupId: string;
+};
+
+/**
+ * Describes the message cloud.v1.DeleteWorkloadBackupRequest.
+ * Use `create(DeleteWorkloadBackupRequestSchema)` to create a new message.
+ */
+export const DeleteWorkloadBackupRequestSchema: GenMessage<DeleteWorkloadBackupRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 36);
+
+/**
+ * DeleteWorkloadBackupResponse confirms deletion.
+ *
+ * @generated from message cloud.v1.DeleteWorkloadBackupResponse
+ */
+export type DeleteWorkloadBackupResponse = Message<"cloud.v1.DeleteWorkloadBackupResponse"> & {
+};
+
+/**
+ * Describes the message cloud.v1.DeleteWorkloadBackupResponse.
+ * Use `create(DeleteWorkloadBackupResponseSchema)` to create a new message.
+ */
+export const DeleteWorkloadBackupResponseSchema: GenMessage<DeleteWorkloadBackupResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 37);
+
+/**
+ * SetWorkloadBackupLockedRequest sets the lock flag on a backup.
+ *
+ * @generated from message cloud.v1.SetWorkloadBackupLockedRequest
+ */
+export type SetWorkloadBackupLockedRequest = Message<"cloud.v1.SetWorkloadBackupLockedRequest"> & {
+  /**
+   * Target workload ID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Backup ID.
+   *
+   * @generated from field: string backup_id = 2;
+   */
+  backupId: string;
+
+  /**
+   * New lock status.
+   *
+   * @generated from field: bool locked = 3;
+   */
+  locked: boolean;
+};
+
+/**
+ * Describes the message cloud.v1.SetWorkloadBackupLockedRequest.
+ * Use `create(SetWorkloadBackupLockedRequestSchema)` to create a new message.
+ */
+export const SetWorkloadBackupLockedRequestSchema: GenMessage<SetWorkloadBackupLockedRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 38);
+
+/**
+ * SetWorkloadBackupLockedResponse returns updated backup.
+ *
+ * @generated from message cloud.v1.SetWorkloadBackupLockedResponse
+ */
+export type SetWorkloadBackupLockedResponse = Message<"cloud.v1.SetWorkloadBackupLockedResponse"> & {
+  /**
+   * Updated backup.
+   *
+   * @generated from field: cloud.v1.WorkloadBackup backup = 1;
+   */
+  backup?: WorkloadBackup | undefined;
+};
+
+/**
+ * Describes the message cloud.v1.SetWorkloadBackupLockedResponse.
+ * Use `create(SetWorkloadBackupLockedResponseSchema)` to create a new message.
+ */
+export const SetWorkloadBackupLockedResponseSchema: GenMessage<SetWorkloadBackupLockedResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 39);
 
 /**
  * WorkloadService manages Minecraft servers placed on org nodes.
@@ -1127,6 +1422,56 @@ export const WorkloadService: GenService<{
     methodKind: "unary";
     input: typeof UpdateWorkloadConfigRequestSchema;
     output: typeof UpdateWorkloadConfigResponseSchema;
+  },
+  /**
+   * CreateWorkloadBackup creates an atomic snapshot of workload data.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.CreateWorkloadBackup
+   */
+  createWorkloadBackup: {
+    methodKind: "unary";
+    input: typeof CreateWorkloadBackupRequestSchema;
+    output: typeof CreateWorkloadBackupResponseSchema;
+  },
+  /**
+   * ListWorkloadBackups lists snapshots created for a workload.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.ListWorkloadBackups
+   */
+  listWorkloadBackups: {
+    methodKind: "unary";
+    input: typeof ListWorkloadBackupsRequestSchema;
+    output: typeof ListWorkloadBackupsResponseSchema;
+  },
+  /**
+   * RestoreWorkloadBackup restores a snapshot onto the workload data directory.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.RestoreWorkloadBackup
+   */
+  restoreWorkloadBackup: {
+    methodKind: "unary";
+    input: typeof RestoreWorkloadBackupRequestSchema;
+    output: typeof RestoreWorkloadBackupResponseSchema;
+  },
+  /**
+   * DeleteWorkloadBackup removes a backup snapshot.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.DeleteWorkloadBackup
+   */
+  deleteWorkloadBackup: {
+    methodKind: "unary";
+    input: typeof DeleteWorkloadBackupRequestSchema;
+    output: typeof DeleteWorkloadBackupResponseSchema;
+  },
+  /**
+   * SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.SetWorkloadBackupLocked
+   */
+  setWorkloadBackupLocked: {
+    methodKind: "unary";
+    input: typeof SetWorkloadBackupLockedRequestSchema;
+    output: typeof SetWorkloadBackupLockedResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_cloud_v1_workload, 0);

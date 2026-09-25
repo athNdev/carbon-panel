@@ -164,6 +164,52 @@ message AgentStatFileResult {
   FileInfo info = 4;
 }
 
+// AgentCreateBackupResult acknowledges snapshot creation.
+message AgentCreateBackupResult {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Backup id.
+  string backup_id = 3;
+  // Whether snapshot creation succeeded.
+  bool success = 20;
+  // Error detail when it did not.
+  string error = 4;
+  // Size of archive in bytes.
+  int64 size_bytes = 5;
+  // SHA-256 checksum.
+  string sha256 = 6;
+}
+
+// AgentRestoreBackupResult acknowledges snapshot restoration.
+message AgentRestoreBackupResult {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Backup id.
+  string backup_id = 3;
+  // Whether restoration succeeded.
+  bool success = 4;
+  // Error detail when it did not.
+  string error = 5;
+}
+
+// AgentDeleteBackupResult acknowledges snapshot deletion.
+message AgentDeleteBackupResult {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Backup id.
+  string backup_id = 3;
+  // Whether deletion succeeded.
+  bool success = 4;
+  // Error detail when it did not.
+  string error = 5;
+}
+
 // AgentMessage is anything the agent sends to the control plane.
 message AgentMessage {
   // Exactly one payload per message.
@@ -190,6 +236,12 @@ message AgentMessage {
     AgentCreateDirectoryResult dir_create_result = 10;
     // File stat result.
     AgentStatFileResult file_stat_result = 11;
+    // Backup creation result.
+    AgentCreateBackupResult backup_create_result = 12;
+    // Backup restore result.
+    AgentRestoreBackupResult backup_restore_result = 13;
+    // Backup delete result.
+    AgentDeleteBackupResult backup_delete_result = 14;
   }
 }
 
@@ -326,6 +378,38 @@ message ControlStatFile {
   string path = 3;
 }
 
+// ControlCreateBackup requests snapshot creation on the node.
+message ControlCreateBackup {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Backup id.
+  string backup_id = 3;
+  // Name or description.
+  string name = 4;
+}
+
+// ControlRestoreBackup requests snapshot restore on the node.
+message ControlRestoreBackup {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Backup id to restore.
+  string backup_id = 3;
+}
+
+// ControlDeleteBackup requests snapshot deletion on the node.
+message ControlDeleteBackup {
+  // Correlation id.
+  string command_id = 1;
+  // Workload id.
+  string workload_id = 2;
+  // Backup id to delete.
+  string backup_id = 3;
+}
+
 // ControlMessage is anything the control plane sends to an agent.
 message ControlMessage {
   // Exactly one payload per message.
@@ -356,6 +440,12 @@ message ControlMessage {
     ControlCreateDirectory dir_create = 12;
     // File stat request.
     ControlStatFile file_stat = 13;
+    // Create backup request.
+    ControlCreateBackup create_backup = 14;
+    // Restore backup request.
+    ControlRestoreBackup restore_backup = 15;
+    // Delete backup request.
+    ControlDeleteBackup delete_backup = 16;
   }
 }
 

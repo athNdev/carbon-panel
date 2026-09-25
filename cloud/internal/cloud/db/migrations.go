@@ -41,6 +41,12 @@ func migrations() []*gormigrate.Migration {
 				return tx.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_workloads_org_name ON workloads (org_id, name)`).Error
 			},
 		},
+		{
+			ID: "0003_workload_backups",
+			Migrate: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&WorkloadBackup{})
+			},
+		},
 	}
 }
 
@@ -69,6 +75,7 @@ func tenantModels() []any {
 		&Provision{},
 		&Workload{},
 		&WorkloadEvent{},
+		&WorkloadBackup{},
 		&AuditEvent{},
 		&RoleBinding{},
 	}

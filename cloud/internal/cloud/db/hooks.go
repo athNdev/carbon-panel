@@ -13,6 +13,7 @@ func (p *Provision) BeforeCreate(*gorm.DB) error     { setTenantID(&p.TenantBase
 func (w *Workload) BeforeCreate(*gorm.DB) error      { setTenantID(&w.TenantBase); return nil }
 func (e *WorkloadEvent) BeforeCreate(*gorm.DB) error { setTenantID(&e.TenantBase); return nil }
 func (r *RoleBinding) BeforeCreate(*gorm.DB) error   { setTenantID(&r.TenantBase); return nil }
+func (b *WorkloadBackup) BeforeCreate(*gorm.DB) error { setTenantID(&b.TenantBase); return nil }
 
 func (e *AuditEvent) BeforeCreate(*gorm.DB) error {
 	if e.ID == "" {

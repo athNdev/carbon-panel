@@ -33,6 +33,10 @@ type AgentDispatcher struct {
 	fileDeleteWaiters map[string]chan *v1.AgentDeleteFileResult
 	dirCreateWaiters  map[string]chan *v1.AgentCreateDirectoryResult
 	fileStatWaiters   map[string]chan *v1.AgentStatFileResult
+	backupMu            sync.RWMutex
+	backupCreateWaiters map[string]chan *v1.AgentCreateBackupResult
+	backupRestoreWaiters map[string]chan *v1.AgentRestoreBackupResult
+	backupDeleteWaiters  map[string]chan *v1.AgentDeleteBackupResult
 	logger            *slog.Logger
 }
 
@@ -51,6 +55,9 @@ func NewAgentDispatcher(logger *slog.Logger) *AgentDispatcher {
 		fileDeleteWaiters: make(map[string]chan *v1.AgentDeleteFileResult),
 		dirCreateWaiters:  make(map[string]chan *v1.AgentCreateDirectoryResult),
 		fileStatWaiters:   make(map[string]chan *v1.AgentStatFileResult),
+		backupCreateWaiters:  make(map[string]chan *v1.AgentCreateBackupResult),
+		backupRestoreWaiters: make(map[string]chan *v1.AgentRestoreBackupResult),
+		backupDeleteWaiters:  make(map[string]chan *v1.AgentDeleteBackupResult),
 		logger:            logger,
 	}
 }
@@ -330,6 +337,103 @@ func (d *AgentDispatcher) CancelFileStat(commandID string) {
 	d.fileMu.Lock()
 	delete(d.fileStatWaiters, commandID)
 	d.fileMu.Unlock()
+}
+
+
+// ExpectCreateBackup registers a channel waiting for backup creation.
+func (d *AgentDispatcher) ExpectCreateBackup(commandID string) chan *v1.AgentCreateBackupResult {
+	ch := make(chan *v1.AgentCreateBackupResult, 1)
+	d.backupMu.Lock()
+	d.backupCreateWaiters[commandID] = ch
+	d.backupMu.Unlock()
+	return ch
+}
+
+// ResolveCreateBackup delivers backup creation result to a waiting caller.
+func (d *AgentDispatcher) ResolveCreateBackup(res *v1.AgentCreateBackupResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.backupMu.Lock()
+	ch, exists := d.backupCreateWaiters[res.CommandId]
+	if exists {
+		delete(d.backupCreateWaiters, res.CommandId)
+	}
+	d.backupMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelCreateBackup cleans up an abandoned create backup waiter.
+func (d *AgentDispatcher) CancelCreateBackup(commandID string) {
+	d.backupMu.Lock()
+	delete(d.backupCreateWaiters, commandID)
+	d.backupMu.Unlock()
+}
+
+// ExpectRestoreBackup registers a channel waiting for backup restoration.
+func (d *AgentDispatcher) ExpectRestoreBackup(commandID string) chan *v1.AgentRestoreBackupResult {
+	ch := make(chan *v1.AgentRestoreBackupResult, 1)
+	d.backupMu.Lock()
+	d.backupRestoreWaiters[commandID] = ch
+	d.backupMu.Unlock()
+	return ch
+}
+
+// ResolveRestoreBackup delivers backup restore result to a waiting caller.
+func (d *AgentDispatcher) ResolveRestoreBackup(res *v1.AgentRestoreBackupResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.backupMu.Lock()
+	ch, exists := d.backupRestoreWaiters[res.CommandId]
+	if exists {
+		delete(d.backupRestoreWaiters, res.CommandId)
+	}
+	d.backupMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelRestoreBackup cleans up an abandoned restore backup waiter.
+func (d *AgentDispatcher) CancelRestoreBackup(commandID string) {
+	d.backupMu.Lock()
+	delete(d.backupRestoreWaiters, commandID)
+	d.backupMu.Unlock()
+}
+
+// ExpectDeleteBackup registers a channel waiting for backup deletion.
+func (d *AgentDispatcher) ExpectDeleteBackup(commandID string) chan *v1.AgentDeleteBackupResult {
+	ch := make(chan *v1.AgentDeleteBackupResult, 1)
+	d.backupMu.Lock()
+	d.backupDeleteWaiters[commandID] = ch
+	d.backupMu.Unlock()
+	return ch
+}
+
+// ResolveDeleteBackup delivers backup delete result to a waiting caller.
+func (d *AgentDispatcher) ResolveDeleteBackup(res *v1.AgentDeleteBackupResult) {
+	if res == nil || res.CommandId == "" {
+		return
+	}
+	d.backupMu.Lock()
+	ch, exists := d.backupDeleteWaiters[res.CommandId]
+	if exists {
+		delete(d.backupDeleteWaiters, res.CommandId)
+	}
+	d.backupMu.Unlock()
+	if exists {
+		ch <- res
+	}
+}
+
+// CancelDeleteBackup cleans up an abandoned delete backup waiter.
+func (d *AgentDispatcher) CancelDeleteBackup(commandID string) {
+	d.backupMu.Lock()
+	delete(d.backupDeleteWaiters, commandID)
+	d.backupMu.Unlock()
 }
 
 // BroadcastLogs delivers log lines to active subscribers for a workload.

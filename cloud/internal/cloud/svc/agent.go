@@ -198,6 +198,18 @@ func (s *AgentService) Connect(ctx context.Context, stream *connect.BidiStream[v
 			if s.dispatcher != nil {
 				s.dispatcher.ResolveFileStat(payload.FileStatResult)
 			}
+		case *v1.AgentMessage_BackupCreateResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveCreateBackup(payload.BackupCreateResult)
+			}
+		case *v1.AgentMessage_BackupRestoreResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveRestoreBackup(payload.BackupRestoreResult)
+			}
+		case *v1.AgentMessage_BackupDeleteResult:
+			if s.dispatcher != nil {
+				s.dispatcher.ResolveDeleteBackup(payload.BackupDeleteResult)
+			}
 		default:
 			// Unknown envelopes are ignored: old agents keep working.
 		}

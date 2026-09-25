@@ -247,9 +247,10 @@ func startAgent(configPath, controlPlaneOverride, joinTokenOverride, dataDirOver
 	}
 
 	fileManager := nodeagent.NewFileManager(dataDir)
+	backupManager := nodeagent.NewBackupManager(dataDir)
 
 	// Run agent lifecycle loop in background
-	go runAgentLoop(ctx, logger, state, runner, fileManager, controlPlaneURL, joinToken, identityFile)
+	go runAgentLoop(ctx, logger, state, runner, fileManager, backupManager, controlPlaneURL, joinToken, identityFile)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -310,7 +311,7 @@ func detectDockerVersion() string {
 	return "unknown"
 }
 
-func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, runner nodeagent.Runner, files *nodeagent.FileManager, controlPlaneURL, joinToken, identityPath string) {
+func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, runner nodeagent.Runner, files *nodeagent.FileManager, backupManager *nodeagent.BackupManager, controlPlaneURL, joinToken, identityPath string) {
 	if controlPlaneURL == "" {
 		logger.Warn("control plane URL is empty; agent loop inactive")
 		return
@@ -694,6 +695,84 @@ func runAgentLoop(ctx context.Context, logger *slog.Logger, state *AgentState, r
 								Success:   success,
 								Error:     errMsg,
 								Info:      stat,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_CreateBackup:
+					req := p.CreateBackup
+					if req == nil || req.WorkloadId == "" || req.BackupId == "" {
+						continue
+					}
+					if runner != nil {
+						_, _ = runner.RunCommand(ctx, req.WorkloadId, "save-off")
+						_, _ = runner.RunCommand(ctx, req.WorkloadId, "save-all flush")
+					}
+					size, sha, err := backupManager.CreateBackup(req.WorkloadId, req.BackupId)
+					if runner != nil {
+						_, _ = runner.RunCommand(ctx, req.WorkloadId, "save-on")
+					}
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_BackupCreateResult{
+							BackupCreateResult: &v1.AgentCreateBackupResult{
+								CommandId:  req.CommandId,
+								WorkloadId: req.WorkloadId,
+								BackupId:   req.BackupId,
+								Success:    success,
+								Error:      errMsg,
+								SizeBytes:  size,
+								Sha256:     sha,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_RestoreBackup:
+					req := p.RestoreBackup
+					if req == nil || req.WorkloadId == "" || req.BackupId == "" {
+						continue
+					}
+					err := backupManager.RestoreBackup(req.WorkloadId, req.BackupId)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_BackupRestoreResult{
+							BackupRestoreResult: &v1.AgentRestoreBackupResult{
+								CommandId:  req.CommandId,
+								WorkloadId: req.WorkloadId,
+								BackupId:   req.BackupId,
+								Success:    success,
+								Error:      errMsg,
+							},
+						},
+					}
+
+				case *v1.ControlMessage_DeleteBackup:
+					req := p.DeleteBackup
+					if req == nil || req.WorkloadId == "" || req.BackupId == "" {
+						continue
+					}
+					err := backupManager.DeleteBackup(req.WorkloadId, req.BackupId)
+					errMsg := ""
+					success := err == nil
+					if err != nil {
+						errMsg = err.Error()
+					}
+					sendMsgCh <- &v1.AgentMessage{
+						Payload: &v1.AgentMessage_BackupDeleteResult{
+							BackupDeleteResult: &v1.AgentDeleteBackupResult{
+								CommandId:  req.CommandId,
+								WorkloadId: req.WorkloadId,
+								BackupId:   req.BackupId,
+								Success:    success,
+								Error:      errMsg,
 							},
 						},
 					}

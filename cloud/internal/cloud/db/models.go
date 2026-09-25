@@ -271,3 +271,18 @@ func (r *RoleBinding) PermissionList() []string { return decodeJSON[[]string](r.
 
 // SetPermissions encodes permissions into the JSON column.
 func (r *RoleBinding) SetPermissions(perms []string) { r.Permissions = encodeJSON(perms) }
+
+// WorkloadBackup represents an atomic snapshot archive of a workload's persistent files.
+type WorkloadBackup struct {
+	TenantBase
+	WorkloadID string `gorm:"size:36;index;not null"`
+	NodeID     string `gorm:"size:36;not null;default:''"`
+	Name       string `gorm:"size:128;not null;default:''"`
+	SizeBytes  int64  `gorm:"not null;default:0"`
+	SHA256     string `gorm:"size:64;not null;default:''"`
+	Locked     bool   `gorm:"not null;default:false"`
+	Status     string `gorm:"size:32;not null;default:'pending'"`
+	Error      string `gorm:"type:text;not null;default:''"`
+}
+
+func (WorkloadBackup) TableName() string { return "workload_backups" }
