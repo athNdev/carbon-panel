@@ -66,6 +66,12 @@ const (
 	// WorkloadServiceListWorkloadEventsProcedure is the fully-qualified name of the WorkloadService's
 	// ListWorkloadEvents RPC.
 	WorkloadServiceListWorkloadEventsProcedure = "/cloud.v1.WorkloadService/ListWorkloadEvents"
+	// WorkloadServiceGetWorkloadConfigProcedure is the fully-qualified name of the WorkloadService's
+	// GetWorkloadConfig RPC.
+	WorkloadServiceGetWorkloadConfigProcedure = "/cloud.v1.WorkloadService/GetWorkloadConfig"
+	// WorkloadServiceUpdateWorkloadConfigProcedure is the fully-qualified name of the WorkloadService's
+	// UpdateWorkloadConfig RPC.
+	WorkloadServiceUpdateWorkloadConfigProcedure = "/cloud.v1.WorkloadService/UpdateWorkloadConfig"
 )
 
 // WorkloadServiceClient is a client for the cloud.v1.WorkloadService service.
@@ -93,6 +99,10 @@ type WorkloadServiceClient interface {
 	SendWorkloadCommand(context.Context, *connect.Request[v1.SendWorkloadCommandRequest]) (*connect.Response[v1.SendWorkloadCommandResponse], error)
 	// ListWorkloadEvents lists lifecycle events for a workload.
 	ListWorkloadEvents(context.Context, *connect.Request[v1.ListWorkloadEventsRequest]) (*connect.Response[v1.ListWorkloadEventsResponse], error)
+	// GetWorkloadConfig reads and parses workload configuration properties.
+	GetWorkloadConfig(context.Context, *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error)
+	// UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
+	UpdateWorkloadConfig(context.Context, *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error)
 }
 
 // NewWorkloadServiceClient constructs a client for the cloud.v1.WorkloadService service. By
@@ -172,22 +182,36 @@ func NewWorkloadServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(workloadServiceMethods.ByName("ListWorkloadEvents")),
 			connect.WithClientOptions(opts...),
 		),
+		getWorkloadConfig: connect.NewClient[v1.GetWorkloadConfigRequest, v1.GetWorkloadConfigResponse](
+			httpClient,
+			baseURL+WorkloadServiceGetWorkloadConfigProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		updateWorkloadConfig: connect.NewClient[v1.UpdateWorkloadConfigRequest, v1.UpdateWorkloadConfigResponse](
+			httpClient,
+			baseURL+WorkloadServiceUpdateWorkloadConfigProcedure,
+			connect.WithSchema(workloadServiceMethods.ByName("UpdateWorkloadConfig")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // workloadServiceClient implements WorkloadServiceClient.
 type workloadServiceClient struct {
-	listWorkloads       *connect.Client[v1.ListWorkloadsRequest, v1.ListWorkloadsResponse]
-	getWorkload         *connect.Client[v1.GetWorkloadRequest, v1.GetWorkloadResponse]
-	createWorkload      *connect.Client[v1.CreateWorkloadRequest, v1.CreateWorkloadResponse]
-	updateWorkload      *connect.Client[v1.UpdateWorkloadRequest, v1.UpdateWorkloadResponse]
-	deleteWorkload      *connect.Client[v1.DeleteWorkloadRequest, v1.DeleteWorkloadResponse]
-	startWorkload       *connect.Client[v1.StartWorkloadRequest, v1.StartWorkloadResponse]
-	stopWorkload        *connect.Client[v1.StopWorkloadRequest, v1.StopWorkloadResponse]
-	restartWorkload     *connect.Client[v1.RestartWorkloadRequest, v1.RestartWorkloadResponse]
-	streamWorkloadLogs  *connect.Client[v1.StreamWorkloadLogsRequest, v1.WorkloadLogLine]
-	sendWorkloadCommand *connect.Client[v1.SendWorkloadCommandRequest, v1.SendWorkloadCommandResponse]
-	listWorkloadEvents  *connect.Client[v1.ListWorkloadEventsRequest, v1.ListWorkloadEventsResponse]
+	listWorkloads        *connect.Client[v1.ListWorkloadsRequest, v1.ListWorkloadsResponse]
+	getWorkload          *connect.Client[v1.GetWorkloadRequest, v1.GetWorkloadResponse]
+	createWorkload       *connect.Client[v1.CreateWorkloadRequest, v1.CreateWorkloadResponse]
+	updateWorkload       *connect.Client[v1.UpdateWorkloadRequest, v1.UpdateWorkloadResponse]
+	deleteWorkload       *connect.Client[v1.DeleteWorkloadRequest, v1.DeleteWorkloadResponse]
+	startWorkload        *connect.Client[v1.StartWorkloadRequest, v1.StartWorkloadResponse]
+	stopWorkload         *connect.Client[v1.StopWorkloadRequest, v1.StopWorkloadResponse]
+	restartWorkload      *connect.Client[v1.RestartWorkloadRequest, v1.RestartWorkloadResponse]
+	streamWorkloadLogs   *connect.Client[v1.StreamWorkloadLogsRequest, v1.WorkloadLogLine]
+	sendWorkloadCommand  *connect.Client[v1.SendWorkloadCommandRequest, v1.SendWorkloadCommandResponse]
+	listWorkloadEvents   *connect.Client[v1.ListWorkloadEventsRequest, v1.ListWorkloadEventsResponse]
+	getWorkloadConfig    *connect.Client[v1.GetWorkloadConfigRequest, v1.GetWorkloadConfigResponse]
+	updateWorkloadConfig *connect.Client[v1.UpdateWorkloadConfigRequest, v1.UpdateWorkloadConfigResponse]
 }
 
 // ListWorkloads calls cloud.v1.WorkloadService.ListWorkloads.
@@ -245,6 +269,16 @@ func (c *workloadServiceClient) ListWorkloadEvents(ctx context.Context, req *con
 	return c.listWorkloadEvents.CallUnary(ctx, req)
 }
 
+// GetWorkloadConfig calls cloud.v1.WorkloadService.GetWorkloadConfig.
+func (c *workloadServiceClient) GetWorkloadConfig(ctx context.Context, req *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error) {
+	return c.getWorkloadConfig.CallUnary(ctx, req)
+}
+
+// UpdateWorkloadConfig calls cloud.v1.WorkloadService.UpdateWorkloadConfig.
+func (c *workloadServiceClient) UpdateWorkloadConfig(ctx context.Context, req *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error) {
+	return c.updateWorkloadConfig.CallUnary(ctx, req)
+}
+
 // WorkloadServiceHandler is an implementation of the cloud.v1.WorkloadService service.
 type WorkloadServiceHandler interface {
 	// ListWorkloads lists workloads in the active org.
@@ -270,6 +304,10 @@ type WorkloadServiceHandler interface {
 	SendWorkloadCommand(context.Context, *connect.Request[v1.SendWorkloadCommandRequest]) (*connect.Response[v1.SendWorkloadCommandResponse], error)
 	// ListWorkloadEvents lists lifecycle events for a workload.
 	ListWorkloadEvents(context.Context, *connect.Request[v1.ListWorkloadEventsRequest]) (*connect.Response[v1.ListWorkloadEventsResponse], error)
+	// GetWorkloadConfig reads and parses workload configuration properties.
+	GetWorkloadConfig(context.Context, *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error)
+	// UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
+	UpdateWorkloadConfig(context.Context, *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error)
 }
 
 // NewWorkloadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -345,6 +383,18 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 		connect.WithSchema(workloadServiceMethods.ByName("ListWorkloadEvents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workloadServiceGetWorkloadConfigHandler := connect.NewUnaryHandler(
+		WorkloadServiceGetWorkloadConfigProcedure,
+		svc.GetWorkloadConfig,
+		connect.WithSchema(workloadServiceMethods.ByName("GetWorkloadConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	workloadServiceUpdateWorkloadConfigHandler := connect.NewUnaryHandler(
+		WorkloadServiceUpdateWorkloadConfigProcedure,
+		svc.UpdateWorkloadConfig,
+		connect.WithSchema(workloadServiceMethods.ByName("UpdateWorkloadConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/cloud.v1.WorkloadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WorkloadServiceListWorkloadsProcedure:
@@ -369,6 +419,10 @@ func NewWorkloadServiceHandler(svc WorkloadServiceHandler, opts ...connect.Handl
 			workloadServiceSendWorkloadCommandHandler.ServeHTTP(w, r)
 		case WorkloadServiceListWorkloadEventsProcedure:
 			workloadServiceListWorkloadEventsHandler.ServeHTTP(w, r)
+		case WorkloadServiceGetWorkloadConfigProcedure:
+			workloadServiceGetWorkloadConfigHandler.ServeHTTP(w, r)
+		case WorkloadServiceUpdateWorkloadConfigProcedure:
+			workloadServiceUpdateWorkloadConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -420,4 +474,12 @@ func (UnimplementedWorkloadServiceHandler) SendWorkloadCommand(context.Context, 
 
 func (UnimplementedWorkloadServiceHandler) ListWorkloadEvents(context.Context, *connect.Request[v1.ListWorkloadEventsRequest]) (*connect.Response[v1.ListWorkloadEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.ListWorkloadEvents is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) GetWorkloadConfig(context.Context, *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.GetWorkloadConfig is not implemented"))
+}
+
+func (UnimplementedWorkloadServiceHandler) UpdateWorkloadConfig(context.Context, *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cloud.v1.WorkloadService.UpdateWorkloadConfig is not implemented"))
 }

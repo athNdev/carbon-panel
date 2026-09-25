@@ -99,6 +99,10 @@ service WorkloadService {
   rpc SendWorkloadCommand(SendWorkloadCommandRequest) returns (SendWorkloadCommandResponse);
   // ListWorkloadEvents lists lifecycle events for a workload.
   rpc ListWorkloadEvents(ListWorkloadEventsRequest) returns (ListWorkloadEventsResponse);
+  // GetWorkloadConfig reads and parses workload configuration properties.
+  rpc GetWorkloadConfig(GetWorkloadConfigRequest) returns (GetWorkloadConfigResponse);
+  // UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
+  rpc UpdateWorkloadConfig(UpdateWorkloadConfigRequest) returns (UpdateWorkloadConfigResponse);
 }
 
 // WorkloadLogLine is one console line from a workload.
@@ -149,26 +153,26 @@ message GetWorkloadResponse {
 message CreateWorkloadRequest {
   // Display name; unique within the org.
   string name = 1;
-  // Requested specification.
-  WorkloadSpec spec = 2;
-  // Optional node to pin the workload to; empty lets the scheduler choose.
-  string node_id = 3;
+  // Optional pinned node. When empty, scheduler chooses.
+  string node_id = 2;
+  // Workload specification.
+  WorkloadSpec spec = 3;
 }
 
 // CreateWorkloadResponse returns the created workload.
 message CreateWorkloadResponse {
-  // The created workload, already placed when a node was available.
+  // The created workload.
   Workload workload = 1;
 }
 
-// UpdateWorkloadRequest patches a workload.
+// UpdateWorkloadRequest patches workload fields.
 message UpdateWorkloadRequest {
   // Workload id.
   string id = 1;
-  // New display name; unchanged when omitted.
+  // New display name, when set.
   optional string name = 2;
-  // Replaces the spec when present.
-  optional WorkloadSpec spec = 3;
+  // New spec fields, when set.
+  WorkloadSpec spec = 3;
 }
 
 // UpdateWorkloadResponse returns the updated workload.
@@ -181,11 +185,11 @@ message UpdateWorkloadResponse {
 message DeleteWorkloadRequest {
   // Workload id.
   string id = 1;
-  // When true, world data is deleted with the container.
+  // When true, requests the node agent to erase the workload's data dir.
   bool delete_data = 2;
 }
 
-// DeleteWorkloadResponse acknowledges deletion.
+// DeleteWorkloadResponse confirms deletion.
 message DeleteWorkloadResponse {}
 
 // StartWorkloadRequest starts a workload.
@@ -248,7 +252,7 @@ message SendWorkloadCommandResponse {
   string output = 1;
 }
 
-// ListWorkloadEventsRequest lists lifecycle events.
+// ListWorkloadEventsRequest lists events.
 message ListWorkloadEventsRequest {
   // Workload id.
   string id = 1;
@@ -258,8 +262,56 @@ message ListWorkloadEventsRequest {
 
 // ListWorkloadEventsResponse lists events.
 message ListWorkloadEventsResponse {
-  // Events, newest first.
+  // Events in reverse chronological order.
   repeated WorkloadEvent events = 1;
   // Pagination cursor.
   PageResponse page = 2;
+}
+
+// WorkloadConfigProperty represents a single configuration key-value entry.
+message WorkloadConfigProperty {
+  // Configuration key (e.g. "motd", "difficulty", "server-port").
+  string key = 1;
+  // Current string value.
+  string value = 2;
+  // File where this property is defined (defaults to "server.properties").
+  string file = 3;
+}
+
+// GetWorkloadConfigRequest requests configuration properties.
+message GetWorkloadConfigRequest {
+  // Workload id.
+  string id = 1;
+  // Target config file (defaults to "server.properties" if empty).
+  string file = 2;
+}
+
+// GetWorkloadConfigResponse returns parsed properties.
+message GetWorkloadConfigResponse {
+  // Properties mapped by key.
+  map<string, string> properties = 1;
+  // Raw file contents for complete fidelity or non-KV files.
+  string raw_content = 2;
+}
+
+// UpdateWorkloadConfigRequest modifies configuration properties.
+message UpdateWorkloadConfigRequest {
+  // Workload id.
+  string id = 1;
+  // Key-value updates to apply.
+  map<string, string> properties = 2;
+  // Optional raw file content replacement (if set, takes precedence over properties map).
+  optional string raw_content = 3;
+  // Target config file (defaults to "server.properties" if empty).
+  string file = 4;
+  // If true, trigger a console reload or graceful restart.
+  bool restart_or_reload = 5;
+}
+
+// UpdateWorkloadConfigResponse confirms updates.
+message UpdateWorkloadConfigResponse {
+  // Updated properties map.
+  map<string, string> properties = 1;
+  // Action taken to apply changes ("saved", "reloaded", "restarted").
+  string action_taken = 2;
 }

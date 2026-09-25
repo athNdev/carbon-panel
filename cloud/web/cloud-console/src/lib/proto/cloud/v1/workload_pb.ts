@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file cloud/v1/workload.proto.
  */
 export const file_cloud_v1_workload: GenFile = /*@__PURE__*/
-  fileDesc("ChdjbG91ZC92MS93b3JrbG9hZC5wcm90bxIIY2xvdWQudjEijQIKDFdvcmtsb2FkU3BlYxIOCgZsb2FkZXIYASABKAkSGQoRbWluZWNyYWZ0X3ZlcnNpb24YAiABKAkSEQoJbWVtb3J5X21iGAMgASgDEhYKDmNwdV9taWxsaWNvcmVzGAQgASgDEg8KB2Rpc2tfZ2IYBSABKAUSLAoDZW52GAYgAygLMh8uY2xvdWQudjEuV29ya2xvYWRTcGVjLkVudkVudHJ5EhAKCGhvc3RuYW1lGAcgASgJEhcKD2FsbG93X2J5b19ub2RlcxgIIAEoCBIRCglqdm1fZmxhZ3MYCSADKAkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ/Cg1Xb3JrbG9hZEV2ZW50EgoKAmlkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBGtpbmQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLbAgoIV29ya2xvYWQSCgoCaWQYASABKAkSDgoGb3JnX2lkGAIgASgJEg8KB25vZGVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRIkCgRzcGVjGAUgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjEigKBnN0YXR1cxgGIAEoDjIYLmNsb3VkLnYxLldvcmtsb2FkU3RhdHVzEhQKDGNvbnRhaW5lcl9pZBgHIAEoCRIRCglob3N0X3BvcnQYCCABKAUSEAoIaG9zdG5hbWUYCSABKAkSFQoNc3RhdHVzX2RldGFpbBgKIAEoCRISCgpjcmVhdGVkX2J5GAsgASgJEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm4KD1dvcmtsb2FkTG9nTGluZRIOCgZzb3VyY2UYASABKAkSDAoEbGluZRgCIAEoCRIOCgZzdGRlcnIYAyABKAgSLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKNAQoUTGlzdFdvcmtsb2Fkc1JlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCRIoCgZzdGF0dXMYAiABKA4yGC5jbG91ZC52MS5Xb3JrbG9hZFN0YXR1cxIVCg1uYW1lX2NvbnRhaW5zGAMgASgJEiMKBHBhZ2UYBCABKAsyFS5jbG91ZC52MS5QYWdlUmVxdWVzdCJkChVMaXN0V29ya2xvYWRzUmVzcG9uc2USJQoJd29ya2xvYWRzGAEgAygLMhIuY2xvdWQudjEuV29ya2xvYWQSJAoEcGFnZRgCIAEoCzIWLmNsb3VkLnYxLlBhZ2VSZXNwb25zZSIgChJHZXRXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkiOwoTR2V0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIlwKFUNyZWF0ZVdvcmtsb2FkUmVxdWVzdBIMCgRuYW1lGAEgASgJEiQKBHNwZWMYAiABKAsyFi5jbG91ZC52MS5Xb3JrbG9hZFNwZWMSDwoHbm9kZV9pZBgDIAEoCSI+ChZDcmVhdGVXb3JrbG9hZFJlc3BvbnNlEiQKCHdvcmtsb2FkGAEgASgLMhIuY2xvdWQudjEuV29ya2xvYWQicwoVVXBkYXRlV29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIpCgRzcGVjGAMgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjSAGIAQFCBwoFX25hbWVCBwoFX3NwZWMiPgoWVXBkYXRlV29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIjgKFURlbGV0ZVdvcmtsb2FkUmVxdWVzdBIKCgJpZBgBIAEoCRITCgtkZWxldGVfZGF0YRgCIAEoCCIYChZEZWxldGVXb3JrbG9hZFJlc3BvbnNlIiIKFFN0YXJ0V29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJIj0KFVN0YXJ0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIjoKE1N0b3BXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkSFwoPdGltZW91dF9zZWNvbmRzGAIgASgFIjwKFFN0b3BXb3JrbG9hZFJlc3BvbnNlEiQKCHdvcmtsb2FkGAEgASgLMhIuY2xvdWQudjEuV29ya2xvYWQiJAoWUmVzdGFydFdvcmtsb2FkUmVxdWVzdBIKCgJpZBgBIAEoCSI/ChdSZXN0YXJ0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIjsKGVN0cmVhbVdvcmtsb2FkTG9nc1JlcXVlc3QSCgoCaWQYASABKAkSEgoKdGFpbF9saW5lcxgCIAEoBSI5ChpTZW5kV29ya2xvYWRDb21tYW5kUmVxdWVzdBIKCgJpZBgBIAEoCRIPCgdjb21tYW5kGAIgASgJIi0KG1NlbmRXb3JrbG9hZENvbW1hbmRSZXNwb25zZRIOCgZvdXRwdXQYASABKAkiTAoZTGlzdFdvcmtsb2FkRXZlbnRzUmVxdWVzdBIKCgJpZBgBIAEoCRIjCgRwYWdlGAIgASgLMhUuY2xvdWQudjEuUGFnZVJlcXVlc3QiawoaTGlzdFdvcmtsb2FkRXZlbnRzUmVzcG9uc2USJwoGZXZlbnRzGAEgAygLMhcuY2xvdWQudjEuV29ya2xvYWRFdmVudBIkCgRwYWdlGAIgASgLMhYuY2xvdWQudjEuUGFnZVJlc3BvbnNlMsQHCg9Xb3JrbG9hZFNlcnZpY2USUAoNTGlzdFdvcmtsb2FkcxIeLmNsb3VkLnYxLkxpc3RXb3JrbG9hZHNSZXF1ZXN0Gh8uY2xvdWQudjEuTGlzdFdvcmtsb2Fkc1Jlc3BvbnNlEkoKC0dldFdvcmtsb2FkEhwuY2xvdWQudjEuR2V0V29ya2xvYWRSZXF1ZXN0Gh0uY2xvdWQudjEuR2V0V29ya2xvYWRSZXNwb25zZRJTCg5DcmVhdGVXb3JrbG9hZBIfLmNsb3VkLnYxLkNyZWF0ZVdvcmtsb2FkUmVxdWVzdBogLmNsb3VkLnYxLkNyZWF0ZVdvcmtsb2FkUmVzcG9uc2USUwoOVXBkYXRlV29ya2xvYWQSHy5jbG91ZC52MS5VcGRhdGVXb3JrbG9hZFJlcXVlc3QaIC5jbG91ZC52MS5VcGRhdGVXb3JrbG9hZFJlc3BvbnNlElMKDkRlbGV0ZVdvcmtsb2FkEh8uY2xvdWQudjEuRGVsZXRlV29ya2xvYWRSZXF1ZXN0GiAuY2xvdWQudjEuRGVsZXRlV29ya2xvYWRSZXNwb25zZRJQCg1TdGFydFdvcmtsb2FkEh4uY2xvdWQudjEuU3RhcnRXb3JrbG9hZFJlcXVlc3QaHy5jbG91ZC52MS5TdGFydFdvcmtsb2FkUmVzcG9uc2USTQoMU3RvcFdvcmtsb2FkEh0uY2xvdWQudjEuU3RvcFdvcmtsb2FkUmVxdWVzdBoeLmNsb3VkLnYxLlN0b3BXb3JrbG9hZFJlc3BvbnNlElYKD1Jlc3RhcnRXb3JrbG9hZBIgLmNsb3VkLnYxLlJlc3RhcnRXb3JrbG9hZFJlcXVlc3QaIS5jbG91ZC52MS5SZXN0YXJ0V29ya2xvYWRSZXNwb25zZRJWChJTdHJlYW1Xb3JrbG9hZExvZ3MSIy5jbG91ZC52MS5TdHJlYW1Xb3JrbG9hZExvZ3NSZXF1ZXN0GhkuY2xvdWQudjEuV29ya2xvYWRMb2dMaW5lMAESYgoTU2VuZFdvcmtsb2FkQ29tbWFuZBIkLmNsb3VkLnYxLlNlbmRXb3JrbG9hZENvbW1hbmRSZXF1ZXN0GiUuY2xvdWQudjEuU2VuZFdvcmtsb2FkQ29tbWFuZFJlc3BvbnNlEl8KEkxpc3RXb3JrbG9hZEV2ZW50cxIjLmNsb3VkLnYxLkxpc3RXb3JrbG9hZEV2ZW50c1JlcXVlc3QaJC5jbG91ZC52MS5MaXN0V29ya2xvYWRFdmVudHNSZXNwb25zZUI8WjpnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jbG91ZC92MTtjbG91ZHYxYgZwcm90bzM", [file_cloud_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChdjbG91ZC92MS93b3JrbG9hZC5wcm90bxIIY2xvdWQudjEijQIKDFdvcmtsb2FkU3BlYxIOCgZsb2FkZXIYASABKAkSGQoRbWluZWNyYWZ0X3ZlcnNpb24YAiABKAkSEQoJbWVtb3J5X21iGAMgASgDEhYKDmNwdV9taWxsaWNvcmVzGAQgASgDEg8KB2Rpc2tfZ2IYBSABKAUSLAoDZW52GAYgAygLMh8uY2xvdWQudjEuV29ya2xvYWRTcGVjLkVudkVudHJ5EhAKCGhvc3RuYW1lGAcgASgJEhcKD2FsbG93X2J5b19ub2RlcxgIIAEoCBIRCglqdm1fZmxhZ3MYCSADKAkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ/Cg1Xb3JrbG9hZEV2ZW50EgoKAmlkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBGtpbmQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLbAgoIV29ya2xvYWQSCgoCaWQYASABKAkSDgoGb3JnX2lkGAIgASgJEg8KB25vZGVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRIkCgRzcGVjGAUgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjEigKBnN0YXR1cxgGIAEoDjIYLmNsb3VkLnYxLldvcmtsb2FkU3RhdHVzEhQKDGNvbnRhaW5lcl9pZBgHIAEoCRIRCglob3N0X3BvcnQYCCABKAUSEAoIaG9zdG5hbWUYCSABKAkSFQoNc3RhdHVzX2RldGFpbBgKIAEoCRISCgpjcmVhdGVkX2J5GAsgASgJEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm4KD1dvcmtsb2FkTG9nTGluZRIOCgZzb3VyY2UYASABKAkSDAoEbGluZRgCIAEoCRIOCgZzdGRlcnIYAyABKAgSLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKNAQoUTGlzdFdvcmtsb2Fkc1JlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCRIoCgZzdGF0dXMYAiABKA4yGC5jbG91ZC52MS5Xb3JrbG9hZFN0YXR1cxIVCg1uYW1lX2NvbnRhaW5zGAMgASgJEiMKBHBhZ2UYBCABKAsyFS5jbG91ZC52MS5QYWdlUmVxdWVzdCJkChVMaXN0V29ya2xvYWRzUmVzcG9uc2USJQoJd29ya2xvYWRzGAEgAygLMhIuY2xvdWQudjEuV29ya2xvYWQSJAoEcGFnZRgCIAEoCzIWLmNsb3VkLnYxLlBhZ2VSZXNwb25zZSIgChJHZXRXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkiOwoTR2V0V29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIlwKFUNyZWF0ZVdvcmtsb2FkUmVxdWVzdBIMCgRuYW1lGAEgASgJEg8KB25vZGVfaWQYAiABKAkSJAoEc3BlYxgDIAEoCzIWLmNsb3VkLnYxLldvcmtsb2FkU3BlYyI+ChZDcmVhdGVXb3JrbG9hZFJlc3BvbnNlEiQKCHdvcmtsb2FkGAEgASgLMhIuY2xvdWQudjEuV29ya2xvYWQiZQoVVXBkYXRlV29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIkCgRzcGVjGAMgASgLMhYuY2xvdWQudjEuV29ya2xvYWRTcGVjQgcKBV9uYW1lIj4KFlVwZGF0ZVdvcmtsb2FkUmVzcG9uc2USJAoId29ya2xvYWQYASABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZCI4ChVEZWxldGVXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkSEwoLZGVsZXRlX2RhdGEYAiABKAgiGAoWRGVsZXRlV29ya2xvYWRSZXNwb25zZSIiChRTdGFydFdvcmtsb2FkUmVxdWVzdBIKCgJpZBgBIAEoCSI9ChVTdGFydFdvcmtsb2FkUmVzcG9uc2USJAoId29ya2xvYWQYASABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZCI6ChNTdG9wV29ya2xvYWRSZXF1ZXN0EgoKAmlkGAEgASgJEhcKD3RpbWVvdXRfc2Vjb25kcxgCIAEoBSI8ChRTdG9wV29ya2xvYWRSZXNwb25zZRIkCgh3b3JrbG9hZBgBIAEoCzISLmNsb3VkLnYxLldvcmtsb2FkIiQKFlJlc3RhcnRXb3JrbG9hZFJlcXVlc3QSCgoCaWQYASABKAkiPwoXUmVzdGFydFdvcmtsb2FkUmVzcG9uc2USJAoId29ya2xvYWQYASABKAsyEi5jbG91ZC52MS5Xb3JrbG9hZCI7ChlTdHJlYW1Xb3JrbG9hZExvZ3NSZXF1ZXN0EgoKAmlkGAEgASgJEhIKCnRhaWxfbGluZXMYAiABKAUiOQoaU2VuZFdvcmtsb2FkQ29tbWFuZFJlcXVlc3QSCgoCaWQYASABKAkSDwoHY29tbWFuZBgCIAEoCSItChtTZW5kV29ya2xvYWRDb21tYW5kUmVzcG9uc2USDgoGb3V0cHV0GAEgASgJIkwKGUxpc3RXb3JrbG9hZEV2ZW50c1JlcXVlc3QSCgoCaWQYASABKAkSIwoEcGFnZRgCIAEoCzIVLmNsb3VkLnYxLlBhZ2VSZXF1ZXN0ImsKGkxpc3RXb3JrbG9hZEV2ZW50c1Jlc3BvbnNlEicKBmV2ZW50cxgBIAMoCzIXLmNsb3VkLnYxLldvcmtsb2FkRXZlbnQSJAoEcGFnZRgCIAEoCzIWLmNsb3VkLnYxLlBhZ2VSZXNwb25zZSJCChZXb3JrbG9hZENvbmZpZ1Byb3BlcnR5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCRIMCgRmaWxlGAMgASgJIjQKGEdldFdvcmtsb2FkQ29uZmlnUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgRmaWxlGAIgASgJIqwBChlHZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlEkcKCnByb3BlcnRpZXMYASADKAsyMy5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlLlByb3BlcnRpZXNFbnRyeRITCgtyYXdfY29udGVudBgCIAEoCRoxCg9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASL6AQobVXBkYXRlV29ya2xvYWRDb25maWdSZXF1ZXN0EgoKAmlkGAEgASgJEkkKCnByb3BlcnRpZXMYAiADKAsyNS5jbG91ZC52MS5VcGRhdGVXb3JrbG9hZENvbmZpZ1JlcXVlc3QuUHJvcGVydGllc0VudHJ5EhgKC3Jhd19jb250ZW50GAMgASgJSACIAQESDAoEZmlsZRgEIAEoCRIZChFyZXN0YXJ0X29yX3JlbG9hZBgFIAEoCBoxCg9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIOCgxfcmF3X2NvbnRlbnQiswEKHFVwZGF0ZVdvcmtsb2FkQ29uZmlnUmVzcG9uc2USSgoKcHJvcGVydGllcxgBIAMoCzI2LmNsb3VkLnYxLlVwZGF0ZVdvcmtsb2FkQ29uZmlnUmVzcG9uc2UuUHJvcGVydGllc0VudHJ5EhQKDGFjdGlvbl90YWtlbhgCIAEoCRoxCg9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATKJCQoPV29ya2xvYWRTZXJ2aWNlElAKDUxpc3RXb3JrbG9hZHMSHi5jbG91ZC52MS5MaXN0V29ya2xvYWRzUmVxdWVzdBofLmNsb3VkLnYxLkxpc3RXb3JrbG9hZHNSZXNwb25zZRJKCgtHZXRXb3JrbG9hZBIcLmNsb3VkLnYxLkdldFdvcmtsb2FkUmVxdWVzdBodLmNsb3VkLnYxLkdldFdvcmtsb2FkUmVzcG9uc2USUwoOQ3JlYXRlV29ya2xvYWQSHy5jbG91ZC52MS5DcmVhdGVXb3JrbG9hZFJlcXVlc3QaIC5jbG91ZC52MS5DcmVhdGVXb3JrbG9hZFJlc3BvbnNlElMKDlVwZGF0ZVdvcmtsb2FkEh8uY2xvdWQudjEuVXBkYXRlV29ya2xvYWRSZXF1ZXN0GiAuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRSZXNwb25zZRJTCg5EZWxldGVXb3JrbG9hZBIfLmNsb3VkLnYxLkRlbGV0ZVdvcmtsb2FkUmVxdWVzdBogLmNsb3VkLnYxLkRlbGV0ZVdvcmtsb2FkUmVzcG9uc2USUAoNU3RhcnRXb3JrbG9hZBIeLmNsb3VkLnYxLlN0YXJ0V29ya2xvYWRSZXF1ZXN0Gh8uY2xvdWQudjEuU3RhcnRXb3JrbG9hZFJlc3BvbnNlEk0KDFN0b3BXb3JrbG9hZBIdLmNsb3VkLnYxLlN0b3BXb3JrbG9hZFJlcXVlc3QaHi5jbG91ZC52MS5TdG9wV29ya2xvYWRSZXNwb25zZRJWCg9SZXN0YXJ0V29ya2xvYWQSIC5jbG91ZC52MS5SZXN0YXJ0V29ya2xvYWRSZXF1ZXN0GiEuY2xvdWQudjEuUmVzdGFydFdvcmtsb2FkUmVzcG9uc2USVgoSU3RyZWFtV29ya2xvYWRMb2dzEiMuY2xvdWQudjEuU3RyZWFtV29ya2xvYWRMb2dzUmVxdWVzdBoZLmNsb3VkLnYxLldvcmtsb2FkTG9nTGluZTABEmIKE1NlbmRXb3JrbG9hZENvbW1hbmQSJC5jbG91ZC52MS5TZW5kV29ya2xvYWRDb21tYW5kUmVxdWVzdBolLmNsb3VkLnYxLlNlbmRXb3JrbG9hZENvbW1hbmRSZXNwb25zZRJfChJMaXN0V29ya2xvYWRFdmVudHMSIy5jbG91ZC52MS5MaXN0V29ya2xvYWRFdmVudHNSZXF1ZXN0GiQuY2xvdWQudjEuTGlzdFdvcmtsb2FkRXZlbnRzUmVzcG9uc2USXAoRR2V0V29ya2xvYWRDb25maWcSIi5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1JlcXVlc3QaIy5jbG91ZC52MS5HZXRXb3JrbG9hZENvbmZpZ1Jlc3BvbnNlEmUKFFVwZGF0ZVdvcmtsb2FkQ29uZmlnEiUuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRDb25maWdSZXF1ZXN0GiYuY2xvdWQudjEuVXBkYXRlV29ya2xvYWRDb25maWdSZXNwb25zZUI8WjpnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jbG91ZC92MTtjbG91ZHYxYgZwcm90bzM", [file_cloud_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * WorkloadSpec is the declarative description of a Minecraft server. It is the
@@ -416,18 +416,18 @@ export type CreateWorkloadRequest = Message<"cloud.v1.CreateWorkloadRequest"> & 
   name: string;
 
   /**
-   * Requested specification.
+   * Optional pinned node. When empty, scheduler chooses.
    *
-   * @generated from field: cloud.v1.WorkloadSpec spec = 2;
-   */
-  spec?: WorkloadSpec | undefined;
-
-  /**
-   * Optional node to pin the workload to; empty lets the scheduler choose.
-   *
-   * @generated from field: string node_id = 3;
+   * @generated from field: string node_id = 2;
    */
   nodeId: string;
+
+  /**
+   * Workload specification.
+   *
+   * @generated from field: cloud.v1.WorkloadSpec spec = 3;
+   */
+  spec?: WorkloadSpec | undefined;
 };
 
 /**
@@ -444,7 +444,7 @@ export const CreateWorkloadRequestSchema: GenMessage<CreateWorkloadRequest> = /*
  */
 export type CreateWorkloadResponse = Message<"cloud.v1.CreateWorkloadResponse"> & {
   /**
-   * The created workload, already placed when a node was available.
+   * The created workload.
    *
    * @generated from field: cloud.v1.Workload workload = 1;
    */
@@ -459,7 +459,7 @@ export const CreateWorkloadResponseSchema: GenMessage<CreateWorkloadResponse> = 
   messageDesc(file_cloud_v1_workload, 9);
 
 /**
- * UpdateWorkloadRequest patches a workload.
+ * UpdateWorkloadRequest patches workload fields.
  *
  * @generated from message cloud.v1.UpdateWorkloadRequest
  */
@@ -472,16 +472,16 @@ export type UpdateWorkloadRequest = Message<"cloud.v1.UpdateWorkloadRequest"> & 
   id: string;
 
   /**
-   * New display name; unchanged when omitted.
+   * New display name, when set.
    *
    * @generated from field: optional string name = 2;
    */
   name?: string | undefined;
 
   /**
-   * Replaces the spec when present.
+   * New spec fields, when set.
    *
-   * @generated from field: optional cloud.v1.WorkloadSpec spec = 3;
+   * @generated from field: cloud.v1.WorkloadSpec spec = 3;
    */
   spec?: WorkloadSpec | undefined;
 };
@@ -528,7 +528,7 @@ export type DeleteWorkloadRequest = Message<"cloud.v1.DeleteWorkloadRequest"> & 
   id: string;
 
   /**
-   * When true, world data is deleted with the container.
+   * When true, requests the node agent to erase the workload's data dir.
    *
    * @generated from field: bool delete_data = 2;
    */
@@ -543,7 +543,7 @@ export const DeleteWorkloadRequestSchema: GenMessage<DeleteWorkloadRequest> = /*
   messageDesc(file_cloud_v1_workload, 12);
 
 /**
- * DeleteWorkloadResponse acknowledges deletion.
+ * DeleteWorkloadResponse confirms deletion.
  *
  * @generated from message cloud.v1.DeleteWorkloadResponse
  */
@@ -768,7 +768,7 @@ export const SendWorkloadCommandResponseSchema: GenMessage<SendWorkloadCommandRe
   messageDesc(file_cloud_v1_workload, 22);
 
 /**
- * ListWorkloadEventsRequest lists lifecycle events.
+ * ListWorkloadEventsRequest lists events.
  *
  * @generated from message cloud.v1.ListWorkloadEventsRequest
  */
@@ -802,7 +802,7 @@ export const ListWorkloadEventsRequestSchema: GenMessage<ListWorkloadEventsReque
  */
 export type ListWorkloadEventsResponse = Message<"cloud.v1.ListWorkloadEventsResponse"> & {
   /**
-   * Events, newest first.
+   * Events in reverse chronological order.
    *
    * @generated from field: repeated cloud.v1.WorkloadEvent events = 1;
    */
@@ -822,6 +822,174 @@ export type ListWorkloadEventsResponse = Message<"cloud.v1.ListWorkloadEventsRes
  */
 export const ListWorkloadEventsResponseSchema: GenMessage<ListWorkloadEventsResponse> = /*@__PURE__*/
   messageDesc(file_cloud_v1_workload, 24);
+
+/**
+ * WorkloadConfigProperty represents a single configuration key-value entry.
+ *
+ * @generated from message cloud.v1.WorkloadConfigProperty
+ */
+export type WorkloadConfigProperty = Message<"cloud.v1.WorkloadConfigProperty"> & {
+  /**
+   * Configuration key (e.g. "motd", "difficulty", "server-port").
+   *
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * Current string value.
+   *
+   * @generated from field: string value = 2;
+   */
+  value: string;
+
+  /**
+   * File where this property is defined (defaults to "server.properties").
+   *
+   * @generated from field: string file = 3;
+   */
+  file: string;
+};
+
+/**
+ * Describes the message cloud.v1.WorkloadConfigProperty.
+ * Use `create(WorkloadConfigPropertySchema)` to create a new message.
+ */
+export const WorkloadConfigPropertySchema: GenMessage<WorkloadConfigProperty> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 25);
+
+/**
+ * GetWorkloadConfigRequest requests configuration properties.
+ *
+ * @generated from message cloud.v1.GetWorkloadConfigRequest
+ */
+export type GetWorkloadConfigRequest = Message<"cloud.v1.GetWorkloadConfigRequest"> & {
+  /**
+   * Workload id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Target config file (defaults to "server.properties" if empty).
+   *
+   * @generated from field: string file = 2;
+   */
+  file: string;
+};
+
+/**
+ * Describes the message cloud.v1.GetWorkloadConfigRequest.
+ * Use `create(GetWorkloadConfigRequestSchema)` to create a new message.
+ */
+export const GetWorkloadConfigRequestSchema: GenMessage<GetWorkloadConfigRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 26);
+
+/**
+ * GetWorkloadConfigResponse returns parsed properties.
+ *
+ * @generated from message cloud.v1.GetWorkloadConfigResponse
+ */
+export type GetWorkloadConfigResponse = Message<"cloud.v1.GetWorkloadConfigResponse"> & {
+  /**
+   * Properties mapped by key.
+   *
+   * @generated from field: map<string, string> properties = 1;
+   */
+  properties: { [key: string]: string };
+
+  /**
+   * Raw file contents for complete fidelity or non-KV files.
+   *
+   * @generated from field: string raw_content = 2;
+   */
+  rawContent: string;
+};
+
+/**
+ * Describes the message cloud.v1.GetWorkloadConfigResponse.
+ * Use `create(GetWorkloadConfigResponseSchema)` to create a new message.
+ */
+export const GetWorkloadConfigResponseSchema: GenMessage<GetWorkloadConfigResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 27);
+
+/**
+ * UpdateWorkloadConfigRequest modifies configuration properties.
+ *
+ * @generated from message cloud.v1.UpdateWorkloadConfigRequest
+ */
+export type UpdateWorkloadConfigRequest = Message<"cloud.v1.UpdateWorkloadConfigRequest"> & {
+  /**
+   * Workload id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Key-value updates to apply.
+   *
+   * @generated from field: map<string, string> properties = 2;
+   */
+  properties: { [key: string]: string };
+
+  /**
+   * Optional raw file content replacement (if set, takes precedence over properties map).
+   *
+   * @generated from field: optional string raw_content = 3;
+   */
+  rawContent?: string | undefined;
+
+  /**
+   * Target config file (defaults to "server.properties" if empty).
+   *
+   * @generated from field: string file = 4;
+   */
+  file: string;
+
+  /**
+   * If true, trigger a console reload or graceful restart.
+   *
+   * @generated from field: bool restart_or_reload = 5;
+   */
+  restartOrReload: boolean;
+};
+
+/**
+ * Describes the message cloud.v1.UpdateWorkloadConfigRequest.
+ * Use `create(UpdateWorkloadConfigRequestSchema)` to create a new message.
+ */
+export const UpdateWorkloadConfigRequestSchema: GenMessage<UpdateWorkloadConfigRequest> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 28);
+
+/**
+ * UpdateWorkloadConfigResponse confirms updates.
+ *
+ * @generated from message cloud.v1.UpdateWorkloadConfigResponse
+ */
+export type UpdateWorkloadConfigResponse = Message<"cloud.v1.UpdateWorkloadConfigResponse"> & {
+  /**
+   * Updated properties map.
+   *
+   * @generated from field: map<string, string> properties = 1;
+   */
+  properties: { [key: string]: string };
+
+  /**
+   * Action taken to apply changes ("saved", "reloaded", "restarted").
+   *
+   * @generated from field: string action_taken = 2;
+   */
+  actionTaken: string;
+};
+
+/**
+ * Describes the message cloud.v1.UpdateWorkloadConfigResponse.
+ * Use `create(UpdateWorkloadConfigResponseSchema)` to create a new message.
+ */
+export const UpdateWorkloadConfigResponseSchema: GenMessage<UpdateWorkloadConfigResponse> = /*@__PURE__*/
+  messageDesc(file_cloud_v1_workload, 29);
 
 /**
  * WorkloadService manages Minecraft servers placed on org nodes.
@@ -939,6 +1107,26 @@ export const WorkloadService: GenService<{
     methodKind: "unary";
     input: typeof ListWorkloadEventsRequestSchema;
     output: typeof ListWorkloadEventsResponseSchema;
+  },
+  /**
+   * GetWorkloadConfig reads and parses workload configuration properties.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.GetWorkloadConfig
+   */
+  getWorkloadConfig: {
+    methodKind: "unary";
+    input: typeof GetWorkloadConfigRequestSchema;
+    output: typeof GetWorkloadConfigResponseSchema;
+  },
+  /**
+   * UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
+   *
+   * @generated from rpc cloud.v1.WorkloadService.UpdateWorkloadConfig
+   */
+  updateWorkloadConfig: {
+    methodKind: "unary";
+    input: typeof UpdateWorkloadConfigRequestSchema;
+    output: typeof UpdateWorkloadConfigResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_cloud_v1_workload, 0);

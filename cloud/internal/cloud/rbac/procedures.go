@@ -81,6 +81,8 @@ var procedurePermissions = map[string]Permission{
 	cloudv1connect.WorkloadServiceStopWorkloadProcedure:        PermWorkloadsWrite,
 	cloudv1connect.WorkloadServiceStreamWorkloadLogsProcedure:  PermWorkloadsRead,
 	cloudv1connect.WorkloadServiceUpdateWorkloadProcedure:      PermWorkloadsWrite,
+	cloudv1connect.WorkloadServiceGetWorkloadConfigProcedure:    PermWorkloadsRead,
+	cloudv1connect.WorkloadServiceUpdateWorkloadConfigProcedure: PermWorkloadsWrite,
 	// FileService.
 	cloudv1connect.FileServiceListFilesProcedure:       PermWorkloadsRead,
 	cloudv1connect.FileServiceStatFileProcedure:        PermWorkloadsRead,
@@ -166,6 +168,8 @@ func AllProcedures() []string {
 		cloudv1connect.WorkloadServiceStopWorkloadProcedure,
 		cloudv1connect.WorkloadServiceStreamWorkloadLogsProcedure,
 		cloudv1connect.WorkloadServiceUpdateWorkloadProcedure,
+		cloudv1connect.WorkloadServiceGetWorkloadConfigProcedure,
+		cloudv1connect.WorkloadServiceUpdateWorkloadConfigProcedure,
 		cloudv1connect.FileServiceListFilesProcedure,
 		cloudv1connect.FileServiceStatFileProcedure,
 		cloudv1connect.FileServiceReadFileProcedure,

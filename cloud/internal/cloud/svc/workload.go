@@ -526,3 +526,216 @@ func (s *WorkloadService) ListWorkloadEvents(ctx context.Context, req *connect.R
 	}
 	return connect.NewResponse(&v1.ListWorkloadEventsResponse{Events: out, Page: pageResp(int(total), limit, offset)}), nil
 }
+
+// GetWorkloadConfig reads and parses workload configuration properties.
+func (s *WorkloadService) GetWorkloadConfig(ctx context.Context, req *connect.Request[v1.GetWorkloadConfigRequest]) (*connect.Response[v1.GetWorkloadConfigResponse], error) {
+	if req.Msg.Id == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("workload id is required"))
+	}
+	w, err := s.load(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
+	}
+	if w.NodeID == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("workload is not placed on any node"))
+	}
+	if s.dispatcher == nil || !s.dispatcher.IsConnected(w.NodeID) {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("node agent is offline"))
+	}
+
+	targetFile := strings.TrimSpace(req.Msg.File)
+	if targetFile == "" {
+		targetFile = "server.properties"
+	}
+
+	commandID := uuid.NewString()
+	chunkCh := s.dispatcher.ExpectFileChunk(commandID)
+	defer s.dispatcher.CancelFileChunk(commandID)
+
+	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+		Payload: &v1.ControlMessage_FileRead{
+			FileRead: &v1.ControlReadFile{
+				CommandId:  commandID,
+				WorkloadId: w.ID,
+				Path:       targetFile,
+			},
+		},
+	})
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch read request to node agent"))
+	}
+
+	var contentBuilder strings.Builder
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
+		case <-time.After(15 * time.Second):
+			return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out waiting for config file content from node agent"))
+		case chunk, ok := <-chunkCh:
+			if !ok {
+				goto DoneRead
+			}
+			if !chunk.Success {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("read config file failed: %s", chunk.Error))
+			}
+			contentBuilder.Write(chunk.Chunk)
+			if chunk.IsLast {
+				goto DoneRead
+			}
+		}
+	}
+
+DoneRead:
+	raw := contentBuilder.String()
+	props := ParseProperties(raw)
+
+	return connect.NewResponse(&v1.GetWorkloadConfigResponse{
+		Properties: props.ToMap(),
+		RawContent: raw,
+	}), nil
+}
+
+// UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload/restart.
+func (s *WorkloadService) UpdateWorkloadConfig(ctx context.Context, req *connect.Request[v1.UpdateWorkloadConfigRequest]) (*connect.Response[v1.UpdateWorkloadConfigResponse], error) {
+	if req.Msg.Id == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("workload id is required"))
+	}
+	w, err := s.load(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errWorkloadNotFound)
+	}
+	if w.NodeID == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("workload is not placed on any node"))
+	}
+	if s.dispatcher == nil || !s.dispatcher.IsConnected(w.NodeID) {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("node agent is offline"))
+	}
+
+	targetFile := strings.TrimSpace(req.Msg.File)
+	if targetFile == "" {
+		targetFile = "server.properties"
+	}
+
+	var newRawContent string
+	var resultingProps map[string]string
+
+	if req.Msg.RawContent != nil && *req.Msg.RawContent != "" {
+		newRawContent = *req.Msg.RawContent
+		props := ParseProperties(newRawContent)
+		resultingProps = props.ToMap()
+	} else {
+		// Read current file first to preserve comments and structure
+		readCmdID := uuid.NewString()
+		chunkCh := s.dispatcher.ExpectFileChunk(readCmdID)
+		defer s.dispatcher.CancelFileChunk(readCmdID)
+
+		ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+			Payload: &v1.ControlMessage_FileRead{
+				FileRead: &v1.ControlReadFile{
+					CommandId:  readCmdID,
+					WorkloadId: w.ID,
+					Path:       targetFile,
+				},
+			},
+		})
+		if !ok {
+			return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch read request to node agent"))
+		}
+
+		var currentBuilder strings.Builder
+		for {
+			select {
+			case <-ctx.Done():
+				return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
+			case <-time.After(15 * time.Second):
+				return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out reading existing config from node agent"))
+			case chunk, ok := <-chunkCh:
+				if !ok {
+					goto DoneCurrentRead
+				}
+				if chunk.Success {
+					currentBuilder.Write(chunk.Chunk)
+				}
+				if chunk.IsLast {
+					goto DoneCurrentRead
+				}
+			}
+		}
+
+	DoneCurrentRead:
+		props := ParseProperties(currentBuilder.String())
+		for k, v := range req.Msg.Properties {
+			props.Set(k, v)
+		}
+		newRawContent = props.Serialize()
+		resultingProps = props.ToMap()
+	}
+
+	// Write updated file back to the workload
+	writeCmdID := uuid.NewString()
+	writeCh := s.dispatcher.ExpectFileWrite(writeCmdID)
+	defer s.dispatcher.CancelFileWrite(writeCmdID)
+
+	ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+		Payload: &v1.ControlMessage_FileWrite{
+			FileWrite: &v1.ControlWriteFileChunk{
+				CommandId:  writeCmdID,
+				WorkloadId: w.ID,
+				Path:       targetFile,
+				Chunk:      []byte(newRawContent),
+				IsLast:     true,
+				Mode:       0644,
+			},
+		},
+	})
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("failed to dispatch write request to node agent"))
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, connect.NewError(connect.CodeCanceled, ctx.Err())
+	case <-time.After(15 * time.Second):
+		return nil, connect.NewError(connect.CodeDeadlineExceeded, errors.New("timed out writing config to node agent"))
+	case res := <-writeCh:
+		if !res.Success {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("write config failed: %s", res.Error))
+		}
+	}
+
+	actionTaken := "saved"
+	if req.Msg.RestartOrReload {
+		// If workload is currently running, try a reload or restart
+		if w.Status == "running" {
+			// Trigger reload command via RCON
+			cmdID := uuid.NewString()
+			cmdCh := s.dispatcher.ExpectCommand(cmdID)
+			defer s.dispatcher.CancelCommand(cmdID)
+
+			if ok := s.dispatcher.Dispatch(w.NodeID, &v1.ControlMessage{
+				Payload: &v1.ControlMessage_RunCommand{
+					RunCommand: &v1.ControlRunCommand{
+						CommandId:  cmdID,
+						WorkloadId: w.ID,
+						Command:    "reload",
+					},
+				},
+			}); ok {
+				select {
+				case <-time.After(5 * time.Second):
+					actionTaken = "saved (reload timed out)"
+				case <-cmdCh:
+					actionTaken = "saved and reloaded"
+				}
+			}
+		}
+	}
+
+	s.recordEvent(ctx, w.ID, "config_updated", fmt.Sprintf("updated configuration file %s (%s)", targetFile, actionTaken))
+
+	return connect.NewResponse(&v1.UpdateWorkloadConfigResponse{
+		Properties:  resultingProps,
+		ActionTaken: actionTaken,
+	}), nil
+}

@@ -15,7 +15,7 @@ func TestActionNameExample(t *testing.T) {
 func TestEveryProcedureHasAction(t *testing.T) {
 	t.Parallel()
 	procs := AllProcedures()
-	require.Len(t, procs, 65)
+	require.Len(t, procs, 67)
 	for _, p := range procs {
 		a := ActionName(p)
 		require.NotEmpty(t, a, "procedure %s has no action", p)

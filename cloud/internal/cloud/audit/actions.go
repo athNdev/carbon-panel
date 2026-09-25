@@ -66,6 +66,8 @@ var actionTable = map[string]string{
 	cloudv1connect.WorkloadServiceStopWorkloadProcedure:         "workloads.stop",
 	cloudv1connect.WorkloadServiceStreamWorkloadLogsProcedure:   "workloads.stream_logs",
 	cloudv1connect.WorkloadServiceUpdateWorkloadProcedure:       "workloads.update",
+	cloudv1connect.WorkloadServiceGetWorkloadConfigProcedure:    "workloads.get_config",
+	cloudv1connect.WorkloadServiceUpdateWorkloadConfigProcedure: "workloads.update_config",
 	// FileService.
 	cloudv1connect.FileServiceListFilesProcedure:       "files.list",
 	cloudv1connect.FileServiceStatFileProcedure:        "files.stat",
@@ -110,6 +112,7 @@ var mutatingTable = map[string]bool{
 	cloudv1connect.WorkloadServiceStartWorkloadProcedure:       true,
 	cloudv1connect.WorkloadServiceStopWorkloadProcedure:        true,
 	cloudv1connect.WorkloadServiceUpdateWorkloadProcedure:      true,
+	cloudv1connect.WorkloadServiceUpdateWorkloadConfigProcedure: true,
 	cloudv1connect.FileServiceWriteFileProcedure:               true,
 	cloudv1connect.FileServiceDeleteFileProcedure:              true,
 	cloudv1connect.FileServiceCreateDirectoryProcedure:         true,

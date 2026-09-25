@@ -915,6 +915,78 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 			}
 			return tw.Flush()
 		})
+	case "config":
+		if len(args) < 2 {
+			return errors.New("usage: cloudctl workloads config <get|set> <id> [args...]")
+		}
+		switch args[1] {
+		case "get":
+			if len(args) < 3 {
+				return errors.New("usage: cloudctl workloads config get <id> [--file <path>]")
+			}
+			id := args[2]
+			fs := flag.NewFlagSet("workloads config get", flag.ContinueOnError)
+			file := fs.String("file", "server.properties", "Config file to read")
+			if err := fs.Parse(args[3:]); err != nil {
+				return err
+			}
+			resp, err := c.Client.Workload.GetWorkloadConfig(ctx, connect.NewRequest(&v1.GetWorkloadConfigRequest{
+				Id:   id,
+				File: *file,
+			}))
+			if err != nil {
+				return err
+			}
+			return c.printOutput(resp.Msg, func(w io.Writer) error {
+				tw := tabwriter.NewWriter(w, 0, 0, 3, ' ', 0)
+				_, _ = fmt.Fprintln(tw, "PROPERTY\tVALUE")
+				for k, v := range resp.Msg.Properties {
+					_, _ = fmt.Fprintf(tw, "%s\t%s\n", k, v)
+				}
+				return tw.Flush()
+			})
+		case "set":
+			if len(args) < 4 {
+				return errors.New("usage: cloudctl workloads config set <id> key=val [key=val...] [--file <path>] [--reload]")
+			}
+			id := args[2]
+			var propPairs []string
+			var flagArgs []string
+			for _, a := range args[3:] {
+				if strings.HasPrefix(a, "-") {
+					flagArgs = append(flagArgs, a)
+				} else {
+					propPairs = append(propPairs, a)
+				}
+			}
+			fs := flag.NewFlagSet("workloads config set", flag.ContinueOnError)
+			file := fs.String("file", "server.properties", "Config file to mutate")
+			reload := fs.Bool("reload", false, "Trigger reload command if workload is running")
+			if err := fs.Parse(flagArgs); err != nil {
+				return err
+			}
+			props := make(map[string]string)
+			for _, pair := range propPairs {
+				idx := strings.Index(pair, "=")
+				if idx <= 0 {
+					return fmt.Errorf("invalid property format %q, expected key=value", pair)
+				}
+				props[pair[:idx]] = pair[idx+1:]
+			}
+			resp, err := c.Client.Workload.UpdateWorkloadConfig(ctx, connect.NewRequest(&v1.UpdateWorkloadConfigRequest{
+				Id:              id,
+				File:            *file,
+				Properties:      props,
+				RestartOrReload: *reload,
+			}))
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(c.Stdout, "Config updated (%s). %d properties active.\n", resp.Msg.ActionTaken, len(resp.Msg.Properties))
+			return nil
+		default:
+			return fmt.Errorf("unknown config sub-command: %s", args[1])
+		}
 	default:
 		return fmt.Errorf("unknown workloads command: %s", args[0])
 	}
