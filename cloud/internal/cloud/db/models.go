@@ -309,7 +309,6 @@ func (b *Blueprint) setID() {
 	}
 }
 
-
 // WorkloadSchedule represents a recurring cron task for a workload (MINE-164).
 type WorkloadSchedule struct {
 	TenantBase
@@ -323,7 +322,7 @@ type WorkloadSchedule struct {
 	NextRunAt      *time.Time `gorm:"index"`
 }
 
-func (WorkloadSchedule) TableName() string { return "workload_schedules" }
+func (WorkloadSchedule) TableName() string              { return "workload_schedules" }
 func (s *WorkloadSchedule) BeforeCreate(*gorm.DB) error { s.setID(); return nil }
 func (s *WorkloadSchedule) setID() {
 	if s.ID == "" {
@@ -337,7 +336,7 @@ type ScheduleExecution struct {
 	OrgID       string     `gorm:"size:36;not null;index"`
 	ScheduleID  string     `gorm:"size:36;not null;index"`
 	WorkloadID  string     `gorm:"size:36;not null;index"`
-	TriggeredBy string     `gorm:"size:32;not null;default:'cron'"` // "cron", "manual"
+	TriggeredBy string     `gorm:"size:32;not null;default:'cron'"`    // "cron", "manual"
 	Status      string     `gorm:"size:32;not null;default:'running'"` // "running", "success", "failed"
 	Output      string     `gorm:"type:text;not null;default:''"`
 	Error       string     `gorm:"type:text;not null;default:''"`
@@ -346,7 +345,7 @@ type ScheduleExecution struct {
 	FinishedAt  *time.Time `gorm:"index"`
 }
 
-func (ScheduleExecution) TableName() string { return "schedule_executions" }
+func (ScheduleExecution) TableName() string   { return "schedule_executions" }
 func (ScheduleExecution) IsTenantOwned() bool { return true }
 func (e *ScheduleExecution) BeforeCreate(*gorm.DB) error {
 	if e.ID == "" {

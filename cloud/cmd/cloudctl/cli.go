@@ -866,11 +866,11 @@ func (c *CLI) runWorkloads(ctx context.Context, args []string) error {
 			Name:   *name,
 			NodeId: *nodeID,
 			Spec: &v1.WorkloadSpec{
-				BlueprintId:      *blueprint,
-				MinecraftVersion: defaultVersion,
-				Loader:           defaultLoader,
-				MemoryMb:         defaultMem,
-				CpuMillicores:    defaultCpu,
+				BlueprintId:        *blueprint,
+				MinecraftVersion:   defaultVersion,
+				Loader:             defaultLoader,
+				MemoryMb:           defaultMem,
+				CpuMillicores:      defaultCpu,
 				HostPort:           int32(*port),
 				Hostname:           *hostname,
 				IdleTimeoutMinutes: int32(*idle),
@@ -1440,7 +1440,6 @@ func (c *CLI) runOrgs(ctx context.Context, args []string) error {
 	})
 }
 
-
 func (c *CLI) runFiles(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return errors.New("usage: cloudctl files <list|cat|put|rm|mkdir|stat> <workload-id> [args...]")
@@ -1785,7 +1784,8 @@ func (c *CLI) runBlueprints(ctx context.Context, args []string) error {
 		_, _ = fmt.Fprintf(c.Stdout, "Blueprint %s deleted\n", id)
 		return nil
 
-	default:		return fmt.Errorf("unknown blueprints command: %s (usage: list, get, create, delete)", args[0])
+	default:
+		return fmt.Errorf("unknown blueprints command: %s (usage: list, get, create, delete)", args[0])
 	}
 }
 
@@ -1909,7 +1909,8 @@ func (c *CLI) runAddons(ctx context.Context, args []string) error {
 	case "uninstall", "delete", "rm":
 		return c.runWorkloadAddons(ctx, append([]string{"uninstall"}, args[1:]...))
 
-	default:		return fmt.Errorf("unknown addons command: %s", args[0])
+	default:
+		return fmt.Errorf("unknown addons command: %s", args[0])
 	}
 }
 

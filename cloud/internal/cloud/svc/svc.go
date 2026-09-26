@@ -42,9 +42,9 @@ type Deps struct {
 	// Empty means join commands use a relative reference.
 	ControlPlaneURL string
 	// Version, Commit, and BuildTime override the package-level build metadata.
-	Version   string
-	Commit    string
-	BuildTime string
+	Version    string
+	Commit     string
+	BuildTime  string
 	Dispatcher *AgentDispatcher
 }
 

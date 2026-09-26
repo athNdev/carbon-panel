@@ -23,22 +23,22 @@ func (s *NodeSession) NextMessage() <-chan *v1.ControlMessage {
 
 // AgentDispatcher manages active bi-directional gRPC/Connect streams to node agents.
 type AgentDispatcher struct {
-	mu                sync.RWMutex
-	nodes             map[string]*NodeSession
-	cmdMu             sync.RWMutex
-	cmdWaiters        map[string]chan *v1.AgentCommandResult
-	logMu             sync.RWMutex
-	logListeners      map[string]map[chan *v1.WorkloadLogLine]struct{}
-	fileMu            sync.RWMutex
-	fileListWaiters   map[string]chan *v1.AgentFileListResult
-	fileChunkWaiters  map[string]chan *v1.AgentReadFileChunk
-	fileWriteWaiters  map[string]chan *v1.AgentWriteFileResult
-	fileDeleteWaiters map[string]chan *v1.AgentDeleteFileResult
-	dirCreateWaiters  map[string]chan *v1.AgentCreateDirectoryResult
-	fileStatWaiters   map[string]chan *v1.AgentStatFileResult
-	fileRenameWaiters map[string]chan *v1.AgentFileRenameResult
-	backupMu            sync.RWMutex
-	backupCreateWaiters map[string]chan *v1.AgentCreateBackupResult
+	mu                   sync.RWMutex
+	nodes                map[string]*NodeSession
+	cmdMu                sync.RWMutex
+	cmdWaiters           map[string]chan *v1.AgentCommandResult
+	logMu                sync.RWMutex
+	logListeners         map[string]map[chan *v1.WorkloadLogLine]struct{}
+	fileMu               sync.RWMutex
+	fileListWaiters      map[string]chan *v1.AgentFileListResult
+	fileChunkWaiters     map[string]chan *v1.AgentReadFileChunk
+	fileWriteWaiters     map[string]chan *v1.AgentWriteFileResult
+	fileDeleteWaiters    map[string]chan *v1.AgentDeleteFileResult
+	dirCreateWaiters     map[string]chan *v1.AgentCreateDirectoryResult
+	fileStatWaiters      map[string]chan *v1.AgentStatFileResult
+	fileRenameWaiters    map[string]chan *v1.AgentFileRenameResult
+	backupMu             sync.RWMutex
+	backupCreateWaiters  map[string]chan *v1.AgentCreateBackupResult
 	backupRestoreWaiters map[string]chan *v1.AgentRestoreBackupResult
 	backupDeleteWaiters  map[string]chan *v1.AgentDeleteBackupResult
 	metricsMu            sync.RWMutex
@@ -56,16 +56,16 @@ func NewAgentDispatcher(logger *slog.Logger) *AgentDispatcher {
 		logger = slog.Default()
 	}
 	return &AgentDispatcher{
-		nodes:             make(map[string]*NodeSession),
-		cmdWaiters:        make(map[string]chan *v1.AgentCommandResult),
-		logListeners:      make(map[string]map[chan *v1.WorkloadLogLine]struct{}),
-		fileListWaiters:   make(map[string]chan *v1.AgentFileListResult),
-		fileChunkWaiters:  make(map[string]chan *v1.AgentReadFileChunk),
-		fileWriteWaiters:  make(map[string]chan *v1.AgentWriteFileResult),
-		fileDeleteWaiters: make(map[string]chan *v1.AgentDeleteFileResult),
-		dirCreateWaiters:  make(map[string]chan *v1.AgentCreateDirectoryResult),
-		fileStatWaiters:   make(map[string]chan *v1.AgentStatFileResult),
-		fileRenameWaiters: make(map[string]chan *v1.AgentFileRenameResult),
+		nodes:                make(map[string]*NodeSession),
+		cmdWaiters:           make(map[string]chan *v1.AgentCommandResult),
+		logListeners:         make(map[string]map[chan *v1.WorkloadLogLine]struct{}),
+		fileListWaiters:      make(map[string]chan *v1.AgentFileListResult),
+		fileChunkWaiters:     make(map[string]chan *v1.AgentReadFileChunk),
+		fileWriteWaiters:     make(map[string]chan *v1.AgentWriteFileResult),
+		fileDeleteWaiters:    make(map[string]chan *v1.AgentDeleteFileResult),
+		dirCreateWaiters:     make(map[string]chan *v1.AgentCreateDirectoryResult),
+		fileStatWaiters:      make(map[string]chan *v1.AgentStatFileResult),
+		fileRenameWaiters:    make(map[string]chan *v1.AgentFileRenameResult),
 		backupCreateWaiters:  make(map[string]chan *v1.AgentCreateBackupResult),
 		backupRestoreWaiters: make(map[string]chan *v1.AgentRestoreBackupResult),
 		backupDeleteWaiters:  make(map[string]chan *v1.AgentDeleteBackupResult),

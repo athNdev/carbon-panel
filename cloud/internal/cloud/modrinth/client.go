@@ -71,19 +71,19 @@ type modrinthHit struct {
 }
 
 type modrinthProject struct {
-	ID            string   `json:"id"`
-	Slug          string   `json:"slug"`
-	ProjectType   string   `json:"project_type"`
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Categories    []string `json:"categories"`
-	Loaders       []string `json:"loaders"`
-	GameVersions  []string `json:"game_versions"`
-	Downloads     int64    `json:"downloads"`
-	Follows       int64    `json:"follows"`
-	IconURL       string   `json:"icon_url"`
-	ClientSide    string   `json:"client_side"`
-	ServerSide    string   `json:"server_side"`
+	ID           string   `json:"id"`
+	Slug         string   `json:"slug"`
+	ProjectType  string   `json:"project_type"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Categories   []string `json:"categories"`
+	Loaders      []string `json:"loaders"`
+	GameVersions []string `json:"game_versions"`
+	Downloads    int64    `json:"downloads"`
+	Follows      int64    `json:"follows"`
+	IconURL      string   `json:"icon_url"`
+	ClientSide   string   `json:"client_side"`
+	ServerSide   string   `json:"server_side"`
 }
 
 type modrinthVersion struct {

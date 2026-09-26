@@ -345,7 +345,6 @@ func (m *mockFileServer) RenameFile(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1.RenameFileResponse{}), nil
 }
 
-
 type mockScheduleServer struct {
 	cloudv1connect.UnimplementedScheduleServiceHandler
 }

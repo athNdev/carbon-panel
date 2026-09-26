@@ -146,8 +146,8 @@ func TestWorkloadCreationFromBlueprint(t *testing.T) {
 		NodeId: nodeID,
 		Spec: &v1.WorkloadSpec{
 			BlueprintId:      "paper",
-			MemoryMb:         8192,               // override memory
-			MinecraftVersion: "1.20.4",           // override version
+			MemoryMb:         8192,     // override memory
+			MinecraftVersion: "1.20.4", // override version
 			Env:              map[string]string{"MOTD": "Welcome to Overridden Paper"},
 		},
 	}))

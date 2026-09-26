@@ -86,13 +86,13 @@ func TestWorkloadMetrics_CachedAndOnDemand(t *testing.T) {
 	// 5. Test cache hit: update cached metrics directly as if from a heartbeat
 	svcs.Dispatcher.UpdateWorkloadMetrics([]*v1.WorkloadMetrics{
 		{
-			WorkloadId:     workloadID,
-			CpuPercent:     12.0,
-			MemoryUsedMb:   800.0,
-			MemoryLimitMb:  2048.0,
-			PlayersOnline:  5,
-			Tps:            20.0,
-			UpdatedAt:      timestamppb.Now(),
+			WorkloadId:    workloadID,
+			CpuPercent:    12.0,
+			MemoryUsedMb:  800.0,
+			MemoryLimitMb: 2048.0,
+			PlayersOnline: 5,
+			Tps:           20.0,
+			UpdatedAt:     timestamppb.Now(),
 		},
 	})
 

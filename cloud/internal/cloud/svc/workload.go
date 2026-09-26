@@ -50,12 +50,12 @@ func workloadToProto(w *db.Workload) *v1.Workload {
 	}
 	if w.Spec != "" {
 		var s struct {
-			Loader           string            `json:"loader"`
-			MinecraftVersion string            `json:"minecraft_version"`
-			MemoryMB         int64             `json:"memory_mb"`
-			CPUMillicores    int64             `json:"cpu_millicores"`
-			Hostname         string            `json:"hostname"`
-			BlueprintID      string            `json:"blueprint_id"`
+			Loader             string            `json:"loader"`
+			MinecraftVersion   string            `json:"minecraft_version"`
+			MemoryMB           int64             `json:"memory_mb"`
+			CPUMillicores      int64             `json:"cpu_millicores"`
+			Hostname           string            `json:"hostname"`
+			BlueprintID        string            `json:"blueprint_id"`
 			Env                map[string]string `json:"env"`
 			JVMFlags           []string          `json:"jvm_flags"`
 			IdleTimeoutMinutes int32             `json:"idle_timeout_minutes"`

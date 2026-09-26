@@ -127,7 +127,6 @@ func TestScheduleService_CRUDAndExecution(t *testing.T) {
 	require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
-
 func TestScheduleService_BackgroundDueExecution(t *testing.T) {
 	t.Parallel()
 	bundle := testBundle(t)

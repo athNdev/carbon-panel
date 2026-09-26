@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodeagent"
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodeagent"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"

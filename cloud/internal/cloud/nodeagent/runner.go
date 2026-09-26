@@ -16,12 +16,12 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/minecraft"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
-	"net/netip"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"net/netip"
 )
 
 // Runner manages the execution of containerized Minecraft workloads.

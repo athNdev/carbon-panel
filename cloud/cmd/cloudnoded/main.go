@@ -1109,8 +1109,8 @@ func newAgentHTTPClient() *http.Client {
 	protocols.SetUnencryptedHTTP2(true)
 	return &http.Client{
 		Transport: &http.Transport{
-			Protocols:           protocols,
-			ForceAttemptHTTP2:   true,
+			Protocols:          protocols,
+			ForceAttemptHTTP2:  true,
 			DisableCompression: true,
 		},
 	}

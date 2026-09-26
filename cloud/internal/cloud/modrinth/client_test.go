@@ -42,11 +42,11 @@ func TestModrinthClient_Search(t *testing.T) {
 	client.SetBaseURL(srv.URL)
 
 	res, err := client.Search(context.Background(), &v1.SearchAddonsRequest{
-		Query:        "viaversion",
-		AddonType:    v1.AddonType_ADDON_TYPE_PLUGIN,
-		Loader:       "paper",
-		GameVersion:  "1.21.4",
-		Limit:        20,
+		Query:       "viaversion",
+		AddonType:   v1.AddonType_ADDON_TYPE_PLUGIN,
+		Loader:      "paper",
+		GameVersion: "1.21.4",
+		Limit:       20,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int32(1), res.TotalHits)
