@@ -66,3 +66,30 @@ func TestDownloadSession_ExpiryAndDeleteAfter(t *testing.T) {
 		t.Errorf("delete-after file survives: %v", err)
 	}
 }
+
+func TestCleanupExpired_RemovesStaleKeepsFresh(t *testing.T) {
+	m := NewManager(t.TempDir(), time.Hour, logger.New())
+	defer m.Stop()
+
+	staleFile := filepath.Join(t.TempDir(), "stale.zip")
+	if err := os.WriteFile(staleFile, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stale := m.InitSession(staleFile, "stale.zip", 1, true)
+	stale.ExpiresAt = time.Now().Add(-time.Minute)
+
+	fresh := m.InitSession(staleFile, "fresh.zip", 1, false)
+	fresh.ExpiresAt = time.Now().Add(time.Hour)
+
+	m.cleanupExpired()
+
+	if _, err := m.GetSession(stale.ID); err != ErrSessionExpired && err != ErrSessionNotFound {
+		t.Errorf("stale session = %v", err)
+	}
+	if _, err := m.GetSession(fresh.ID); err != nil {
+		t.Errorf("fresh session swept: %v", err)
+	}
+	if _, err := os.Stat(staleFile); !os.IsNotExist(err) {
+		t.Error("delete-after file survives expiry sweep")
+	}
+}
