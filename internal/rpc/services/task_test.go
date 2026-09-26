@@ -181,3 +181,16 @@ func TestTaskService_UpdateTask_CronValidation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, validCron, updateRes.Msg.Task.CronExpr)
 }
+
+func TestTaskService_TriggerTask_MissingMapsToNotFound(t *testing.T) {
+	svc, _ := setupTaskTestService(t)
+	ctx := context.Background()
+
+	_, err := svc.TriggerTask(ctx, connect.NewRequest(&v1.TriggerTaskRequest{
+		Id: "no-such-task",
+	}))
+	require.Error(t, err)
+	connectErr, ok := err.(*connect.Error)
+	require.True(t, ok, "expected connect error, got %T", err)
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+}
