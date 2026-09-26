@@ -488,7 +488,46 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 	}
 }
 
+// validateServerPorts rejects out-of-range container-side ports before any
+// daemon contact. network.Port is built from uint16, so an unchecked value
+// would truncate to the wrong port; the old string-keyed maps failed loudly
+// at the daemon instead. Host-side ports stay strings and are still
+// validated by the daemon.
+func validateServerPorts(server *models.Server) error {
+	gamePort := server.Port
+	if server.ProxyHostname != "" {
+		gamePort = DefaultMinecraftPort
+	}
+	if gamePort < 1 || gamePort > 65535 {
+		return fmt.Errorf("invalid container port %d: must be 1-65535", gamePort)
+	}
+	if rconPort := server.Port + RCONPortOffset; rconPort < 1 || rconPort > 65535 {
+		return fmt.Errorf("invalid RCON host port %d: must be 1-65535", rconPort)
+	}
+	for _, port := range server.AdditionalPorts {
+		if port == nil {
+			continue
+		}
+		if cp := int(port.GetContainerPort()); cp < 1 || cp > 65535 {
+			return fmt.Errorf("invalid additional container port %d: must be 1-65535", cp)
+		}
+		if hp := int(port.GetHostPort()); hp < 1 || hp > 65535 {
+			return fmt.Errorf("invalid additional host port %d: must be 1-65535", hp)
+		}
+	}
+	return nil
+}
+
 func (c *Client) CreateContainer(ctx context.Context, server *models.Server, serverConfig *models.ServerConfig) (string, error) {
+	// Validate container-side ports before touching the daemon: the new
+	// SDK's network.Port is built from uint16, so unchecked values would
+	// truncate to the wrong port instead of failing loudly (as the old
+	// string-keyed maps did at the daemon). This also covers legacy rows
+	// that predate RPC-side range checks.
+	if err := validateServerPorts(server); err != nil {
+		return "", err
+	}
+
 	// Use server's DockerImage if specified, otherwise determine based on version and loader
 	var imageName string
 	if server.DockerImage != "" {
@@ -530,30 +569,44 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	c.log.Debug("Creating container for server %s with image %s", server.ID, imageName)
 
 	// Build exposed ports
-	tcpPort := func(num int) network.Port {
+	tcpPort := func(num int) (network.Port, bool) {
+		if num < 1 || num > 65535 {
+			c.log.Error("Invalid container port %d, skipping expose", num)
+			return network.Port{}, false
+		}
 		p, ok := network.PortFrom(uint16(num), network.TCP)
 		if !ok {
 			c.log.Error("Invalid container port %d, skipping expose", num)
 		}
-		return p
+		return p, ok
 	}
-	protoPort := func(num int, protocol string) network.Port {
+	protoPort := func(num int, protocol string) (network.Port, bool) {
+		if num < 1 || num > 65535 {
+			c.log.Error("Invalid container port %d/%s, skipping expose", num, protocol)
+			return network.Port{}, false
+		}
 		p, err := network.ParsePort(fmt.Sprintf("%d/%s", num, protocol))
 		if err != nil {
 			c.log.Error("Invalid container port %d/%s, skipping expose: %v", num, protocol, err)
+			return network.Port{}, false
 		}
-		return p
+		return p, true
 	}
-	exposedPorts := network.PortSet{
-		tcpPort(containerPort):   struct{}{},
-		tcpPort(DefaultRCONPort): struct{}{},
+	exposedPorts := network.PortSet{}
+	if p, ok := tcpPort(containerPort); ok {
+		exposedPorts[p] = struct{}{}
+	}
+	if p, ok := tcpPort(DefaultRCONPort); ok {
+		exposedPorts[p] = struct{}{}
 	}
 	for _, port := range server.AdditionalPorts {
 		protocol := port.GetProtocol()
 		if protocol == "" {
 			protocol = "tcp"
 		}
-		exposedPorts[protoPort(int(port.GetContainerPort()), protocol)] = struct{}{}
+		if p, ok := protoPort(int(port.GetContainerPort()), protocol); ok {
+			exposedPorts[p] = struct{}{}
+		}
 	}
 
 	// Build port bindings
@@ -563,11 +616,21 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		}
 	}
 	portBindings := network.PortMap{}
+	bindGamePort := func(hostIP string) {
+		if p, ok := tcpPort(containerPort); ok {
+			portBindings[p] = bindTCP(hostIP, server.Port)
+		}
+	}
+	bindRCONPort := func() {
+		if p, ok := tcpPort(DefaultRCONPort); ok {
+			portBindings[p] = bindTCP("127.0.0.1", server.Port+RCONPortOffset)
+		}
+	}
 	if !useProxy {
 		// Bind game port to public host interfaces (0.0.0.0)
-		portBindings[tcpPort(containerPort)] = bindTCP("0.0.0.0", server.Port)
+		bindGamePort("0.0.0.0")
 		// Bind RCON to localhost only
-		portBindings[tcpPort(DefaultRCONPort)] = bindTCP("127.0.0.1", server.Port+RCONPortOffset)
+		bindRCONPort()
 
 		// Apply DOCKER-USER iptables rate limiting & SYN flood protection (MINE-9)
 		if c.firewall != nil && server.Port > 0 {
@@ -579,10 +642,10 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// When routed through Velocity/proxy, bind server container port strictly to loopback (127.0.0.1)
 		// so external players cannot bypass Velocity by connecting directly to the server's backend port.
 		if server.Port > 0 {
-			portBindings[tcpPort(containerPort)] = bindTCP("127.0.0.1", server.Port)
+			bindGamePort("127.0.0.1")
 		}
 		// Bind RCON to localhost only
-		portBindings[tcpPort(DefaultRCONPort)] = bindTCP("127.0.0.1", server.Port+RCONPortOffset)
+		bindRCONPort()
 
 		// Apply DOCKER-USER iptables proxy port isolation guard
 		if c.firewall != nil && server.Port > 0 {
@@ -596,7 +659,10 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		if protocol == "" {
 			protocol = "tcp"
 		}
-		portKey := protoPort(int(port.GetContainerPort()), protocol)
+		portKey, ok := protoPort(int(port.GetContainerPort()), protocol)
+		if !ok {
+			continue
+		}
 		portBindings[portKey] = bindTCP("0.0.0.0", int(port.GetHostPort()))
 		c.log.Debug("Additional port mapping: %s (%d:%d/%s)", port.GetName(), port.GetHostPort(), port.GetContainerPort(), protocol)
 	}
