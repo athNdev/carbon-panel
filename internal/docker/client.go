@@ -47,7 +47,62 @@ const (
 
 	// Offset added to game port for RCON host binding
 	RCONPortOffset = 10
+
+	// defaultAPITimeout bounds a single Docker API call when the caller has no
+	// deadline of its own. Without it, a daemon that blackholes connections
+	// (e.g. a node whose TCP endpoint is filtered) blocks the caller until the
+	// OS-level connect timeout — long past the panel's HTTP write timeout — and
+	// the client sees the connection dropped ("socket hang up") instead of an
+	// error response.
+	defaultAPITimeout = 5 * time.Second
+
+	// negotiationTimeout bounds the eager API-version ping performed by
+	// NewAPIClient. Kept short so a client built for an unresponsive node adds
+	// little latency before the caller's own bounded request runs.
+	negotiationTimeout = 3 * time.Second
 )
+
+// boundedCall applies defaultAPITimeout to ctx unless the caller already
+// supplied a deadline (or cancellation), in which case that budget wins.
+// Long-running operations (image pulls, container start/stop, log/exec
+// streaming) pass an explicit context and are therefore unaffected.
+func boundedCall(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, defaultAPITimeout)
+}
+
+// NewAPIClient creates a Docker API client and negotiates the API version
+// eagerly, with a bounded ping, before returning it.
+//
+// The SDK's lazy negotiation (client.WithAPIVersionNegotiation) runs that ping
+// while holding negotiateLock — a plain, non-cancellable mutex. One unreachable
+// daemon therefore blocks every subsequent caller of that client until the OS
+// connect timeout, regardless of their own deadlines, which is what turns a
+// single dead node into "socket hang up" on unrelated RPCs. Negotiating here
+// keeps that lock off the request path entirely; callers must not pass
+// client.WithAPIVersionNegotiation, or the SDK re-enters the lazy path whenever
+// this eager ping fails.
+func NewAPIClient(opts ...client.Opt) (*client.Client, error) {
+	cli, err := client.New(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), negotiationTimeout)
+	defer cancel()
+
+	_, err = cli.Ping(ctx, client.PingOptions{NegotiateAPIVersion: true})
+	if err != nil {
+		// Leave the client at default API version and disable lazy negotiation
+		// so requests fail fast with their own bounded contexts rather than hanging.
+		fixedOpts := append(opts, client.WithAPIVersion(client.MaxAPIVersion))
+		return client.New(fixedOpts...)
+	}
+
+	return cli, nil
+}
 
 // DefaultRestartPolicy is the Docker restart policy applied to every
 // Carbon Panel container. "on-failure:5" lets the daemon re-attempt
@@ -223,7 +278,6 @@ func (c *Client) SetLogStreamer(ls ContainerLogStreamer) {
 func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client, error) {
 	opts := []client.Opt{
 		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
 	}
 
 	// Apply API version if provided
@@ -235,7 +289,7 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 		opts = append(opts, client.WithHost(host))
 	}
 
-	docker, err := client.NewClientWithOpts(opts...)
+	docker, err := NewAPIClient(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
@@ -279,6 +333,8 @@ func (c *Client) Ping(ctx context.Context) (client.PingResult, error) {
 	if c == nil || c.docker == nil {
 		return client.PingResult{}, fmt.Errorf("docker client is nil")
 	}
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
 	return c.docker.Ping(ctx, client.PingOptions{})
 }
 
@@ -745,6 +801,9 @@ func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*contai
 		return nil, fmt.Errorf("resolve container: server id is empty")
 	}
 
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
 	// Strategy 1: label match
 	filterArgs := client.Filters{}.Add("label", fmt.Sprintf("carbon-panel.server.id=%s", serverID))
 
@@ -779,6 +838,9 @@ func (c *Client) ResolveModuleContainer(ctx context.Context, moduleID string) (*
 	if moduleID == "" {
 		return nil, fmt.Errorf("resolve module container: module id is empty")
 	}
+
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
 
 	// Strategy 1: label match
 	filterArgs := client.Filters{}.Add("label", fmt.Sprintf("carbon-panel.module.id=%s", moduleID))
@@ -1050,6 +1112,9 @@ func mapContainerState(state *container.State) models.ServerStatus {
 }
 
 func (c *Client) GetContainerStatus(ctx context.Context, containerID string) (models.ServerStatus, error) {
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
 	res, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return models.StatusError, err
@@ -1063,6 +1128,9 @@ func (c *Client) GetContainerStatus(ctx context.Context, containerID string) (mo
 // error (errdefs.IsNotFound); callers expecting it to exist should treat that
 // as "container missing" rather than a transient failure.
 func (c *Client) ObserveContainer(ctx context.Context, containerID string) (*ContainerState, error) {
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
 	res, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, err
@@ -1087,6 +1155,9 @@ func (c *Client) ObserveContainer(ctx context.Context, containerID string) (*Con
 }
 
 func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*ContainerStats, error) {
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
 	// Get real-time stats
 	statsResponse, err := c.docker.ContainerStats(ctx, containerID, client.ContainerStatsOptions{Stream: false})
 	if err != nil {
@@ -1218,7 +1289,8 @@ func getDockerImage(loader models.ModLoader, mcVersion string) string {
 
 // Creates the Docker network if it doesn't exist - attaches itself to that network when applicable
 func (c *Client) EnsureNetwork() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), defaultAPITimeout)
+	defer cancel()
 
 	// List existing networks
 	res, err := c.docker.NetworkList(ctx, client.NetworkListOptions{})
@@ -1422,6 +1494,9 @@ func buildEnvFromConfig(config *models.ServerConfig) []string {
 
 // DetectContainerJavaVersion attempts to auto-detect the Java runtime version from a running container
 func (c *Client) DetectContainerJavaVersion(ctx context.Context, containerID string) (int, error) {
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
 	inspectRes, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return 0, err

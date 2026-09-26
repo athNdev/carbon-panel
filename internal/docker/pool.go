@@ -115,15 +115,6 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 		return cli, nil
 	}
 
-	// Write lock check and initialize
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// Double check
-	if cli, exists := p.clients[nodeID]; exists && cli != nil {
-		return cli, nil
-	}
-
 	if p.store == nil {
 		if p.defaultClient != nil {
 			p.log.Warn("NodeStore is nil; falling back to default Docker client for node: %s", nodeID)
@@ -141,6 +132,9 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 		return nil, fmt.Errorf("node %s not found: %w", nodeID, err)
 	}
 
+	// Build the client outside the pool lock: NewClientForNode performs a
+	// bounded API-version ping, and holding p.mu across that network call
+	// would stall every other node's callers behind an unresponsive daemon.
 	newCli, err := p.createClientForNode(node)
 	if err != nil {
 		if p.defaultClient != nil {
@@ -148,6 +142,15 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 			return p.defaultClient, nil
 		}
 		return nil, fmt.Errorf("failed to create client for node %s: %w", nodeID, err)
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Another goroutine may have registered a client while this one was built.
+	if existing, ok := p.clients[nodeID]; ok && existing != nil {
+		_ = newCli.Close()
+		return existing, nil
 	}
 
 	p.clients[nodeID] = newCli
@@ -175,13 +178,6 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 		return cli, nil
 	}
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if cli, exists := p.clients[nodeID]; exists && cli != nil {
-		return cli, nil
-	}
-
 	if p.store == nil {
 		return nil, fmt.Errorf("node store is nil and client not found for node: %s", nodeID)
 	}
@@ -191,9 +187,19 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 		return nil, fmt.Errorf("node %s not found: %w", nodeID, err)
 	}
 
+	// See GetClient: build the client outside the pool lock so its bounded
+	// API-version ping cannot stall callers for other nodes.
 	newCli, err := p.createClientForNode(node)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client for node %s: %w", nodeID, err)
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if existing, ok := p.clients[nodeID]; ok && existing != nil {
+		_ = newCli.Close()
+		return existing, nil
 	}
 
 	p.clients[nodeID] = newCli
@@ -343,7 +349,6 @@ func (p *ClientPool) createClientForNode(node *models.Node) (*Client, error) {
 func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientConfig) (*Client, error) {
 	opts := []client.Opt{
 		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
 	}
 
 	if baseConfig.APIVersion != "" {
@@ -393,7 +398,7 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 		}
 	}
 
-	dockerCli, err := client.NewClientWithOpts(opts...)
+	dockerCli, err := NewAPIClient(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create docker client for host %s: %w", host, err)
 	}

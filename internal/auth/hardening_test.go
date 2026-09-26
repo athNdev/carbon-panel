@@ -28,7 +28,7 @@ func newTestManager(t *testing.T, authCfg *config.AuthConfig) (*Manager, *db.Sto
 	if err := store.Migrate(); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
-	t.Cleanup(func() { store.Close() })
+	t.Cleanup(func() { _ = store.Close() })
 
 	m, err := NewManager(store, nil, authCfg)
 	if err != nil {

@@ -32,7 +32,7 @@ func TestFileServicePathContainment(t *testing.T) {
 	}
 
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	if err := store.CreateServer(context.Background(), &db.Server{
 		ID: "abc", Name: "abc", ModLoader: db.ModLoaderVanilla, MCVersion: "1.21",
 		Status: db.StatusStopped, DataPath: serverDir, Port: 25565,
