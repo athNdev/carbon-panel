@@ -54,7 +54,7 @@ type DockerRunner struct {
 
 // NewDockerRunner creates a new Docker runner using local environment connection.
 func NewDockerRunner(dataDir string, logger *slog.Logger) (*DockerRunner, error) {
-	cli, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return nil, fmt.Errorf("docker client: %w", err)
 	}
