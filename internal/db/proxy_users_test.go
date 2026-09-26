@@ -27,9 +27,10 @@ func TestModpackFavorites(t *testing.T) {
 	if err := store.AddModpackFavorite(ctx, "m1"); err != nil {
 		t.Fatalf("add failed: %v", err)
 	}
-	// NOTE: re-adding within the same wall-clock second collides on the
-	// timestamp-derived favorite ID (UNIQUE constraint) — known wart,
-	// out of scope for this test batch.
+	// Rapid re-add must not collide (IDs are unique, not timestamp-derived).
+	if err := store.AddModpackFavorite(ctx, "m1"); err != nil {
+		t.Fatalf("re-add failed: %v", err)
+	}
 	fav, err = store.IsModpackFavorited(ctx, "m1")
 	if err != nil || !fav {
 		t.Fatalf("after add = %v, %v", fav, err)
