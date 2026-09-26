@@ -14,6 +14,8 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
 type fakeExecutor struct {
@@ -102,5 +104,30 @@ func TestResolveExecutor_DefaultWithoutPool(t *testing.T) {
 
 	if got := s.resolveExecutor("any-node"); got != DockerExecutor(exec) {
 		t.Error("nil pool must resolve to the default executor")
+	}
+}
+
+func TestResolveExecutor_PoolFallsBackToDefault(t *testing.T) {
+	store := newSenderTestStore(t)
+	ctx := context.Background()
+
+	if err := store.DB().Create(&storage.Server{ID: "srv-pool", Name: "p", DataPath: t.TempDir(), ContainerID: "cid-9"}).Error; err != nil {
+		t.Fatalf("failed to insert server: %v", err)
+	}
+	disabled := false
+	if err := store.DB().Create(&storage.ServerConfig{ServerID: "srv-pool", EnableRCON: &disabled}).Error; err != nil {
+		t.Fatalf("failed to insert config: %v", err)
+	}
+
+	exec := &fakeExecutor{output: "pool-fallback"}
+	pool := docker.NewClientPool(store, nil, logger.New())
+	s := NewSender(store, &config.Config{}, exec, pool)
+
+	out, err := s.SendCommand(ctx, "srv-pool", "list")
+	if err != nil {
+		t.Fatalf("fallback send failed: %v", err)
+	}
+	if out != "pool-fallback" || exec.calls != 1 || exec.lastID != "cid-9" {
+		t.Errorf("exec = %q calls=%d id=%q", out, exec.calls, exec.lastID)
 	}
 }
