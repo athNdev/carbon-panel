@@ -26,7 +26,6 @@
 		PinOff,
 		Package,
 		Loader2,
-		Blocks,
 		CheckCircle2,
 		AlertTriangle,
 		RefreshCw,
@@ -188,7 +187,7 @@
 	// Maintenance State
 	let refreshing = $state(false);
 	let rawPackToml = $state('');
-	let rawIndexToml = $state('');
+	let _rawIndexToml = $state('');
 	let loadingRaw = $state(false);
 
 	// Deploy Dialog State
@@ -530,7 +529,7 @@
 			const pRes = await apiFetch(`/api/v1/packwiz/${packId}/pack.toml`);
 			if (pRes.ok) rawPackToml = await pRes.text();
 			const iRes = await apiFetch(`/api/v1/packwiz/${packId}/index.toml`);
-			if (iRes.ok) rawIndexToml = await iRes.text();
+			if (iRes.ok) _rawIndexToml = await iRes.text();
 		} catch (err) {
 			console.error('Failed to load raw tomls:', err);
 		} finally {

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	dockerevents "github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
-)
+	dockerevents "github.com/moby/moby/api/types/events"
+	"github.com/moby/moby/client"
+	)
 
 // --- translateEvent: pure translation logic ---
 
@@ -240,8 +240,11 @@ func newFakeEventsSource() *fakeEventsSource {
 	}
 }
 
-func (f *fakeEventsSource) Events(ctx context.Context, options dockerevents.ListOptions) (<-chan dockerevents.Message, <-chan error) {
-	return f.msgCh, f.errCh
+func (f *fakeEventsSource) Events(ctx context.Context, options client.EventsListOptions) client.EventsResult {
+	return client.EventsResult{
+		Messages: f.msgCh,
+		Err:      f.errCh,
+	}
 }
 
 func TestWatcherStream_ForwardsTranslatedEvents(t *testing.T) {
@@ -374,13 +377,10 @@ func TestWatcherRun_ClosesOutOnCancel(t *testing.T) {
 	}
 }
 
-// sanity: filters.Args is used in stream(); ensure import compiles cleanly
-// via a trivial construction (guards against accidental removal leaving an
-// unused import that a future edit re-adds incorrectly).
+// sanity: client.Filters is used in stream(); ensure import compiles cleanly.
 func TestFiltersArgsCompiles(t *testing.T) {
-	args := filters.NewArgs()
-	args.Add("type", "container")
-	if !args.Contains("type") {
-		t.Fatal("expected filters.Args to contain 'type'")
+	args := client.Filters{}.Add("type", "container")
+	if len(args["type"]) == 0 {
+		t.Fatal("expected filters to contain 'type'")
 	}
 }

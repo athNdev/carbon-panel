@@ -1,0 +1,598 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// WorkloadSpec is the declarative description of a Minecraft server. It is the
+// cloud-level equivalent of the OSS server record, minus anything node-local.
+message WorkloadSpec {
+  // Loader or server software, e.g. "paper", "fabric", "vanilla", "velocity".
+  string loader = 1;
+  // Minecraft version, e.g. "1.21.4".
+  string minecraft_version = 2;
+  // Memory reservation in MiB.
+  int64 memory_mb = 3;
+  // CPU reservation in millicores.
+  int64 cpu_millicores = 4;
+  // Disk reservation in GiB.
+  int32 disk_gb = 5;
+  // Extra environment variables passed to the container.
+  map<string, string> env = 6;
+  // Optional public hostname to route player traffic to this workload.
+  string hostname = 7;
+  // Whether the workload may be placed on a BYO node.
+  bool allow_byo_nodes = 8;
+  // Extra JVM flags appended to the generated command line.
+  repeated string jvm_flags = 9;
+  // Optional preferred host port on the node. If 0, dynamically allocated.
+  int32 host_port = 10;
+  // Optional blueprint/preset ID to inherit server configuration from (MINE-162).
+  string blueprint_id = 11;
+  // Minutes of inactivity before auto-hibernation (0 = disabled).
+  int32 idle_timeout_minutes = 12;
+  // Hibernation mode: "pause" (cgroup freeze) or "deep_sleep" (stop container).
+  string hibernation_mode = 13;
+}
+
+// WorkloadEvent is an auditable lifecycle transition of a workload.
+message WorkloadEvent {
+  // Event id.
+  string id = 1;
+  // Workload the event belongs to.
+  string workload_id = 2;
+  // Short event kind, e.g. "placed", "started", "stopped", "crashed".
+  string kind = 3;
+  // Human-readable message.
+  string message = 4;
+  // Time the event was recorded.
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// Workload is a Minecraft server placed on a node.
+message Workload {
+  // Server-side workload id.
+  string id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Node the workload is placed on; empty while pending.
+  string node_id = 3;
+  // Display name; unique within the org.
+  string name = 4;
+  // Requested specification.
+  WorkloadSpec spec = 5;
+  // Current lifecycle state.
+  WorkloadStatus status = 6;
+  // Container id reported by the node agent.
+  string container_id = 7;
+  // Host port the container is bound to on the node, if any.
+  int32 host_port = 8;
+  // Player-facing hostname, when configured.
+  string hostname = 9;
+  // Reason for the most recent non-running state.
+  string status_detail = 10;
+  // Creator's user id.
+  string created_by = 11;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 12;
+  // Last modification time.
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// WorkloadService manages Minecraft servers placed on org nodes.
+service WorkloadService {
+  // ListWorkloads lists workloads in the active org.
+  rpc ListWorkloads(ListWorkloadsRequest) returns (ListWorkloadsResponse);
+  // GetWorkload returns one workload.
+  rpc GetWorkload(GetWorkloadRequest) returns (GetWorkloadResponse);
+  // CreateWorkload places a new workload, optionally pinning a node.
+  rpc CreateWorkload(CreateWorkloadRequest) returns (CreateWorkloadResponse);
+  // UpdateWorkload patches the spec; changes take effect on next restart.
+  rpc UpdateWorkload(UpdateWorkloadRequest) returns (UpdateWorkloadResponse);
+  // DeleteWorkload removes a workload and its data.
+  rpc DeleteWorkload(DeleteWorkloadRequest) returns (DeleteWorkloadResponse);
+  // StartWorkload starts the workload's container.
+  rpc StartWorkload(StartWorkloadRequest) returns (StartWorkloadResponse);
+  // StopWorkload stops the workload's container.
+  rpc StopWorkload(StopWorkloadRequest) returns (StopWorkloadResponse);
+  // RestartWorkload restarts the workload's container.
+  rpc RestartWorkload(RestartWorkloadRequest) returns (RestartWorkloadResponse);
+  // StreamWorkloadLogs streams console output from the workload.
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  rpc StreamWorkloadLogs(StreamWorkloadLogsRequest) returns (stream WorkloadLogLine);
+  // SendWorkloadCommand sends a console command over RCON.
+  rpc SendWorkloadCommand(SendWorkloadCommandRequest) returns (SendWorkloadCommandResponse);
+  // ListWorkloadEvents lists lifecycle events for a workload.
+  rpc ListWorkloadEvents(ListWorkloadEventsRequest) returns (ListWorkloadEventsResponse);
+  // GetWorkloadConfig reads and parses workload configuration properties.
+  rpc GetWorkloadConfig(GetWorkloadConfigRequest) returns (GetWorkloadConfigResponse);
+  // UpdateWorkloadConfig mutates configuration properties and optionally triggers a reload.
+  rpc UpdateWorkloadConfig(UpdateWorkloadConfigRequest) returns (UpdateWorkloadConfigResponse);
+  // CreateWorkloadBackup creates an atomic snapshot of workload data.
+  rpc CreateWorkloadBackup(CreateWorkloadBackupRequest) returns (CreateWorkloadBackupResponse);
+  // ListWorkloadBackups lists snapshots created for a workload.
+  rpc ListWorkloadBackups(ListWorkloadBackupsRequest) returns (ListWorkloadBackupsResponse);
+  // RestoreWorkloadBackup restores a snapshot onto the workload data directory.
+  rpc RestoreWorkloadBackup(RestoreWorkloadBackupRequest) returns (RestoreWorkloadBackupResponse);
+  // DeleteWorkloadBackup removes a backup snapshot.
+  rpc DeleteWorkloadBackup(DeleteWorkloadBackupRequest) returns (DeleteWorkloadBackupResponse);
+  // SetWorkloadBackupLocked locks or unlocks a backup to prevent automated deletion.
+  rpc SetWorkloadBackupLocked(SetWorkloadBackupLockedRequest) returns (SetWorkloadBackupLockedResponse);
+  // GetWorkloadMetrics returns current real-time telemetry for a workload.
+  rpc GetWorkloadMetrics(GetWorkloadMetricsRequest) returns (GetWorkloadMetricsResponse);
+  // GetWorkloadNetworking returns port bindings, host addressing, and DNS/SRV configuration.
+  rpc GetWorkloadNetworking(GetWorkloadNetworkingRequest) returns (GetWorkloadNetworkingResponse);
+  // ListNodePorts lists allocated and available ports on a given node.
+  rpc ListNodePorts(ListNodePortsRequest) returns (ListNodePortsResponse);
+  // HibernateWorkload pauses or deep-sleeps an idle workload.
+  rpc HibernateWorkload(HibernateWorkloadRequest) returns (HibernateWorkloadResponse);
+  // WakeWorkload unpauses or starts a hibernated workload.
+  rpc WakeWorkload(WakeWorkloadRequest) returns (WakeWorkloadResponse);
+  // SyncIngressRoutes synchronizes hostname routing table for ingress / Gate proxy.
+  rpc SyncIngressRoutes(SyncIngressRoutesRequest) returns (SyncIngressRoutesResponse);
+}
+
+// WorkloadLogLine is one console line from a workload.
+message WorkloadLogLine {
+  // Source of the line.
+  string source = 1;
+  // Line text.
+  string line = 2;
+  // Whether the line is from stderr.
+  bool stderr = 3;
+  // Time the line was produced.
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// ListWorkloadsRequest lists workloads.
+message ListWorkloadsRequest {
+  // Optional node filter.
+  string node_id = 1;
+  // Optional status filter.
+  WorkloadStatus status = 2;
+  // Optional name substring filter.
+  string name_contains = 3;
+  // Optional pagination.
+  PageRequest page = 4;
+}
+
+// ListWorkloadsResponse lists workloads.
+message ListWorkloadsResponse {
+  // Workloads in the active org.
+  repeated Workload workloads = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// GetWorkloadRequest fetches one workload.
+message GetWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// GetWorkloadResponse returns one workload.
+message GetWorkloadResponse {
+  // The requested workload.
+  Workload workload = 1;
+}
+
+// CreateWorkloadRequest creates a workload.
+message CreateWorkloadRequest {
+  // Display name; unique within the org.
+  string name = 1;
+  // Optional pinned node. When empty, scheduler chooses.
+  string node_id = 2;
+  // Workload specification.
+  WorkloadSpec spec = 3;
+}
+
+// CreateWorkloadResponse returns the created workload.
+message CreateWorkloadResponse {
+  // The created workload.
+  Workload workload = 1;
+}
+
+// UpdateWorkloadRequest patches workload fields.
+message UpdateWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // New display name, when set.
+  optional string name = 2;
+  // New spec fields, when set.
+  optional WorkloadSpec spec = 3;
+}
+
+// UpdateWorkloadResponse returns the updated workload.
+message UpdateWorkloadResponse {
+  // The updated workload.
+  Workload workload = 1;
+}
+
+// DeleteWorkloadRequest deletes a workload.
+message DeleteWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // When true, world data is deleted with the container.
+  bool delete_data = 2;
+}
+
+// DeleteWorkloadResponse acknowledges deletion.
+message DeleteWorkloadResponse {}
+
+// StartWorkloadRequest starts a workload.
+message StartWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// StartWorkloadResponse returns the workload after the request was accepted.
+message StartWorkloadResponse {
+  // The workload, with status reflecting the accepted transition.
+  Workload workload = 1;
+}
+
+// StopWorkloadRequest stops a workload.
+message StopWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // Seconds to wait for a graceful shutdown before killing.
+  int32 timeout_seconds = 2;
+}
+
+// StopWorkloadResponse returns the workload after the request was accepted.
+message StopWorkloadResponse {
+  // The workload, with status reflecting the accepted transition.
+  Workload workload = 1;
+}
+
+// RestartWorkloadRequest restarts a workload.
+message RestartWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// RestartWorkloadResponse returns the workload after the request was accepted.
+message RestartWorkloadResponse {
+  // The workload, with status reflecting the accepted transition.
+  Workload workload = 1;
+}
+
+// StreamWorkloadLogsRequest streams console output.
+message StreamWorkloadLogsRequest {
+  // Workload id.
+  string id = 1;
+  // Number of trailing lines to replay before following live output.
+  int32 tail_lines = 2;
+}
+
+// SendWorkloadCommandRequest sends a console command.
+message SendWorkloadCommandRequest {
+  // Workload id.
+  string id = 1;
+  // Command text, without a leading slash.
+  string command = 2;
+}
+
+// SendWorkloadCommandResponse returns the command output.
+message SendWorkloadCommandResponse {
+  // Raw command output.
+  string output = 1;
+}
+
+// ListWorkloadEventsRequest lists lifecycle events.
+message ListWorkloadEventsRequest {
+  // Workload id.
+  string id = 1;
+  // Optional pagination.
+  PageRequest page = 2;
+}
+
+// ListWorkloadEventsResponse lists events.
+message ListWorkloadEventsResponse {
+  // Events, newest first.
+  repeated WorkloadEvent events = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// GetWorkloadConfigRequest requests parsed config properties.
+message GetWorkloadConfigRequest {
+  // Target workload id.
+  string id = 1;
+  // Target config file (defaults to "server.properties" if empty).
+  string file = 2;
+}
+
+// GetWorkloadConfigResponse returns parsed key-value properties.
+message GetWorkloadConfigResponse {
+  // Parsed configuration map.
+  map<string, string> properties = 1;
+  // Raw file content.
+  string raw = 2;
+}
+
+// UpdateWorkloadConfigRequest modifies configuration properties.
+message UpdateWorkloadConfigRequest {
+  // Target workload id.
+  string id = 1;
+  // Key-value properties to update or insert.
+  map<string, string> properties = 2;
+  // Keys to remove from configuration.
+  repeated string remove_keys = 3;
+  // Target config file (defaults to "server.properties" if empty).
+  string file = 4;
+  // If true, trigger a console reload or graceful restart.
+  bool restart_or_reload = 5;
+}
+
+// UpdateWorkloadConfigResponse confirms updates.
+message UpdateWorkloadConfigResponse {
+  // Updated properties map.
+  map<string, string> properties = 1;
+  // Action taken to apply changes ("saved", "reloaded", "restarted").
+  string action_taken = 2;
+}
+
+// WorkloadBackup represents a snapshot of a workload's persistent data.
+message WorkloadBackup {
+  // Backup snapshot ID.
+  string id = 1;
+  // Workload ID.
+  string workload_id = 2;
+  // Node ID where the snapshot was taken.
+  string node_id = 3;
+  // Human-readable backup name or label.
+  string name = 4;
+  // Size of archive in bytes.
+  int64 size_bytes = 5;
+  // SHA-256 checksum of the backup archive.
+  string sha256 = 6;
+  // Whether this backup is locked against automated pruning or deletion.
+  bool locked = 7;
+  // Current status of backup ("completed", "failed", "in_progress").
+  string status = 8;
+  // Error message if backup creation failed.
+  string error = 9;
+  // Creation timestamp.
+  google.protobuf.Timestamp created_at = 10;
+}
+
+// CreateWorkloadBackupRequest creates a snapshot.
+message CreateWorkloadBackupRequest {
+  // Target workload ID.
+  string id = 1;
+  // Optional backup name or description.
+  string name = 2;
+}
+
+// CreateWorkloadBackupResponse returns the created backup record.
+message CreateWorkloadBackupResponse {
+  // The backup metadata.
+  WorkloadBackup backup = 1;
+}
+
+// ListWorkloadBackupsRequest lists backups for a workload.
+message ListWorkloadBackupsRequest {
+  // Target workload ID.
+  string id = 1;
+}
+
+// ListWorkloadBackupsResponse returns available backups.
+message ListWorkloadBackupsResponse {
+  // List of backups.
+  repeated WorkloadBackup backups = 1;
+}
+
+// RestoreWorkloadBackupRequest restores a snapshot.
+message RestoreWorkloadBackupRequest {
+  // Target workload ID.
+  string id = 1;
+  // Backup ID to restore.
+  string backup_id = 2;
+}
+
+// RestoreWorkloadBackupResponse confirms restore completion.
+message RestoreWorkloadBackupResponse {
+  // Success indicator.
+  bool success = 1;
+  // Detail message.
+  string message = 2;
+}
+
+// DeleteWorkloadBackupRequest deletes a snapshot.
+message DeleteWorkloadBackupRequest {
+  // Target workload ID.
+  string id = 1;
+  // Backup ID to delete.
+  string backup_id = 2;
+}
+
+// DeleteWorkloadBackupResponse confirms deletion.
+message DeleteWorkloadBackupResponse {}
+
+// SetWorkloadBackupLockedRequest sets the lock flag on a backup.
+message SetWorkloadBackupLockedRequest {
+  // Target workload ID.
+  string id = 1;
+  // Backup ID.
+  string backup_id = 2;
+  // New lock status.
+  bool locked = 3;
+}
+
+// SetWorkloadBackupLockedResponse returns updated backup.
+message SetWorkloadBackupLockedResponse {
+  // Updated backup.
+  WorkloadBackup backup = 1;
+}
+
+// WorkloadMetrics represents real-time resource usage and server metrics.
+message WorkloadMetrics {
+  // Target workload ID.
+  string workload_id = 1;
+  // CPU utilization percentage across assigned cores.
+  double cpu_percent = 2;
+  // Current memory usage in MiB.
+  double memory_used_mb = 3;
+  // Memory limit in MiB.
+  double memory_limit_mb = 4;
+  // Total disk used by workload data in bytes.
+  int64 disk_used_bytes = 5;
+  // Cumulative network bytes received.
+  int64 network_rx_bytes = 6;
+  // Cumulative network bytes transmitted.
+  int64 network_tx_bytes = 7;
+  // Current number of players online.
+  int32 players_online = 8;
+  // Maximum player capacity configured.
+  int32 max_players = 9;
+  // Current ticks per second (TPS).
+  double tps = 10;
+  // Sample of currently connected player names.
+  repeated string player_sample = 11;
+  // Timestamp when metrics were captured.
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// GetWorkloadMetricsRequest queries metrics for a workload.
+message GetWorkloadMetricsRequest {
+  // Target workload ID.
+  string id = 1;
+}
+
+// GetWorkloadMetricsResponse returns real-time metrics.
+message GetWorkloadMetricsResponse {
+  // Metrics for the workload.
+  WorkloadMetrics metrics = 1;
+}
+
+// GetWorkloadNetworkingRequest queries network configuration and routing for a workload.
+message GetWorkloadNetworkingRequest {
+  // Target workload ID.
+  string id = 1;
+}
+
+// GetWorkloadNetworkingResponse returns network routing, ports, and DNS guidance.
+message GetWorkloadNetworkingResponse {
+  // Target workload ID.
+  string workload_id = 1;
+  // Node ID hosting the workload.
+  string node_id = 2;
+  // Node public/hostname address.
+  string node_address = 3;
+  // Host port bound on the node.
+  int32 host_port = 4;
+  // Container port inside the workload (default 25565).
+  int32 container_port = 5;
+  // Player-facing hostname if configured.
+  string hostname = 6;
+  // Direct connection string (e.g. "192.168.0.102:25566").
+  string primary_address = 7;
+  // Suggested DNS SRV record for custom domain routing without port.
+  string srv_record = 8;
+  // Whether a port collision was detected.
+  bool port_conflict = 9;
+}
+
+// NodePortAllocation describes a single active port lease on a node.
+message NodePortAllocation {
+  // The host port number.
+  int32 port = 1;
+  // Workload leasing the port.
+  string workload_id = 2;
+  // Display name of the workload.
+  string workload_name = 3;
+  // Workload lifecycle status.
+  string status = 4;
+  // Hostname configured for the workload.
+  string hostname = 5;
+}
+
+// ListNodePortsRequest queries port allocations for a node.
+message ListNodePortsRequest {
+  // Target node ID.
+  string node_id = 1;
+}
+
+// ListNodePortsResponse returns all active port leases and available range for a node.
+message ListNodePortsResponse {
+  // Target node ID.
+  string node_id = 1;
+  // Minimum port in the assignable range.
+  int32 port_range_min = 2;
+  // Maximum port in the assignable range.
+  int32 port_range_max = 3;
+  // All currently allocated ports.
+  repeated NodePortAllocation allocations = 4;
+  // Count of remaining unallocated ports in the range.
+  int32 available_ports = 5;
+}
+
+// HibernateWorkloadRequest requests putting a workload to sleep.
+message HibernateWorkloadRequest {
+  // Workload id.
+  string id = 1;
+  // Reason for hibernation (e.g. "idle_timeout", "manual").
+  string reason = 2;
+}
+
+// HibernateWorkloadResponse returns outcome of hibernation.
+message HibernateWorkloadResponse {
+  // Whether hibernation succeeded.
+  bool success = 1;
+  // Resulting workload status.
+  WorkloadStatus status = 2;
+  // Detail message.
+  string message = 3;
+}
+
+// WakeWorkloadRequest requests waking a hibernated workload.
+message WakeWorkloadRequest {
+  // Workload id.
+  string id = 1;
+}
+
+// WakeWorkloadResponse returns outcome of waking.
+message WakeWorkloadResponse {
+  // Whether wake succeeded.
+  bool success = 1;
+  // Resulting workload status.
+  WorkloadStatus status = 2;
+  // Detail message.
+  string message = 3;
+}
+
+// IngressRoute describes a virtual hostname mapping to a workload backend.
+message IngressRoute {
+  // Workload id.
+  string workload_id = 1;
+  // Public virtual hostname (e.g. "survival.example.com").
+  string hostname = 2;
+  // Backend node IP or internal address.
+  string backend_host = 3;
+  // Backend allocated host port.
+  int32 backend_port = 4;
+  // Public proxy port (typically 25565).
+  int32 proxy_port = 5;
+  // Whether the backend is currently hibernated.
+  bool hibernated = 6;
+  // Node ID hosting the workload.
+  string node_id = 7;
+}
+
+// SyncIngressRoutesRequest initiates ingress route synchronization.
+message SyncIngressRoutesRequest {
+  // Optional specific workload id to sync. If empty, syncs all active routes in org.
+  string workload_id = 1;
+}
+
+// SyncIngressRoutesResponse returns synchronized ingress routes.
+message SyncIngressRoutesResponse {
+  // Number of routes synchronized.
+  int32 routes_synced = 1;
+  // Active ingress routes.
+  repeated IngressRoute routes = 2;
+}

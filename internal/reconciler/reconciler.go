@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -431,8 +431,8 @@ func containerIP(summary *container.Summary) string {
 
 	for _, name := range names {
 		ep := summary.NetworkSettings.Networks[name]
-		if ep != nil && ep.IPAddress != "" {
-			return ep.IPAddress
+		if ep != nil && ep.IPAddress.IsValid() && !ep.IPAddress.IsUnspecified() {
+			return ep.IPAddress.String()
 		}
 	}
 	return ""

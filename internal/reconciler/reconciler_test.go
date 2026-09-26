@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"net/netip"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -539,11 +540,15 @@ func (m *fakeLogMigrator) snapshot() []migrationCall {
 }
 
 func summaryWithIP(id, ip string) *container.Summary {
+	var addr netip.Addr
+	if ip != "" {
+		addr = netip.MustParseAddr(ip)
+	}
 	return &container.Summary{
 		ID: id,
 		NetworkSettings: &container.NetworkSettingsSummary{
 			Networks: map[string]*network.EndpointSettings{
-				"carbon-panel-network": {IPAddress: ip},
+				"carbon-panel-network": {IPAddress: addr},
 			},
 		},
 	}

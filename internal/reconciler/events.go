@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	dockerevents "github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
-
+	dockerevents "github.com/moby/moby/api/types/events"
+	"github.com/moby/moby/client"
+	
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
@@ -146,7 +146,7 @@ func computeBackoff(retries int) time.Duration {
 // GetDockerClient(), which itself satisfies this interface (its Events
 // method matches this signature).
 type eventsSource interface {
-	Events(ctx context.Context, options dockerevents.ListOptions) (<-chan dockerevents.Message, <-chan error)
+	Events(ctx context.Context, options client.EventsListOptions) client.EventsResult
 }
 
 // Watcher streams container lifecycle events for a single node, translating
@@ -225,11 +225,12 @@ func (w *Watcher) Run(ctx context.Context) {
 // that ended the stream, or nil if it ended solely because ctx was
 // cancelled.
 func (w *Watcher) stream(ctx context.Context) error {
-	filterArgs := filters.NewArgs()
-	filterArgs.Add("type", string(dockerevents.ContainerEventType))
-	filterArgs.Add("label", labelManaged+"=true")
+	filterArgs := client.Filters{}.
+		Add("type", string(dockerevents.ContainerEventType)).
+		Add("label", labelManaged+"=true")
 
-	msgCh, errCh := w.client.Events(ctx, dockerevents.ListOptions{Filters: filterArgs})
+	res := w.client.Events(ctx, client.EventsListOptions{Filters: filterArgs})
+	msgCh, errCh := res.Messages, res.Err
 
 	for {
 		select {

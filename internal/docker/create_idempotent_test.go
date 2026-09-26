@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 )
 
 // TestIsConflictError verifies isConflictError uses the containerd errdefs.IsConflict

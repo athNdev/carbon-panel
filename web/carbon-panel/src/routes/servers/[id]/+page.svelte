@@ -14,14 +14,12 @@
 		RefreshCcw,
 		MoreVertical,
 		Package,
-		Activity,
 		Loader2,
 		Copy,
 		ExternalLink,
 		Trash2,
 		Cpu,
 		Info,
-		Network,
 		ArrowLeft,
 		HardDrive,
 		Terminal,
@@ -53,9 +51,9 @@
 		RestartServerRequestSchema,
 		RecreateServerRequestSchema
 	} from '$lib/proto/carbonpanel/v1/server_pb';
-	import { formatBytes, enumToString } from '$lib/utils';
+	import { enumToString } from '$lib/utils';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
-	import { CarbonTag, CarbonButton, CarbonTabs } from '$lib/components/carbon';
+	import { CarbonTag, CarbonTabs } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
 	import ServerSettings from '$lib/components/server-settings.svelte';

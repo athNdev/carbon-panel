@@ -131,6 +131,7 @@ func (x *ActivityLogEntry) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// List request with optional filters
 type ListActivityLogsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -199,6 +200,7 @@ func (x *ListActivityLogsRequest) GetLimit() int32 {
 	return 0
 }
 
+// Newest-first audit records
 type ListActivityLogsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Entries       []*ActivityLogEntry    `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`

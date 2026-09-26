@@ -51,7 +51,7 @@ prod: build-frontend
 # Build frontend for production
 build-frontend:
 	@echo "Building frontend..."
-	cd $(FRONTEND_DIR) && bun run build
+	cd $(FRONTEND_DIR) && NODE_OPTIONS="--max-old-space-size=4096" bun run build
 
 # Build backend with embedded frontend
 build: build-frontend
@@ -162,6 +162,8 @@ check:
 proto:
 	@echo "Generating protocol buffer code (using Docker)..."
 	$(BUF_RUN) generate
+	@echo "Generating Carbon Cloud protocol buffer code..."
+	$(BUF_RUN) generate --template buf.gen.cloud.yaml
 	@echo "Proto generation complete!"
 
 proto-clean:

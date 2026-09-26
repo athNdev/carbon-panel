@@ -194,7 +194,7 @@ sequenceDiagram
 ```
 
 ### 4.2 Docker Container Orchestration (`internal/docker`)
-Carbon Panel uses the official Docker Engine API (`github.com/docker/docker/client`) to orchestrate container lifecycles:
+Carbon Panel uses the official Docker Engine API (`github.com/moby/moby/client`) to orchestrate container lifecycles:
 - **Base Images**: Utilizes optimized `itzg/minecraft-server` multi-architecture images.
 - **Volume Binding**: Server directories are mounted into the container at `/data`, isolating world saves, configs, and plugins.
 - **Resource Constraints**: Dynamically applies CPU quotas (`NanoCPUs`) and memory limits (`Memory`) defined per server.

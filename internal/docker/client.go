@@ -24,15 +24,12 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/utils"
 	"github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
+	"net/netip"
 )
 
 const (
@@ -88,7 +85,7 @@ func boundedCall(ctx context.Context) (context.Context, context.CancelFunc) {
 // client.WithAPIVersionNegotiation, or the SDK re-enters the lazy path whenever
 // this eager ping fails.
 func NewAPIClient(opts ...client.Opt) (*client.Client, error) {
-	cli, err := client.NewClientWithOpts(opts...)
+	cli, err := client.New(opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,13 +93,13 @@ func NewAPIClient(opts ...client.Opt) (*client.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), negotiationTimeout)
 	defer cancel()
 
-	ping, err := cli.Ping(ctx)
+	_, err = cli.Ping(ctx, client.PingOptions{NegotiateAPIVersion: true})
 	if err != nil {
-		// Leave the client at its default API version; requests still fail
-		// fast with their own bounded contexts rather than hanging.
-		return cli, nil
+		// Leave the client at default API version and disable lazy negotiation
+		// so requests fail fast with their own bounded contexts rather than hanging.
+		fixedOpts := append(opts, client.WithAPIVersion(client.MaxAPIVersion))
+		return client.New(fixedOpts...)
 	}
-	cli.NegotiateAPIVersionPing(ping)
 
 	return cli, nil
 }
@@ -176,11 +173,11 @@ func fetchDockerImages() ([]DockerImageTag, error) {
 	dockerCache.mu.RUnlock()
 
 	// Fetch new manifest
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	resp, err := client.Get(dockerImagesURL)
+	resp, err := httpClient.Get(dockerImagesURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch docker images manifest: %w", err)
 	}
@@ -332,13 +329,13 @@ func (c *Client) GetDockerClient() *client.Client {
 }
 
 // Ping checks connectivity to the Docker daemon
-func (c *Client) Ping(ctx context.Context) (types.Ping, error) {
+func (c *Client) Ping(ctx context.Context) (client.PingResult, error) {
 	if c == nil || c.docker == nil {
-		return types.Ping{}, fmt.Errorf("docker client is nil")
+		return client.PingResult{}, fmt.Errorf("docker client is nil")
 	}
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
-	return c.docker.Ping(ctx)
+	return c.docker.Ping(ctx, client.PingOptions{})
 }
 
 // ApplyOverrides applies DockerOverrides to container and host configs
@@ -464,7 +461,13 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 
 	// Apply DNS override
 	if len(overrides.GetDns()) > 0 {
-		hostConfig.DNS = overrides.GetDns()
+		var dnsAddrs []netip.Addr
+		for _, d := range overrides.GetDns() {
+			if addr, err := netip.ParseAddr(d); err == nil {
+				dnsAddrs = append(dnsAddrs, addr)
+			}
+		}
+		hostConfig.DNS = dnsAddrs
 	}
 }
 
@@ -480,7 +483,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	// Ensure image is available locally before creating container (MINE-125).
 	// If the image is already present on the Docker daemon, skip remote registry check
 	// to avoid blocking / stalling during 'Creating' state on network latency or Docker Hub rate limits.
-	if _, _, err := c.docker.ImageInspectWithRaw(ctx, imageName); err != nil {
+	if _, err := c.docker.ImageInspect(ctx, imageName); err != nil {
 		c.log.Info("Image %s not present locally, pulling...", imageName)
 		if pullErr := c.pullImage(ctx, imageName); pullErr != nil {
 			return "", fmt.Errorf("failed to pull image %s: %w", imageName, pullErr)
@@ -510,28 +513,28 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	c.log.Debug("Creating container for server %s with image %s", server.ID, imageName)
 
 	// Build exposed ports
-	exposedPorts := nat.PortSet{
-		nat.Port(fmt.Sprintf("%d/tcp", containerPort)):   struct{}{},
-		nat.Port(fmt.Sprintf("%d/tcp", DefaultRCONPort)): struct{}{},
+	exposedPorts := network.PortSet{
+		network.MustParsePort(fmt.Sprintf("%d/tcp", containerPort)):   struct{}{},
+		network.MustParsePort(fmt.Sprintf("%d/tcp", DefaultRCONPort)): struct{}{},
 	}
 	for _, port := range server.AdditionalPorts {
 		protocol := port.GetProtocol()
 		if protocol == "" {
 			protocol = "tcp"
 		}
-		exposedPorts[nat.Port(fmt.Sprintf("%d/%s", port.GetContainerPort(), protocol))] = struct{}{}
+		exposedPorts[network.MustParsePort(fmt.Sprintf("%d/%s", port.GetContainerPort(), protocol))] = struct{}{}
 	}
 
 	// Build port bindings
-	portBindings := nat.PortMap{}
+	portBindings := network.PortMap{}
 	if !useProxy {
 		// Bind game port to public host interfaces (0.0.0.0)
-		portBindings[nat.Port(fmt.Sprintf("%d/tcp", containerPort))] = []nat.PortBinding{
-			{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", server.Port)},
+		portBindings[network.MustParsePort(fmt.Sprintf("%d/tcp", containerPort))] = []network.PortBinding{
+			{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: fmt.Sprintf("%d", server.Port)},
 		}
 		// Bind RCON to localhost only
-		portBindings[nat.Port(fmt.Sprintf("%d/tcp", DefaultRCONPort))] = []nat.PortBinding{
-			{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", server.Port+RCONPortOffset)},
+		portBindings[network.MustParsePort(fmt.Sprintf("%d/tcp", DefaultRCONPort))] = []network.PortBinding{
+			{HostIP: netip.MustParseAddr("127.0.0.1"), HostPort: fmt.Sprintf("%d", server.Port+RCONPortOffset)},
 		}
 
 		// Apply DOCKER-USER iptables rate limiting & SYN flood protection (MINE-9)
@@ -544,13 +547,13 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// When routed through Velocity/proxy, bind server container port strictly to loopback (127.0.0.1)
 		// so external players cannot bypass Velocity by connecting directly to the server's backend port.
 		if server.Port > 0 {
-			portBindings[nat.Port(fmt.Sprintf("%d/tcp", containerPort))] = []nat.PortBinding{
-				{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", server.Port)},
+			portBindings[network.MustParsePort(fmt.Sprintf("%d/tcp", containerPort))] = []network.PortBinding{
+				{HostIP: netip.MustParseAddr("127.0.0.1"), HostPort: fmt.Sprintf("%d", server.Port)},
 			}
 		}
 		// Bind RCON to localhost only
-		portBindings[nat.Port(fmt.Sprintf("%d/tcp", DefaultRCONPort))] = []nat.PortBinding{
-			{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", server.Port+RCONPortOffset)},
+		portBindings[network.MustParsePort(fmt.Sprintf("%d/tcp", DefaultRCONPort))] = []network.PortBinding{
+			{HostIP: netip.MustParseAddr("127.0.0.1"), HostPort: fmt.Sprintf("%d", server.Port+RCONPortOffset)},
 		}
 
 		// Apply DOCKER-USER iptables proxy port isolation guard
@@ -565,9 +568,9 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		if protocol == "" {
 			protocol = "tcp"
 		}
-		portKey := nat.Port(fmt.Sprintf("%d/%s", port.GetContainerPort(), protocol))
-		portBindings[portKey] = []nat.PortBinding{
-			{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", port.GetHostPort())},
+		portKey := network.MustParsePort(fmt.Sprintf("%d/%s", port.GetContainerPort(), protocol))
+		portBindings[portKey] = []network.PortBinding{
+			{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: fmt.Sprintf("%d", port.GetHostPort())},
 		}
 		c.log.Debug("Additional port mapping: %s (%d:%d/%s)", port.GetName(), port.GetHostPort(), port.GetContainerPort(), protocol)
 	}
@@ -645,7 +648,9 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 
 	// Apply global DNS from config
 	if c.config.DNS != "" {
-		hostConfig.DNS = []string{c.config.DNS}
+		if addr, err := netip.ParseAddr(c.config.DNS); err == nil {
+			hostConfig.DNS = []netip.Addr{addr}
+		}
 	}
 
 	// Apply global labels from config
@@ -720,7 +725,7 @@ func (c *Client) preflightResolveForCreate(ctx context.Context, kind, id string,
 	}
 
 	c.log.Warn("Found stale %s container %s (name=%v, state=%s), removing before creating a fresh one", kind, existing.ID, existing.Names, existing.State)
-	if rmErr := c.docker.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+	if _, rmErr := c.docker.ContainerRemove(ctx, existing.ID, client.ContainerRemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
 		return "", false, fmt.Errorf("failed to remove stale %s container %s: %w", kind, existing.ID, rmErr)
 	}
 	return "", false, nil
@@ -743,7 +748,13 @@ func isAliveContainerState(state container.ContainerState) bool {
 // conflicting container via resolve, force-removes it if found, and retries creation exactly
 // once. If the retry also fails, the error is returned as-is.
 func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkConfig *network.NetworkingConfig, containerName string, resolve func() (*container.Summary, error)) (string, error) {
-	resp, err := c.docker.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, containerName)
+	createOpts := client.ContainerCreateOptions{
+		Config:           config,
+		HostConfig:       hostConfig,
+		NetworkingConfig: networkConfig,
+		Name:             containerName,
+	}
+	resp, err := c.docker.ContainerCreate(ctx, createOpts)
 	if err == nil {
 		return resp.ID, nil
 	}
@@ -754,14 +765,14 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	c.log.Warn("Container name %q conflicted on create (%v), resolving and removing stale container before retrying once", containerName, err)
 
 	if existing, resolveErr := resolve(); resolveErr == nil {
-		if rmErr := c.docker.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+		if _, rmErr := c.docker.ContainerRemove(ctx, existing.ID, client.ContainerRemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
 			return "", fmt.Errorf("container name %q already in use and stale container %s could not be removed: %w (original conflict: %v)", containerName, existing.ID, rmErr, err)
 		}
 	} else if !errors.Is(resolveErr, ErrContainerNotResolved) {
 		c.log.Warn("Failed to resolve conflicting container %q after 409: %v", containerName, resolveErr)
 	}
 
-	resp, retryErr := c.docker.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, containerName)
+	resp, retryErr := c.docker.ContainerCreate(ctx, createOpts)
 	if retryErr != nil {
 		return "", retryErr
 	}
@@ -794,23 +805,22 @@ func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*contai
 	defer cancel()
 
 	// Strategy 1: label match
-	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", fmt.Sprintf("carbon-panel.server.id=%s", serverID))
+	filterArgs := client.Filters{}.Add("label", fmt.Sprintf("carbon-panel.server.id=%s", serverID))
 
-	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
+	res, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
 		Filters: filterArgs,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("resolve container: label lookup failed: %w", err)
 	}
-	if len(containers) > 0 {
-		return &containers[0], nil
+	if len(res.Items) > 0 {
+		return &res.Items[0], nil
 	}
 
 	// Strategy 2: deterministic name fallback
 	name := fmt.Sprintf("carbon-panel-server-%s", serverID)
-	inspect, err := c.docker.ContainerInspect(ctx, name)
+	inspectRes, err := c.docker.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			return nil, fmt.Errorf("%w: server %s", ErrContainerNotResolved, serverID)
@@ -818,7 +828,7 @@ func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*contai
 		return nil, fmt.Errorf("resolve container: name lookup failed: %w", err)
 	}
 
-	return inspectToSummary(inspect), nil
+	return inspectToSummary(inspectRes.Container), nil
 }
 
 // ResolveModuleContainer is the module-scoped analogue of ResolveContainer. It re-finds the
@@ -833,23 +843,22 @@ func (c *Client) ResolveModuleContainer(ctx context.Context, moduleID string) (*
 	defer cancel()
 
 	// Strategy 1: label match
-	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", fmt.Sprintf("carbon-panel.module.id=%s", moduleID))
+	filterArgs := client.Filters{}.Add("label", fmt.Sprintf("carbon-panel.module.id=%s", moduleID))
 
-	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
+	res, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
 		Filters: filterArgs,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("resolve module container: label lookup failed: %w", err)
 	}
-	if len(containers) > 0 {
-		return &containers[0], nil
+	if len(res.Items) > 0 {
+		return &res.Items[0], nil
 	}
 
 	// Strategy 2: deterministic name fallback
 	name := fmt.Sprintf("carbon-panel-module-%s", moduleID)
-	inspect, err := c.docker.ContainerInspect(ctx, name)
+	inspectRes, err := c.docker.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			return nil, fmt.Errorf("%w: module %s", ErrContainerNotResolved, moduleID)
@@ -857,7 +866,7 @@ func (c *Client) ResolveModuleContainer(ctx context.Context, moduleID string) (*
 		return nil, fmt.Errorf("resolve module container: name lookup failed: %w", err)
 	}
 
-	return inspectToSummary(inspect), nil
+	return inspectToSummary(inspectRes.Container), nil
 }
 
 // inspectToSummary adapts a ContainerInspect result into the same container.Summary shape
@@ -879,8 +888,8 @@ func inspectToSummary(inspect container.InspectResponse) *container.Summary {
 		}
 	}
 	if inspect.State != nil {
-		summary.State = container.ContainerState(inspect.State.Status)
-		summary.Status = inspect.State.Status
+		summary.State = inspect.State.Status
+		summary.Status = string(inspect.State.Status)
 	}
 	// Carry the per-network endpoint state across too. Callers that need a
 	// container's address (e.g. the reconciler's route-drift check) get the same
@@ -894,7 +903,7 @@ func inspectToSummary(inspect container.InspectResponse) *container.Summary {
 }
 
 func (c *Client) StartContainer(ctx context.Context, containerID string) error {
-	if err := c.docker.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
+	if _, err := c.docker.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); err != nil {
 		return err
 	}
 
@@ -918,7 +927,7 @@ func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, e
 
 	// First try graceful stop with a short timeout
 	timeout := 5 // seconds
-	err := c.docker.ContainerStop(ctx, containerID, container.StopOptions{
+	_, err := c.docker.ContainerStop(ctx, containerID, client.ContainerStopOptions{
 		Timeout: &timeout,
 	})
 
@@ -930,7 +939,7 @@ func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, e
 		}
 		// If graceful stop fails, force kill the container
 		c.log.Warn("Graceful stop failed for container %s: %v, attempting force kill", containerID, err)
-		killErr := c.docker.ContainerKill(ctx, containerID, "KILL")
+		_, killErr := c.docker.ContainerKill(ctx, containerID, client.ContainerKillOptions{Signal: "KILL"})
 		if killErr != nil {
 			// If container non-existent on kill
 			if errdefs.IsNotFound(killErr) {
@@ -947,14 +956,15 @@ func (c *Client) RemoveContainer(ctx context.Context, containerID string) error 
 	if c.logStreamer != nil {
 		c.logStreamer.RemoveContainer(containerID)
 	}
-	return c.docker.ContainerRemove(ctx, containerID, container.RemoveOptions{
+	_, err := c.docker.ContainerRemove(ctx, containerID, client.ContainerRemoveOptions{
 		Force: true,
 	})
+	return err
 }
 
 // PauseContainer pauses all processes in the container using cgroup freezer (MINE-18)
 func (c *Client) PauseContainer(ctx context.Context, containerID string) error {
-	if err := c.docker.ContainerPause(ctx, containerID); err != nil {
+	if _, err := c.docker.ContainerPause(ctx, containerID, client.ContainerPauseOptions{}); err != nil {
 		return fmt.Errorf("failed to pause container %s: %w", containerID, err)
 	}
 	c.log.Info("Paused container %s via cgroup freezer", containerID)
@@ -963,7 +973,7 @@ func (c *Client) PauseContainer(ctx context.Context, containerID string) error {
 
 // UnpauseContainer resumes all processes in the container from cgroup freezer (MINE-18)
 func (c *Client) UnpauseContainer(ctx context.Context, containerID string) error {
-	if err := c.docker.ContainerUnpause(ctx, containerID); err != nil {
+	if _, err := c.docker.ContainerUnpause(ctx, containerID, client.ContainerUnpauseOptions{}); err != nil {
 		return fmt.Errorf("failed to unpause container %s: %w", containerID, err)
 	}
 	c.log.Info("Unpaused container %s from cgroup freezer", containerID)
@@ -1015,7 +1025,7 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 		}
 
 		// Remove old container directly from Docker to preserve log subscribers for migration
-		if err := c.docker.ContainerRemove(ctx, oldContainerID, container.RemoveOptions{Force: true}); err != nil {
+		if _, err := c.docker.ContainerRemove(ctx, oldContainerID, client.ContainerRemoveOptions{Force: true}); err != nil {
 			// Log but continue - container may already be removed
 			c.log.Debug("Could not remove old container (may not exist): %v", err)
 		}
@@ -1105,12 +1115,12 @@ func (c *Client) GetContainerStatus(ctx context.Context, containerID string) (mo
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
 
-	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	res, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return models.StatusError, err
 	}
 
-	return mapContainerState(inspect.State), nil
+	return mapContainerState(res.Container.State), nil
 }
 
 // ObserveContainer inspects a container once and returns its consolidated
@@ -1121,10 +1131,11 @@ func (c *Client) ObserveContainer(ctx context.Context, containerID string) (*Con
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
 
-	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	res, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, err
 	}
+	inspect := res.Container
 
 	st := &ContainerState{
 		ContainerID: inspect.ID,
@@ -1148,7 +1159,7 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	defer cancel()
 
 	// Get real-time stats
-	statsResponse, err := c.docker.ContainerStats(ctx, containerID, false)
+	statsResponse, err := c.docker.ContainerStats(ctx, containerID, client.ContainerStatsOptions{Stream: false})
 	if err != nil {
 		return nil, err
 	}
@@ -1190,23 +1201,20 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 
 // Runs shell command, script, or executable inside the container and returns the output
 func (c *Client) Exec(ctx context.Context, containerID string, execCmd []string) (string, error) {
-	// Create exec configuration
-	execConfig := container.ExecOptions{
+	// Create exec instance
+	execResp, err := c.docker.ExecCreate(ctx, containerID, client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          false,
-		Cmd:          execCmd, //[]string{"rcon-cli", command},
-	}
-
-	// Create exec instance
-	execResp, err := c.docker.ContainerExecCreate(ctx, containerID, execConfig)
+		TTY:          false,
+		Cmd:          execCmd,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create exec: %w", err)
 	}
 
 	// Attach to exec instance
-	attachResp, err := c.docker.ContainerExecAttach(ctx, execResp.ID, container.ExecStartOptions{})
+	attachResp, err := c.docker.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to attach to exec: %w", err)
 	}
@@ -1220,7 +1228,7 @@ func (c *Client) Exec(ctx context.Context, containerID string, execCmd []string)
 	}
 
 	// Check exec exit code
-	inspectResp, err := c.docker.ContainerExecInspect(ctx, execResp.ID)
+	inspectResp, err := c.docker.ExecInspect(ctx, execResp.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to inspect exec: %w", err)
 	}
@@ -1238,7 +1246,7 @@ func (c *Client) ExecCommand(ctx context.Context, containerID string, command st
 }
 
 func (c *Client) pullImage(ctx context.Context, imageName string) error {
-	reader, err := c.docker.ImagePull(ctx, imageName, image.PullOptions{})
+	reader, err := c.docker.ImagePull(ctx, imageName, client.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
 	}
@@ -1285,14 +1293,14 @@ func (c *Client) EnsureNetwork() error {
 	defer cancel()
 
 	// List existing networks
-	networks, err := c.docker.NetworkList(ctx, network.ListOptions{})
+	res, err := c.docker.NetworkList(ctx, client.NetworkListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list networks: %w", err)
 	}
 
 	// Check if network already exists
 	exists := false
-	for _, net := range networks {
+	for _, net := range res.Items {
 		if net.Name == c.config.NetworkName {
 			exists = true
 			break
@@ -1301,7 +1309,7 @@ func (c *Client) EnsureNetwork() error {
 
 	if !exists {
 		// Create network - let Docker allocate subnet from its configured default-address-pools
-		createOpts := network.CreateOptions{
+		createOpts := client.NetworkCreateOptions{
 			Driver: "bridge",
 			Labels: map[string]string{
 				"carbon-panel.managed": "true",
@@ -1330,21 +1338,24 @@ func (c *Client) attachSelfToNetwork(ctx context.Context) {
 	}
 
 	// Docker sets the container hostname to its short ID by default
-	info, err := c.docker.ContainerInspect(ctx, hostname)
+	inspectRes, err := c.docker.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
 	if err != nil {
 		c.log.Debug("Could not inspect own container %s: %v", hostname, err)
 		return
 	}
+	info := inspectRes.Container
 
 	if info.HostConfig != nil && info.HostConfig.NetworkMode.IsHost() {
 		return
 	}
 
-	if _, ok := info.NetworkSettings.Networks[c.config.NetworkName]; ok {
-		return
+	if info.NetworkSettings != nil {
+		if _, ok := info.NetworkSettings.Networks[c.config.NetworkName]; ok {
+			return
+		}
 	}
 
-	if err := c.docker.NetworkConnect(ctx, c.config.NetworkName, info.ID, nil); err != nil {
+	if _, err := c.docker.NetworkConnect(ctx, c.config.NetworkName, client.NetworkConnectOptions{Container: info.ID}); err != nil {
 		c.log.Error("Failed to attach Carbon Panel container to network %s: %v", c.config.NetworkName, err)
 		return
 	}
@@ -1486,9 +1497,13 @@ func (c *Client) DetectContainerJavaVersion(ctx context.Context, containerID str
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
 
-	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	inspectRes, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return 0, err
+	}
+	inspect := inspectRes.Container
+	if inspect.Config == nil {
+		return 21, nil
 	}
 	for _, e := range inspect.Config.Env {
 		if strings.HasPrefix(e, "JAVA_VERSION=") {

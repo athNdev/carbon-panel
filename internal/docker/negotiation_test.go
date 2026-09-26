@@ -10,7 +10,7 @@ import (
 	"time"
 
 	models "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // fakeDockerHost converts an httptest server URL into the tcp:// docker host

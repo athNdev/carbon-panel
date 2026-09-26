@@ -1,0 +1,2 @@
+hcloud_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+join_token   = "fake_join_token_000000000000000000000000000000"

@@ -1,0 +1,270 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// NodeCapacity is the resource envelope a node offers to workloads.
+message NodeCapacity {
+  // Guaranteed virtual CPUs.
+  int32 vcpu = 1;
+  // Total RAM in MiB.
+  int64 ram_mb = 2;
+  // Total disk in GiB.
+  int32 disk_gb = 3;
+  // Maximum number of concurrent workloads; zero means unbounded.
+  int32 max_workloads = 4;
+}
+
+// NodeAllocation is what is currently committed on a node.
+message NodeAllocation {
+  // Sum of workload CPU reservations, millicores.
+  int64 cpu_millicores = 1;
+  // Sum of workload memory reservations in MiB.
+  int64 ram_mb = 2;
+  // Sum of workload disk reservations in GiB.
+  int32 disk_gb = 3;
+  // Number of workloads currently placed on the node.
+  int32 workload_count = 4;
+  // Number of those workloads reporting RUNNING.
+  int32 running_count = 5;
+}
+
+// NodeMetrics is the latest resource telemetry reported by the agent.
+message NodeMetrics {
+  // CPU utilisation as a percentage of the node's cores.
+  double cpu_percent = 1;
+  // Used RAM in MiB.
+  int64 mem_used_mb = 2;
+  // Used disk in GiB.
+  int32 disk_used_gb = 3;
+  // Reported Docker Engine version.
+  string docker_version = 4;
+  // Node agent version.
+  string agent_version = 5;
+  // 1-minute load average.
+  double load1 = 7;
+}
+
+// Node is a machine that can run workloads for an org, whether the tenant
+// brought it or Carbon Cloud provisioned it.
+message Node {
+  // Server-side node id.
+  string id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Display name.
+  string name = 3;
+  // How the node joined.
+  NodeOrigin origin = 4;
+  // Cloud provider for managed nodes.
+  ProviderId provider = 5;
+  // Node type the node satisfies.
+  string node_type_id = 6;
+  // Cloud region, for managed nodes.
+  string region = 7;
+  // Current liveness.
+  NodeStatus status = 8;
+  // Hostname reported by the agent.
+  string hostname = 9;
+  // Public address, when known.
+  string public_ip = 10;
+  // Private address, when known.
+  string private_ip = 11;
+  // Declared capacity.
+  NodeCapacity capacity = 12;
+  // Current allocation.
+  NodeAllocation allocation = 13;
+  // Latest telemetry, absent until the first heartbeat.
+  NodeMetrics metrics = 14;
+  // Operator-supplied labels used for placement.
+  map<string, string> labels = 15;
+  // SHA-256 fingerprint of the agent's client certificate.
+  string agent_fingerprint = 16;
+  // Provisioning run that produced the node, for managed nodes.
+  string provision_id = 17;
+  // Last heartbeat time.
+  google.protobuf.Timestamp last_heartbeat = 18;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 19;
+  // Last modification time.
+  google.protobuf.Timestamp updated_at = 20;
+  // True when the node is reserved for system workloads and cannot be deleted.
+  bool is_system = 21;
+}
+
+// JoinToken authorises exactly one node registration.
+message JoinToken {
+  // Token id (the secret is derived from this plus a nonce).
+  string id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Human label, e.g. "homeserver-1".
+  string name = 3;
+  // Node type the joining node is expected to satisfy.
+  string node_type_id = 4;
+  // Origin the node will be recorded with.
+  NodeOrigin origin = 5;
+  // Provisioning run the token belongs to, for managed nodes.
+  string provision_id = 6;
+  // Expiry time.
+  google.protobuf.Timestamp expires_at = 7;
+  // Redemption time; a redeemed token cannot be redeemed again.
+  google.protobuf.Timestamp used_at = 8;
+  // Node that consumed the token.
+  string used_by_node_id = 9;
+  // Revocation time.
+  google.protobuf.Timestamp revoked_at = 10;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 11;
+}
+
+// NodeService is the tenant-facing node management API.
+service NodeService {
+  // ListNodes lists nodes in the active org with live allocation and status.
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  // GetNode returns one node.
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  // UpdateNode patches display fields and labels.
+  rpc UpdateNode(UpdateNodeRequest) returns (UpdateNodeResponse);
+  // DrainNode stops placing new workloads without disrupting running ones.
+  rpc DrainNode(DrainNodeRequest) returns (DrainNodeResponse);
+  // ResumeNode returns a drained node to active placement.
+  rpc ResumeNode(ResumeNodeRequest) returns (ResumeNodeResponse);
+  // DeleteNode removes a node; it must have no running workloads.
+  rpc DeleteNode(DeleteNodeRequest) returns (DeleteNodeResponse);
+  // CreateJoinToken mints a single-use token for a BYO node.
+  rpc CreateJoinToken(CreateJoinTokenRequest) returns (CreateJoinTokenResponse);
+  // ListJoinTokens lists tokens in the active org.
+  rpc ListJoinTokens(ListJoinTokensRequest) returns (ListJoinTokensResponse);
+  // RevokeJoinToken invalidates an unused token.
+  rpc RevokeJoinToken(RevokeJoinTokenRequest) returns (RevokeJoinTokenResponse);
+}
+
+// ListNodesRequest lists nodes.
+message ListNodesRequest {
+  // Optional status filter.
+  NodeStatus status = 1;
+  // Optional origin filter.
+  NodeOrigin origin = 2;
+  // Optional pagination.
+  PageRequest page = 3;
+}
+
+// ListNodesResponse lists nodes.
+message ListNodesResponse {
+  // Nodes in the active org.
+  repeated Node nodes = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// GetNodeRequest fetches one node.
+message GetNodeRequest {
+  // Node id.
+  string id = 1;
+}
+
+// GetNodeResponse returns one node.
+message GetNodeResponse {
+  // The requested node.
+  Node node = 1;
+}
+
+// UpdateNodeRequest patches a node.
+message UpdateNodeRequest {
+  // New display name; unchanged when omitted.
+  optional string name = 1;
+  // Replaces the label set when present.
+  map<string, string> labels = 2;
+  // New declared capacity; unchanged when omitted. Shrinking below current
+  // allocation is rejected.
+  optional NodeCapacity capacity = 3;
+}
+
+// UpdateNodeResponse returns the updated node.
+message UpdateNodeResponse {
+  // The updated node.
+  Node node = 1;
+}
+
+// DrainNodeRequest drains a node.
+message DrainNodeRequest {
+  // Node id.
+  string id = 1;
+}
+
+// DrainNodeResponse returns the updated node.
+message DrainNodeResponse {
+  // The drained node.
+  Node node = 1;
+}
+
+// ResumeNodeRequest resumes a drained node.
+message ResumeNodeRequest {
+  // Node id.
+  string id = 1;
+}
+
+// ResumeNodeResponse returns the updated node.
+message ResumeNodeResponse {
+  // The resumed node.
+  Node node = 1;
+}
+
+// DeleteNodeRequest deletes a node.
+message DeleteNodeRequest {
+  // Node id.
+  string id = 1;
+  // When true, running workloads are stopped first.
+  bool force = 2;
+}
+
+// DeleteNodeResponse acknowledges deletion.
+message DeleteNodeResponse {}
+
+// CreateJoinTokenRequest mints a join token.
+message CreateJoinTokenRequest {
+  // Human label, usually the machine's name.
+  string name = 1;
+  // Node type the node will be recorded under.
+  string node_type_id = 2;
+  // Validity window in seconds; the server clamps it.
+  int64 ttl_seconds = 3;
+}
+
+// CreateJoinTokenResponse returns the token and the exact join command to run.
+message CreateJoinTokenResponse {
+  // Token metadata.
+  JoinToken token = 1;
+  // Plaintext token secret; returned once.
+  string secret = 2;
+  // Ready-to-paste join command for the target host.
+  string join_command = 3;
+}
+
+// ListJoinTokensRequest lists tokens.
+message ListJoinTokensRequest {
+  // Optional pagination.
+  PageRequest page = 1;
+}
+
+// ListJoinTokensResponse lists tokens.
+message ListJoinTokensResponse {
+  // Tokens in the active org.
+  repeated JoinToken tokens = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// RevokeJoinTokenRequest revokes a token.
+message RevokeJoinTokenRequest {
+  // Token id.
+  string id = 1;
+}
+
+// RevokeJoinTokenResponse acknowledges revocation.
+message RevokeJoinTokenResponse {}

@@ -163,7 +163,7 @@
 		}
 	});
 
-	let taskConfig = $state('');
+	let _taskConfig = $state('');
 	let eventTriggers = $state<TriggeredEventType[]>([TriggeredEventType.SERVER_START]);
 
 	// Form state â€” webhook
@@ -383,7 +383,7 @@
 		backupMinBackups = 3;
 		backupMaxBackups = 0;
 		activeSection = 'general';
-		taskConfig = '';
+		_taskConfig = '';
 		eventTriggers = [TriggeredEventType.SERVER_START];
 		webhookUrl = '';
 		webhookSecret = '';
@@ -441,7 +441,7 @@
 		backupMinBackups = typeof parsed.min_backups === 'number' ? parsed.min_backups : 0;
 		backupMaxBackups = typeof parsed.max_backups === 'number' ? parsed.max_backups : 0;
 
-		taskConfig = task.config;
+		_taskConfig = task.config;
 		eventTriggers =
 			task.eventTriggers && task.eventTriggers.length > 0
 				? [...task.eventTriggers]

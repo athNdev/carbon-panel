@@ -3,18 +3,9 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import type { ProxyListener } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { ProxyListenerWithCount, ProxyRoute } from '$lib/proto/carbonpanel/v1/proxy_pb';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Button } from '$lib/components/ui/button';
 	import { Switch } from '$lib/components/ui/switch';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import { CarbonInlineLoading } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';

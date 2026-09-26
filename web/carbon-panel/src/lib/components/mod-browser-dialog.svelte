@@ -12,23 +12,18 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import {
 		Search,
 		Download,
 		Package,
 		Loader2,
-		CheckCircle2,
-		ExternalLink,
 		ArrowLeft,
 		Boxes,
 		AlertTriangle,
 		Layers,
 		Filter,
-		X,
-		Plus,
-		Check
+		X
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';

@@ -5,8 +5,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/moby/moby/client"
 )
 
 // ReconcileStore is the subset of *db.Store that startup reconciliation needs. It exists so
@@ -72,19 +71,18 @@ func (c *Client) listManagedContainers(ctx context.Context) ([]managedContainer,
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
 
-	filterArgs := filters.NewArgs()
-	filterArgs.Add("label", "carbon-panel.managed=true")
+	filters := client.Filters{}.Add("label", "carbon-panel.managed=true")
 
-	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
+	res, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
-		Filters: filterArgs,
+		Filters: filters,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]managedContainer, 0, len(containers))
-	for _, cont := range containers {
+	result := make([]managedContainer, 0, len(res.Items))
+	for _, cont := range res.Items {
 		name := ""
 		if len(cont.Names) > 0 {
 			name = cont.Names[0]
@@ -209,14 +207,14 @@ func ReconcileAndCleanupContainers(ctx context.Context, store ReconcileStore, do
 
 		if cont.Running {
 			timeout := 30
-			if err := dockerClient.docker.ContainerStop(ctx, cont.ID, container.StopOptions{
+			if _, err := dockerClient.docker.ContainerStop(ctx, cont.ID, client.ContainerStopOptions{
 				Timeout: &timeout,
 			}); err != nil {
 				log.Error("Failed to stop orphaned container %s: %v", shortID(cont.ID), err)
 			}
 		}
 
-		if err := dockerClient.docker.ContainerRemove(ctx, cont.ID, container.RemoveOptions{
+		if _, err := dockerClient.docker.ContainerRemove(ctx, cont.ID, client.ContainerRemoveOptions{
 			Force: true,
 		}); err != nil {
 			log.Error("Failed to remove orphaned container %s: %v", shortID(cont.ID), err)

@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// SessionService exposes the caller's own identity, org memberships and
+// effective permissions. It is the only service that never requires an org
+// selection, because listing your orgs is how you pick one.
+service SessionService {
+  // GetSession returns the calling principal and their effective permissions.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  // ListMyOrgs lists every org the caller is a member of.
+  rpc ListMyOrgs(ListMyOrgsRequest) returns (ListMyOrgsResponse);
+  // ListMyPermissions returns the concrete permissions for the active org.
+  rpc ListMyPermissions(ListMyPermissionsRequest) returns (ListMyPermissionsResponse);
+}
+
+// GetSessionRequest is the session introspection request.
+message GetSessionRequest {}
+
+// GetSessionResponse carries the resolved principal.
+message GetSessionResponse {
+  // Resolved principal for the request (includes the active org).
+  Principal principal = 1;
+  // Orgs the caller may switch to.
+  repeated Org orgs = 2;
+  // True when the caller authenticated with an API key rather than a session.
+  bool via_api_key = 3;
+}
+
+// ListMyOrgsRequest is the org listing request.
+message ListMyOrgsRequest {
+  // Optional pagination.
+  PageRequest page = 1;
+}
+
+// ListMyOrgsResponse lists the caller's orgs.
+message ListMyOrgsResponse {
+  // Orgs the caller belongs to.
+  repeated Org orgs = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// ListMyPermissionsRequest is the permission listing request.
+message ListMyPermissionsRequest {}
+
+// ListMyPermissionsResponse lists effective permissions.
+message ListMyPermissionsResponse {
+  // Permission strings of the form "resource.action" that the caller holds.
+  repeated string permissions = 1;
+  // Role the permissions were derived from.
+  Role role = 2;
+}
+
+// ApiKey is a long-lived credential for programmatic access, scoped to one org.
+message ApiKey {
+  // Server-side identifier; never the secret itself.
+  string id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Human label chosen at creation.
+  string name = 3;
+  // First characters of the key, safe to display for identification.
+  string prefix = 4;
+  // Permission strings granted to the key.
+  repeated string permissions = 5;
+  // Last time the key authenticated a request.
+  google.protobuf.Timestamp last_used_at = 6;
+  // Key expiry; absent means no expiry.
+  google.protobuf.Timestamp expires_at = 7;
+  // Revocation time; absent means active.
+  google.protobuf.Timestamp revoked_at = 8;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 9;
+}
+
+// ApiKeyService manages org-scoped programmatic credentials.
+service ApiKeyService {
+  // ListApiKeys lists keys in the active org (secrets are never returned).
+  rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse);
+  // CreateApiKey mints a key and returns its plaintext exactly once.
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
+  // RevokeApiKey permanently disables a key.
+  rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
+  // RotateApiKey revokes a key and issues a replacement with the same grants.
+  rpc RotateApiKey(RotateApiKeyRequest) returns (RotateApiKeyResponse);
+}
+
+// ListApiKeysRequest is the key listing request.
+message ListApiKeysRequest {
+  // Optional pagination.
+  PageRequest page = 1;
+}
+
+// ListApiKeysResponse lists keys without secrets.
+message ListApiKeysResponse {
+  // Keys in the active org.
+  repeated ApiKey api_keys = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// CreateApiKeyRequest describes the key to mint.
+message CreateApiKeyRequest {
+  // Human label for the key.
+  string name = 1;
+  // Permission strings to grant; must be a subset of the caller's permissions.
+  repeated string permissions = 2;
+  // Optional expiry as a duration in seconds from now; zero means no expiry.
+  int64 expires_in_seconds = 3;
+}
+
+// CreateApiKeyResponse returns the plaintext key once.
+message CreateApiKeyResponse {
+  // Key metadata.
+  ApiKey api_key = 1;
+  // Plaintext secret; the only time it is ever returned.
+  string secret = 2;
+}
+
+// RevokeApiKeyRequest identifies the key to revoke.
+message RevokeApiKeyRequest {
+  // Key id.
+  string id = 1;
+}
+
+// RevokeApiKeyResponse acknowledges revocation.
+message RevokeApiKeyResponse {}
+
+// RotateApiKeyRequest identifies the key to rotate.
+message RotateApiKeyRequest {
+  // Key id.
+  string id = 1;
+}
+
+// RotateApiKeyResponse returns the replacement key.
+message RotateApiKeyResponse {
+  // New key metadata.
+  ApiKey api_key = 1;
+  // New plaintext secret, returned once.
+  string secret = 2;
+}

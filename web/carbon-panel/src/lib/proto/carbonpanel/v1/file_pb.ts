@@ -2,943 +2,904 @@
 // @generated from file carbonpanel/v1/file.proto (package carbonpanel.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2';
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file carbonpanel/v1/file.proto.
  */
-export const file_carbonpanel_v1_file: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		'ChljYXJib25wYW5lbC92MS9maWxlLnByb3RvEg5jYXJib25wYW5lbC52MSKXAQoIRmlsZUluZm8SDAoEbmFtZRgBIAEoCRIMCgRwYXRoGAIgASgJEg4KBmlzX2RpchgDIAEoCBIMCgRzaXplGAQgASgDEhAKCG1vZGlmaWVkGAUgASgDEhMKC2lzX2VkaXRhYmxlGAYgASgIEioKCGNoaWxkcmVuGAcgAygLMhguY2FyYm9ucGFuZWwudjEuRmlsZUluZm8iQQoQTGlzdEZpbGVzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDAoEcGF0aBgCIAEoCRIMCgR0cmVlGAMgASgIIjwKEUxpc3RGaWxlc1Jlc3BvbnNlEicKBWZpbGVzGAEgAygLMhguY2FyYm9ucGFuZWwudjEuRmlsZUluZm8iMQoOR2V0RmlsZVJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEgwKBHBhdGgYAiABKAkiNQoPR2V0RmlsZVJlc3BvbnNlEg8KB2NvbnRlbnQYASABKAwSEQoJbWltZV90eXBlGAIgASgJInMKF1NhdmVVcGxvYWRlZEZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIZChF1cGxvYWRfc2Vzc2lvbl9pZBgCIAEoCRIYChBkZXN0aW5hdGlvbl9wYXRoGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJIjkKGFNhdmVVcGxvYWRlZEZpbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJEgwKBHBhdGgYAiABKAkiRQoRVXBkYXRlRmlsZVJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEgwKBHBhdGgYAiABKAkSDwoHY29udGVudBgDIAEoDCIzChJVcGRhdGVGaWxlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCRIMCgRwYXRoGAIgASgJIkMKEURlbGV0ZUZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIMCgRwYXRoGAIgASgJEg0KBXBhdGhzGAMgAygJIhQKEkRlbGV0ZUZpbGVSZXNwb25zZSI2ChNDcmVhdGVGb2xkZXJSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIicKFENyZWF0ZUZvbGRlclJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiUwoPTW92ZUZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRITCgtzb3VyY2VfcGF0aBgCIAEoCRIYChBkZXN0aW5hdGlvbl9wYXRoGAMgASgJIiMKEE1vdmVGaWxlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSJTCg9Db3B5RmlsZVJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEhMKC3NvdXJjZV9wYXRoGAIgASgJEhgKEGRlc3RpbmF0aW9uX3BhdGgYAyABKAkiIwoQQ29weUZpbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJImgKFENyZWF0ZUFyY2hpdmVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRINCgVwYXRocxgCIAMoCRIYChBkZXN0aW5hdGlvbl9wYXRoGAMgASgJEhQKDGFyY2hpdmVfbmFtZRgEIAEoCSJWChVDcmVhdGVBcmNoaXZlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCRIUCgxhcmNoaXZlX3BhdGgYAiABKAkSFgoOZmlsZXNfYXJjaGl2ZWQYAyABKAUiOgoWRG93bmxvYWRBcmNoaXZlUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDQoFcGF0aHMYAiADKAkiUwoXRG93bmxvYWRBcmNoaXZlUmVzcG9uc2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRISCgp0b3RhbF9zaXplGAMgASgDIkYKEVJlbmFtZUZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIMCgRwYXRoGAIgASgJEhAKCG5ld19uYW1lGAMgASgJIjcKElJlbmFtZUZpbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJEhAKCG5ld19wYXRoGAIgASgJIjgKFUV4dHJhY3RBcmNoaXZlUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDAoEcGF0aBgCIAEoCSIuChZFeHRyYWN0QXJjaGl2ZVJlc3BvbnNlEhQKDG9wZXJhdGlvbl9pZBgBIAEoCSIyChpHZXRFeHRyYWN0aW9uU3RhdHVzUmVxdWVzdBIUCgxvcGVyYXRpb25faWQYASABKAkiVAobR2V0RXh0cmFjdGlvblN0YXR1c1Jlc3BvbnNlEg0KBXN0YXRlGAEgASgJEhcKD2ZpbGVzX2V4dHJhY3RlZBgCIAEoBRINCgVlcnJvchgDIAEoCSI6ChdJbml0RmlsZURvd25sb2FkUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDAoEcGF0aBgCIAEoCSJUChhJbml0RmlsZURvd25sb2FkUmVzcG9uc2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRISCgp0b3RhbF9zaXplGAMgASgDIocBChxEb3dubG9hZFJlbW90ZUFyY2hpdmVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRILCgN1cmwYAiABKAkSGAoQZGVzdGluYXRpb25fcGF0aBgDIAEoCRIXCg9zaGEyNTZfY2hlY2tzdW0YBCABKAkSFAoMYXV0b19leHRyYWN0GAUgASgIIkEKHURvd25sb2FkUmVtb3RlQXJjaGl2ZVJlc3BvbnNlEg8KB3Rhc2tfaWQYASABKAkSDwoHbWVzc2FnZRgCIAEoCSJFCh9HZXRSZW1vdGVBcmNoaXZlUHJvZ3Jlc3NSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJIpsBCiBHZXRSZW1vdGVBcmNoaXZlUHJvZ3Jlc3NSZXNwb25zZRIPCgd0YXNrX2lkGAEgASgJEg4KBnN0YXR1cxgCIAEoCRIYChBieXRlc19kb3dubG9hZGVkGAMgASgDEhMKC3RvdGFsX2J5dGVzGAQgASgDEhgKEHByb2dyZXNzX3BlcmNlbnQYBSABKAUSDQoFZXJyb3IYBiABKAky+QsKC0ZpbGVTZXJ2aWNlElAKCUxpc3RGaWxlcxIgLmNhcmJvbnBhbmVsLnYxLkxpc3RGaWxlc1JlcXVlc3QaIS5jYXJib25wYW5lbC52MS5MaXN0RmlsZXNSZXNwb25zZRJKCgdHZXRGaWxlEh4uY2FyYm9ucGFuZWwudjEuR2V0RmlsZVJlcXVlc3QaHy5jYXJib25wYW5lbC52MS5HZXRGaWxlUmVzcG9uc2USZQoQU2F2ZVVwbG9hZGVkRmlsZRInLmNhcmJvbnBhbmVsLnYxLlNhdmVVcGxvYWRlZEZpbGVSZXF1ZXN0GiguY2FyYm9ucGFuZWwudjEuU2F2ZVVwbG9hZGVkRmlsZVJlc3BvbnNlElMKClVwZGF0ZUZpbGUSIS5jYXJib25wYW5lbC52MS5VcGRhdGVGaWxlUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZUZpbGVSZXNwb25zZRJTCgpEZWxldGVGaWxlEiEuY2FyYm9ucGFuZWwudjEuRGVsZXRlRmlsZVJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5EZWxldGVGaWxlUmVzcG9uc2USUwoKUmVuYW1lRmlsZRIhLmNhcmJvbnBhbmVsLnYxLlJlbmFtZUZpbGVSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuUmVuYW1lRmlsZVJlc3BvbnNlEl8KDkV4dHJhY3RBcmNoaXZlEiUuY2FyYm9ucGFuZWwudjEuRXh0cmFjdEFyY2hpdmVSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuRXh0cmFjdEFyY2hpdmVSZXNwb25zZRJZCgxDcmVhdGVGb2xkZXISIy5jYXJib25wYW5lbC52MS5DcmVhdGVGb2xkZXJSZXF1ZXN0GiQuY2FyYm9ucGFuZWwudjEuQ3JlYXRlRm9sZGVyUmVzcG9uc2USTQoITW92ZUZpbGUSHy5jYXJib25wYW5lbC52MS5Nb3ZlRmlsZVJlcXVlc3QaIC5jYXJib25wYW5lbC52MS5Nb3ZlRmlsZVJlc3BvbnNlEk0KCENvcHlGaWxlEh8uY2FyYm9ucGFuZWwudjEuQ29weUZpbGVSZXF1ZXN0GiAuY2FyYm9ucGFuZWwudjEuQ29weUZpbGVSZXNwb25zZRJcCg1DcmVhdGVBcmNoaXZlEiQuY2FyYm9ucGFuZWwudjEuQ3JlYXRlQXJjaGl2ZVJlcXVlc3QaJS5jYXJib25wYW5lbC52MS5DcmVhdGVBcmNoaXZlUmVzcG9uc2USYgoPRG93bmxvYWRBcmNoaXZlEiYuY2FyYm9ucGFuZWwudjEuRG93bmxvYWRBcmNoaXZlUmVxdWVzdBonLmNhcmJvbnBhbmVsLnYxLkRvd25sb2FkQXJjaGl2ZVJlc3BvbnNlEmUKEEluaXRGaWxlRG93bmxvYWQSJy5jYXJib25wYW5lbC52MS5Jbml0RmlsZURvd25sb2FkUmVxdWVzdBooLmNhcmJvbnBhbmVsLnYxLkluaXRGaWxlRG93bmxvYWRSZXNwb25zZRJuChNHZXRFeHRyYWN0aW9uU3RhdHVzEiouY2FyYm9ucGFuZWwudjEuR2V0RXh0cmFjdGlvblN0YXR1c1JlcXVlc3QaKy5jYXJib25wYW5lbC52MS5HZXRFeHRyYWN0aW9uU3RhdHVzUmVzcG9uc2USdAoVRG93bmxvYWRSZW1vdGVBcmNoaXZlEiwuY2FyYm9ucGFuZWwudjEuRG93bmxvYWRSZW1vdGVBcmNoaXZlUmVxdWVzdBotLmNhcmJvbnBhbmVsLnYxLkRvd25sb2FkUmVtb3RlQXJjaGl2ZVJlc3BvbnNlEn0KGEdldFJlbW90ZUFyY2hpdmVQcm9ncmVzcxIvLmNhcmJvbnBhbmVsLnYxLkdldFJlbW90ZUFyY2hpdmVQcm9ncmVzc1JlcXVlc3QaMC5jYXJib25wYW5lbC52MS5HZXRSZW1vdGVBcmNoaXZlUHJvZ3Jlc3NSZXNwb25zZUJIWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxYgZwcm90bzM'
-	);
+export const file_carbonpanel_v1_file: GenFile = /*@__PURE__*/
+  fileDesc("ChljYXJib25wYW5lbC92MS9maWxlLnByb3RvEg5jYXJib25wYW5lbC52MSKXAQoIRmlsZUluZm8SDAoEbmFtZRgBIAEoCRIMCgRwYXRoGAIgASgJEg4KBmlzX2RpchgDIAEoCBIMCgRzaXplGAQgASgDEhAKCG1vZGlmaWVkGAUgASgDEhMKC2lzX2VkaXRhYmxlGAYgASgIEioKCGNoaWxkcmVuGAcgAygLMhguY2FyYm9ucGFuZWwudjEuRmlsZUluZm8iQQoQTGlzdEZpbGVzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDAoEcGF0aBgCIAEoCRIMCgR0cmVlGAMgASgIIjwKEUxpc3RGaWxlc1Jlc3BvbnNlEicKBWZpbGVzGAEgAygLMhguY2FyYm9ucGFuZWwudjEuRmlsZUluZm8iMQoOR2V0RmlsZVJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEgwKBHBhdGgYAiABKAkiNQoPR2V0RmlsZVJlc3BvbnNlEg8KB2NvbnRlbnQYASABKAwSEQoJbWltZV90eXBlGAIgASgJInMKF1NhdmVVcGxvYWRlZEZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIZChF1cGxvYWRfc2Vzc2lvbl9pZBgCIAEoCRIYChBkZXN0aW5hdGlvbl9wYXRoGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJIjkKGFNhdmVVcGxvYWRlZEZpbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJEgwKBHBhdGgYAiABKAkiRQoRVXBkYXRlRmlsZVJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEgwKBHBhdGgYAiABKAkSDwoHY29udGVudBgDIAEoDCIzChJVcGRhdGVGaWxlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCRIMCgRwYXRoGAIgASgJIkMKEURlbGV0ZUZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIMCgRwYXRoGAIgASgJEg0KBXBhdGhzGAMgAygJIhQKEkRlbGV0ZUZpbGVSZXNwb25zZSI2ChNDcmVhdGVGb2xkZXJSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIMCgRwYXRoGAIgASgJIicKFENyZWF0ZUZvbGRlclJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiUwoPTW92ZUZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRITCgtzb3VyY2VfcGF0aBgCIAEoCRIYChBkZXN0aW5hdGlvbl9wYXRoGAMgASgJIiMKEE1vdmVGaWxlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSJTCg9Db3B5RmlsZVJlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEhMKC3NvdXJjZV9wYXRoGAIgASgJEhgKEGRlc3RpbmF0aW9uX3BhdGgYAyABKAkiIwoQQ29weUZpbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJImgKFENyZWF0ZUFyY2hpdmVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRINCgVwYXRocxgCIAMoCRIYChBkZXN0aW5hdGlvbl9wYXRoGAMgASgJEhQKDGFyY2hpdmVfbmFtZRgEIAEoCSJWChVDcmVhdGVBcmNoaXZlUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCRIUCgxhcmNoaXZlX3BhdGgYAiABKAkSFgoOZmlsZXNfYXJjaGl2ZWQYAyABKAUiOgoWRG93bmxvYWRBcmNoaXZlUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDQoFcGF0aHMYAiADKAkiUwoXRG93bmxvYWRBcmNoaXZlUmVzcG9uc2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRISCgp0b3RhbF9zaXplGAMgASgDIkYKEVJlbmFtZUZpbGVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIMCgRwYXRoGAIgASgJEhAKCG5ld19uYW1lGAMgASgJIjcKElJlbmFtZUZpbGVSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJEhAKCG5ld19wYXRoGAIgASgJIjgKFUV4dHJhY3RBcmNoaXZlUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDAoEcGF0aBgCIAEoCSIuChZFeHRyYWN0QXJjaGl2ZVJlc3BvbnNlEhQKDG9wZXJhdGlvbl9pZBgBIAEoCSIyChpHZXRFeHRyYWN0aW9uU3RhdHVzUmVxdWVzdBIUCgxvcGVyYXRpb25faWQYASABKAkiVAobR2V0RXh0cmFjdGlvblN0YXR1c1Jlc3BvbnNlEg0KBXN0YXRlGAEgASgJEhcKD2ZpbGVzX2V4dHJhY3RlZBgCIAEoBRINCgVlcnJvchgDIAEoCSI6ChdJbml0RmlsZURvd25sb2FkUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDAoEcGF0aBgCIAEoCSJUChhJbml0RmlsZURvd25sb2FkUmVzcG9uc2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRISCgp0b3RhbF9zaXplGAMgASgDIocBChxEb3dubG9hZFJlbW90ZUFyY2hpdmVSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRILCgN1cmwYAiABKAkSGAoQZGVzdGluYXRpb25fcGF0aBgDIAEoCRIXCg9zaGEyNTZfY2hlY2tzdW0YBCABKAkSFAoMYXV0b19leHRyYWN0GAUgASgIIkEKHURvd25sb2FkUmVtb3RlQXJjaGl2ZVJlc3BvbnNlEg8KB3Rhc2tfaWQYASABKAkSDwoHbWVzc2FnZRgCIAEoCSJFCh9HZXRSZW1vdGVBcmNoaXZlUHJvZ3Jlc3NSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJIpsBCiBHZXRSZW1vdGVBcmNoaXZlUHJvZ3Jlc3NSZXNwb25zZRIPCgd0YXNrX2lkGAEgASgJEg4KBnN0YXR1cxgCIAEoCRIYChBieXRlc19kb3dubG9hZGVkGAMgASgDEhMKC3RvdGFsX2J5dGVzGAQgASgDEhgKEHByb2dyZXNzX3BlcmNlbnQYBSABKAUSDQoFZXJyb3IYBiABKAky+QsKC0ZpbGVTZXJ2aWNlElAKCUxpc3RGaWxlcxIgLmNhcmJvbnBhbmVsLnYxLkxpc3RGaWxlc1JlcXVlc3QaIS5jYXJib25wYW5lbC52MS5MaXN0RmlsZXNSZXNwb25zZRJKCgdHZXRGaWxlEh4uY2FyYm9ucGFuZWwudjEuR2V0RmlsZVJlcXVlc3QaHy5jYXJib25wYW5lbC52MS5HZXRGaWxlUmVzcG9uc2USZQoQU2F2ZVVwbG9hZGVkRmlsZRInLmNhcmJvbnBhbmVsLnYxLlNhdmVVcGxvYWRlZEZpbGVSZXF1ZXN0GiguY2FyYm9ucGFuZWwudjEuU2F2ZVVwbG9hZGVkRmlsZVJlc3BvbnNlElMKClVwZGF0ZUZpbGUSIS5jYXJib25wYW5lbC52MS5VcGRhdGVGaWxlUmVxdWVzdBoiLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZUZpbGVSZXNwb25zZRJTCgpEZWxldGVGaWxlEiEuY2FyYm9ucGFuZWwudjEuRGVsZXRlRmlsZVJlcXVlc3QaIi5jYXJib25wYW5lbC52MS5EZWxldGVGaWxlUmVzcG9uc2USUwoKUmVuYW1lRmlsZRIhLmNhcmJvbnBhbmVsLnYxLlJlbmFtZUZpbGVSZXF1ZXN0GiIuY2FyYm9ucGFuZWwudjEuUmVuYW1lRmlsZVJlc3BvbnNlEl8KDkV4dHJhY3RBcmNoaXZlEiUuY2FyYm9ucGFuZWwudjEuRXh0cmFjdEFyY2hpdmVSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuRXh0cmFjdEFyY2hpdmVSZXNwb25zZRJZCgxDcmVhdGVGb2xkZXISIy5jYXJib25wYW5lbC52MS5DcmVhdGVGb2xkZXJSZXF1ZXN0GiQuY2FyYm9ucGFuZWwudjEuQ3JlYXRlRm9sZGVyUmVzcG9uc2USTQoITW92ZUZpbGUSHy5jYXJib25wYW5lbC52MS5Nb3ZlRmlsZVJlcXVlc3QaIC5jYXJib25wYW5lbC52MS5Nb3ZlRmlsZVJlc3BvbnNlEk0KCENvcHlGaWxlEh8uY2FyYm9ucGFuZWwudjEuQ29weUZpbGVSZXF1ZXN0GiAuY2FyYm9ucGFuZWwudjEuQ29weUZpbGVSZXNwb25zZRJcCg1DcmVhdGVBcmNoaXZlEiQuY2FyYm9ucGFuZWwudjEuQ3JlYXRlQXJjaGl2ZVJlcXVlc3QaJS5jYXJib25wYW5lbC52MS5DcmVhdGVBcmNoaXZlUmVzcG9uc2USYgoPRG93bmxvYWRBcmNoaXZlEiYuY2FyYm9ucGFuZWwudjEuRG93bmxvYWRBcmNoaXZlUmVxdWVzdBonLmNhcmJvbnBhbmVsLnYxLkRvd25sb2FkQXJjaGl2ZVJlc3BvbnNlEmUKEEluaXRGaWxlRG93bmxvYWQSJy5jYXJib25wYW5lbC52MS5Jbml0RmlsZURvd25sb2FkUmVxdWVzdBooLmNhcmJvbnBhbmVsLnYxLkluaXRGaWxlRG93bmxvYWRSZXNwb25zZRJuChNHZXRFeHRyYWN0aW9uU3RhdHVzEiouY2FyYm9ucGFuZWwudjEuR2V0RXh0cmFjdGlvblN0YXR1c1JlcXVlc3QaKy5jYXJib25wYW5lbC52MS5HZXRFeHRyYWN0aW9uU3RhdHVzUmVzcG9uc2USdAoVRG93bmxvYWRSZW1vdGVBcmNoaXZlEiwuY2FyYm9ucGFuZWwudjEuRG93bmxvYWRSZW1vdGVBcmNoaXZlUmVxdWVzdBotLmNhcmJvbnBhbmVsLnYxLkRvd25sb2FkUmVtb3RlQXJjaGl2ZVJlc3BvbnNlEn0KGEdldFJlbW90ZUFyY2hpdmVQcm9ncmVzcxIvLmNhcmJvbnBhbmVsLnYxLkdldFJlbW90ZUFyY2hpdmVQcm9ncmVzc1JlcXVlc3QaMC5jYXJib25wYW5lbC52MS5HZXRSZW1vdGVBcmNoaXZlUHJvZ3Jlc3NSZXNwb25zZUJIWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxYgZwcm90bzM");
 
 /**
  * File metadata and tree
  *
  * @generated from message carbonpanel.v1.FileInfo
  */
-export type FileInfo = Message<'carbonpanel.v1.FileInfo'> & {
-	/**
-	 * @generated from field: string name = 1;
-	 */
-	name: string;
+export type FileInfo = Message<"carbonpanel.v1.FileInfo"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 
-	/**
-	 * @generated from field: bool is_dir = 3;
-	 */
-	isDir: boolean;
+  /**
+   * @generated from field: bool is_dir = 3;
+   */
+  isDir: boolean;
 
-	/**
-	 * @generated from field: int64 size = 4;
-	 */
-	size: bigint;
+  /**
+   * @generated from field: int64 size = 4;
+   */
+  size: bigint;
 
-	/**
-	 * @generated from field: int64 modified = 5;
-	 */
-	modified: bigint;
+  /**
+   * @generated from field: int64 modified = 5;
+   */
+  modified: bigint;
 
-	/**
-	 * @generated from field: bool is_editable = 6;
-	 */
-	isEditable: boolean;
+  /**
+   * @generated from field: bool is_editable = 6;
+   */
+  isEditable: boolean;
 
-	/**
-	 * @generated from field: repeated carbonpanel.v1.FileInfo children = 7;
-	 */
-	children: FileInfo[];
+  /**
+   * @generated from field: repeated carbonpanel.v1.FileInfo children = 7;
+   */
+  children: FileInfo[];
 };
 
 /**
  * Describes the message carbonpanel.v1.FileInfo.
  * Use `create(FileInfoSchema)` to create a new message.
  */
-export const FileInfoSchema: GenMessage<FileInfo> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 0);
+export const FileInfoSchema: GenMessage<FileInfo> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 0);
 
 /**
  * Directory listing parameters
  *
  * @generated from message carbonpanel.v1.ListFilesRequest
  */
-export type ListFilesRequest = Message<'carbonpanel.v1.ListFilesRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type ListFilesRequest = Message<"carbonpanel.v1.ListFilesRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 
-	/**
-	 * @generated from field: bool tree = 3;
-	 */
-	tree: boolean;
+  /**
+   * @generated from field: bool tree = 3;
+   */
+  tree: boolean;
 };
 
 /**
  * Describes the message carbonpanel.v1.ListFilesRequest.
  * Use `create(ListFilesRequestSchema)` to create a new message.
  */
-export const ListFilesRequestSchema: GenMessage<ListFilesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 1);
+export const ListFilesRequestSchema: GenMessage<ListFilesRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 1);
 
 /**
  * Directory contents
  *
  * @generated from message carbonpanel.v1.ListFilesResponse
  */
-export type ListFilesResponse = Message<'carbonpanel.v1.ListFilesResponse'> & {
-	/**
-	 * @generated from field: repeated carbonpanel.v1.FileInfo files = 1;
-	 */
-	files: FileInfo[];
+export type ListFilesResponse = Message<"carbonpanel.v1.ListFilesResponse"> & {
+  /**
+   * @generated from field: repeated carbonpanel.v1.FileInfo files = 1;
+   */
+  files: FileInfo[];
 };
 
 /**
  * Describes the message carbonpanel.v1.ListFilesResponse.
  * Use `create(ListFilesResponseSchema)` to create a new message.
  */
-export const ListFilesResponseSchema: GenMessage<ListFilesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 2);
+export const ListFilesResponseSchema: GenMessage<ListFilesResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 2);
 
 /**
  * File download parameters
  *
  * @generated from message carbonpanel.v1.GetFileRequest
  */
-export type GetFileRequest = Message<'carbonpanel.v1.GetFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type GetFileRequest = Message<"carbonpanel.v1.GetFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetFileRequest.
  * Use `create(GetFileRequestSchema)` to create a new message.
  */
-export const GetFileRequestSchema: GenMessage<GetFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 3);
+export const GetFileRequestSchema: GenMessage<GetFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 3);
 
 /**
  * File binary content
  *
  * @generated from message carbonpanel.v1.GetFileResponse
  */
-export type GetFileResponse = Message<'carbonpanel.v1.GetFileResponse'> & {
-	/**
-	 * @generated from field: bytes content = 1;
-	 */
-	content: Uint8Array;
+export type GetFileResponse = Message<"carbonpanel.v1.GetFileResponse"> & {
+  /**
+   * @generated from field: bytes content = 1;
+   */
+  content: Uint8Array;
 
-	/**
-	 * @generated from field: string mime_type = 2;
-	 */
-	mimeType: string;
+  /**
+   * @generated from field: string mime_type = 2;
+   */
+  mimeType: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetFileResponse.
  * Use `create(GetFileResponseSchema)` to create a new message.
  */
-export const GetFileResponseSchema: GenMessage<GetFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 4);
+export const GetFileResponseSchema: GenMessage<GetFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 4);
 
 /**
  * File upload data
  *
  * @generated from message carbonpanel.v1.SaveUploadedFileRequest
  */
-export type SaveUploadedFileRequest = Message<'carbonpanel.v1.SaveUploadedFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type SaveUploadedFileRequest = Message<"carbonpanel.v1.SaveUploadedFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string upload_session_id = 2;
-	 */
-	uploadSessionId: string;
+  /**
+   * @generated from field: string upload_session_id = 2;
+   */
+  uploadSessionId: string;
 
-	/**
-	 * Target dir
-	 *
-	 * @generated from field: string destination_path = 3;
-	 */
-	destinationPath: string;
+  /**
+   * Target dir
+   *
+   * @generated from field: string destination_path = 3;
+   */
+  destinationPath: string;
 
-	/**
-	 * Target filename
-	 *
-	 * @generated from field: string filename = 4;
-	 */
-	filename: string;
+  /**
+   * Target filename
+   *
+   * @generated from field: string filename = 4;
+   */
+  filename: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.SaveUploadedFileRequest.
  * Use `create(SaveUploadedFileRequestSchema)` to create a new message.
  */
-export const SaveUploadedFileRequestSchema: GenMessage<SaveUploadedFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 5);
+export const SaveUploadedFileRequestSchema: GenMessage<SaveUploadedFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 5);
 
 /**
  * Save uploaded file result
  *
  * @generated from message carbonpanel.v1.SaveUploadedFileResponse
  */
-export type SaveUploadedFileResponse = Message<'carbonpanel.v1.SaveUploadedFileResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type SaveUploadedFileResponse = Message<"carbonpanel.v1.SaveUploadedFileResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.SaveUploadedFileResponse.
  * Use `create(SaveUploadedFileResponseSchema)` to create a new message.
  */
-export const SaveUploadedFileResponseSchema: GenMessage<SaveUploadedFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 6);
+export const SaveUploadedFileResponseSchema: GenMessage<SaveUploadedFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 6);
 
 /**
  * File content update
  *
  * @generated from message carbonpanel.v1.UpdateFileRequest
  */
-export type UpdateFileRequest = Message<'carbonpanel.v1.UpdateFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type UpdateFileRequest = Message<"carbonpanel.v1.UpdateFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 
-	/**
-	 * @generated from field: bytes content = 3;
-	 */
-	content: Uint8Array;
+  /**
+   * @generated from field: bytes content = 3;
+   */
+  content: Uint8Array;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateFileRequest.
  * Use `create(UpdateFileRequestSchema)` to create a new message.
  */
-export const UpdateFileRequestSchema: GenMessage<UpdateFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 7);
+export const UpdateFileRequestSchema: GenMessage<UpdateFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 7);
 
 /**
  * Update confirmation
  *
  * @generated from message carbonpanel.v1.UpdateFileResponse
  */
-export type UpdateFileResponse = Message<'carbonpanel.v1.UpdateFileResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type UpdateFileResponse = Message<"carbonpanel.v1.UpdateFileResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.UpdateFileResponse.
  * Use `create(UpdateFileResponseSchema)` to create a new message.
  */
-export const UpdateFileResponseSchema: GenMessage<UpdateFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 8);
+export const UpdateFileResponseSchema: GenMessage<UpdateFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 8);
 
 /**
  * File to delete
  *
  * @generated from message carbonpanel.v1.DeleteFileRequest
  */
-export type DeleteFileRequest = Message<'carbonpanel.v1.DeleteFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type DeleteFileRequest = Message<"carbonpanel.v1.DeleteFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 
-	/**
-	 * Bulk delete
-	 *
-	 * @generated from field: repeated string paths = 3;
-	 */
-	paths: string[];
+  /**
+   * Bulk delete
+   *
+   * @generated from field: repeated string paths = 3;
+   */
+  paths: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.DeleteFileRequest.
  * Use `create(DeleteFileRequestSchema)` to create a new message.
  */
-export const DeleteFileRequestSchema: GenMessage<DeleteFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 9);
+export const DeleteFileRequestSchema: GenMessage<DeleteFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 9);
 
 /**
  * Empty delete response
  *
  * @generated from message carbonpanel.v1.DeleteFileResponse
  */
-export type DeleteFileResponse = Message<'carbonpanel.v1.DeleteFileResponse'> & {};
+export type DeleteFileResponse = Message<"carbonpanel.v1.DeleteFileResponse"> & {
+};
 
 /**
  * Describes the message carbonpanel.v1.DeleteFileResponse.
  * Use `create(DeleteFileResponseSchema)` to create a new message.
  */
-export const DeleteFileResponseSchema: GenMessage<DeleteFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 10);
+export const DeleteFileResponseSchema: GenMessage<DeleteFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 10);
 
 /**
  * Folder creation parameters
  *
  * @generated from message carbonpanel.v1.CreateFolderRequest
  */
-export type CreateFolderRequest = Message<'carbonpanel.v1.CreateFolderRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type CreateFolderRequest = Message<"carbonpanel.v1.CreateFolderRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateFolderRequest.
  * Use `create(CreateFolderRequestSchema)` to create a new message.
  */
-export const CreateFolderRequestSchema: GenMessage<CreateFolderRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 11);
+export const CreateFolderRequestSchema: GenMessage<CreateFolderRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 11);
 
 /**
  * Folder creation result
  *
  * @generated from message carbonpanel.v1.CreateFolderResponse
  */
-export type CreateFolderResponse = Message<'carbonpanel.v1.CreateFolderResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type CreateFolderResponse = Message<"carbonpanel.v1.CreateFolderResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateFolderResponse.
  * Use `create(CreateFolderResponseSchema)` to create a new message.
  */
-export const CreateFolderResponseSchema: GenMessage<CreateFolderResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 12);
+export const CreateFolderResponseSchema: GenMessage<CreateFolderResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 12);
 
 /**
  * File move parameters
  *
  * @generated from message carbonpanel.v1.MoveFileRequest
  */
-export type MoveFileRequest = Message<'carbonpanel.v1.MoveFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type MoveFileRequest = Message<"carbonpanel.v1.MoveFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string source_path = 2;
-	 */
-	sourcePath: string;
+  /**
+   * @generated from field: string source_path = 2;
+   */
+  sourcePath: string;
 
-	/**
-	 * @generated from field: string destination_path = 3;
-	 */
-	destinationPath: string;
+  /**
+   * @generated from field: string destination_path = 3;
+   */
+  destinationPath: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.MoveFileRequest.
  * Use `create(MoveFileRequestSchema)` to create a new message.
  */
-export const MoveFileRequestSchema: GenMessage<MoveFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 13);
+export const MoveFileRequestSchema: GenMessage<MoveFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 13);
 
 /**
  * File move result
  *
  * @generated from message carbonpanel.v1.MoveFileResponse
  */
-export type MoveFileResponse = Message<'carbonpanel.v1.MoveFileResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type MoveFileResponse = Message<"carbonpanel.v1.MoveFileResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.MoveFileResponse.
  * Use `create(MoveFileResponseSchema)` to create a new message.
  */
-export const MoveFileResponseSchema: GenMessage<MoveFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 14);
+export const MoveFileResponseSchema: GenMessage<MoveFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 14);
 
 /**
  * File copy parameters
  *
  * @generated from message carbonpanel.v1.CopyFileRequest
  */
-export type CopyFileRequest = Message<'carbonpanel.v1.CopyFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type CopyFileRequest = Message<"carbonpanel.v1.CopyFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string source_path = 2;
-	 */
-	sourcePath: string;
+  /**
+   * @generated from field: string source_path = 2;
+   */
+  sourcePath: string;
 
-	/**
-	 * @generated from field: string destination_path = 3;
-	 */
-	destinationPath: string;
+  /**
+   * @generated from field: string destination_path = 3;
+   */
+  destinationPath: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.CopyFileRequest.
  * Use `create(CopyFileRequestSchema)` to create a new message.
  */
-export const CopyFileRequestSchema: GenMessage<CopyFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 15);
+export const CopyFileRequestSchema: GenMessage<CopyFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 15);
 
 /**
  * File copy result
  *
  * @generated from message carbonpanel.v1.CopyFileResponse
  */
-export type CopyFileResponse = Message<'carbonpanel.v1.CopyFileResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type CopyFileResponse = Message<"carbonpanel.v1.CopyFileResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.CopyFileResponse.
  * Use `create(CopyFileResponseSchema)` to create a new message.
  */
-export const CopyFileResponseSchema: GenMessage<CopyFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 16);
+export const CopyFileResponseSchema: GenMessage<CopyFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 16);
 
 /**
  * Archive creation parameters
  *
  * @generated from message carbonpanel.v1.CreateArchiveRequest
  */
-export type CreateArchiveRequest = Message<'carbonpanel.v1.CreateArchiveRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type CreateArchiveRequest = Message<"carbonpanel.v1.CreateArchiveRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: repeated string paths = 2;
-	 */
-	paths: string[];
+  /**
+   * @generated from field: repeated string paths = 2;
+   */
+  paths: string[];
 
-	/**
-	 * @generated from field: string destination_path = 3;
-	 */
-	destinationPath: string;
+  /**
+   * @generated from field: string destination_path = 3;
+   */
+  destinationPath: string;
 
-	/**
-	 * @generated from field: string archive_name = 4;
-	 */
-	archiveName: string;
+  /**
+   * @generated from field: string archive_name = 4;
+   */
+  archiveName: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateArchiveRequest.
  * Use `create(CreateArchiveRequestSchema)` to create a new message.
  */
-export const CreateArchiveRequestSchema: GenMessage<CreateArchiveRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 17);
+export const CreateArchiveRequestSchema: GenMessage<CreateArchiveRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 17);
 
 /**
  * Archive creation result
  *
  * @generated from message carbonpanel.v1.CreateArchiveResponse
  */
-export type CreateArchiveResponse = Message<'carbonpanel.v1.CreateArchiveResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type CreateArchiveResponse = Message<"carbonpanel.v1.CreateArchiveResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 
-	/**
-	 * @generated from field: string archive_path = 2;
-	 */
-	archivePath: string;
+  /**
+   * @generated from field: string archive_path = 2;
+   */
+  archivePath: string;
 
-	/**
-	 * @generated from field: int32 files_archived = 3;
-	 */
-	filesArchived: number;
+  /**
+   * @generated from field: int32 files_archived = 3;
+   */
+  filesArchived: number;
 };
 
 /**
  * Describes the message carbonpanel.v1.CreateArchiveResponse.
  * Use `create(CreateArchiveResponseSchema)` to create a new message.
  */
-export const CreateArchiveResponseSchema: GenMessage<CreateArchiveResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 18);
+export const CreateArchiveResponseSchema: GenMessage<CreateArchiveResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 18);
 
 /**
  * Archive download parameters
  *
  * @generated from message carbonpanel.v1.DownloadArchiveRequest
  */
-export type DownloadArchiveRequest = Message<'carbonpanel.v1.DownloadArchiveRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type DownloadArchiveRequest = Message<"carbonpanel.v1.DownloadArchiveRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: repeated string paths = 2;
-	 */
-	paths: string[];
+  /**
+   * @generated from field: repeated string paths = 2;
+   */
+  paths: string[];
 };
 
 /**
  * Describes the message carbonpanel.v1.DownloadArchiveRequest.
  * Use `create(DownloadArchiveRequestSchema)` to create a new message.
  */
-export const DownloadArchiveRequestSchema: GenMessage<DownloadArchiveRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 19);
+export const DownloadArchiveRequestSchema: GenMessage<DownloadArchiveRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 19);
 
 /**
  * Archive download session
  *
  * @generated from message carbonpanel.v1.DownloadArchiveResponse
  */
-export type DownloadArchiveResponse = Message<'carbonpanel.v1.DownloadArchiveResponse'> & {
-	/**
-	 * @generated from field: string session_id = 1;
-	 */
-	sessionId: string;
+export type DownloadArchiveResponse = Message<"carbonpanel.v1.DownloadArchiveResponse"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
 
-	/**
-	 * @generated from field: string filename = 2;
-	 */
-	filename: string;
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
 
-	/**
-	 * @generated from field: int64 total_size = 3;
-	 */
-	totalSize: bigint;
+  /**
+   * @generated from field: int64 total_size = 3;
+   */
+  totalSize: bigint;
 };
 
 /**
  * Describes the message carbonpanel.v1.DownloadArchiveResponse.
  * Use `create(DownloadArchiveResponseSchema)` to create a new message.
  */
-export const DownloadArchiveResponseSchema: GenMessage<DownloadArchiveResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 20);
+export const DownloadArchiveResponseSchema: GenMessage<DownloadArchiveResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 20);
 
 /**
  * File rename parameters
  *
  * @generated from message carbonpanel.v1.RenameFileRequest
  */
-export type RenameFileRequest = Message<'carbonpanel.v1.RenameFileRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type RenameFileRequest = Message<"carbonpanel.v1.RenameFileRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 
-	/**
-	 * @generated from field: string new_name = 3;
-	 */
-	newName: string;
+  /**
+   * @generated from field: string new_name = 3;
+   */
+  newName: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RenameFileRequest.
  * Use `create(RenameFileRequestSchema)` to create a new message.
  */
-export const RenameFileRequestSchema: GenMessage<RenameFileRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 21);
+export const RenameFileRequestSchema: GenMessage<RenameFileRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 21);
 
 /**
  * Rename result
  *
  * @generated from message carbonpanel.v1.RenameFileResponse
  */
-export type RenameFileResponse = Message<'carbonpanel.v1.RenameFileResponse'> & {
-	/**
-	 * @generated from field: string message = 1;
-	 */
-	message: string;
+export type RenameFileResponse = Message<"carbonpanel.v1.RenameFileResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
 
-	/**
-	 * @generated from field: string new_path = 2;
-	 */
-	newPath: string;
+  /**
+   * @generated from field: string new_path = 2;
+   */
+  newPath: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.RenameFileResponse.
  * Use `create(RenameFileResponseSchema)` to create a new message.
  */
-export const RenameFileResponseSchema: GenMessage<RenameFileResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 22);
+export const RenameFileResponseSchema: GenMessage<RenameFileResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 22);
 
 /**
  * Archive to extract
  *
  * @generated from message carbonpanel.v1.ExtractArchiveRequest
  */
-export type ExtractArchiveRequest = Message<'carbonpanel.v1.ExtractArchiveRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type ExtractArchiveRequest = Message<"carbonpanel.v1.ExtractArchiveRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ExtractArchiveRequest.
  * Use `create(ExtractArchiveRequestSchema)` to create a new message.
  */
-export const ExtractArchiveRequestSchema: GenMessage<ExtractArchiveRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 23);
+export const ExtractArchiveRequestSchema: GenMessage<ExtractArchiveRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 23);
 
 /**
  * Extraction started
  *
  * @generated from message carbonpanel.v1.ExtractArchiveResponse
  */
-export type ExtractArchiveResponse = Message<'carbonpanel.v1.ExtractArchiveResponse'> & {
-	/**
-	 * @generated from field: string operation_id = 1;
-	 */
-	operationId: string;
+export type ExtractArchiveResponse = Message<"carbonpanel.v1.ExtractArchiveResponse"> & {
+  /**
+   * @generated from field: string operation_id = 1;
+   */
+  operationId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.ExtractArchiveResponse.
  * Use `create(ExtractArchiveResponseSchema)` to create a new message.
  */
-export const ExtractArchiveResponseSchema: GenMessage<ExtractArchiveResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 24);
+export const ExtractArchiveResponseSchema: GenMessage<ExtractArchiveResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 24);
 
 /**
  * Extraction status poll
  *
  * @generated from message carbonpanel.v1.GetExtractionStatusRequest
  */
-export type GetExtractionStatusRequest = Message<'carbonpanel.v1.GetExtractionStatusRequest'> & {
-	/**
-	 * @generated from field: string operation_id = 1;
-	 */
-	operationId: string;
+export type GetExtractionStatusRequest = Message<"carbonpanel.v1.GetExtractionStatusRequest"> & {
+  /**
+   * @generated from field: string operation_id = 1;
+   */
+  operationId: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetExtractionStatusRequest.
  * Use `create(GetExtractionStatusRequestSchema)` to create a new message.
  */
-export const GetExtractionStatusRequestSchema: GenMessage<GetExtractionStatusRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 25);
+export const GetExtractionStatusRequestSchema: GenMessage<GetExtractionStatusRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 25);
 
 /**
  * Extraction progress
  *
  * @generated from message carbonpanel.v1.GetExtractionStatusResponse
  */
-export type GetExtractionStatusResponse = Message<'carbonpanel.v1.GetExtractionStatusResponse'> & {
-	/**
-	 * @generated from field: string state = 1;
-	 */
-	state: string;
+export type GetExtractionStatusResponse = Message<"carbonpanel.v1.GetExtractionStatusResponse"> & {
+  /**
+   * @generated from field: string state = 1;
+   */
+  state: string;
 
-	/**
-	 * @generated from field: int32 files_extracted = 2;
-	 */
-	filesExtracted: number;
+  /**
+   * @generated from field: int32 files_extracted = 2;
+   */
+  filesExtracted: number;
 
-	/**
-	 * @generated from field: string error = 3;
-	 */
-	error: string;
+  /**
+   * @generated from field: string error = 3;
+   */
+  error: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.GetExtractionStatusResponse.
  * Use `create(GetExtractionStatusResponseSchema)` to create a new message.
  */
-export const GetExtractionStatusResponseSchema: GenMessage<GetExtractionStatusResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 26);
+export const GetExtractionStatusResponseSchema: GenMessage<GetExtractionStatusResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 26);
 
 /**
  * Single file download session
  *
  * @generated from message carbonpanel.v1.InitFileDownloadRequest
  */
-export type InitFileDownloadRequest = Message<'carbonpanel.v1.InitFileDownloadRequest'> & {
-	/**
-	 * @generated from field: string server_id = 1;
-	 */
-	serverId: string;
+export type InitFileDownloadRequest = Message<"carbonpanel.v1.InitFileDownloadRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-	/**
-	 * @generated from field: string path = 2;
-	 */
-	path: string;
+  /**
+   * @generated from field: string path = 2;
+   */
+  path: string;
 };
 
 /**
  * Describes the message carbonpanel.v1.InitFileDownloadRequest.
  * Use `create(InitFileDownloadRequestSchema)` to create a new message.
  */
-export const InitFileDownloadRequestSchema: GenMessage<InitFileDownloadRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 27);
+export const InitFileDownloadRequestSchema: GenMessage<InitFileDownloadRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 27);
 
 /**
  * Download session
  *
  * @generated from message carbonpanel.v1.InitFileDownloadResponse
  */
-export type InitFileDownloadResponse = Message<'carbonpanel.v1.InitFileDownloadResponse'> & {
-	/**
-	 * @generated from field: string session_id = 1;
-	 */
-	sessionId: string;
+export type InitFileDownloadResponse = Message<"carbonpanel.v1.InitFileDownloadResponse"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
 
-	/**
-	 * @generated from field: string filename = 2;
-	 */
-	filename: string;
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
 
-	/**
-	 * @generated from field: int64 total_size = 3;
-	 */
-	totalSize: bigint;
+  /**
+   * @generated from field: int64 total_size = 3;
+   */
+  totalSize: bigint;
 };
 
 /**
  * Describes the message carbonpanel.v1.InitFileDownloadResponse.
  * Use `create(InitFileDownloadResponseSchema)` to create a new message.
  */
-export const InitFileDownloadResponseSchema: GenMessage<InitFileDownloadResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 28);
+export const InitFileDownloadResponseSchema: GenMessage<InitFileDownloadResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 28);
 
 /**
  * Download archive from remote URL request
  *
  * @generated from message carbonpanel.v1.DownloadRemoteArchiveRequest
  */
-export type DownloadRemoteArchiveRequest =
-	Message<'carbonpanel.v1.DownloadRemoteArchiveRequest'> & {
-		/**
-		 * @generated from field: string server_id = 1;
-		 */
-		serverId: string;
+export type DownloadRemoteArchiveRequest = Message<"carbonpanel.v1.DownloadRemoteArchiveRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-		/**
-		 * @generated from field: string url = 2;
-		 */
-		url: string;
+  /**
+   * @generated from field: string url = 2;
+   */
+  url: string;
 
-		/**
-		 * @generated from field: string destination_path = 3;
-		 */
-		destinationPath: string;
+  /**
+   * @generated from field: string destination_path = 3;
+   */
+  destinationPath: string;
 
-		/**
-		 * @generated from field: string sha256_checksum = 4;
-		 */
-		sha256Checksum: string;
+  /**
+   * @generated from field: string sha256_checksum = 4;
+   */
+  sha256Checksum: string;
 
-		/**
-		 * @generated from field: bool auto_extract = 5;
-		 */
-		autoExtract: boolean;
-	};
+  /**
+   * @generated from field: bool auto_extract = 5;
+   */
+  autoExtract: boolean;
+};
 
 /**
  * Describes the message carbonpanel.v1.DownloadRemoteArchiveRequest.
  * Use `create(DownloadRemoteArchiveRequestSchema)` to create a new message.
  */
-export const DownloadRemoteArchiveRequestSchema: GenMessage<DownloadRemoteArchiveRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 29);
+export const DownloadRemoteArchiveRequestSchema: GenMessage<DownloadRemoteArchiveRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 29);
 
 /**
  * Download archive from remote URL response
  *
  * @generated from message carbonpanel.v1.DownloadRemoteArchiveResponse
  */
-export type DownloadRemoteArchiveResponse =
-	Message<'carbonpanel.v1.DownloadRemoteArchiveResponse'> & {
-		/**
-		 * @generated from field: string task_id = 1;
-		 */
-		taskId: string;
+export type DownloadRemoteArchiveResponse = Message<"carbonpanel.v1.DownloadRemoteArchiveResponse"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
 
-		/**
-		 * @generated from field: string message = 2;
-		 */
-		message: string;
-	};
+  /**
+   * @generated from field: string message = 2;
+   */
+  message: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.DownloadRemoteArchiveResponse.
  * Use `create(DownloadRemoteArchiveResponseSchema)` to create a new message.
  */
-export const DownloadRemoteArchiveResponseSchema: GenMessage<DownloadRemoteArchiveResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 30);
+export const DownloadRemoteArchiveResponseSchema: GenMessage<DownloadRemoteArchiveResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 30);
 
 /**
  * Get remote archive download progress request
  *
  * @generated from message carbonpanel.v1.GetRemoteArchiveProgressRequest
  */
-export type GetRemoteArchiveProgressRequest =
-	Message<'carbonpanel.v1.GetRemoteArchiveProgressRequest'> & {
-		/**
-		 * @generated from field: string server_id = 1;
-		 */
-		serverId: string;
+export type GetRemoteArchiveProgressRequest = Message<"carbonpanel.v1.GetRemoteArchiveProgressRequest"> & {
+  /**
+   * @generated from field: string server_id = 1;
+   */
+  serverId: string;
 
-		/**
-		 * @generated from field: string task_id = 2;
-		 */
-		taskId: string;
-	};
+  /**
+   * @generated from field: string task_id = 2;
+   */
+  taskId: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.GetRemoteArchiveProgressRequest.
  * Use `create(GetRemoteArchiveProgressRequestSchema)` to create a new message.
  */
-export const GetRemoteArchiveProgressRequestSchema: GenMessage<GetRemoteArchiveProgressRequest> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 31);
+export const GetRemoteArchiveProgressRequestSchema: GenMessage<GetRemoteArchiveProgressRequest> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 31);
 
 /**
  * Get remote archive download progress response
  *
  * @generated from message carbonpanel.v1.GetRemoteArchiveProgressResponse
  */
-export type GetRemoteArchiveProgressResponse =
-	Message<'carbonpanel.v1.GetRemoteArchiveProgressResponse'> & {
-		/**
-		 * @generated from field: string task_id = 1;
-		 */
-		taskId: string;
+export type GetRemoteArchiveProgressResponse = Message<"carbonpanel.v1.GetRemoteArchiveProgressResponse"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
 
-		/**
-		 * @generated from field: string status = 2;
-		 */
-		status: string;
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
 
-		/**
-		 * @generated from field: int64 bytes_downloaded = 3;
-		 */
-		bytesDownloaded: bigint;
+  /**
+   * @generated from field: int64 bytes_downloaded = 3;
+   */
+  bytesDownloaded: bigint;
 
-		/**
-		 * @generated from field: int64 total_bytes = 4;
-		 */
-		totalBytes: bigint;
+  /**
+   * @generated from field: int64 total_bytes = 4;
+   */
+  totalBytes: bigint;
 
-		/**
-		 * @generated from field: int32 progress_percent = 5;
-		 */
-		progressPercent: number;
+  /**
+   * @generated from field: int32 progress_percent = 5;
+   */
+  progressPercent: number;
 
-		/**
-		 * @generated from field: string error = 6;
-		 */
-		error: string;
-	};
+  /**
+   * @generated from field: string error = 6;
+   */
+  error: string;
+};
 
 /**
  * Describes the message carbonpanel.v1.GetRemoteArchiveProgressResponse.
  * Use `create(GetRemoteArchiveProgressResponseSchema)` to create a new message.
  */
-export const GetRemoteArchiveProgressResponseSchema: GenMessage<GetRemoteArchiveProgressResponse> =
-	/*@__PURE__*/
-	messageDesc(file_carbonpanel_v1_file, 32);
+export const GetRemoteArchiveProgressResponseSchema: GenMessage<GetRemoteArchiveProgressResponse> = /*@__PURE__*/
+  messageDesc(file_carbonpanel_v1_file, 32);
 
 /**
  * Server file management
@@ -946,164 +907,166 @@ export const GetRemoteArchiveProgressResponseSchema: GenMessage<GetRemoteArchive
  * @generated from service carbonpanel.v1.FileService
  */
 export const FileService: GenService<{
-	/**
-	 * Browse server directory
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.ListFiles
-	 */
-	listFiles: {
-		methodKind: 'unary';
-		input: typeof ListFilesRequestSchema;
-		output: typeof ListFilesResponseSchema;
-	};
-	/**
-	 * Download file content
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.GetFile
-	 */
-	getFile: {
-		methodKind: 'unary';
-		input: typeof GetFileRequestSchema;
-		output: typeof GetFileResponseSchema;
-	};
-	/**
-	 * Save an uploaded file
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.SaveUploadedFile
-	 */
-	saveUploadedFile: {
-		methodKind: 'unary';
-		input: typeof SaveUploadedFileRequestSchema;
-		output: typeof SaveUploadedFileResponseSchema;
-	};
-	/**
-	 * Modify file content
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.UpdateFile
-	 */
-	updateFile: {
-		methodKind: 'unary';
-		input: typeof UpdateFileRequestSchema;
-		output: typeof UpdateFileResponseSchema;
-	};
-	/**
-	 * Remove file or directory
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.DeleteFile
-	 */
-	deleteFile: {
-		methodKind: 'unary';
-		input: typeof DeleteFileRequestSchema;
-		output: typeof DeleteFileResponseSchema;
-	};
-	/**
-	 * Change file name
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.RenameFile
-	 */
-	renameFile: {
-		methodKind: 'unary';
-		input: typeof RenameFileRequestSchema;
-		output: typeof RenameFileResponseSchema;
-	};
-	/**
-	 * Unzip archive file
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.ExtractArchive
-	 */
-	extractArchive: {
-		methodKind: 'unary';
-		input: typeof ExtractArchiveRequestSchema;
-		output: typeof ExtractArchiveResponseSchema;
-	};
-	/**
-	 * Create a new folder
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.CreateFolder
-	 */
-	createFolder: {
-		methodKind: 'unary';
-		input: typeof CreateFolderRequestSchema;
-		output: typeof CreateFolderResponseSchema;
-	};
-	/**
-	 * Move a file or directory
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.MoveFile
-	 */
-	moveFile: {
-		methodKind: 'unary';
-		input: typeof MoveFileRequestSchema;
-		output: typeof MoveFileResponseSchema;
-	};
-	/**
-	 * Copy a file or directory
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.CopyFile
-	 */
-	copyFile: {
-		methodKind: 'unary';
-		input: typeof CopyFileRequestSchema;
-		output: typeof CopyFileResponseSchema;
-	};
-	/**
-	 * Create a zip archive from selected paths
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.CreateArchive
-	 */
-	createArchive: {
-		methodKind: 'unary';
-		input: typeof CreateArchiveRequestSchema;
-		output: typeof CreateArchiveResponseSchema;
-	};
-	/**
-	 * Download multiple files/folders as a zip
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.DownloadArchive
-	 */
-	downloadArchive: {
-		methodKind: 'unary';
-		input: typeof DownloadArchiveRequestSchema;
-		output: typeof DownloadArchiveResponseSchema;
-	};
-	/**
-	 * Initiate a single-file download session (actual bytes served via GET /api/v1/download/{session_id})
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.InitFileDownload
-	 */
-	initFileDownload: {
-		methodKind: 'unary';
-		input: typeof InitFileDownloadRequestSchema;
-		output: typeof InitFileDownloadResponseSchema;
-	};
-	/**
-	 * Poll extraction progress
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.GetExtractionStatus
-	 */
-	getExtractionStatus: {
-		methodKind: 'unary';
-		input: typeof GetExtractionStatusRequestSchema;
-		output: typeof GetExtractionStatusResponseSchema;
-	};
-	/**
-	 * Download archive from remote URL (GitHub Releases, CDN, S3) with SHA256 verification and auto-extraction
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.DownloadRemoteArchive
-	 */
-	downloadRemoteArchive: {
-		methodKind: 'unary';
-		input: typeof DownloadRemoteArchiveRequestSchema;
-		output: typeof DownloadRemoteArchiveResponseSchema;
-	};
-	/**
-	 * Poll remote archive download progress
-	 *
-	 * @generated from rpc carbonpanel.v1.FileService.GetRemoteArchiveProgress
-	 */
-	getRemoteArchiveProgress: {
-		methodKind: 'unary';
-		input: typeof GetRemoteArchiveProgressRequestSchema;
-		output: typeof GetRemoteArchiveProgressResponseSchema;
-	};
-}> = /*@__PURE__*/ serviceDesc(file_carbonpanel_v1_file, 0);
+  /**
+   * Browse server directory
+   *
+   * @generated from rpc carbonpanel.v1.FileService.ListFiles
+   */
+  listFiles: {
+    methodKind: "unary";
+    input: typeof ListFilesRequestSchema;
+    output: typeof ListFilesResponseSchema;
+  },
+  /**
+   * Download file content
+   *
+   * @generated from rpc carbonpanel.v1.FileService.GetFile
+   */
+  getFile: {
+    methodKind: "unary";
+    input: typeof GetFileRequestSchema;
+    output: typeof GetFileResponseSchema;
+  },
+  /**
+   * Save an uploaded file
+   *
+   * @generated from rpc carbonpanel.v1.FileService.SaveUploadedFile
+   */
+  saveUploadedFile: {
+    methodKind: "unary";
+    input: typeof SaveUploadedFileRequestSchema;
+    output: typeof SaveUploadedFileResponseSchema;
+  },
+  /**
+   * Modify file content
+   *
+   * @generated from rpc carbonpanel.v1.FileService.UpdateFile
+   */
+  updateFile: {
+    methodKind: "unary";
+    input: typeof UpdateFileRequestSchema;
+    output: typeof UpdateFileResponseSchema;
+  },
+  /**
+   * Remove file or directory
+   *
+   * @generated from rpc carbonpanel.v1.FileService.DeleteFile
+   */
+  deleteFile: {
+    methodKind: "unary";
+    input: typeof DeleteFileRequestSchema;
+    output: typeof DeleteFileResponseSchema;
+  },
+  /**
+   * Change file name
+   *
+   * @generated from rpc carbonpanel.v1.FileService.RenameFile
+   */
+  renameFile: {
+    methodKind: "unary";
+    input: typeof RenameFileRequestSchema;
+    output: typeof RenameFileResponseSchema;
+  },
+  /**
+   * Unzip archive file
+   *
+   * @generated from rpc carbonpanel.v1.FileService.ExtractArchive
+   */
+  extractArchive: {
+    methodKind: "unary";
+    input: typeof ExtractArchiveRequestSchema;
+    output: typeof ExtractArchiveResponseSchema;
+  },
+  /**
+   * Create a new folder
+   *
+   * @generated from rpc carbonpanel.v1.FileService.CreateFolder
+   */
+  createFolder: {
+    methodKind: "unary";
+    input: typeof CreateFolderRequestSchema;
+    output: typeof CreateFolderResponseSchema;
+  },
+  /**
+   * Move a file or directory
+   *
+   * @generated from rpc carbonpanel.v1.FileService.MoveFile
+   */
+  moveFile: {
+    methodKind: "unary";
+    input: typeof MoveFileRequestSchema;
+    output: typeof MoveFileResponseSchema;
+  },
+  /**
+   * Copy a file or directory
+   *
+   * @generated from rpc carbonpanel.v1.FileService.CopyFile
+   */
+  copyFile: {
+    methodKind: "unary";
+    input: typeof CopyFileRequestSchema;
+    output: typeof CopyFileResponseSchema;
+  },
+  /**
+   * Create a zip archive from selected paths
+   *
+   * @generated from rpc carbonpanel.v1.FileService.CreateArchive
+   */
+  createArchive: {
+    methodKind: "unary";
+    input: typeof CreateArchiveRequestSchema;
+    output: typeof CreateArchiveResponseSchema;
+  },
+  /**
+   * Download multiple files/folders as a zip
+   *
+   * @generated from rpc carbonpanel.v1.FileService.DownloadArchive
+   */
+  downloadArchive: {
+    methodKind: "unary";
+    input: typeof DownloadArchiveRequestSchema;
+    output: typeof DownloadArchiveResponseSchema;
+  },
+  /**
+   * Initiate a single-file download session (actual bytes served via GET /api/v1/download/{session_id})
+   *
+   * @generated from rpc carbonpanel.v1.FileService.InitFileDownload
+   */
+  initFileDownload: {
+    methodKind: "unary";
+    input: typeof InitFileDownloadRequestSchema;
+    output: typeof InitFileDownloadResponseSchema;
+  },
+  /**
+   * Poll extraction progress
+   *
+   * @generated from rpc carbonpanel.v1.FileService.GetExtractionStatus
+   */
+  getExtractionStatus: {
+    methodKind: "unary";
+    input: typeof GetExtractionStatusRequestSchema;
+    output: typeof GetExtractionStatusResponseSchema;
+  },
+  /**
+   * Download archive from remote URL (GitHub Releases, CDN, S3) with SHA256 verification and auto-extraction
+   *
+   * @generated from rpc carbonpanel.v1.FileService.DownloadRemoteArchive
+   */
+  downloadRemoteArchive: {
+    methodKind: "unary";
+    input: typeof DownloadRemoteArchiveRequestSchema;
+    output: typeof DownloadRemoteArchiveResponseSchema;
+  },
+  /**
+   * Poll remote archive download progress
+   *
+   * @generated from rpc carbonpanel.v1.FileService.GetRemoteArchiveProgress
+   */
+  getRemoteArchiveProgress: {
+    methodKind: "unary";
+    input: typeof GetRemoteArchiveProgressRequestSchema;
+    output: typeof GetRemoteArchiveProgressResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_carbonpanel_v1_file, 0);
+

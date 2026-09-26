@@ -2,11 +2,12 @@ package module
 
 import (
 	"context"
+	"net/netip"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -16,15 +17,19 @@ import (
 )
 
 type mockDockerClient struct {
-	client.CommonAPIClient
-	inspectFunc func(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	inspectFunc func(ctx context.Context, containerID string) (container.InspectResponse, error)
 }
 
-func (m *mockDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (m *mockDockerClient) ContainerInspect(ctx context.Context, containerID string, _ client.ContainerInspectOptions) (client.ContainerInspectResult, error) {
 	if m.inspectFunc != nil {
-		return m.inspectFunc(ctx, containerID)
+		res, err := m.inspectFunc(ctx, containerID)
+		return client.ContainerInspectResult{Container: res}, err
 	}
-	return types.ContainerJSON{}, nil
+	return client.ContainerInspectResult{}, nil
+}
+
+func (m *mockDockerClient) Close() error {
+	return nil
 }
 
 func setupTestStore(t *testing.T) *storage.Store {
@@ -47,12 +52,12 @@ func setupTestStore(t *testing.T) *storage.Store {
 
 func TestModuleManager_RestoreProxyRoutesOnStart(t *testing.T) {
 	mockCli := &mockDockerClient{
-		inspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+		inspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"test-net": {
-							IPAddress: "172.28.0.25",
+							IPAddress: netip.MustParseAddr("172.28.0.25"),
 						},
 					},
 				},

@@ -13,7 +13,7 @@
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { toast } from 'svelte-sonner';
 	import { inspectManifest, exportServerManifest } from '$lib/utils/manifest-inspector';
-	import type { ManifestInspectionResult, InspectedMod } from '$lib/utils/manifest-inspector';
+	import type { ManifestInspectionResult } from '$lib/utils/manifest-inspector';
 	import {
 		FileSearch,
 		Upload,
@@ -22,8 +22,6 @@
 		Laptop,
 		Server,
 		Layers,
-		Check,
-		AlertTriangle,
 		ExternalLink
 	} from '@lucide/svelte';
 

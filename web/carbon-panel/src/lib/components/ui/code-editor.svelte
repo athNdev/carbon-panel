@@ -48,7 +48,7 @@
 					[/\{\{/, { token: 'variable.template', next: '@template' }],
 					[/"(?:[^"\\]|\\.)*"(?=\s*:)/, 'type'],
 					[/"/, { token: 'string', next: '@string' }],
-					[/-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?/, 'number'],
+					[/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
 					[/\b(?:true|false|null)\b/, 'keyword'],
 					[/[{}[\]]/, 'delimiter.bracket'],
 					[/[,:]/, 'delimiter']
