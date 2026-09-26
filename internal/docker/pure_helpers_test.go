@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	models "github.com/athNdev/carbon-panel/internal/db"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/moby/moby/api/types/container"
 )
 
@@ -125,4 +126,37 @@ func TestMapContainerState(t *testing.T) {
 			t.Errorf("mapContainerState(%+v) = %q, want %q", tc.state, got, tc.want)
 		}
 	}
+}
+
+func TestValidateServerPorts(t *testing.T) {
+	valid := &models.Server{ID: "s", Port: 25565}
+	if err := validateServerPorts(valid); err != nil {
+		t.Errorf("valid ports rejected: %v", err)
+	}
+
+	for name, mutate := range map[string]func(*models.Server){
+		"zero game port":      func(s *models.Server) { s.Port = 0 },
+		"oversize game port":  func(s *models.Server) { s.Port = 70000 },
+		"negative game port":  func(s *models.Server) { s.Port = -1 },
+		"rcon overflow":       func(s *models.Server) { s.Port = 65530 },
+		"bad additional cont": func(s *models.Server) { s.AdditionalPorts = portList(0, 25566) },
+		"bad additional host": func(s *models.Server) { s.AdditionalPorts = portList(25566, 99999) },
+		"oversize additional": func(s *models.Server) { s.AdditionalPorts = portList(70000, 25566) },
+	} {
+		srv := &models.Server{ID: "s", Port: 25565}
+		mutate(srv)
+		if err := validateServerPorts(srv); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+
+	// Proxy servers use the default internal port regardless of host port.
+	proxy := &models.Server{ID: "p", Port: 25565, ProxyHostname: "mc.example.com"}
+	if err := validateServerPorts(proxy); err != nil {
+		t.Errorf("proxy ports rejected: %v", err)
+	}
+}
+
+func portList(containerPort, hostPort int32) []*v1.AdditionalPort {
+	return []*v1.AdditionalPort{{Name: "x", ContainerPort: containerPort, HostPort: hostPort, Protocol: "tcp"}}
 }
