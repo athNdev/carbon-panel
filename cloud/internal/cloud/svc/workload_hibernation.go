@@ -271,7 +271,7 @@ func (s *WorkloadService) SyncIngressRoutes(ctx context.Context, req *connect.Re
 	}
 	if valkeyAddr != "" {
 		client := proxy.NewRespClient(valkeyAddr, os.Getenv("VALKEY_PASSWORD"))
-		defer client.Close()
+		defer func() { _ = client.Close() }()
 
 		syncCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()

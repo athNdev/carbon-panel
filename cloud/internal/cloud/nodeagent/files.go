@@ -156,7 +156,7 @@ func (m *FileManager) ReadFile(workloadID, relPath string, chunkFunc func(chunk 
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	totalSize := info.Size()
 	buf := make([]byte, MaxChunkSize)

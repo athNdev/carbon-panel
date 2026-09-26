@@ -54,7 +54,7 @@ type DockerRunner struct {
 
 // NewDockerRunner creates a new Docker runner using local environment connection.
 func NewDockerRunner(dataDir string, logger *slog.Logger) (*DockerRunner, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, fmt.Errorf("docker client: %w", err)
 	}
@@ -418,7 +418,7 @@ func (r *DockerRunner) GetMetrics(ctx context.Context, workloadID string) (*v1.W
 	if err != nil {
 		return nil, fmt.Errorf("container stats: %w", err)
 	}
-	defer statsResp.Body.Close()
+	defer func() { _ = statsResp.Body.Close() }()
 
 	var stats container.StatsResponse
 	if err := json.NewDecoder(statsResp.Body).Decode(&stats); err != nil {
@@ -466,7 +466,7 @@ func (r *DockerRunner) GetMetrics(ctx context.Context, workloadID string) (*v1.W
 	var playersOnline int32
 	var maxPlayers int32 = 20
 	var playerSample []string
-	var tps float64 = 20.0
+	var tps = 20.0
 
 	rconCtx, rconCancel := context.WithTimeout(ctx, 2*time.Second)
 	defer rconCancel()

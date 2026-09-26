@@ -127,9 +127,10 @@ func (c *Client) Search(ctx context.Context, req *v1.SearchAddonsRequest) (*v1.S
 
 	// Build facets
 	var facetGroups [][]string
-	if req.AddonType == v1.AddonType_ADDON_TYPE_PLUGIN {
+	switch req.AddonType {
+	case v1.AddonType_ADDON_TYPE_PLUGIN:
 		facetGroups = append(facetGroups, []string{"project_type:plugin", "project_type:mod"})
-	} else if req.AddonType == v1.AddonType_ADDON_TYPE_MOD {
+	case v1.AddonType_ADDON_TYPE_MOD:
 		facetGroups = append(facetGroups, []string{"project_type:mod"})
 	}
 
@@ -157,7 +158,7 @@ func (c *Client) Search(ctx context.Context, req *v1.SearchAddonsRequest) (*v1.S
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -218,7 +219,7 @@ func (c *Client) GetProject(ctx context.Context, idOrSlug string) (*v1.AddonSear
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -284,7 +285,7 @@ func (c *Client) GetVersions(ctx context.Context, idOrSlug, loader, gameVersion 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -341,7 +342,7 @@ func (c *Client) ResolveDownloadURL(ctx context.Context, projectIDOrSlug, versio
 		if err != nil {
 			return "", "", err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)

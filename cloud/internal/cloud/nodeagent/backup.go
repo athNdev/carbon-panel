@@ -105,7 +105,7 @@ func (b *BackupManager) CreateBackup(workloadID, backupID string) (sizeBytes int
 			if err != nil {
 				return fmt.Errorf("open file %s: %w", rel, err)
 			}
-			defer src.Close()
+			defer func() { _ = src.Close() }()
 			if _, err := io.Copy(tw, src); err != nil {
 				return fmt.Errorf("copy file %s: %w", rel, err)
 			}
@@ -156,13 +156,13 @@ func (b *BackupManager) RestoreBackup(workloadID, backupID string) error {
 	if err != nil {
 		return fmt.Errorf("open backup archive: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	gr, err := gzip.NewReader(f)
 	if err != nil {
 		return fmt.Errorf("gzip reader: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 
@@ -171,7 +171,7 @@ func (b *BackupManager) RestoreBackup(workloadID, backupID string) error {
 	if err := os.MkdirAll(stagingDir, 0755); err != nil {
 		return fmt.Errorf("create staging dir: %w", err)
 	}
-	defer os.RemoveAll(stagingDir)
+	defer func() { _ = os.RemoveAll(stagingDir) }()
 
 	for {
 		hdr, err := tr.Next()
@@ -202,7 +202,7 @@ func (b *BackupManager) RestoreBackup(workloadID, backupID string) error {
 				return fmt.Errorf("create file %s: %w", cleanName, err)
 			}
 			if _, err := io.Copy(out, tr); err != nil {
-				out.Close()
+				_ = out.Close()
 				return fmt.Errorf("extract file %s: %w", cleanName, err)
 			}
 			if err := out.Close(); err != nil {

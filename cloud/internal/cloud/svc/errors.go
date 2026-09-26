@@ -5,16 +5,6 @@ import "errors"
 // Typed dependency and state errors. Handlers wrap these in connect errors
 // with the narrowest applicable code; the messages carry no internals.
 var (
-	errNoStore   = errors.New("svc: db store is required")
-	errNoNode    = errors.New("svc: node registry is required")
-	errNoCatalog = errors.New("svc: node-type catalog is required")
-	errNoAudit   = errors.New("svc: audit store is required")
-
-	// errNodeExecutes is returned by control-plane RPCs whose execution
-	// belongs to the node agent (w3-noded lane). The control plane records
-	// intent and streams commands; the agent applies them.
-	errNodeExecutes = errors.New("svc: execution belongs to the node agent")
-
 	errNoPrincipal       = errors.New("svc: no authenticated principal")
 	errNoOrgCtx          = errors.New("svc: no org selected")
 	errOrgName           = errors.New("svc: org name is required")

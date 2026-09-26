@@ -176,11 +176,11 @@ func bootstrapDB(configPath, orgName string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("create api key: %w", err)
 	}
 
-	fmt.Fprintf(stdout, "Organization ID:   %s\n", org.ID)
-	fmt.Fprintf(stdout, "Organization Name: %s\n", org.Name)
-	fmt.Fprintf(stdout, "Organization Slug: %s\n", org.Slug)
-	fmt.Fprintf(stdout, "Owner Email:       %s\n", member.Email)
-	fmt.Fprintf(stdout, "API Key:           %s\n", secret)
+	_, _ = fmt.Fprintf(stdout, "Organization ID:   %s\n", org.ID)
+	_, _ = fmt.Fprintf(stdout, "Organization Name: %s\n", org.Name)
+	_, _ = fmt.Fprintf(stdout, "Organization Slug: %s\n", org.Slug)
+	_, _ = fmt.Fprintf(stdout, "Owner Email:       %s\n", member.Email)
+	_, _ = fmt.Fprintf(stdout, "API Key:           %s\n", secret)
 	return nil
 }
 

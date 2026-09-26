@@ -422,7 +422,7 @@ func (s *AddonService) InstallAddon(ctx context.Context, req *connect.Request[v1
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to download addon: %w", err))
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusOK {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("download returned HTTP status %d", httpResp.StatusCode))
