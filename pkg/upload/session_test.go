@@ -7,6 +7,7 @@
 package upload
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -127,4 +128,78 @@ func TestSession_WriteStream(t *testing.T) {
 	if _, _, err := m.WriteStream("missing", strings.NewReader("x"), 0); err == nil {
 		t.Error("stream for unknown session accepted")
 	}
+}
+
+func TestCleanupSession_MoveSemantics(t *testing.T) {
+	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
+
+	sess, err := m.InitSession("move.bin", 4, 4)
+	if err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+	if _, err := os.Stat(sess.TempPath); err != nil {
+		t.Fatalf("temp file missing: %v", err)
+	}
+
+	// CleanupSession drops the record but keeps the file for the caller to move.
+	if err := m.CleanupSession(sess.ID); err != nil {
+		t.Fatalf("cleanup failed: %v", err)
+	}
+	if _, err := m.GetSession(sess.ID); err == nil {
+		t.Error("cleaned session still fetchable")
+	}
+	if _, err := os.Stat(sess.TempPath); err != nil {
+		t.Errorf("temp file removed by CleanupSession: %v", err)
+	}
+	// Idempotent on missing sessions.
+	if err := m.CleanupSession(sess.ID); err != nil {
+		t.Errorf("second cleanup failed: %v", err)
+	}
+}
+
+func TestStop_ClearsSessionsAndFiles(t *testing.T) {
+	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+
+	sess, err := m.InitSession("stop.bin", 4, 4)
+	if err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+	m.Stop()
+
+	if _, err := m.GetSession(sess.ID); err == nil {
+		t.Error("session survives Stop")
+	}
+	if _, err := os.Stat(sess.TempPath); !os.IsNotExist(err) {
+		t.Errorf("temp file survives Stop: %v", err)
+	}
+}
+
+func TestCleanupExpired_SweepsStale(t *testing.T) {
+	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
+
+	stale, err := m.InitSession("stale.bin", 4, 4)
+	if err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+	stale.ExpiresAt = time.Now().Add(-time.Minute)
+	fresh, err := m.InitSession("fresh.bin", 4, 4)
+	if err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+
+	m.cleanupExpired()
+
+	if _, err := m.GetSession(stale.ID); err == nil {
+		t.Error("stale session survives sweep")
+	}
+	if _, err := os.Stat(stale.TempPath); !os.IsNotExist(err) {
+		t.Error("stale temp file survives sweep")
+	}
+	if _, err := m.GetSession(fresh.ID); err != nil {
+		t.Errorf("fresh session swept: %v", err)
+	}
+	// Unknown IDs are safe no-ops.
+	m.cleanupSession("missing")
 }
