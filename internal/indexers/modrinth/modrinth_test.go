@@ -28,7 +28,7 @@ func TestSearchModpacks(t *testing.T) {
 		if q := r.URL.Query(); q.Get("facets") == "" || q.Get("limit") == "" {
 			t.Errorf("missing query params: %v", q)
 		}
-		w.Write([]byte(`{"hits":[{"slug":"pl-pack","title":"PL Pack","description":"d","categories":["fabric"],"project_id":"abc123","downloads":42,"icon_url":"http://x/i.png","versions":["1.20.1"],"latest_version":"v1","date_created":"2024-01-01T00:00:00Z","date_modified":"2024-02-01T00:00:00Z"}],"offset":0,"limit":10,"total_hits":1}`))
+		_, _ = w.Write([]byte(`{"hits":[{"slug":"pl-pack","title":"PL Pack","description":"d","categories":["fabric"],"project_id":"abc123","downloads":42,"icon_url":"http://x/i.png","versions":["1.20.1"],"latest_version":"v1","date_created":"2024-01-01T00:00:00Z","date_modified":"2024-02-01T00:00:00Z"}],"offset":0,"limit":10,"total_hits":1}`))
 	})
 	testServer(t, mux)
 
@@ -45,7 +45,7 @@ func TestSearchModpacksError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte("slow down"))
+		_, _ = w.Write([]byte("slow down"))
 	})
 	testServer(t, mux)
 
@@ -57,10 +57,10 @@ func TestSearchModpacksError(t *testing.T) {
 func TestGetModpackAndVersions(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/project/abc123", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"id":"abc123","slug":"pl-pack","title":"PL Pack","description":"d","body":"full","project_type":"modpack","game_versions":["1.20.1"],"loaders":["fabric"],"categories":["adventure"],"versions":["v1"],"downloads":42,"published":"2024-01-01T00:00:00Z","updated":"2024-02-01T00:00:00Z"}`))
+		_, _ = w.Write([]byte(`{"id":"abc123","slug":"pl-pack","title":"PL Pack","description":"d","body":"full","project_type":"modpack","game_versions":["1.20.1"],"loaders":["fabric"],"categories":["adventure"],"versions":["v1"],"downloads":42,"published":"2024-01-01T00:00:00Z","updated":"2024-02-01T00:00:00Z"}`))
 	})
 	mux.HandleFunc("/project/abc123/version", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`[{"id":"v1","name":"Pack 1.0","version_number":"1.0","version_type":"release","game_versions":["1.20.1"],"loaders":["fabric"],"date_published":"2024-02-01T00:00:00Z","files":[{"hashes":{"sha512":"a","sha1":"b"},"url":"http://x/pack.jar","filename":"pack.jar","primary":true,"size":99}]}]`))
+		_, _ = w.Write([]byte(`[{"id":"v1","name":"Pack 1.0","version_number":"1.0","version_type":"release","game_versions":["1.20.1"],"loaders":["fabric"],"date_published":"2024-02-01T00:00:00Z","files":[{"hashes":{"sha512":"a","sha1":"b"},"url":"http://x/pack.jar","filename":"pack.jar","primary":true,"size":99}]}]`))
 	})
 	testServer(t, mux)
 
@@ -78,13 +78,13 @@ func TestGetModpackAndVersions(t *testing.T) {
 func TestAdapterEndToEnd(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"hits":[{"slug":"pl-pack","title":"PL Pack","description":"d","categories":["fabric"],"display_categories":["adventure"],"project_id":"abc123","downloads":7,"icon_url":"","versions":["1.20.1"],"latest_version":"v1","date_created":"2024-01-01T00:00:00Z","date_modified":"2024-02-01T00:00:00Z"}],"offset":0,"limit":10,"total_hits":1}`))
+		_, _ = w.Write([]byte(`{"hits":[{"slug":"pl-pack","title":"PL Pack","description":"d","categories":["fabric"],"display_categories":["adventure"],"project_id":"abc123","downloads":7,"icon_url":"","versions":["1.20.1"],"latest_version":"v1","date_created":"2024-01-01T00:00:00Z","date_modified":"2024-02-01T00:00:00Z"}],"offset":0,"limit":10,"total_hits":1}`))
 	})
 	mux.HandleFunc("/project/abc123", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"id":"abc123","slug":"pl-pack","title":"PL Pack","description":"d","body":"full","game_versions":["1.20.1"],"loaders":["Fabric"],"categories":["adventure"],"additional_categories":["extra"],"versions":["v1"],"downloads":7,"published":"2024-01-01T00:00:00Z","updated":"2024-02-01T00:00:00Z"}`))
+		_, _ = w.Write([]byte(`{"id":"abc123","slug":"pl-pack","title":"PL Pack","description":"d","body":"full","game_versions":["1.20.1"],"loaders":["Fabric"],"categories":["adventure"],"additional_categories":["extra"],"versions":["v1"],"downloads":7,"published":"2024-01-01T00:00:00Z","updated":"2024-02-01T00:00:00Z"}`))
 	})
 	mux.HandleFunc("/project/abc123/version", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`[{"id":"v1","name":"Pack 1.0","version_number":"1.0","version_type":"beta","game_versions":["1.20.1"],"loaders":["Fabric"],"date_published":"2024-02-01T00:00:00Z","files":[{"hashes":{},"url":"http://x/pack.jar","filename":"pack.jar","primary":false,"size":10}]}]`))
+		_, _ = w.Write([]byte(`[{"id":"v1","name":"Pack 1.0","version_number":"1.0","version_type":"beta","game_versions":["1.20.1"],"loaders":["Fabric"],"date_published":"2024-02-01T00:00:00Z","files":[{"hashes":{},"url":"http://x/pack.jar","filename":"pack.jar","primary":false,"size":10}]}]`))
 	})
 	testServer(t, mux)
 
