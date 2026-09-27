@@ -683,7 +683,7 @@
 				tabs={subViewTabs}
 				bind:selectedTab={activeTab}
 				onselect={(tab) => (activeTab = tab)}
-				class="overflow-x-auto"
+				class="sticky top-0 z-20 overflow-x-auto bg-[#161616]"
 			/>
 
 			<!-- Tab Content Areas -->

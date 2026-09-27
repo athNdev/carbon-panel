@@ -1015,6 +1015,7 @@
 					tabs={studioTabs}
 					selectedTab={activeTab}
 					onselect={(id) => (activeTab = id as unknown as typeof activeTab)}
+					class="sticky top-0 z-20 bg-[#161616]"
 				/>
 
 				<!-- TAB 1: MODS MANAGEMENT -->

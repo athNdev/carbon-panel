@@ -105,6 +105,7 @@
 			placeholder="Search players…"
 			aria-label="Search players"
 			bind:value={search}
+			onkeydown={(e) => e.key === 'Escape' && (search = '')}
 			class="mb-4 h-9 w-full max-w-xs rounded-none border border-[#393939] bg-[#161616] px-3 text-xs text-[#f4f4f4]"
 		/>
 
