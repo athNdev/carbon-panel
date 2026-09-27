@@ -53,7 +53,7 @@
 	} from '$lib/proto/carbonpanel/v1/server_pb';
 	import { enumToString } from '$lib/utils';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
-	import { CarbonTag, CarbonTabs } from '$lib/components/carbon';
+	import { CarbonTag, CarbonTabs, CarbonConfirm } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
 	import ServerSettings from '$lib/components/server-settings.svelte';
@@ -182,15 +182,15 @@
 		}
 	}
 
+	let confirmDeleteOpen = $state(false);
+
 	async function handleDeleteServer() {
 		if (!server) return;
+		confirmDeleteOpen = true;
+	}
 
-		const confirmed = confirm(
-			`Are you sure you want to delete "${server.name}"?\n\nThis will:\n- Stop and remove the Docker container\n- Delete all server files and data\n- Remove all mods and configurations\n\nThis action cannot be undone!`
-		);
-
-		if (!confirmed) return;
-
+	async function confirmDeleteServer() {
+		if (!server) return;
 		actionLoading = true;
 		try {
 			const deleteRequest = create(DeleteServerRequestSchema, { id: server.id });
@@ -743,6 +743,22 @@
 {/if}
 
 <ScrollToTop />
+
+{#if server}
+	<CarbonConfirm
+		bind:open={confirmDeleteOpen}
+		title="Delete server?"
+		message="This will stop and remove the container, delete all files and data, and remove mods and configurations. This action cannot be undone."
+		confirmLabel="Delete Server"
+		danger
+		confirming={actionLoading}
+		onconfirm={confirmDeleteServer}
+	>
+		{#snippet details()}
+			{#if server}{server.name}{/if}
+		{/snippet}
+	</CarbonConfirm>
+{/if}
 
 <style>
 	.heartbeat-container {
