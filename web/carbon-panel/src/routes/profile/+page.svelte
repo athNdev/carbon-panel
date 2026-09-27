@@ -191,8 +191,8 @@
 			return;
 		}
 
-		if (passwordForm.newPassword.length < 8) {
-			toast.error('New password must be at least 8 characters');
+		if (passwordForm.newPassword.length < 12) {
+			toast.error('New password must be at least 12 characters');
 			return;
 		}
 
@@ -387,7 +387,7 @@
 								<CarbonTextInput
 									type="password"
 									label="New Password"
-									placeholder="Minimum 8 characters"
+									placeholder="Minimum 12 characters"
 									bind:value={passwordForm.newPassword}
 									required
 									disabled={saving}

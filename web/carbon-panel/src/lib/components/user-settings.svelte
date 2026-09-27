@@ -154,8 +154,8 @@
 			return;
 		}
 
-		if (newUserForm.password.length < 8) {
-			toast.error('Password must be at least 8 characters');
+		if (newUserForm.password.length < 12) {
+			toast.error('Password must be at least 12 characters');
 			return;
 		}
 
@@ -583,7 +583,7 @@
 					<div class="rounded-lg bg-muted/50 p-4">
 						<p class="mb-1 text-sm font-medium">Password policy</p>
 						<p class="text-xs text-muted-foreground">
-							Passwords must be at least 8 characters. The user can change their password later.
+							Passwords must be at least 12 characters. The user can change their password later.
 						</p>
 					</div>
 				</div>
@@ -639,7 +639,7 @@
 								id="new-password"
 								type="password"
 								bind:value={newUserForm.password}
-								placeholder="Minimum 8 characters"
+								placeholder="Minimum 12 characters"
 								required
 							/>
 						</div>

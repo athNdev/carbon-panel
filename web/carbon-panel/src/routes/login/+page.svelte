@@ -127,8 +127,8 @@
 			return;
 		}
 
-		if (password.length < 8) {
-			error = 'Password must be at least 8 characters';
+		if (password.length < 12) {
+			error = 'Password must be at least 12 characters';
 			return;
 		}
 
@@ -252,7 +252,7 @@
 				<CarbonTextInput
 					type="password"
 					label="Password"
-					placeholder="Choose a strong password (min 8 chars)"
+					placeholder="Choose a strong password (min 12 chars)"
 					bind:value={password}
 					required
 					disabled={loading}
@@ -378,7 +378,7 @@
 					<CarbonTextInput
 						type="password"
 						label="Password"
-						placeholder="Choose a password (min 8 chars)"
+						placeholder="Choose a password (min 12 chars)"
 						bind:value={password}
 						required
 						disabled={loading}
