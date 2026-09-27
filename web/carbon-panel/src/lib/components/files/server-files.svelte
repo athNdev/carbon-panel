@@ -906,8 +906,15 @@
 	{:else if files.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center text-muted-foreground">
 			<Folder class="mb-4 h-12 w-12" />
-			<p>No files found</p>
-			<p class="mt-2 text-sm">Upload files to get started</p>
+			<p>This folder is empty</p>
+			<p class="mt-2 text-sm">Upload files or create a new file to get started</p>
+			<button
+				type="button"
+				onclick={() => triggerUpload('')}
+				class="mt-4 inline-flex h-8 cursor-pointer items-center rounded-none bg-[#0f62fe] px-4 font-sans text-xs text-white transition-colors hover:bg-[#0353e9]"
+			>
+				Upload files
+			</button>
 		</div>
 	{:else}
 		<!-- File tree -->

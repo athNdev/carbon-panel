@@ -291,6 +291,7 @@
 					href={resolve('/servers')}
 					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 					title="Back to Servers"
+					aria-label="Back to Servers"
 				>
 					<ArrowLeft class="h-4 w-4" />
 				</a>

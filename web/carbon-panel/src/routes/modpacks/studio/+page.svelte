@@ -303,6 +303,7 @@
 				onclick={() => goto(resolve('/modpacks'))}
 				class="rounded-none text-[#c6c6c6] hover:text-white"
 				title="Back to Modpacks"
+				aria-label="Back to Modpacks"
 			>
 				<ArrowLeft class="h-5 w-5" />
 			</CarbonButton>
