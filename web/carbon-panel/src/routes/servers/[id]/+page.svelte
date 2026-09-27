@@ -441,7 +441,7 @@
 		</div>
 
 		<!-- Carbon Metric Tiles (ZERO rounded corners) -->
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+		<div class="motion-stagger grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 			<!-- Tile 1: Status & Heartbeat -->
 			<div
 				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4"
@@ -689,7 +689,7 @@
 			{#key activeTab}
 				<div class="motion-fade-in min-h-0 flex-1">
 					{#if activeTab === 'overview'}
-						<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
+						<div class="rounded-none border border-[#393939] bg-[#262626] p-4 sm:p-6">
 							<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Server Settings</h3>
 							<p class="mb-6 text-xs text-[#a8a8a8]">
 								Modify runtime container settings and server parameters

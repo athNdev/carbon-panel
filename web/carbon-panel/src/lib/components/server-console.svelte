@@ -353,7 +353,7 @@
 								onclick={fetchLogs}
 								disabled={loading}
 								aria-label="Refresh logs"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[#0f62fe]"
 							>
 								{#if loading}
 									<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -376,7 +376,7 @@
 								onclick={uploadToMCLogs}
 								disabled={uploading}
 								aria-label="Upload logs to mclo.gs"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[#0f62fe]"
 							>
 								{#if uploading}
 									<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -399,7 +399,7 @@
 								onclick={downloadLogs}
 								disabled={logEntries.length === 0}
 								aria-label="Download raw log"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:opacity-40"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[#0f62fe]"
 							>
 								<Download class="h-3.5 w-3.5" />
 							</button>
@@ -418,7 +418,7 @@
 								onclick={clearLogs}
 								disabled={logEntries.length === 0}
 								aria-label="Clear log buffer"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-[#ff8389] disabled:opacity-40"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-[#ff8389] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[#0f62fe]"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</button>
