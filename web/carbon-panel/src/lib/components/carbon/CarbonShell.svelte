@@ -77,7 +77,20 @@
 		if (event.key === 'Escape') closeMobileNav();
 	}
 
-	const navItems: { href: '/' | '/servers' | '/servers/new' | '/modpacks/studio' | '/modpacks' | '/modules' | '/settings' | '/docs/api'; label: string; icon: string; badge?: boolean }[] = [
+	const navItems: {
+		href:
+			| '/'
+			| '/servers'
+			| '/servers/new'
+			| '/modpacks/studio'
+			| '/modpacks'
+			| '/modules'
+			| '/settings'
+			| '/docs/api';
+		label: string;
+		icon: string;
+		badge?: boolean;
+	}[] = [
 		{
 			href: '/',
 			label: 'Overview',

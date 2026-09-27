@@ -125,7 +125,7 @@
 						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
 							<td class="max-w-[180px] truncate py-2 pr-4" title={player}>{player}</td>
 							<td class="flex flex-wrap gap-2 py-2">
-								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label]}
+								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label] (cmd)}
 									<button
 										type="button"
 										class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"

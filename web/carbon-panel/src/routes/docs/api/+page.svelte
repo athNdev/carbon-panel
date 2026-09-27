@@ -202,17 +202,21 @@
 			</div>
 			<p class="mt-1 font-sans text-xs text-[#8d8d8d]">
 				Live ConnectRPC + OpenAPI reference. Spec served from
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- static asset, not a route -->
 				<a href="/api/v1/openapi.yaml" class="font-mono text-[#78a9ff] hover:text-white"
 					>/api/v1/openapi.yaml</a
 				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				(regenerated via <span class="font-mono">make gen</span>)
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
+			<!-- eslint-disable svelte/no-navigation-without-resolve -- static asset, not a route -->
 			<a
 				href="/api/v1/openapi.yaml"
 				class="inline-flex h-8 items-center px-3 font-mono text-xs tracking-wider text-[#78a9ff] uppercase hover:bg-[#353535] hover:text-white"
 			>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				Open raw spec
 			</a>
 		</div>

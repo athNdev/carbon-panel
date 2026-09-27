@@ -264,7 +264,9 @@
 			);
 		} catch (err) {
 			console.error('Failed to export modpack:', err);
-			toast.error(`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`);
+			toast.error(
+				`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`
+			);
 		} finally {
 			exportingPack = null;
 		}
@@ -500,7 +502,9 @@
 			}
 		} catch (err) {
 			console.error('Migration failed:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Version migration simulation failed');
+			toast.error(
+				(err instanceof Error ? err.message : '') || 'Version migration simulation failed'
+			);
 		} finally {
 			migrating = false;
 		}

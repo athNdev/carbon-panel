@@ -3,8 +3,7 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import type { ProxyListener } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { ProxyListenerWithCount, ProxyRoute } from '$lib/proto/carbonpanel/v1/proxy_pb';
-	import {
-	} from '$lib/components/ui/card';
+	import {} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';

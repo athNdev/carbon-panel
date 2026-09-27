@@ -97,9 +97,9 @@
 					: 'Change staged — applies on next restart'
 			);
 			await loadChanges();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to stage change:', err);
-			toast.error(err.message || 'Failed to stage change');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to stage change');
 		} finally {
 			staging = false;
 		}
@@ -117,9 +117,9 @@
 			}
 			toast.success('Staged change applied to live config');
 			await loadChanges();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to apply staged change:', err);
-			toast.error(err.message || 'Failed to apply staged change');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to apply staged change');
 		} finally {
 			applyingId = null;
 		}
@@ -134,9 +134,9 @@
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success('Staged change discarded');
 			await loadChanges();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to discard staged change:', err);
-			toast.error(err.message || 'Failed to discard staged change');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to discard staged change');
 		}
 	}
 

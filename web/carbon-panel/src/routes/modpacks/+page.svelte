@@ -516,7 +516,7 @@
 				<div class="md:col-span-2">
 					<CarbonSelect bind:value={searchParams.gameVersion} disabled={loading}>
 						<option value="">All MC Versions</option>
-						{#each gameVersions as version}
+						{#each gameVersions as version (version)}
 							<option value={version}>{version}</option>
 						{/each}
 					</CarbonSelect>
@@ -524,11 +524,9 @@
 
 				<div class="md:col-span-2">
 					<CarbonSelect bind:value={searchParams.modLoader} disabled={loading}>
-						<option value="">All Loaders</option>
-						<option value="forge">Forge</option>
-						<option value="fabric">Fabric</option>
-						<option value="neoforge">NeoForge</option>
-						<option value="quilt">Quilt</option>
+						{#each modLoaders as loader (loader.value)}
+							<option value={loader.value}>{loader.label}</option>
+						{/each}
 					</CarbonSelect>
 				</div>
 
@@ -600,9 +598,14 @@
 					/>
 				</div>
 
-				<div class="font-mono text-xs text-[#8d8d8d]">
+				<div class="flex items-center gap-3 font-mono text-xs text-[#8d8d8d]">
 					{#if searchResults}
-						TOTAL: {searchResults.total} PACKS
+						<span>TOTAL: {searchResults.total} PACKS</span>
+					{/if}
+					{#if indexerStatus}
+						{#each Object.entries(indexerStatus.modpacksByIndexer ?? {}) as [name, count] (`${name}:${count}`)}
+							<span>{name.toUpperCase()}: {count}</span>
+						{/each}
 					{/if}
 				</div>
 			</div>
@@ -723,7 +726,9 @@
 				<div class="mt-4 flex items-center justify-between gap-2 border-t border-[#393939] pt-3">
 					<div class="flex items-center gap-1">
 						{#if modpack.websiteUrl}
+							<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
 							<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 								<CarbonButton kind="ghost" size="sm" class="rounded-none">
 									<ExternalLink class="mr-1 h-3 w-3" />
 									View

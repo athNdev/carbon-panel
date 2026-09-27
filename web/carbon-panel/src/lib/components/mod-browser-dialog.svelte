@@ -23,7 +23,7 @@
 		AlertTriangle,
 		Layers,
 		Filter,
-		X,
+		X
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
