@@ -58,8 +58,10 @@
 
 	let wsConnectionState = $derived(wsClient.state.connectionState);
 	let previousConnectionState = $state('disconnected');
+	let everConnected = $state(false);
 	$effect(() => {
 		const s = wsConnectionState;
+		if (s === 'connected' || s === 'authenticated') everConnected = true;
 		if (
 			(previousConnectionState === 'connected' || previousConnectionState === 'authenticated') &&
 			s === 'disconnected'
@@ -341,6 +343,11 @@
 						<Wifi class="h-3.5 w-3.5 {getConnectionColor()}" />
 					{:else}
 						<WifiOff class="h-3.5 w-3.5 {getConnectionColor()}" />
+					{/if}
+					{#if everConnected && wsConnectionState !== 'authenticated'}
+						<CarbonTag type="yellow" size="sm">
+							<span class="motion-pulse">RECONNECTING</span>
+						</CarbonTag>
 					{/if}
 				</div>
 
