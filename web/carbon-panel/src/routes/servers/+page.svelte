@@ -228,6 +228,7 @@
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'all')}
+					aria-pressed={statusFilter === 'all'}
 					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 					'all'
 						? 'border-[#0f62fe] bg-[#0f62fe] text-white'
@@ -238,6 +239,7 @@
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'running')}
+					aria-pressed={statusFilter === 'running'}
 					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 					'running'
 						? 'border-[#198038] bg-[#198038] text-white'
@@ -248,6 +250,7 @@
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'stopped')}
+					aria-pressed={statusFilter === 'stopped'}
 					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 					'stopped'
 						? 'border-[#525252] bg-[#525252] text-white'
@@ -259,6 +262,7 @@
 					<button
 						type="button"
 						onclick={() => (statusFilter = 'issues')}
+						aria-pressed={statusFilter === 'issues'}
 						class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 						'issues'
 							? 'border-[#da1e28] bg-[#da1e28] text-white'
@@ -278,6 +282,7 @@
 					onclick={() => (viewMode = 'table')}
 					title="Table View"
 					aria-label="Table View"
+					aria-pressed={viewMode === 'table'}
 					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none transition-colors {viewMode ===
 					'table'
 						? 'bg-[#393939] text-[#f4f4f4]'
@@ -290,6 +295,7 @@
 					onclick={() => (viewMode = 'tiles')}
 					title="Tile View"
 					aria-label="Tile View"
+					aria-pressed={viewMode === 'tiles'}
 					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none transition-colors {viewMode ===
 					'tiles'
 						? 'bg-[#393939] text-[#f4f4f4]'
