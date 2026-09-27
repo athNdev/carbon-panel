@@ -160,13 +160,13 @@
 			tabindex="-1"
 			class="w-full {sizeClasses[
 				size
-			]} flex max-h-[90vh] flex-col rounded-none border border-[#393939] bg-[#161616] shadow-2xl outline-none focus:outline-none"
+			]} flex max-h-[90vh] flex-col rounded-none border border-[#393939] bg-[#161616] shadow-2xl outline-none select-text focus:outline-none"
 			in:scale={{ start: 0.97, opacity: 0, duration: 200, easing: cubicOut }}
 			out:scale={{ start: 0.97, opacity: 0, duration: 150, easing: cubicIn }}
 		>
 			<!-- Header -->
 			<div
-				class="flex items-start justify-between rounded-none border-b border-[#393939] bg-[#262626] p-6"
+				class="flex items-start justify-between rounded-none border-b border-[#393939] bg-[#262626] p-4 sm:p-6"
 			>
 				<div>
 					{#if description}
@@ -194,7 +194,7 @@
 
 			<!-- Body -->
 			<div
-				class="flex-1 space-y-4 overflow-y-auto rounded-none p-6 font-sans text-sm text-[#f4f4f4]"
+				class="flex-1 space-y-4 overflow-y-auto rounded-none p-4 font-sans text-sm text-[#f4f4f4] sm:p-6"
 			>
 				{@render children?.()}
 			</div>
