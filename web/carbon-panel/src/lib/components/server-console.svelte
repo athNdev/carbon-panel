@@ -515,7 +515,7 @@
 					: server.status === ServerStatus.STARTING
 						? 'Server is starting...'
 						: server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY
-							? 'Enter Minecraft server command (e.g. op, whitelist, stop)...'
+							? 'Enter Minecraft server command (↑↓ recalls history)...'
 							: 'Server must be active to execute commands'}
 				bind:value={command}
 				disabled={server.status !== ServerStatus.RUNNING &&
