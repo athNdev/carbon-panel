@@ -1227,6 +1227,7 @@
 											<th scope="col" class="w-8 px-3 py-2.5">
 												<input
 													type="checkbox"
+													aria-label="Select all mods"
 													class="cursor-pointer rounded-none border-[#8d8d8d] bg-[#262626]"
 													checked={selectedSlugs.length > 0 &&
 														selectedSlugs.length === filteredMods.length}
@@ -1257,6 +1258,7 @@
 												<td class="px-3 py-3">
 													<input
 														type="checkbox"
+														aria-label={`Select ${mod.slug}`}
 														class="cursor-pointer rounded-none border-[#8d8d8d] bg-[#262626]"
 														checked={selectedSlugs.includes(mod.slug)}
 														onchange={(e) => {
