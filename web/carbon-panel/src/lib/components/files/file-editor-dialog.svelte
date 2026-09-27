@@ -310,7 +310,7 @@
 				{#if file}
 					{file.name}
 					{#if isDirty}
-						<span class="text-sm text-muted-foreground">â—</span>
+						<span class="text-sm text-muted-foreground">●</span>
 					{/if}
 				{:else}
 					File Editor
@@ -346,9 +346,9 @@
 						{content.split('\n').length} lines, {content.length} characters
 					</span>
 					{#if isDirty}
-						<span class="text-orange-500">â— Modified</span>
+						<span class="text-orange-500">● Modified</span>
 					{:else}
-						<span class="text-green-500">â— Saved</span>
+						<span class="text-green-500">● Saved</span>
 					{/if}
 				</div>
 				<div class="flex items-center gap-2">

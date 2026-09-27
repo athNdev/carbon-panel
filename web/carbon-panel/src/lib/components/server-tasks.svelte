@@ -76,7 +76,7 @@
 	let creating = $state(false);
 	let activeSection = $state<DialogSection>('general');
 
-	// Form state â€” common
+	// Form state — common
 	let taskName = $state('');
 	let taskDescription = $state('');
 	let taskType = $state<TaskType>(TaskType.COMMAND);
@@ -165,7 +165,7 @@
 
 	let eventTriggers = $state<TriggeredEventType[]>([TriggeredEventType.SERVER_START]);
 
-	// Form state â€” webhook
+	// Form state — webhook
 	let webhookUrl = $state('');
 	let webhookSecret = $state('');
 	let payloadTemplate = $state('');
@@ -215,7 +215,7 @@
     },
     {
       "type": "section",
-      "text": {"type": "mrkdwn", "text": "*{{.server_name}}* â€” {{.server_status}}"}
+      "text": {"type": "mrkdwn", "text": "*{{.server_name}}* — {{.server_status}}"}
     },
     {
       "type": "section",
@@ -228,7 +228,7 @@
     },
     {
       "type": "context",
-      "elements": [{"type": "mrkdwn", "text": "Carbon Panel â€¢ {{.timestamp}}"}]
+      "elements": [{"type": "mrkdwn", "text": "Carbon Panel • {{.timestamp}}"}]
     }
   ]
 }`,
@@ -249,7 +249,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "**{{.server_name}}** â€” {{.server_status}}",
+          "text": "**{{.server_name}}** — {{.server_status}}",
           "wrap": true
         },
         {
@@ -263,7 +263,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "Carbon Panel â€¢ {{.timestamp}}",
+          "text": "Carbon Panel • {{.timestamp}}",
           "size": "small",
           "isSubtle": true
         }
@@ -274,7 +274,7 @@
 		ntfy: `{
   "topic": "carbon-panel",
   "title": "{{.title}}",
-  "message": "{{.server_name}} â€” {{.server_status}}",
+  "message": "{{.server_name}} — {{.server_status}}",
   "tags": ["video_game"],
   "priority": 3
 }`
@@ -459,7 +459,7 @@
 				webhookRetryDelayMs = cfg.retry_delay_ms ?? 1000;
 				webhookTimeoutMs = cfg.timeout_ms ?? 5000;
 			} catch {
-				// Invalid config â€” leave defaults from resetForm
+				// Invalid config — leave defaults from resetForm
 			}
 		}
 
@@ -473,7 +473,7 @@
 				gitRestartImmediately = cfg.restart_immediately ?? true;
 				gitAuthToken = cfg.auth_token || '';
 			} catch {
-				// Invalid config â€” leave defaults
+				// Invalid config — leave defaults
 			}
 		}
 

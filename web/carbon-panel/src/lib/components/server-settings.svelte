@@ -674,7 +674,7 @@
 											{:else}
 												<span class="text-rose-400">Offline</span>
 											{/if}
-											â€¢ {(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB RAM
+											• {(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB RAM
 										</div>
 									</div>
 								</SelectItem>
@@ -702,7 +702,7 @@
 			<div class="flex flex-col justify-between gap-2 pt-1 sm:flex-row sm:items-center">
 				<p class="text-[11px] text-muted-foreground">
 					{#if server.status === ServerStatus.RUNNING}
-						âš¡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy
+						⚡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy
 						rerouting.
 					{:else}
 						ðŸ’¤ <b>Offline migration</b>: Container will be initialized on the selected node.

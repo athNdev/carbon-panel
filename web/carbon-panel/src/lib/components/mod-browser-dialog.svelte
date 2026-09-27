@@ -405,7 +405,7 @@
 							title="Click to toggle version filter"
 						>
 							MC {server.mcVersion}
-							{filterByVersion ? 'âœ“' : '(any)'}
+							{filterByVersion ? '✓' : '(any)'}
 						</button>
 					{/if}
 				</div>
