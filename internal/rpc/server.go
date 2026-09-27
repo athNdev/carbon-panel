@@ -259,8 +259,8 @@ func (s *Server) setupHandler() {
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
 
-	// h2c HTTP/2 cleartext
-	s.handler = h2c.NewHandler(mux, &http2.Server{})
+	// h2c HTTP/2 cleartext (security headers stamped inside, MINE-163)
+	s.handler = h2c.NewHandler(securityHeaders(mux), &http2.Server{})
 }
 
 // Registers all Connect RPC service handlers
