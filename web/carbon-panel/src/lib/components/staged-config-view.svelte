@@ -265,12 +265,12 @@
 		</div>
 	{/if}
 </CarbonTile>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Discard staged change?"
-		message="The pending change is dropped and will never apply."
-		confirmLabel="Discard Change"
-		danger
-		onconfirm={confirmDiscard}
-		onclose={() => (pendingDiscard = null)}
-	/>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Discard staged change?"
+	message="The pending change is dropped and will never apply."
+	confirmLabel="Discard Change"
+	danger
+	onconfirm={confirmDiscard}
+	onclose={() => (pendingDiscard = null)}
+/>

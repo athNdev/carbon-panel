@@ -36,14 +36,7 @@
 	}
 </script>
 
-<CarbonModal
-	bind:open
-	{title}
-	description={message}
-	hasFooter={false}
-	size="sm"
-	onclose={onclose}
->
+<CarbonModal bind:open {title} description={message} hasFooter={false} size="sm" {onclose}>
 	{#if details}
 		<div
 			class="rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#c6c6c6]"

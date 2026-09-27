@@ -779,16 +779,16 @@
 		</div>
 	</DialogContent>
 </Dialog>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete role?"
-		message="Users with this role lose its permissions. This cannot be undone."
-		confirmLabel="Delete Role"
-		danger
-		onconfirm={confirmDeleteRole}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete role?"
+	message="Users with this role lose its permissions. This cannot be undone."
+	confirmLabel="Delete Role"
+	danger
+	onconfirm={confirmDeleteRole}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

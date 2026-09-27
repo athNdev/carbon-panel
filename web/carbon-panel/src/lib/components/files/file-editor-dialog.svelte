@@ -377,11 +377,11 @@
 		</DialogFooter>
 	</DialogContent>
 </Dialog>
-	<CarbonConfirm
-		bind:open={confirmDiscardOpen}
-		title="Discard unsaved changes?"
-		message="Your edits will be lost."
-		confirmLabel="Discard Changes"
-		danger
-		onconfirm={onClose}
-	/>
+<CarbonConfirm
+	bind:open={confirmDiscardOpen}
+	title="Discard unsaved changes?"
+	message="Your edits will be lost."
+	confirmLabel="Discard Changes"
+	danger
+	onconfirm={onClose}
+/>

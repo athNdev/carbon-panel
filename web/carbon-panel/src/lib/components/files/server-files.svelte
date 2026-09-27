@@ -528,11 +528,22 @@
 	}
 
 	// --- Bulk operations ---
+	let pendingBulkCount = $state(0);
+	let confirmBulkOpen = $state(false);
+
 	async function bulkDelete() {
 		const paths = Array.from(selectedPaths);
 		if (paths.length === 0) return;
-		const confirmed = confirm(`Delete ${paths.length} item(s)?`);
-		if (!confirmed) return;
+		pendingBulkCount = paths.length;
+		confirmBulkOpen = true;
+	}
+
+	async function confirmBulkDelete() {
+		const paths = Array.from(selectedPaths);
+		if (paths.length === 0) {
+			pendingBulkCount = 0;
+			return;
+		}
 		try {
 			await rpcClient.file.deleteFile({
 				serverId: server.id,
@@ -544,6 +555,8 @@
 			await loadFiles();
 		} catch {
 			toast.error('Failed to delete items');
+		} finally {
+			pendingBulkCount = 0;
 		}
 	}
 
@@ -1100,16 +1113,29 @@
 	onConfirm={confirmCopy}
 	onClose={() => (showCopyDialog = false)}
 />
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete from server?"
-		message="Files are permanently removed from the server volume."
-		confirmLabel="Delete"
-		danger
-		onconfirm={confirmDeleteFile}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.path}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete from server?"
+	message="Files are permanently removed from the server volume."
+	confirmLabel="Delete"
+	danger
+	onconfirm={confirmDeleteFile}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.path}{/if}
+	{/snippet}
+</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmBulkOpen}
+	title="Delete selected items?"
+	message="The selected files and folders are permanently removed."
+	confirmLabel="Delete All"
+	danger
+	onconfirm={confirmBulkDelete}
+	onclose={() => (pendingBulkCount = 0)}
+>
+	{#snippet details()}
+		{pendingBulkCount} item(s)
+	{/snippet}
+</CarbonConfirm>

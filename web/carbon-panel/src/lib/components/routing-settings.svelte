@@ -600,16 +600,17 @@
 		{/if}
 	{/if}
 </div>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete listener?"
-		message="The proxy port stops accepting connections. Servers using it were already checked."
-		confirmLabel="Delete Listener"
-		danger
-		onconfirm={confirmDeleteListener}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete?.listener}{pendingDelete.listener.name} · port {pendingDelete.listener.port}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete listener?"
+	message="The proxy port stops accepting connections. Servers using it were already checked."
+	confirmLabel="Delete Listener"
+	danger
+	onconfirm={confirmDeleteListener}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete?.listener}{pendingDelete.listener.name} · port {pendingDelete.listener
+				.port}{/if}
+	{/snippet}
+</CarbonConfirm>

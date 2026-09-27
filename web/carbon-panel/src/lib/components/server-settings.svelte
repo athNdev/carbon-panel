@@ -755,11 +755,11 @@
 		</Button>
 	</div>
 </div>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title={confirmTitle}
-		message={confirmMessage}
-		confirmLabel="Migrate Server"
-		onconfirm={confirmMigrate}
-		onclose={() => (pendingMigrate = null)}
-	/>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title={confirmTitle}
+	message={confirmMessage}
+	confirmLabel="Migrate Server"
+	onconfirm={confirmMigrate}
+	onclose={() => (pendingMigrate = null)}
+/>

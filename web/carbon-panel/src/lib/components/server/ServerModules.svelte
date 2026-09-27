@@ -578,16 +578,16 @@
 	bind:open={templateCreateDialogOpen}
 	onSuccess={handleTemplateCreated}
 />
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete module?"
-		message="This will stop and remove the container and all module data."
-		confirmLabel="Delete Module"
-		danger
-		onconfirm={confirmDeleteModule}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete module?"
+	message="This will stop and remove the container and all module data."
+	confirmLabel="Delete Module"
+	danger
+	onconfirm={confirmDeleteModule}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

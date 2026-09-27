@@ -1890,16 +1890,16 @@
 		modLoader={pack.mod_loader}
 	/>
 {/if}
-	<CarbonConfirm
-		bind:open={confirmDeleteOpen}
-		title="Delete override file?"
-		message="The file is removed from the packwiz project. This cannot be undone."
-		confirmLabel="Delete File"
-		danger
-		onconfirm={confirmDeleteFile}
-		onclose={() => (pendingDeleteFile = null)}
-	>
-		{#snippet details()}
-			{#if pendingDeleteFile}{pendingDeleteFile}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmDeleteOpen}
+	title="Delete override file?"
+	message="The file is removed from the packwiz project. This cannot be undone."
+	confirmLabel="Delete File"
+	danger
+	onconfirm={confirmDeleteFile}
+	onclose={() => (pendingDeleteFile = null)}
+>
+	{#snippet details()}
+		{#if pendingDeleteFile}{pendingDeleteFile}{/if}
+	{/snippet}
+</CarbonConfirm>

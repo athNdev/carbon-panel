@@ -346,11 +346,11 @@
 	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 		<div class="w-full sm:w-72">
 			<CarbonSearch
-					placeholder="Search modpack projects..."
-					bind:value={filterQuery}
-					size="sm"
-					onkeydown={(e) => e.key === 'Escape' && (filterQuery = '')}
-				/>
+				placeholder="Search modpack projects..."
+				bind:value={filterQuery}
+				size="sm"
+				onkeydown={(e) => e.key === 'Escape' && (filterQuery = '')}
+			/>
 		</div>
 		<p class="font-mono text-xs text-[#8d8d8d]">
 			SHOWING {filteredPacks.length} OF {packs.length} PROJECTS
@@ -664,16 +664,16 @@
 		</div>
 	</div>
 </CarbonModal>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete modpack project?"
-		message="The project, overrides, and local metadata are removed. This cannot be undone."
-		confirmLabel="Delete Project"
-		danger
-		onconfirm={confirmDeletePack}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete modpack project?"
+	message="The project, overrides, and local metadata are removed. This cannot be undone."
+	confirmLabel="Delete Project"
+	danger
+	onconfirm={confirmDeletePack}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

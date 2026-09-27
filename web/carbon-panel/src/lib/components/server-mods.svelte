@@ -20,7 +20,12 @@
 	import { formatBytes } from '$lib/utils';
 	import { uploadFile, cancelUpload, type UploadProgress } from '$lib/utils/chunked-upload';
 	import ModBrowserDialog from '$lib/components/mod-browser-dialog.svelte';
-	import { CarbonTag, CarbonInlineLoading, CarbonButton, CarbonConfirm } from '$lib/components/carbon';
+	import {
+		CarbonTag,
+		CarbonInlineLoading,
+		CarbonButton,
+		CarbonConfirm
+	} from '$lib/components/carbon';
 
 	interface Props {
 		server: Server;
@@ -513,16 +518,16 @@
 </ResizablePaneGroup>
 
 <ModBrowserDialog bind:open={browserDialogOpen} {server} onInstalled={loadMods} />
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete mod?"
-		message="The file is removed from the server. This cannot be undone."
-		confirmLabel="Delete Mod"
-		danger
-		onconfirm={confirmDeleteMod}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.displayName}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete mod?"
+	message="The file is removed from the server. This cannot be undone."
+	confirmLabel="Delete Mod"
+	danger
+	onconfirm={confirmDeleteMod}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.displayName}{/if}
+	{/snippet}
+</CarbonConfirm>

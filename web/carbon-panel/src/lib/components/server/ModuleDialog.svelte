@@ -1579,16 +1579,16 @@
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete template?"
-		message="This cannot be undone and will not affect existing instances."
-		confirmLabel="Delete Template"
-		danger
-		onconfirm={confirmDeleteTemplate}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete template?"
+	message="This cannot be undone and will not affect existing instances."
+	confirmLabel="Delete Template"
+	danger
+	onconfirm={confirmDeleteTemplate}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

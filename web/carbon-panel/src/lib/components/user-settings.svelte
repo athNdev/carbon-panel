@@ -1046,16 +1046,16 @@
 		</div>
 	</DialogContent>
 </Dialog>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete user?"
-		message="Their sessions end and the account is removed. This cannot be undone."
-		confirmLabel="Delete User"
-		danger
-		onconfirm={confirmDeleteUser}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.username}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete user?"
+	message="Their sessions end and the account is removed. This cannot be undone."
+	confirmLabel="Delete User"
+	danger
+	onconfirm={confirmDeleteUser}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.username}{/if}
+	{/snippet}
+</CarbonConfirm>

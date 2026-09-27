@@ -1758,16 +1758,16 @@
 		</Dialog.Content>
 	</Dialog.Root>
 {/if}
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete task?"
-		message="Scheduled executions stop. Run history is kept. This cannot be undone."
-		confirmLabel="Delete Task"
-		danger
-		onconfirm={confirmDeleteTask}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete task?"
+	message="Scheduled executions stop. Run history is kept. This cannot be undone."
+	confirmLabel="Delete Task"
+	danger
+	onconfirm={confirmDeleteTask}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

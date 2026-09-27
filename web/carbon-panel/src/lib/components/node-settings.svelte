@@ -1082,16 +1082,16 @@
 		</DialogFooter>
 	</DialogContent>
 </Dialog>
-	<CarbonConfirm
-		bind:open={confirmOpen}
-		title="Delete Docker node?"
-		message="The node is removed from the panel. Containers on it are left untouched."
-		confirmLabel="Delete Node"
-		danger
-		onconfirm={confirmDeleteNode}
-		onclose={() => (pendingDelete = null)}
-	>
-		{#snippet details()}
-			{#if pendingDelete}{pendingDelete.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete Docker node?"
+	message="The node is removed from the panel. Containers on it are left untouched."
+	confirmLabel="Delete Node"
+	danger
+	onconfirm={confirmDeleteNode}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>
