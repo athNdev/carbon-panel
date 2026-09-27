@@ -314,6 +314,7 @@
 						<button
 							type="button"
 							onclick={() => (modFilter = 'all')}
+							aria-pressed={modFilter === 'all'}
 							class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {modFilter ===
 							'all'
 								? 'border-[#0f62fe] bg-[#0f62fe] text-white'
@@ -324,6 +325,7 @@
 						<button
 							type="button"
 							onclick={() => (modFilter = 'enabled')}
+							aria-pressed={modFilter === 'enabled'}
 							class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {modFilter ===
 							'enabled'
 								? 'border-[#198038] bg-[#198038] text-white'
@@ -334,6 +336,7 @@
 						<button
 							type="button"
 							onclick={() => (modFilter = 'disabled')}
+							aria-pressed={modFilter === 'disabled'}
 							class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {modFilter ===
 							'disabled'
 								? 'border-[#525252] bg-[#525252] text-white'
