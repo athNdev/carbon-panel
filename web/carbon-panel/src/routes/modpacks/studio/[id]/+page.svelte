@@ -814,14 +814,15 @@
 				onclick={() => goto(resolve('/modpacks/studio'))}
 				class="rounded-none text-[#c6c6c6] hover:text-white"
 				title="Back to Studio List"
+				aria-label="Back to Studio List"
 			>
 				<ArrowLeft class="h-5 w-5" />
 			</CarbonButton>
 
 			{#if pack}
-				<div class="space-y-0.5">
+				<div class="min-w-0 space-y-0.5">
 					<div class="flex items-center gap-3">
-						<h1 class="text-3xl font-semibold tracking-tight text-white">{pack.name}</h1>
+						<h1 class="truncate text-3xl font-semibold tracking-tight text-white">{pack.name}</h1>
 						<CarbonTag type="blue" size="sm" class="uppercase">
 							{pack.mod_loader}
 						</CarbonTag>
