@@ -479,7 +479,7 @@
 
 	{#if selectedIndexer === 'fuego'}
 		<div
-			class="flex items-center justify-between rounded-none border-y border-r border-l-4 border-[#0f62fe] border-[#393939] bg-[#262626] p-3.5 text-xs text-[#c6c6c6]"
+			class="flex items-center justify-between rounded-none border-y border-r border-l-4 border-[#393939] border-l-[#0f62fe] bg-[#262626] p-3.5 text-xs text-[#c6c6c6]"
 		>
 			<div class="flex items-center gap-2">
 				<KeyRound class="h-4 w-4 shrink-0 text-[#78a9ff]" />
@@ -641,7 +641,7 @@
 	{/if}
 
 	<!-- Modpack Packages Grid with CarbonTiles -->
-	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="motion-stagger grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each displayModpacks as modpack (modpack.id)}
 			<CarbonTile
 				class="group flex flex-col justify-between rounded-none border-[#393939] p-5 transition-colors hover:border-[#525252]"
