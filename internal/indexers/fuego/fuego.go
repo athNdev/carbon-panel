@@ -24,18 +24,30 @@ type Client struct {
 	http    *indexers.HTTPClient
 }
 
-func NewClient(apiKey string, cfg *config.Config) *Client {
+func NewClient(apiKey string, cfg *config.Config, opts ...Option) *Client {
 	baseURL := KeylessBaseURL
 	headers := map[string]string{}
 	if apiKey != "" {
 		baseURL = OfficialBaseURL
 		headers["x-api-key"] = apiKey
 	}
-	return &Client{
+	c := &Client{
 		apiKey:  apiKey,
 		baseURL: baseURL,
 		http:    indexers.NewHTTPClient("fuego", cfg.Server.UserAgent, headers),
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// Option customizes a Client (e.g. pointing tests at an httptest server).
+type Option func(*Client)
+
+// WithBaseURL overrides the API endpoint (custom mirrors, tests).
+func WithBaseURL(url string) Option {
+	return func(c *Client) { c.baseURL = url }
 }
 
 type SearchModsResponse struct {
