@@ -236,6 +236,7 @@
 								class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 								onclick={() => discard(change.id)}
 								title="Discard"
+								aria-label="Discard"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</CarbonButton>

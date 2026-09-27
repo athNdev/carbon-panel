@@ -222,6 +222,7 @@
 									class="rounded-none text-[#c6c6c6] hover:text-white"
 									onclick={() => openEditDialog(template)}
 									title="Edit template"
+									aria-label="Edit template"
 								>
 									<Settings class="h-3.5 w-3.5" />
 								</CarbonButton>
@@ -232,6 +233,7 @@
 									class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 									onclick={() => handleDeleteTemplate(template)}
 									title="Delete template"
+									aria-label="Delete template"
 								>
 									<Trash2 class="h-3.5 w-3.5" />
 								</CarbonButton>

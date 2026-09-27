@@ -520,6 +520,7 @@
 									onclick={() => deleteToken(token.id)}
 									disabled={deletingTokenId === token.id}
 									title="Delete token"
+									aria-label="Delete token"
 								>
 									{#if deletingTokenId === token.id}
 										<Loader2 class="h-3.5 w-3.5 animate-spin" />
