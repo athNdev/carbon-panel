@@ -686,8 +686,9 @@
 			/>
 
 			<!-- Tab Content Areas -->
-			<div class="min-h-0 flex-1">
-				{#if activeTab === 'overview'}
+			{#key activeTab}
+				<div class="motion-fade-in min-h-0 flex-1">
+					{#if activeTab === 'overview'}
 					<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
 						<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Server Settings</h3>
 						<p class="mb-6 text-xs text-[#a8a8a8]">
@@ -722,7 +723,8 @@
 						<ServerRouting {server} bind:router={routingInfo} active={activeTab === 'routing'} />
 					</div>
 				{/if}
-			</div>
+				</div>
+			{/key}
 		</div>
 	</div>
 {:else}
