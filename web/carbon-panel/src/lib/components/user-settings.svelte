@@ -47,6 +47,7 @@
 	import { create } from '@bufbuild/protobuf';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import type { User, Role } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import type { RegistrationInvite } from '$lib/proto/carbonpanel/v1/auth_pb';
 	import {
 		CreateUserRequestSchema,
@@ -203,11 +204,17 @@
 		}
 	}
 
-	async function deleteUser(user: User) {
-		if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) {
-			return;
-		}
+	let pendingDelete = $state<User | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deleteUser(user: User) {
+		pendingDelete = user;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteUser() {
+		const user = pendingDelete;
+		if (!user) return;
 		try {
 			const request = create(DeleteUserRequestSchema, { id: user.id });
 			await rpcClient.user.deleteUser(request);
@@ -216,6 +223,8 @@
 			await loadUsers();
 		} catch (error: unknown) {
 			toast.error(error instanceof Error ? error.message : 'Failed to delete user');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -1037,3 +1046,16 @@
 		</div>
 	</DialogContent>
 </Dialog>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete user?"
+		message="Their sessions end and the account is removed. This cannot be undone."
+		confirmLabel="Delete User"
+		danger
+		onconfirm={confirmDeleteUser}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.username}{/if}
+		{/snippet}
+	</CarbonConfirm>
