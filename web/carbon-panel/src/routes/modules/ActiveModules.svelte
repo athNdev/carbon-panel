@@ -3,7 +3,8 @@
 		CarbonButton,
 		CarbonDataTable,
 		CarbonTag,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
@@ -107,12 +108,17 @@
 		}
 	}
 
-	async function handleDeleteModule(module: Module) {
-		const confirmed = confirm(
-			`Are you sure you want to delete "${module.name}"?\n\nThis will stop and remove the container and all module data.`
-		);
-		if (!confirmed) return;
+	let pendingDelete = $state<Module | null>(null);
+	let confirmOpen = $state(false);
 
+	async function handleDeleteModule(module: Module) {
+		pendingDelete = module;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteModule() {
+		const module = pendingDelete;
+		if (!module) return;
 		actionLoading = module.id;
 		try {
 			await rpcClient.module.deleteModule({ id: module.id });
@@ -124,6 +130,7 @@
 			);
 		} finally {
 			actionLoading = null;
+			pendingDelete = null;
 		}
 	}
 
@@ -416,3 +423,16 @@
 
 	<ModuleLogsDialog bind:open={logsDialogOpen} module={selectedModule} />
 {/if}
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete module?"
+		message="This will stop and remove the container and all module data."
+		confirmLabel="Delete Module"
+		danger
+		onconfirm={confirmDeleteModule}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>
