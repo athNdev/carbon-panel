@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
@@ -674,8 +675,17 @@
 		}
 	}
 
+	let pendingDelete = $state<ScheduledTask | null>(null);
+	let confirmOpen = $state(false);
+
 	async function deleteTask(task: ScheduledTask) {
-		if (!confirm(`Are you sure you want to delete the task "${task.name}"?`)) return;
+		pendingDelete = task;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteTask() {
+		const task = pendingDelete;
+		if (!task) return;
 		try {
 			const request = create(DeleteTaskRequestSchema, { id: task.id });
 			await rpcClient.task.deleteTask(request);
@@ -683,6 +693,8 @@
 			await loadTasks();
 		} catch (_e) {
 			toast.error('Failed to delete task');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -1746,3 +1758,16 @@
 		</Dialog.Content>
 	</Dialog.Root>
 {/if}
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete task?"
+		message="Scheduled executions stop. Run history is kept. This cannot be undone."
+		confirmLabel="Delete Task"
+		danger
+		onconfirm={confirmDeleteTask}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>

@@ -20,7 +20,7 @@
 	import { formatBytes } from '$lib/utils';
 	import { uploadFile, cancelUpload, type UploadProgress } from '$lib/utils/chunked-upload';
 	import ModBrowserDialog from '$lib/components/mod-browser-dialog.svelte';
-	import { CarbonTag, CarbonInlineLoading, CarbonButton } from '$lib/components/carbon';
+	import { CarbonTag, CarbonInlineLoading, CarbonButton, CarbonConfirm } from '$lib/components/carbon';
 
 	interface Props {
 		server: Server;
@@ -164,10 +164,17 @@
 		}
 	}
 
-	async function deleteMod(mod: Mod) {
-		const confirmed = confirm(`Are you sure you want to delete "${mod.displayName}"?`);
-		if (!confirmed) return;
+	let pendingDelete = $state<Mod | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deleteMod(mod: Mod) {
+		pendingDelete = mod;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteMod() {
+		const mod = pendingDelete;
+		if (!mod) return;
 		try {
 			await rpcClient.mod.deleteMod({
 				serverId: server.id,
@@ -177,6 +184,8 @@
 			await loadMods();
 		} catch (_e) {
 			toast.error('Failed to delete mod');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -504,3 +513,16 @@
 </ResizablePaneGroup>
 
 <ModBrowserDialog bind:open={browserDialogOpen} {server} onInstalled={loadMods} />
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete mod?"
+		message="The file is removed from the server. This cannot be undone."
+		confirmLabel="Delete Mod"
+		danger
+		onconfirm={confirmDeleteMod}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.displayName}{/if}
+		{/snippet}
+	</CarbonConfirm>

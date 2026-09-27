@@ -10,6 +10,7 @@
 	import { toast } from 'svelte-sonner';
 	import { Loader2, Save, AlertCircle, Network, ArrowRightLeft } from '@lucide/svelte';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import * as _ from 'lodash-es';
 	import { ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { UpdateServerRequest } from '$lib/proto/carbonpanel/v1/server_pb';
@@ -179,6 +180,11 @@
 		}
 	}
 
+	let confirmOpen = $state(false);
+	let confirmTitle = $state('');
+	let confirmMessage = $state('');
+	let pendingMigrate = $state<{ targetNodeId: string; isLive: boolean } | null>(null);
+
 	async function handleMigrate() {
 		if (!targetNodeId || targetNodeId === server.nodeId) {
 			toast.error('Please select a different target node to migrate to');
@@ -186,11 +192,21 @@
 		}
 		const target = nodes.find((n) => n.id === targetNodeId);
 		const isLive = server.status === ServerStatus.RUNNING;
-		const confirmMsg = isLive
-			? `Perform live migration of "${server.name}" to node "${target?.name || targetNodeId}"?\n\n- World state will be flushed to disk\n- Server container will transition cleanly\n- Proxy routing will be updated with zero player disconnection`
-			: `Migrate "${server.name}" to node "${target?.name || targetNodeId}"?`;
-		if (!confirm(confirmMsg)) return;
+		confirmTitle = `Migrate "${server.name}"?`;
+		confirmMessage =
+			(target?.name || targetNodeId) +
+			(isLive
+				? ' — world state is flushed, the container transitions cleanly, proxy routing updates with zero player disconnection.'
+				: ' — the container is recreated on the target node.');
+		confirmOpen = true;
+		pendingMigrate = { targetNodeId, isLive };
+	}
 
+	async function confirmMigrate() {
+		const pending = pendingMigrate;
+		if (!pending) return;
+		const target = nodes.find((n) => n.id === pending.targetNodeId);
+		const isLive = pending.isLive;
 		migrating = true;
 		migrationStep = isLive
 			? 'Flushing world chunks and migrating container...'
@@ -218,6 +234,7 @@
 		} finally {
 			migrating = false;
 			migrationStep = '';
+			pendingMigrate = null;
 		}
 	}
 
@@ -738,3 +755,11 @@
 		</Button>
 	</div>
 </div>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title={confirmTitle}
+		message={confirmMessage}
+		confirmLabel="Migrate Server"
+		onconfirm={confirmMigrate}
+		onclose={() => (pendingMigrate = null)}
+	/>

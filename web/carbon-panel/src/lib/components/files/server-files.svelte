@@ -15,6 +15,7 @@
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { authStore } from '$lib/stores/auth';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { FileInfo } from '$lib/proto/carbonpanel/v1/file_pb';
 	import { formatBytes } from '$lib/utils';
@@ -442,9 +443,17 @@
 		a.click();
 	}
 
+	let pendingDelete = $state<FileInfo | null>(null);
+	let confirmOpen = $state(false);
+
 	async function deleteFile(file: FileInfo) {
-		const confirmed = confirm(`Delete "${file.name}"${file.isDir ? ' and all its contents' : ''}?`);
-		if (!confirmed) return;
+		pendingDelete = file;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteFile() {
+		const file = pendingDelete;
+		if (!file) return;
 		try {
 			await rpcClient.file.deleteFile({
 				serverId: server.id,
@@ -454,6 +463,8 @@
 			await loadFiles();
 		} catch {
 			toast.error('Failed to delete');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -1089,3 +1100,16 @@
 	onConfirm={confirmCopy}
 	onClose={() => (showCopyDialog = false)}
 />
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete from server?"
+		message="Files are permanently removed from the server volume."
+		confirmLabel="Delete"
+		danger
+		onconfirm={confirmDeleteFile}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.path}{/if}
+		{/snippet}
+	</CarbonConfirm>
