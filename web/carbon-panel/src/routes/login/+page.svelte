@@ -206,7 +206,7 @@
 	class="flex min-h-screen items-center justify-center rounded-none bg-[#161616] p-4 font-sans text-[#f4f4f4]"
 >
 	<div
-		class="motion-scale-in w-full max-w-md rounded-none border border-[#393939] bg-[#262626] p-8 shadow-2xl"
+		class="motion-scale-in w-full max-w-md rounded-none border border-[#393939] bg-[#262626] p-5 shadow-2xl sm:p-8"
 	>
 		<!-- Header -->
 		<div class="mb-8 text-center">

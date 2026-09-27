@@ -226,9 +226,9 @@
 			>
 				{initials}
 			</div>
-			<div class="space-y-1">
+			<div class="min-w-0 space-y-1">
 				<div class="flex items-center gap-3">
-					<h1 class="text-3xl font-semibold tracking-tight text-white">{user.username}</h1>
+					<h1 class="truncate text-3xl font-semibold tracking-tight text-white">{user.username}</h1>
 					<CarbonTag type={getRoleTagType(primaryRole)} size="md">{primaryRole}</CarbonTag>
 				</div>
 				<p class="text-sm text-[#a8a8a8]">
