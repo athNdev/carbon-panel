@@ -156,6 +156,7 @@
 		<Checkbox
 			checked={isSelected}
 			onCheckedChange={() => onCheckboxToggle(file)}
+			aria-label={`Select ${file.name}`}
 			class="h-3.5 w-3.5 rounded-none"
 		/>
 	</div>
