@@ -166,6 +166,7 @@
 		{#if file.isDir}
 			<button
 				class="cursor-pointer rounded-none p-0 text-[#8d8d8d] hover:text-[#f4f4f4]"
+				aria-label={isExpanded ? `Collapse ${file.name}` : `Expand ${file.name}`}
 				onclick={(e) => {
 					e.stopPropagation();
 					onToggleExpand(file.path);
