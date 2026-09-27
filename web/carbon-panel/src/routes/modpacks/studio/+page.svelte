@@ -385,7 +385,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<div class="motion-stagger grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredPacks as pack (pack.id)}
 				<CarbonTile
 					class="group flex flex-col justify-between rounded-none border-[#393939] p-5 transition-colors hover:border-[#525252]"

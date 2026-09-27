@@ -372,7 +372,7 @@
 				</thead>
 
 				<!-- Sharp Alternating/Hover Rows #353535 -->
-				<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
+				<tbody class="motion-stagger divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
 					{#each filteredServers as server (server.id)}
 						<tr
 							class="group cursor-pointer transition-colors hover:bg-[#353535]"
@@ -544,7 +544,7 @@
 
 		<!-- Carbon Tile / Grid Layout -->
 	{:else}
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="motion-stagger grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredServers as server (server.id)}
 				<div
 					class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4 transition-colors hover:border-[#525252]"

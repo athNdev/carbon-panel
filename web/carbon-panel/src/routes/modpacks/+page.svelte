@@ -785,6 +785,21 @@
 					Click "Sync" to index popular modpacks or import a custom modpack from URL or ZIP.
 				{/if}
 			</p>
+			{#if !showFavorites && !loading && !syncing && (searchParams.query || searchParams.gameVersion || searchParams.modLoader)}
+				<CarbonButton
+					kind="secondary"
+					size="sm"
+					class="mt-4 justify-center rounded-none"
+					onclick={() => {
+						searchParams.query = '';
+						searchParams.gameVersion = '';
+						searchParams.modLoader = '';
+						searchModpacks();
+					}}
+				>
+					Clear search & filters
+				</CarbonButton>
+			{/if}
 		</div>
 	{/if}
 

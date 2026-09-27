@@ -76,7 +76,7 @@
 					month: 'long',
 					day: 'numeric'
 				})
-			: 'Unknown'
+			: 'Not recorded'
 	);
 
 	let lastActive = $derived(
