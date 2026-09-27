@@ -22,6 +22,7 @@
 	} from '@lucide/svelte';
 	import { type Server, ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
 	import { CarbonTag, CarbonButton } from '$lib/components/carbon';
+	import { onMount } from 'svelte';
 
 	let servers = $derived($serversStore);
 	let filteredServers = $state<Server[]>([]);
@@ -29,6 +30,21 @@
 	let statusFilter = $state<'all' | 'running' | 'stopped' | 'issues'>('all');
 	let viewMode = $state<'table' | 'tiles'>('table');
 	let loading = $state(false);
+	// Cold direct loads render before the layout's fetch lands; hold the
+	// empty state until the first fetch settles so "no servers" never
+	// flashes for fleets that simply haven't loaded yet.
+	let hydrated = $state(servers.length > 0);
+
+	onMount(async () => {
+		if (hydrated) return;
+		try {
+			await serversStore.fetchServers(false);
+		} catch (err) {
+			console.error('Failed to fetch servers:', err);
+		} finally {
+			hydrated = true;
+		}
+	});
 
 	$effect(() => {
 		filterServers();
@@ -307,8 +323,28 @@
 		</div>
 	</div>
 
-	<!-- Empty State -->
-	{#if filteredServers.length === 0}
+	<!-- Loading skeleton (cold direct load, before first fetch settles) -->
+	{#if !hydrated}
+		<div
+			class="w-full overflow-hidden rounded-none border border-[#393939] bg-[#161616]"
+			role="status"
+			aria-label="Loading servers"
+		>
+			{#each [0, 1, 2, 3] as _, i (i)}
+				<div class="flex items-center gap-3 border-b border-[#393939] px-4 py-3.5 last:border-b-0">
+					<div class="motion-skeleton h-5 w-16"></div>
+					<div class="motion-skeleton h-8 w-8"></div>
+					<div class="min-w-0 flex-1">
+						<div class="motion-skeleton h-4 w-40"></div>
+						<div class="motion-skeleton mt-1.5 h-3 w-24"></div>
+					</div>
+					<div class="motion-skeleton hidden h-4 w-20 sm:block"></div>
+				</div>
+			{/each}
+		</div>
+
+		<!-- Empty State -->
+	{:else if filteredServers.length === 0}
 		<div class="rounded-none border border-[#393939] bg-[#262626] p-12 text-center">
 			{#if servers.length === 0}
 				<div
