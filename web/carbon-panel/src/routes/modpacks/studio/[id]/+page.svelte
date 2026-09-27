@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		CarbonButton,
 		CarbonTile,
@@ -26,7 +28,6 @@
 		PinOff,
 		Package,
 		Loader2,
-		Blocks,
 		CheckCircle2,
 		AlertTriangle,
 		RefreshCw,
@@ -188,7 +189,6 @@
 	// Maintenance State
 	let refreshing = $state(false);
 	let rawPackToml = $state('');
-	let rawIndexToml = $state('');
 	let loadingRaw = $state(false);
 
 	// Deploy Dialog State
@@ -262,9 +262,9 @@
 			toast.success(
 				`Exported ${format === 'mrpack' ? '.mrpack' : format === 'packwiz' ? 'Packwiz .zip' : 'CurseForge .zip'}`
 			);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to export modpack:', err);
-			toast.error(`Export failed: ${err.message || 'Unauthorized or server error'}`);
+			toast.error(`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`);
 		} finally {
 			exportingPack = null;
 		}
@@ -393,9 +393,9 @@
 			toast.success(`Batch action applied to ${selectedSlugs.length} mods`);
 			selectedSlugs = [];
 			await loadPack();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Batch action failed:', err);
-			toast.error(err.message || 'Batch action failed');
+			toast.error((err instanceof Error ? err.message : '') || 'Batch action failed');
 		}
 	}
 
@@ -415,7 +415,7 @@
 			}
 			updatesMap = map;
 			toast.success(`Checked updates: ${availableCount} newer versions available`);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Check updates failed:', err);
 			toast.error('Failed to check mod updates');
 		} finally {
@@ -454,7 +454,7 @@
 			toast.success(`Saved override file: ${uploadFilePath}`);
 			uploadFileDialogOpen = false;
 			await loadFiles();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to save file:', err);
 			toast.error('Failed to save override file');
 		} finally {
@@ -474,7 +474,7 @@
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success(`Deleted file "${filePath}"`);
 			await loadFiles();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to delete file:', err);
 			toast.error('Failed to delete override file');
 		}
@@ -498,9 +498,9 @@
 			} else {
 				toast.success(`Simulation complete: ${data.compatible_count} compatible mods found`);
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Migration failed:', err);
-			toast.error(err.message || 'Version migration simulation failed');
+			toast.error((err instanceof Error ? err.message : '') || 'Version migration simulation failed');
 		} finally {
 			migrating = false;
 		}
@@ -515,7 +515,7 @@
 			toast.success('Packwiz re-indexed & refreshed successfully');
 			await loadPack();
 			await loadRawTomls();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Refresh failed:', err);
 			toast.error('Failed to refresh pack index');
 		} finally {
@@ -529,8 +529,6 @@
 		try {
 			const pRes = await apiFetch(`/api/v1/packwiz/${packId}/pack.toml`);
 			if (pRes.ok) rawPackToml = await pRes.text();
-			const iRes = await apiFetch(`/api/v1/packwiz/${packId}/index.toml`);
-			if (iRes.ok) rawIndexToml = await iRes.text();
 		} catch (err) {
 			console.error('Failed to load raw tomls:', err);
 		} finally {
@@ -559,7 +557,7 @@
 			} else {
 				searchResults = data.results || [];
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Search failed:', err);
 			searchError = 'Failed to fetch online mods';
 		} finally {
@@ -613,7 +611,7 @@
 			toast.success(`Added ${item.title} (${side.toUpperCase()}) to pack!`);
 
 			// Resolve transitive required dependencies (best-effort, depth-bounded).
-			const visited = new Set<string>();
+			const visited = new SvelteSet<string>();
 			for (const m of pack.mods || []) {
 				if (m.project_id)
 					visited.add(
@@ -639,9 +637,9 @@
 				console.warn('Dependency auto-resolve failed (non-fatal):', depErr);
 			}
 			await loadPack();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to add mod:', err);
-			toast.error(err.message || 'Failed to add mod to pack');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to add mod to pack');
 		}
 	}
 
@@ -753,9 +751,9 @@
 			urlModFileName = '';
 			urlModDownloadUrl = '';
 			await loadPack();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to add mod from URL:', err);
-			toast.error(err.message || 'Failed to add direct URL mod');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to add direct URL mod');
 		} finally {
 			addingUrlMod = false;
 		}
@@ -809,7 +807,7 @@
 				kind="ghost"
 				size="md"
 				iconOnly
-				onclick={() => goto('/modpacks/studio')}
+				onclick={() => goto(resolve('/modpacks/studio'))}
 				class="rounded-none text-[#c6c6c6] hover:text-white"
 				title="Back to Studio List"
 			>
@@ -935,7 +933,7 @@
 					<CarbonTextInput label="Pack Version" bind:value={pack.version} />
 
 					<CarbonSelect label="Minecraft Version" bind:value={pack.mc_version}>
-						{#each MC_VERSIONS as v}
+						{#each MC_VERSIONS as v (v)}
 							<option value={v}>{v}</option>
 						{/each}
 					</CarbonSelect>
@@ -952,7 +950,7 @@
 						bind:value={pack.loader_version}
 						helperText={loadingLoaderVersions ? 'Fetching versions...' : undefined}
 					>
-						{#each availableLoaderVersions as v}
+						{#each availableLoaderVersions as v (v)}
 							<option value={v}>{v}</option>
 						{/each}
 					</CarbonSelect>
@@ -1011,7 +1009,7 @@
 				<CarbonTabs
 					tabs={studioTabs}
 					selectedTab={activeTab}
-					onselect={(id) => (activeTab = id as any)}
+					onselect={(id) => (activeTab = id as unknown as typeof activeTab)}
 				/>
 
 				<!-- TAB 1: MODS MANAGEMENT -->
@@ -1435,7 +1433,7 @@
 
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<CarbonSelect label="Target Minecraft Version" bind:value={migrateMC}>
-								{#each MC_VERSIONS as v}
+								{#each MC_VERSIONS as v (v)}
 									<option value={v}>{v}</option>
 								{/each}
 							</CarbonSelect>
@@ -1501,7 +1499,7 @@
 										</div>
 									{/snippet}
 
-									{#each migrationReport.mods as m}
+									{#each migrationReport.mods as m (m.slug)}
 										<div class="flex items-center justify-between px-4 py-2.5 font-mono text-xs">
 											<span class="font-medium text-white">{m.name}</span>
 											{#if m.compatible}
@@ -1635,7 +1633,7 @@
 			tabs={addModSourceTabs}
 			selectedTab={addTab}
 			onselect={(id) => {
-				addTab = id as any;
+				addTab = id as unknown as typeof addTab;
 				if (addTab !== 'url') searchMods();
 			}}
 		/>
@@ -1707,7 +1705,7 @@
 											<Download class="mr-0.5 h-2.5 w-2.5" />
 											{formatDownloads(item.downloads)}
 										</CarbonTag>
-										{#each (item.categories || []).slice(0, 2) as cat}
+										{#each (item.categories || []).slice(0, 2) as cat (cat)}
 											<CarbonTag type="gray" size="sm">{cat}</CarbonTag>
 										{/each}
 									</div>

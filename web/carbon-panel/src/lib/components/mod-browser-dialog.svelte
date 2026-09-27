@@ -12,23 +12,18 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import {
 		Search,
 		Download,
 		Package,
 		Loader2,
-		CheckCircle2,
-		ExternalLink,
 		ArrowLeft,
 		Boxes,
 		AlertTriangle,
 		Layers,
 		Filter,
 		X,
-		Plus,
-		Check
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
@@ -230,9 +225,10 @@
 			} else {
 				mods = data.results || [];
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to search mods:', err);
-			searchError = `Failed to search mods: ${err.message || 'Please verify server connection.'}`;
+			const message = err instanceof Error ? err.message : '';
+			searchError = `Failed to search mods: ${message || 'Please verify server connection.'}`;
 		} finally {
 			searching = false;
 		}
@@ -510,7 +506,7 @@
 								>
 									Filter Suggestions (type key:value)
 								</div>
-								{#each suggestions as s}
+								{#each suggestions as s (s.label)}
 									<button
 										type="button"
 										onmousedown={() => addFilter(s.label)}
@@ -610,7 +606,7 @@
 														Client: {mod.client_side}
 													</Badge>
 												{/if}
-												{#each (mod.categories || []).slice(0, 3) as cat}
+												{#each (mod.categories || []).slice(0, 3) as cat (cat)}
 													<Badge variant="outline" class="h-5 px-1.5 text-[11px] capitalize">
 														{cat}
 													</Badge>
@@ -700,7 +696,7 @@
 								This mod specifies {selectedVersion.dependencies.length} upstream dependency/dependencies:
 							</p>
 							<div class="space-y-1.5 pt-1">
-								{#each selectedVersion.dependencies as dep}
+								{#each selectedVersion.dependencies as dep (dep.project_id)}
 									<div class="flex items-center gap-2 text-xs">
 										<Badge variant="outline" class="font-mono text-[10px]">
 											{dep.dependency_type}

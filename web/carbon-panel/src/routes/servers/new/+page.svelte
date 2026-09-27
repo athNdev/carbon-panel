@@ -10,16 +10,10 @@
 		Loader2,
 		Package,
 		Settings,
-		HardDrive,
 		Server as ServerIcon,
-		Network,
-		Cpu,
 		Activity,
-		CheckCircle2,
-		AlertCircle,
 		ChevronRight,
 		ChevronLeft,
-		Plus,
 		Check
 	} from '@lucide/svelte';
 	import { create } from '@bufbuild/protobuf';
@@ -30,7 +24,7 @@
 	import type { IndexedModpack, Version } from '$lib/proto/carbonpanel/v1/modpack_pb';
 	import type { Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { NodeStatus } from '$lib/proto/carbonpanel/v1/node_pb';
-	import { CarbonTag, CarbonButton, CarbonTile, CarbonInlineLoading } from '$lib/components/carbon';
+	import { CarbonTag, CarbonInlineLoading } from '$lib/components/carbon';
 	import {
 		Dialog,
 		DialogContent,
@@ -385,7 +379,7 @@
 		<!-- Carbon Page Header -->
 		<div class="flex items-center gap-4 border-b border-[#393939] pb-5">
 			<a
-				href="/servers"
+				href={resolve('/servers')}
 				class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				title="Back to Servers"
 			>
@@ -540,14 +534,17 @@
 										<p class="mt-1 line-clamp-2 font-sans text-xs text-[#a8a8a8]">
 											{selectedModpack.summary}
 										</p>
-										{#if modpackVersions.length > 0}
+										{#if modpackVersions.length > 0 || loadingModpackVersions}
 											<div class="mt-2 flex items-center gap-2">
 												<span class="font-mono text-xs text-[#c6c6c6]">Version:</span>
 												<select
 													bind:value={selectedVersionId}
-													class="h-8 rounded-none border border-[#525252] bg-[#262626] px-2 font-mono text-xs text-[#f4f4f4] focus:border-[#0f62fe] focus:outline-none"
+													disabled={loadingModpackVersions}
+													class="h-8 rounded-none border border-[#525252] bg-[#262626] px-2 font-mono text-xs text-[#f4f4f4] focus:border-[#0f62fe] focus:outline-none disabled:opacity-50"
 												>
-													<option value="">Latest Release</option>
+													<option value="">
+														{loadingModpackVersions ? 'Loading versions…' : 'Latest Release'}
+													</option>
 													{#each modpackVersions as version (version.id)}
 														<option value={version.id}>
 															{version.displayName}
@@ -1201,7 +1198,7 @@
 			<!-- Carbon Wizard Navigation Bar -->
 			<div class="flex items-center justify-between border-t border-[#393939] pt-4">
 				<a
-					href="/servers"
+					href={resolve('/servers')}
 					class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 				>
 					Cancel

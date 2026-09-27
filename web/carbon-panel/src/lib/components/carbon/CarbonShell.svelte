@@ -3,15 +3,14 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { serversStore, runningServers, activitySortedServers } from '$lib/stores/servers';
-	import { authStore, currentUser, canAccessSettings } from '$lib/stores/auth';
-	import { ServerStatus, type User } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { resolve } from '$app/paths';
+	import { runningServers, activitySortedServers } from '$lib/stores/servers';
+	import { currentUser, canAccessSettings } from '$lib/stores/auth';
+
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { type Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { describeNodeStatus, pickPrimaryNode } from '$lib/utils/node-status';
 	import CarbonTag from './CarbonTag.svelte';
-	import CarbonButton from './CarbonButton.svelte';
 
 	interface Props {
 		children?: Snippet;
@@ -78,7 +77,7 @@
 		if (event.key === 'Escape') closeMobileNav();
 	}
 
-	const navItems = [
+	const navItems: { href: '/' | '/servers' | '/servers/new' | '/modpacks/studio' | '/modpacks' | '/modules' | '/settings' | '/docs/api'; label: string; icon: string; badge?: boolean }[] = [
 		{
 			href: '/',
 			label: 'Overview',
@@ -164,7 +163,7 @@
 
 			<!-- Brand Logo & Name -->
 			<a
-				href="/"
+				href={resolve('/')}
 				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-[#0f62fe]"
 			>
 				<img src="/carbon_panel_logo.png" alt="Carbon Panel" class="h-6 w-6 rounded-sm" />
@@ -207,10 +206,10 @@
 				: '-translate-x-full'} {sideNavExpanded ? 'md:w-64' : 'md:w-12'} md:translate-x-0"
 		>
 			<nav class="motion-stagger flex flex-col py-2" aria-label="Main Navigation">
-				{#each navItems as item}
+				{#each navItems as item (item.href)}
 					{#if item.href !== '/settings' || showSettingsNav}
 						<a
-							href={item.href}
+							href={resolve(item.href)}
 							onclick={closeMobileNav}
 							class="relative flex items-center gap-3 px-3.5 py-2.5 font-sans text-sm transition-colors {isCurrentPath(
 								item.href
@@ -240,7 +239,7 @@
 			<!-- SideNav Footer: live node status, links to Docker Nodes settings -->
 			{#if sideNavExpanded}
 				<a
-					href="/settings?tab=nodes"
+					href={resolve('/settings?tab=nodes')}
 					onclick={closeMobileNav}
 					title="View Docker nodes"
 					class="absolute right-0 bottom-0 left-0 border-t border-[#393939] bg-[#161616] p-3 font-mono text-[11px] text-[#8d8d8d] transition-colors hover:bg-[#262626]"

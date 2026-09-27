@@ -13,11 +13,7 @@
 		Save,
 		AlertCircle,
 		Network,
-		Server as ServerIcon,
 		ArrowRightLeft,
-		ShieldCheck,
-		CheckCircle2,
-		RefreshCw
 	} from '@lucide/svelte';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import * as _ from 'lodash-es';
@@ -221,9 +217,10 @@
 			} else {
 				toast.error(res.message || 'Migration did not succeed');
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Live migration failed:', err);
-			toast.error(`Migration failed: ${err.message || 'Unknown error'}`);
+			const message = err instanceof Error ? err.message : '';
+			toast.error(`Migration failed: ${message || 'Unknown error'}`);
 		} finally {
 			migrating = false;
 			migrationStep = '';

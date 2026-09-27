@@ -17,7 +17,6 @@
 		Settings,
 		Trash2,
 		Terminal,
-		Cpu,
 		Server,
 		Package,
 		RefreshCw
