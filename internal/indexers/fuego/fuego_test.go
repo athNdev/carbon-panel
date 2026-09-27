@@ -30,7 +30,7 @@ func TestSearchModpacks(t *testing.T) {
 	var gotQuery string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
-		w.Write([]byte(`{"data":[{"id":123,"name":"ATM9","slug":"atm9","summary":"pack","downloadCount":100,"mainFileId":456}],"pagination":{"index":0,"pageSize":10,"resultCount":1,"totalCount":1}}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":123,"name":"ATM9","slug":"atm9","summary":"pack","downloadCount":100,"mainFileId":456}],"pagination":{"index":0,"pageSize":10,"resultCount":1,"totalCount":1}}`))
 	}))
 	defer srv.Close()
 
@@ -54,7 +54,7 @@ func TestGetModpack(t *testing.T) {
 		if r.URL.Path != "/mods/123" {
 			t.Errorf("path=%q", r.URL.Path)
 		}
-		w.Write([]byte(`{"data":{"id":123,"name":"ATM9","slug":"atm9"}}`))
+		_, _ = w.Write([]byte(`{"data":{"id":123,"name":"ATM9","slug":"atm9"}}`))
 	}))
 	defer srv.Close()
 
@@ -67,7 +67,7 @@ func TestGetModpack(t *testing.T) {
 func TestGetModpackFilesCDNFallback(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// One file with a URL, one without (gets edge-CDN synthesis).
-		w.Write([]byte(`{"data":[{"id":2000,"fileName":"server.zip","downloadUrl":"http://cdn/x.zip"},{"id":3001500,"fileName":"client.jar","downloadUrl":""}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":2000,"fileName":"server.zip","downloadUrl":"http://cdn/x.zip"},{"id":3001500,"fileName":"client.jar","downloadUrl":""}]}`))
 	}))
 	defer srv.Close()
 
@@ -153,7 +153,7 @@ func TestAdapterSearchLoaderMapping(t *testing.T) {
 	var gotQuery string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
-		w.Write([]byte(`{"data":[{"id":1,"name":"P","slug":"p"}],"pagination":{"totalCount":1}}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":1,"name":"P","slug":"p"}],"pagination":{"totalCount":1}}`))
 	}))
 	defer srv.Close()
 
@@ -176,7 +176,7 @@ func TestAdapterSearchLoaderMapping(t *testing.T) {
 
 func TestAdapterGetFilesSortIndex(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"data":[{"id":1,"fileName":"a.jar","downloadUrl":"http://x/a"},{"id":2,"fileName":"b.jar","downloadUrl":"http://x/b"}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":1,"fileName":"a.jar","downloadUrl":"http://x/a"},{"id":2,"fileName":"b.jar","downloadUrl":"http://x/b"}]}`))
 	}))
 	defer srv.Close()
 
