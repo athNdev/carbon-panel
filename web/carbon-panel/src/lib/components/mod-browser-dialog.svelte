@@ -344,7 +344,7 @@
 </script>
 
 <DialogPrimitive.Root bind:open>
-	<DialogContent class="flex max-h-[90vh] !max-w-4xl flex-col overflow-hidden p-6">
+	<DialogContent class="flex max-h-[90vh] !max-w-4xl flex-col overflow-hidden p-4 sm:p-6">
 		<DialogHeader>
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-3">
@@ -523,7 +523,7 @@
 			</div>
 
 			<!-- Search Results / Mod List -->
-			<div class="mt-4 max-h-[500px] min-h-[360px] flex-1 space-y-3 overflow-y-auto pr-1">
+			<div class="mt-4 max-h-[500px] min-h-[280px] flex-1 space-y-3 overflow-y-auto pr-1 sm:min-h-[360px]">
 				{#if searchError}
 					<Alert variant="destructive" class="my-4">
 						<AlertTriangle class="h-4 w-4" />
@@ -626,7 +626,7 @@
 			</div>
 		{:else}
 			<!-- Mod Versions & 1-Click Install View -->
-			<div class="mt-4 max-h-[500px] min-h-[360px] flex-1 space-y-4 overflow-y-auto pr-1">
+			<div class="mt-4 max-h-[500px] min-h-[280px] flex-1 space-y-4 overflow-y-auto pr-1 sm:min-h-[360px]">
 				<div class="space-y-2 rounded-lg border bg-muted/20 p-4">
 					<div class="flex items-center justify-between">
 						<span class="text-base font-semibold">{selectedMod.title}</span>

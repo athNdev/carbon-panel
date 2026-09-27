@@ -114,7 +114,7 @@
 </script>
 
 <DialogPrimitive.Root bind:open>
-	<DialogContent class="max-w-lg p-6">
+	<DialogContent class="max-w-lg p-4 sm:p-6">
 		<DialogHeader>
 			<DialogTitle class="flex items-center gap-2 text-xl font-bold">
 				<Rocket class="h-5 w-5 text-primary" />
