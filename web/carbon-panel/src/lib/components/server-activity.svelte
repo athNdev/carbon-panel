@@ -70,26 +70,30 @@
 			</p>
 		{:else}
 			<div class="overflow-x-auto">
-			<table class="w-full min-w-[480px] text-xs" aria-label="Server activity log">
-				<thead>
-					<tr class="border-b border-[#393939] text-left text-[#a8a8a8]">
-						<th scope="col" class="py-2 pr-4 font-medium">Time</th>
-						<th scope="col" class="py-2 pr-4 font-medium">Actor</th>
-						<th scope="col" class="py-2 pr-4 font-medium">Event</th>
-						<th scope="col" class="py-2 font-medium">IP</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each entries as entry (entry.id)}
-						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
-							<td class="py-2 pr-4 whitespace-nowrap">{formatTime(entry.createdAt)}</td>
-							<td class="max-w-[160px] truncate py-2 pr-4" title={entry.actorName || entry.actorId || ''}>{entry.actorName || entry.actorId || '—'}</td>
-							<td class="py-2 pr-4">{entry.event}</td>
-							<td class="py-2">{entry.ip || '—'}</td>
+				<table class="w-full min-w-[480px] text-xs" aria-label="Server activity log">
+					<thead>
+						<tr class="border-b border-[#393939] text-left text-[#a8a8a8]">
+							<th scope="col" class="py-2 pr-4 font-medium">Time</th>
+							<th scope="col" class="py-2 pr-4 font-medium">Actor</th>
+							<th scope="col" class="py-2 pr-4 font-medium">Event</th>
+							<th scope="col" class="py-2 font-medium">IP</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each entries as entry (entry.id)}
+							<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
+								<td class="py-2 pr-4 whitespace-nowrap">{formatTime(entry.createdAt)}</td>
+								<td
+									class="max-w-[160px] truncate py-2 pr-4"
+									title={entry.actorName || entry.actorId || ''}
+									>{entry.actorName || entry.actorId || '—'}</td
+								>
+								<td class="py-2 pr-4">{entry.event}</td>
+								<td class="py-2">{entry.ip || '—'}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
 		{/if}
 	</div>

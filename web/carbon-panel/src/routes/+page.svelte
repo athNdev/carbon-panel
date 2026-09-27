@@ -22,6 +22,7 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { CarbonButton, CarbonTag } from '$lib/components/carbon';
+	import { resolve } from '$app/paths';
 	import type { Timestamp } from '@bufbuild/protobuf/wkt';
 
 	// Dashboard data
@@ -243,7 +244,7 @@
 			</div>
 		</div>
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			{#each [0, 1, 2, 3] as _}
+			{#each [0, 1, 2, 3] as _, i (i)}
 				<div
 					class="flex h-[140px] flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 select-none"
 				>
@@ -290,7 +291,12 @@
 					<RefreshCw class="h-4 w-4 {isRefreshing ? 'animate-spin' : ''}" />
 					<span>Refresh</span>
 				</CarbonButton>
-				<CarbonButton kind="primary" size="md" class="justify-center gap-2" href="/servers/new">
+				<CarbonButton
+					kind="primary"
+					size="md"
+					class="justify-center gap-2"
+					href={resolve('/servers/new')}
+				>
 					<Plus class="h-4 w-4" />
 					<span>Create Server</span>
 				</CarbonButton>
@@ -499,7 +505,7 @@
 					</div>
 				</div>
 				<a
-					href="/servers"
+					href={resolve('/servers')}
 					class="flex shrink-0 items-center gap-1 font-mono text-xs tracking-wider text-[#78a9ff] uppercase hover:text-white"
 				>
 					<span>Inspect Servers</span>
@@ -526,7 +532,7 @@
 							</p>
 						</div>
 						<a
-							href="/servers"
+							href={resolve('/servers')}
 							class="inline-flex h-8 items-center gap-1 px-3 font-mono text-xs tracking-wider text-[#78a9ff] uppercase transition-colors hover:bg-[#353535] hover:text-white"
 						>
 							<span>View All ({dashboardServers.length})</span>
@@ -549,7 +555,7 @@
 							<CarbonButton
 								kind="primary"
 								size="sm"
-								href="/servers/new"
+								href={resolve('/servers/new')}
 								class="inline-flex justify-center gap-2"
 							>
 								<Plus class="h-3.5 w-3.5" />
@@ -593,7 +599,7 @@
 										<tr class="group transition-colors hover:bg-[#353535]">
 											<td class="px-4 py-3 align-middle">
 												<a
-													href="/servers/{server.id}"
+													href={resolve(`/servers/${server.id}`)}
 													class="block transition-colors hover:text-[#78a9ff]"
 												>
 													<div class="text-sm font-medium text-[#f4f4f4]">{server.name}</div>
@@ -612,7 +618,9 @@
 													{getStringForEnum(ServerStatus, server.status)}
 												</CarbonTag>
 											</td>
-											<td class="hidden px-4 py-3 align-middle font-mono text-xs text-[#c6c6c6] sm:table-cell">
+											<td
+												class="hidden px-4 py-3 align-middle font-mono text-xs text-[#c6c6c6] sm:table-cell"
+											>
 												{server.mcVersion || '—'}
 											</td>
 											<td class="px-4 py-3 align-middle">
@@ -657,7 +665,7 @@
 														</button>
 													{/if}
 													<a
-														href="/servers/{server.id}"
+														href={resolve(`/servers/${server.id}`)}
 														class="inline-flex h-7 items-center px-2.5 font-mono text-xs tracking-wider text-[#78a9ff] uppercase transition-colors hover:bg-[#393939] hover:text-white"
 													>
 														Manage
@@ -754,7 +762,7 @@
 					</div>
 					<div class="mt-4 space-y-2">
 						<a
-							href="/servers/new"
+							href={resolve('/servers/new')}
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">
@@ -764,7 +772,7 @@
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
 						<a
-							href="/modpacks/studio"
+							href={resolve('/modpacks/studio')}
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">
@@ -774,7 +782,7 @@
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
 						</a>
 						<a
-							href="/settings?tab=routing"
+							href={resolve('/settings?tab=routing')}
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">

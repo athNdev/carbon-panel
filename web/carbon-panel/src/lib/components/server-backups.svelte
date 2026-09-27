@@ -145,8 +145,11 @@
 						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
 							<td class="max-w-[220px] truncate py-2 pr-4" title={backup.name}>
 								{backup.name}{#if backup.locked}
-									<span class="ml-2 border border-[#f1c21b]/50 px-1 text-[10px] text-[#f1c21b]">LOCKED</span>
-								{/if}</td>
+									<span class="ml-2 border border-[#f1c21b]/50 px-1 text-[10px] text-[#f1c21b]"
+										>LOCKED</span
+									>
+								{/if}</td
+							>
 							<td class="py-2 pr-4 whitespace-nowrap">{formatTime(backup.createdAt)}</td>
 							<td class="py-2 pr-4">{formatBytes(backup.sizeBytes)}</td>
 							<td class="py-2 pr-4">{backup.status}</td>

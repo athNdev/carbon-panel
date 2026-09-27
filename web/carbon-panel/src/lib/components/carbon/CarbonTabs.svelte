@@ -39,8 +39,9 @@
 	}
 
 	$effect(() => {
-		tabs;
-		selectedTab;
+		// Track tab identity/selection so the indicator re-measures on change.
+		const _deps = [tabs, selectedTab];
+		void _deps;
 		tick().then(() => requestAnimationFrame(measure));
 	});
 
@@ -67,9 +68,7 @@
 		else if (event.key === 'Home') index = 0;
 		else index = ids.length - 1;
 		handleTabClick(ids[index]);
-		container
-			?.querySelectorAll<HTMLButtonElement>('[data-tab]')
-			[index]?.focus();
+		container?.querySelectorAll<HTMLButtonElement>('[data-tab]')[index]?.focus();
 	}
 </script>
 
@@ -80,7 +79,7 @@
 	onkeydown={handleTablistKeydown}
 	class="relative flex items-center border-b border-[#393939] bg-[#161616] font-sans {className}"
 >
-	{#each tabs as tab}
+	{#each tabs as tab (tab.id)}
 		<button
 			type="button"
 			role="tab"
