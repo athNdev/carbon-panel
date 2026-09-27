@@ -297,7 +297,9 @@
 								<Mail class="h-3.5 w-3.5 text-[#a8a8a8]" />
 								<span>Email</span>
 							</div>
-							<span class="truncate font-mono text-sm text-white" title={user.email ?? ''}>{user.email}</span>
+							<span class="truncate font-mono text-sm text-white" title={user.email ?? ''}
+								>{user.email}</span
+							>
 						</div>
 					{/if}
 
@@ -507,11 +509,11 @@
 					{#each apiTokens as token (token.id)}
 						<tr class="transition-colors hover:bg-[#353535]">
 							<td class="max-w-[200px] px-4 py-3 font-medium text-white">
-									<div class="flex items-center gap-2">
-										<KeyRound class="h-3.5 w-3.5 shrink-0 text-[#0f62fe]" />
-										<span class="truncate font-mono text-sm" title={token.name}>{token.name}</span>
-									</div>
-								</td>
+								<div class="flex items-center gap-2">
+									<KeyRound class="h-3.5 w-3.5 shrink-0 text-[#0f62fe]" />
+									<span class="truncate font-mono text-sm" title={token.name}>{token.name}</span>
+								</div>
+							</td>
 							<td class="px-4 py-3 font-mono text-xs text-[#a8a8a8]">
 								{formatTimestamp(token.createdAt)}
 							</td>
@@ -698,16 +700,16 @@
 		</div>
 	{/if}
 </CarbonModal>
-	<CarbonConfirm
-		bind:open={confirmDeleteOpen}
-		title="Revoke API token?"
-		message="Any automation using this token stops working immediately."
-		confirmLabel="Revoke Token"
-		danger
-		onconfirm={confirmDeleteToken}
-		onclose={() => (pendingDeleteToken = null)}
-	>
-		{#snippet details()}
-			{#if pendingDeleteToken}{pendingDeleteToken.name}{/if}
-		{/snippet}
-	</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmDeleteOpen}
+	title="Revoke API token?"
+	message="Any automation using this token stops working immediately."
+	confirmLabel="Revoke Token"
+	danger
+	onconfirm={confirmDeleteToken}
+	onclose={() => (pendingDeleteToken = null)}
+>
+	{#snippet details()}
+		{#if pendingDeleteToken}{pendingDeleteToken.name}{/if}
+	{/snippet}
+</CarbonConfirm>
