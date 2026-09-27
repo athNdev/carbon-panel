@@ -107,7 +107,7 @@ func TestDoJSONSuccessAndHeaders(t *testing.T) {
 	var gotUA, gotAccept, gotExtra string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotUA, gotAccept, gotExtra = r.Header.Get("User-Agent"), r.Header.Get("Accept"), r.Header.Get("X-Key")
-		w.Write([]byte(`{"a":1}`))
+		_, _ = w.Write([]byte(`{"a":1}`))
 	}))
 	defer srv.Close()
 
@@ -133,7 +133,7 @@ func TestDoJSONStatusMapping(t *testing.T) {
 	} {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(status)
-			w.Write([]byte("nope"))
+			_, _ = w.Write([]byte("nope"))
 		}))
 		h := NewHTTPClient("test", "", nil)
 		var dest struct{ A int }
@@ -147,7 +147,7 @@ func TestDoJSONStatusMapping(t *testing.T) {
 
 func TestDoJSONDecodeError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{invalid json`))
+		_, _ = w.Write([]byte(`{invalid json`))
 	}))
 	defer srv.Close()
 	h := NewHTTPClient("test", "", nil)

@@ -32,8 +32,6 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"github.com/athNdev/carbon-panel/pkg/upload"
 	web "github.com/athNdev/carbon-panel/web/carbon-panel"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -259,8 +257,9 @@ func (s *Server) setupHandler() {
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
 
-	// h2c HTTP/2 cleartext (security headers stamped inside, MINE-163)
-	s.handler = h2c.NewHandler(securityHeaders(mux), &http2.Server{})
+	// HTTP/2 cleartext is negotiated via http.Server.Protocols in main
+	// (security headers stamped inside, MINE-163)
+	s.handler = securityHeaders(mux)
 }
 
 // Registers all Connect RPC service handlers
