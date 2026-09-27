@@ -250,6 +250,7 @@
 					disabled={loading}
 				/>
 				<CarbonTextInput
+					revealable
 					type="password"
 					label="Password"
 					placeholder="Choose a strong password (min 12 chars)"
@@ -258,6 +259,7 @@
 					disabled={loading}
 				/>
 				<CarbonTextInput
+					revealable
 					type="password"
 					label="Confirm Password"
 					placeholder="Confirm your password"
@@ -304,6 +306,7 @@
 								disabled={loading}
 							/>
 							<CarbonTextInput
+								revealable
 								type="password"
 								label="Password"
 								placeholder="Enter your password"
@@ -376,6 +379,7 @@
 						disabled={loading}
 					/>
 					<CarbonTextInput
+						revealable
 						type="password"
 						label="Password"
 						placeholder="Choose a password (min 12 chars)"
@@ -384,6 +388,7 @@
 						disabled={loading}
 					/>
 					<CarbonTextInput
+						revealable
 						type="password"
 						label="Confirm Password"
 						placeholder="Confirm your password"
@@ -393,6 +398,7 @@
 					/>
 					{#if inviteValid && inviteRequiresPin}
 						<CarbonTextInput
+							revealable
 							type="password"
 							label="Invite PIN"
 							placeholder="Enter invite PIN"
@@ -424,6 +430,7 @@
 					and data are preserved.
 				</div>
 				<CarbonTextInput
+					revealable
 					type="password"
 					label="Recovery Key"
 					placeholder="Paste your emergency recovery key"

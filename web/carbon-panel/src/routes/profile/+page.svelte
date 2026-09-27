@@ -378,6 +378,7 @@
 								class="space-y-3"
 							>
 								<CarbonTextInput
+									revealable
 									type="password"
 									label="Current Password"
 									bind:value={passwordForm.oldPassword}
@@ -385,6 +386,7 @@
 									disabled={saving}
 								/>
 								<CarbonTextInput
+									revealable
 									type="password"
 									label="New Password"
 									placeholder="Minimum 12 characters"
@@ -393,6 +395,7 @@
 									disabled={saving}
 								/>
 								<CarbonTextInput
+									revealable
 									type="password"
 									label="Confirm New Password"
 									placeholder="Confirm your new password"
