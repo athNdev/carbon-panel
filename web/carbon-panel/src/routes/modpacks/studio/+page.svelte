@@ -509,7 +509,7 @@
 			disabled={creating}
 		/>
 
-		<div class="grid grid-cols-2 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<CarbonTextInput
 				label="Author"
 				placeholder="Admin"
@@ -524,7 +524,7 @@
 			/>
 		</div>
 
-		<div class="grid grid-cols-2 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<CarbonSelect label="Minecraft Version" bind:value={newMcVersion} disabled={creating}>
 				{#each MC_VERSIONS as v}
 					<option value={v}>{v}</option>
