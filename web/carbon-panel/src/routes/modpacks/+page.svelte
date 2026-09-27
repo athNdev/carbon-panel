@@ -508,7 +508,13 @@
 					<CarbonSearch
 						placeholder="Search modpacks by name or description..."
 						bind:value={searchParams.query}
-						onkeydown={(e) => e.key === 'Enter' && searchModpacks()}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') searchModpacks();
+							else if (e.key === 'Escape' && searchParams.query) {
+								searchParams.query = '';
+								searchModpacks();
+							}
+						}}
 						size="md"
 					/>
 				</div>

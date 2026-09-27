@@ -336,7 +336,12 @@
 	<!-- Search & Summary Bar -->
 	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 		<div class="w-full sm:w-72">
-			<CarbonSearch placeholder="Search modpack projects..." bind:value={filterQuery} size="sm" />
+			<CarbonSearch
+					placeholder="Search modpack projects..."
+					bind:value={filterQuery}
+					size="sm"
+					onkeydown={(e) => e.key === 'Escape' && (filterQuery = '')}
+				/>
 		</div>
 		<p class="font-mono text-xs text-[#8d8d8d]">
 			SHOWING {filteredPacks.length} OF {packs.length} PROJECTS

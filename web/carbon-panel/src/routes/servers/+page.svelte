@@ -232,6 +232,7 @@
 					type="search"
 					placeholder="Search by name, description, version, loader, or port..."
 					bind:value={searchQuery}
+					onkeydown={(e) => e.key === 'Escape' && (searchQuery = '')}
 					class="h-9 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] pr-3 pl-9 font-sans text-xs text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:outline-none"
 				/>
 			</div>

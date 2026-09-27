@@ -303,6 +303,7 @@
 							type="search"
 							placeholder="Search installed mods..."
 							bind:value={searchQuery}
+							onkeydown={(e) => e.key === 'Escape' && (searchQuery = '')}
 							class="h-8 w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] pr-3 pl-8 text-xs text-[#f4f4f4] placeholder-[#6f6f6f] focus:border-b-2 focus:border-[#0f62fe] focus:outline-none"
 						/>
 					</div>
