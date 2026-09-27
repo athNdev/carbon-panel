@@ -21,7 +21,7 @@
 		ArrowRight
 	} from '@lucide/svelte';
 	import { type Server, ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
-	import { CarbonTag, CarbonButton } from '$lib/components/carbon';
+	import { CarbonTag, CarbonButton, CarbonConfirm } from '$lib/components/carbon';
 	import { onMount } from 'svelte';
 
 	let servers = $derived($serversStore);
@@ -30,6 +30,8 @@
 	let statusFilter = $state<'all' | 'running' | 'stopped' | 'issues'>('all');
 	let viewMode = $state<'table' | 'tiles'>('table');
 	let loading = $state(false);
+	let pendingDelete = $state<Server | null>(null);
+	let confirmOpen = $state(false);
 	// Cold direct loads render before the layout's fetch lands; hold the
 	// empty state until the first fetch settles so "no servers" never
 	// flashes for fleets that simply haven't loaded yet.
@@ -116,12 +118,13 @@
 
 	async function deleteServer(server: Server, event?: MouseEvent) {
 		event?.stopPropagation();
-		if (
-			!confirm(`Are you sure you want to delete "${server.name}"? This action cannot be undone.`)
-		) {
-			return;
-		}
+		pendingDelete = server;
+		confirmOpen = true;
+	}
 
+	async function confirmDeleteServer() {
+		const server = pendingDelete;
+		if (!server) return;
 		loading = true;
 		try {
 			await rpcClient.server.deleteServer({ id: server.id });
@@ -133,6 +136,7 @@
 			);
 		} finally {
 			loading = false;
+			pendingDelete = null;
 		}
 	}
 
@@ -758,4 +762,21 @@
 			{/each}
 		</div>
 	{/if}
+
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete server?"
+		message="This action cannot be undone. Containers, volumes, and configuration are removed."
+		confirmLabel="Delete Server"
+		danger
+		confirming={loading}
+		onconfirm={confirmDeleteServer}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}
+				{pendingDelete.name} · {pendingDelete.mcVersion || 'Latest'}
+			{/if}
+		{/snippet}
+	</CarbonConfirm>
 </div>
