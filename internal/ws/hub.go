@@ -2,9 +2,11 @@ package ws
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
@@ -16,6 +18,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -31,6 +34,12 @@ const (
 	// Maximum message size allowed from peer
 	maxMessageSize = 512 * 1024 // 512KB
 )
+
+// controlSendTimeout bounds how long a control message waits for room in a
+// congested client channel. Log lines are droppable (see sendLog); control
+// messages (auth results, acks, errors) block up to this long instead. It is
+// a var so tests can shrink it.
+var controlSendTimeout = 5 * time.Second
 
 // Hub manages WebSocket connections and log subscriptions
 type Hub struct {
@@ -58,6 +67,12 @@ type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
+
+	// droppedLogs counts log lines discarded because send was full. The
+	// count is injected as a "… N lines skipped …" sentinel before the next
+	// delivered line so bursts are visible instead of silent. Touched from
+	// forwardLogs goroutines and the read pump; hence atomic.
+	droppedLogs atomic.Uint64
 
 	// Authentication
 	user          *auth.AuthenticatedUser
@@ -504,7 +519,11 @@ func (c *Client) cleanup() {
 	c.subscriptions = make(map[string]*subscription)
 }
 
-// sendMessage marshals and sends a server message
+// sendMessage marshals and sends a server control message. Control messages
+// (auth results, acks, errors) take the priority path: a bounded blocking
+// send that waits for room instead of dropping on a full channel the way log
+// lines do. If the client stays congested past controlSendTimeout the message
+// is dropped, but the loss is logged server-side — never silent.
 func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 	data, err := proto.Marshal(msg)
 	if err != nil {
@@ -514,8 +533,8 @@ func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 
 	select {
 	case c.send <- data:
-	default:
-		// Channel full, skip
+	case <-time.After(controlSendTimeout):
+		c.hub.log.Error("Dropped WebSocket control message type %v: client slow (channel full %v)", msg.Type, controlSendTimeout)
 	}
 }
 
@@ -583,7 +602,36 @@ func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
 }
 
 func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	// Flush any accumulated skip count first: the sentinel goes out before
+	// the next real line so the gap is visible in the console stream.
+	if skipped := c.droppedLogs.Swap(0); skipped > 0 {
+		sentinel, err := proto.Marshal(&v1.WebSocketServerMessage{
+			Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
+			Payload: &v1.WebSocketServerMessage_Log{
+				Log: &v1.LogMessage{
+					ServerId: serverId,
+					Log: &v1.LogEntry{
+						Timestamp: timestamppb.Now(),
+						Message:   fmt.Sprintf("… %d log lines skipped (slow connection) …", skipped),
+						Level:     "warn",
+						Source:    "carbon-panel",
+					},
+				},
+			},
+		})
+		if err == nil {
+			select {
+			case c.send <- sentinel:
+			default:
+				// Still congested: restore the count (plus this line) and
+				// report the larger gap on the next flush.
+				c.droppedLogs.Add(skipped + 1)
+				return
+			}
+		}
+	}
+
+	data, err := proto.Marshal(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
 		Payload: &v1.WebSocketServerMessage_Log{
 			Log: &v1.LogMessage{
@@ -592,6 +640,16 @@ func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
 			},
 		},
 	})
+	if err != nil {
+		c.hub.log.Error("Failed to marshal WebSocket log message: %v", err)
+		return
+	}
+
+	select {
+	case c.send <- data:
+	default:
+		c.droppedLogs.Add(1)
+	}
 }
 
 func (c *Client) sendCommandResult(serverId string, success bool, output, errMsg string) {
