@@ -9,7 +9,8 @@
 		CarbonSearch,
 		CarbonSelect,
 		CarbonModal,
-		CarbonTextInput
+		CarbonTextInput,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -357,13 +358,17 @@
 		goto(resolve(`/servers/new?modpack=${modpack.id}`));
 	}
 
-	async function deleteModpack(modpack: IndexedModpack) {
-		if (
-			!confirm(`Are you sure you want to delete "${modpack.name}"? This action cannot be undone.`)
-		) {
-			return;
-		}
+	let pendingDelete = $state<IndexedModpack | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deleteModpack(modpack: IndexedModpack) {
+		pendingDelete = modpack;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteModpack() {
+		const modpack = pendingDelete;
+		if (!modpack) return;
 		try {
 			await rpcClient.modpack.deleteModpack({ id: modpack.id });
 			toast.success(`Modpack "${modpack.name}" deleted successfully`);
@@ -376,6 +381,8 @@
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to delete modpack');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -932,4 +939,17 @@
 		bind:open={showManifestInspector}
 		onOpenChange={(v) => (showManifestInspector = v)}
 	/>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete modpack?"
+		message="This action cannot be undone."
+		confirmLabel="Delete Modpack"
+		danger
+		onconfirm={confirmDeleteModpack}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>
 </div>
