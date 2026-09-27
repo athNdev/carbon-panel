@@ -16,6 +16,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import {
 		Server,
 		Plus,
@@ -366,6 +367,9 @@
 		}
 	}
 
+	let pendingDelete = $state<Node | null>(null);
+	let confirmOpen = $state(false);
+
 	async function handleDeleteNode(node: Node) {
 		if (node.isLocal) {
 			toast.error('Local Docker daemon cannot be deleted');
@@ -377,10 +381,13 @@
 			return;
 		}
 
-		if (!confirm(`Are you sure you want to delete Docker node "${node.name}"?`)) {
-			return;
-		}
+		pendingDelete = node;
+		confirmOpen = true;
+	}
 
+	async function confirmDeleteNode() {
+		const node = pendingDelete;
+		if (!node) return;
 		try {
 			await rpcClient.node.deleteNode({ id: node.id });
 			toast.success(`Node "${node.name}" deleted`);
@@ -389,6 +396,8 @@
 			toast.error(
 				`Failed to delete node: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -1073,3 +1082,16 @@
 		</DialogFooter>
 	</DialogContent>
 </Dialog>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete Docker node?"
+		message="The node is removed from the panel. Containers on it are left untouched."
+		confirmLabel="Delete Node"
+		danger
+		onconfirm={confirmDeleteNode}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>

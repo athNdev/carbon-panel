@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import { canCreateRoles, canUpdateRoles, canDeleteRoles } from '$lib/stores/auth';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -177,15 +178,21 @@
 		}
 	}
 
+	let pendingDelete = $state<Role | null>(null);
+	let confirmOpen = $state(false);
+
 	async function deleteRole(role: Role) {
 		if (role.isSystem) {
 			toast.error('Cannot delete system roles');
 			return;
 		}
-		if (!confirm(`Are you sure you want to delete role "${role.name}"?`)) {
-			return;
-		}
+		pendingDelete = role;
+		confirmOpen = true;
+	}
 
+	async function confirmDeleteRole() {
+		const role = pendingDelete;
+		if (!role) return;
 		try {
 			const request = create(DeleteRoleRequestSchema, { id: role.id });
 			await rpcClient.role.deleteRole(request);
@@ -194,6 +201,8 @@
 			await loadRoles();
 		} catch (error: unknown) {
 			toast.error(error instanceof Error ? error.message : 'Failed to delete role');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -770,3 +779,16 @@
 		</div>
 	</DialogContent>
 </Dialog>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete role?"
+		message="Users with this role lose its permissions. This cannot be undone."
+		confirmLabel="Delete Role"
+		danger
+		onconfirm={confirmDeleteRole}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>

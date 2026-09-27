@@ -8,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
-	import { CarbonInlineLoading } from '$lib/components/carbon';
+	import { CarbonInlineLoading, CarbonConfirm } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
 		Save,
@@ -183,6 +183,9 @@
 		}
 	}
 
+	let pendingDelete = $state<ProxyListenerWithCount | null>(null);
+	let confirmOpen = $state(false);
+
 	async function deleteListener(listenerWithCount: ProxyListenerWithCount) {
 		const listener = listenerWithCount.listener;
 		if (!listener) return;
@@ -195,14 +198,22 @@
 			return;
 		}
 
-		if (confirm(`Delete listener "${listener.name}" on port ${listener.port}?`)) {
-			try {
-				await rpcClient.proxy.deleteProxyListener({ id: listener.id });
-				toast.success(`Listener "${listener.name}" deleted`);
-				await loadListeners();
-			} catch (error: unknown) {
-				toast.error(error instanceof Error ? error.message : 'Failed to delete listener');
-			}
+		pendingDelete = listenerWithCount;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteListener() {
+		const target = pendingDelete;
+		if (!target?.listener) return;
+		const listener = target.listener;
+		try {
+			await rpcClient.proxy.deleteProxyListener({ id: listener.id });
+			toast.success(`Listener "${listener.name}" deleted`);
+			await loadListeners();
+		} catch (error: unknown) {
+			toast.error(error instanceof Error ? error.message : 'Failed to delete listener');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -589,3 +600,16 @@
 		{/if}
 	{/if}
 </div>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete listener?"
+		message="The proxy port stops accepting connections. Servers using it were already checked."
+		confirmLabel="Delete Listener"
+		danger
+		onconfirm={confirmDeleteListener}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete?.listener}{pendingDelete.listener.name} · port {pendingDelete.listener.port}{/if}
+		{/snippet}
+	</CarbonConfirm>
