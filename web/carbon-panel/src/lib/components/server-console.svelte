@@ -319,17 +319,19 @@
 <!-- Carbon Code/Terminal Container (Requirement 5) -->
 <ResizablePaneGroup
 	direction="vertical"
-	class="h-full max-h-[800px] min-h-[450px] w-full overflow-hidden rounded-none border border-[#393939] bg-[#161616] font-mono text-[#f4f4f4]"
+	class="h-full max-h-[800px] min-h-[320px] w-full overflow-hidden rounded-none border border-[#393939] bg-[#161616] font-mono text-[#f4f4f4] md:min-h-[450px]"
 >
 	<ResizablePane defaultSize={78} minSize={30}>
 		<div class="flex h-full flex-col">
 			<!-- Terminal Header -->
 			<div
-				class="flex items-center justify-between border-b border-[#393939] bg-[#262626] px-4 py-2"
+				class="flex flex-wrap items-center justify-between gap-y-1 border-b border-[#393939] bg-[#262626] px-4 py-2"
 			>
-				<div class="flex items-center gap-2.5">
-					<Terminal class="h-4 w-4 text-[#0f62fe]" />
-					<span class="font-mono text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase">
+				<div class="flex min-w-0 items-center gap-2.5">
+					<Terminal class="h-4 w-4 shrink-0 text-[#0f62fe]" />
+					<span
+						class="truncate font-mono text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase"
+					>
 						Server Console
 					</span>
 					<CarbonTag type={server.status === ServerStatus.RUNNING ? 'green' : 'gray'} size="sm">
@@ -351,7 +353,7 @@
 								onclick={fetchLogs}
 								disabled={loading}
 								aria-label="Refresh logs"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								{#if loading}
 									<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -374,7 +376,7 @@
 								onclick={uploadToMCLogs}
 								disabled={uploading}
 								aria-label="Upload logs to mclo.gs"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
+								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								{#if uploading}
 									<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -582,5 +584,19 @@
 	.log-line[data-type='command_output'] {
 		opacity: 0.9;
 		padding-left: 0.75rem;
+	}
+
+	/* Severity tinting: backend marks skipped-burst sentinels as warn and
+	   failures as error so they stand out from the info/debug stream. */
+	.log-line[data-type='warn'] {
+		color: #f1c21b;
+		border-left: 2px solid #f1c21b;
+		padding-left: 0.5rem;
+	}
+
+	.log-line[data-type='error'] {
+		color: #ff8389;
+		border-left: 2px solid #da1e28;
+		padding-left: 0.5rem;
 	}
 </style>

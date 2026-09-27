@@ -358,8 +358,8 @@
 						<th scope="col" class="w-28 px-4 py-3">Status</th>
 						<th scope="col" class="px-4 py-3">Server Instance</th>
 						<th scope="col" class="px-4 py-3">Engine & Loader</th>
-						<th scope="col" class="px-4 py-3">Host / Port</th>
-						<th scope="col" class="px-4 py-3">Memory</th>
+						<th scope="col" class="hidden px-4 py-3 md:table-cell">Host / Port</th>
+						<th scope="col" class="hidden px-4 py-3 md:table-cell">Memory</th>
 						<th scope="col" class="px-4 py-3">Players & TPS</th>
 						<th scope="col" class="px-4 py-3 text-right">Actions</th>
 					</tr>
@@ -417,7 +417,7 @@
 							</td>
 
 							<!-- Host / Port -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="hidden px-4 py-3.5 whitespace-nowrap md:table-cell">
 								<div class="flex items-center gap-1.5 font-mono text-xs">
 									<Wifi class="h-3.5 w-3.5 text-[#8d8d8d]" />
 									<span class="text-[#c6c6c6]">
@@ -427,7 +427,7 @@
 							</td>
 
 							<!-- Memory -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="hidden px-4 py-3.5 whitespace-nowrap md:table-cell">
 								<div class="flex items-center gap-1.5 font-mono text-xs text-[#c6c6c6]">
 									<MemoryStick class="h-3.5 w-3.5 text-[#8d8d8d]" />
 									<span>{(server.memory / 1024).toFixed(1)} GB</span>

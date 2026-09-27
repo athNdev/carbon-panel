@@ -301,9 +301,9 @@
 				>
 					<Package class="h-6 w-6" />
 				</div>
-				<div>
+				<div class="min-w-0">
 					<div class="flex flex-wrap items-center gap-2.5">
-						<h1 class="text-2xl font-light tracking-tight text-[#f4f4f4]">{server.name}</h1>
+						<h1 class="truncate text-2xl font-light tracking-tight text-[#f4f4f4]">{server.name}</h1>
 						<!-- Status Badge (Carbon Tag Requirement) -->
 						<CarbonTag type={getStatusTagType(server.status)} size="md">
 							{getStatusDisplayName(server.status)}
@@ -325,7 +325,7 @@
 			</div>
 
 			<!-- Sharp Action Buttons -->
-			<div class="flex items-center gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				{#if server.status === ServerStatus.CREATING}
 					<div
 						class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#f4f4f4] select-none"

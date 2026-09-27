@@ -245,7 +245,7 @@
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 			{#each [0, 1, 2, 3] as _}
 				<div
-					class="cds--tile flex h-[140px] flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 select-none"
+					class="flex h-[140px] flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 select-none"
 				>
 					<div>
 						<div class="flex items-center justify-between">
@@ -297,11 +297,11 @@
 			</div>
 		</div>
 
-		<!-- Carbon KPI Tiles (cds--tile) -->
+		<!-- Carbon KPI Tiles -->
 		<div class="motion-stagger grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 			<!-- Tile 1: Total Servers -->
 			<div
-				class="cds--tile flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
 			>
 				<div>
 					<div
@@ -334,7 +334,7 @@
 
 			<!-- Tile 2: Active Players -->
 			<div
-				class="cds--tile flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
 			>
 				<div>
 					<div
@@ -368,7 +368,7 @@
 
 			<!-- Tile 3: Memory Usage -->
 			<div
-				class="cds--tile flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
 			>
 				<div>
 					<div
@@ -422,7 +422,7 @@
 
 			<!-- Tile 4: Cluster Performance -->
 			<div
-				class="cds--tile flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
+				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 transition-colors select-none hover:border-[#525252]"
 			>
 				<div>
 					<div
@@ -573,7 +573,7 @@
 										>
 										<th
 											scope="col"
-											class="px-4 py-2.5 text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase"
+											class="hidden px-4 py-2.5 text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase sm:table-cell"
 											>Version</th
 										>
 										<th
@@ -612,7 +612,7 @@
 													{getStringForEnum(ServerStatus, server.status)}
 												</CarbonTag>
 											</td>
-											<td class="px-4 py-3 align-middle font-mono text-xs text-[#c6c6c6]">
+											<td class="hidden px-4 py-3 align-middle font-mono text-xs text-[#c6c6c6] sm:table-cell">
 												{server.mcVersion || '—'}
 											</td>
 											<td class="px-4 py-3 align-middle">
