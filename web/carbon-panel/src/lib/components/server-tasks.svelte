@@ -1231,7 +1231,7 @@
 											</p>
 										</div>
 									</label>
-									<div class="grid grid-cols-3 gap-6">
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 										<div class="space-y-3">
 											<Label for="retentionDays">Retention (days)</Label>
 											<Input
@@ -1307,7 +1307,7 @@
 												GitHub or Git repository containing modpack files, configs, or mods.
 											</p>
 										</div>
-										<div class="grid grid-cols-2 gap-4">
+										<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 											<div class="space-y-3">
 												<Label for="gitBranch">Branch / Tag</Label>
 												<Input
@@ -1546,7 +1546,7 @@
 										</p>
 									</div>
 
-									<div class="grid grid-cols-3 gap-6">
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 										<div class="space-y-3">
 											<Label for="maxRetries">Max Retries</Label>
 											<Input
@@ -1602,7 +1602,7 @@
 										</p>
 									</div>
 
-									<div class="grid grid-cols-2 gap-6">
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 										<div class="space-y-3">
 											<Label for="retryCount">Retry Count</Label>
 											<Input
