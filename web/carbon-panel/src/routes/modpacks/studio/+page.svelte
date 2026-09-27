@@ -330,8 +330,8 @@
 	</div>
 
 	<!-- Search & Summary Bar -->
-	<div class="flex items-center justify-between gap-4">
-		<div class="w-72">
+	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+		<div class="w-full sm:w-72">
 			<CarbonSearch placeholder="Search modpack projects..." bind:value={filterQuery} size="sm" />
 		</div>
 		<p class="font-mono text-xs text-[#8d8d8d]">
