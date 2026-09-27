@@ -697,7 +697,7 @@
 						</Button>
 					</div>
 					{#if !d.alreadyRegistered}
-						<div class="grid grid-cols-2 gap-2">
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 							<div class="space-y-1">
 								<Label class="text-xs" for="det-name-{d.host}">Node name</Label>
 								<Input
@@ -782,7 +782,7 @@
 				</p>
 			</div>
 
-			<div class="grid grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div class="space-y-2">
 					<Label for="node-max-mem">Max Memory Limit (MB)</Label>
 					<Input
@@ -940,7 +940,7 @@
 					/>
 				</div>
 
-				<div class="grid grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div class="space-y-2">
 						<Label for="edit-node-max-mem">Max Memory Limit (MB)</Label>
 						<Input
