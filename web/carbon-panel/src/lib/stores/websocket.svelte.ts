@@ -73,7 +73,10 @@ class WebSocketClient {
 		this.state.error = null;
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		const wsUrl = `${protocol}//${window.location.host}/ws`;
+		// Pre-upgrade auth (backend 401s tokenless handshakes unless anonymous
+		// access is on). Message-AUTH on open stays as the re-auth path.
+		const token = get(authStore).token;
+		const wsUrl = `${protocol}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
 		try {
 			this.socket = new WebSocket(wsUrl);

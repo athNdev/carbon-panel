@@ -177,8 +177,44 @@ func (c *Client) migrateSubscription(serverID, newContainerID string) {
 	}
 }
 
+// authorizeHandshake validates the caller's credential before the socket
+// upgrade (MINE-164), so unauthenticated TCP callers never get a socket.
+// It accepts ?token= (what the frontend sends), an Authorization bearer,
+// then falls back to the anonymous-access policy. Message-AUTH stays as a
+// compatible re-auth path with identical checks.
+func (h *Hub) authorizeHandshake(r *http.Request) bool {
+	if !h.authManager.IsAnyAuthEnabled() {
+		return h.authManager.NoAuthAllowed()
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		if ah := r.Header.Get("Authorization"); strings.HasPrefix(ah, "Bearer ") {
+			token = strings.TrimPrefix(ah, "Bearer ")
+		}
+	}
+	if token != "" {
+		ctx := context.Background()
+		var err error
+		if strings.HasPrefix(token, "dp_") {
+			_, err = h.authManager.ValidateAPIToken(ctx, token)
+		} else {
+			_, err = h.authManager.ValidateSession(ctx, token)
+		}
+		if err == nil {
+			return true
+		}
+	}
+	return h.authManager.IsAnonymousAccessEnabled()
+}
+
 // ServeHTTP handles WebSocket upgrade requests
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !h.authorizeHandshake(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.log.Error("WebSocket upgrade failed: %v", err)
