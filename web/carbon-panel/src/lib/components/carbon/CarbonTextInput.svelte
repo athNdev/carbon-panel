@@ -67,7 +67,13 @@
 				class="absolute top-1/2 right-2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center text-[#8d8d8d] transition-colors hover:text-white"
 			>
 				{#if revealed}
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<svg
+						class="h-4 w-4"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						viewBox="0 0 24 24"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -78,14 +84,16 @@
 							stroke-linejoin="round"
 							d="M10.71 5.05A16.65 16.65 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.05a3 3 0 11-4.24-4.24"
 						/>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M2 2l20 20"
-						/>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M2 2l20 20" />
 					</svg>
 				{:else}
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<svg
+						class="h-4 w-4"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						viewBox="0 0 24 24"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
