@@ -15,7 +15,8 @@
 		CarbonStructuredList,
 		CarbonAccordion,
 		CarbonAccordionItem,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import {
 		ArrowLeft,
@@ -464,8 +465,17 @@
 		}
 	}
 
+	let pendingDeleteFile: string | null = $state(null);
+	let confirmDeleteOpen = $state(false);
+
 	async function handleDeleteFile(filePath: string) {
-		if (!confirm(`Delete "${filePath}" from packwiz overrides?`)) return;
+		pendingDeleteFile = filePath;
+		confirmDeleteOpen = true;
+	}
+
+	async function confirmDeleteFile() {
+		const filePath = pendingDeleteFile;
+		if (!filePath) return;
 		try {
 			const res = await apiFetch(
 				`/api/v1/packwiz/packs/${packId}/files?path=${encodeURIComponent(filePath)}`,
@@ -479,6 +489,8 @@
 		} catch (err) {
 			console.error('Failed to delete file:', err);
 			toast.error('Failed to delete override file');
+		} finally {
+			pendingDeleteFile = null;
 		}
 	}
 
@@ -1878,3 +1890,16 @@
 		modLoader={pack.mod_loader}
 	/>
 {/if}
+	<CarbonConfirm
+		bind:open={confirmDeleteOpen}
+		title="Delete override file?"
+		message="The file is removed from the packwiz project. This cannot be undone."
+		confirmLabel="Delete File"
+		danger
+		onconfirm={confirmDeleteFile}
+		onclose={() => (pendingDeleteFile = null)}
+	>
+		{#snippet details()}
+			{#if pendingDeleteFile}{pendingDeleteFile}{/if}
+		{/snippet}
+	</CarbonConfirm>

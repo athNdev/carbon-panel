@@ -10,7 +10,8 @@
 		CarbonSelect,
 		CarbonModal,
 		CarbonTextInput,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import {
 		Package,
@@ -252,11 +253,17 @@
 		}
 	}
 
-	async function deletePack(pack: PackSummary) {
-		if (!confirm(`Are you sure you want to delete "${pack.name}"? This cannot be undone.`)) {
-			return;
-		}
+	let pendingDelete = $state<PackSummary | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deletePack(pack: PackSummary) {
+		pendingDelete = pack;
+		confirmOpen = true;
+	}
+
+	async function confirmDeletePack() {
+		const pack = pendingDelete;
+		if (!pack) return;
 		try {
 			const res = await apiFetch(`/api/v1/packwiz/packs/${pack.id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -265,6 +272,8 @@
 		} catch (err) {
 			console.error('Failed to delete pack:', err);
 			toast.error((err instanceof Error ? err.message : '') || 'Failed to delete modpack');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -655,3 +664,16 @@
 		</div>
 	</div>
 </CarbonModal>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete modpack project?"
+		message="The project, overrides, and local metadata are removed. This cannot be undone."
+		confirmLabel="Delete Project"
+		danger
+		onconfirm={confirmDeletePack}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>
