@@ -282,7 +282,7 @@
 				<span class="font-mono text-[#c6c6c6]">/carbonpanel.v1.&lt;Service&gt;/&lt;Method&gt;</span>
 			</p>
 		</div>
-		<div class="grid gap-px bg-[#393939] sm:grid-cols-2 lg:grid-cols-3">
+		<div class="motion-stagger grid gap-px bg-[#393939] sm:grid-cols-2 lg:grid-cols-3">
 			{#each connectServices as service (service.name)}
 				<div class="bg-[#262626] p-4 transition-colors hover:bg-[#353535]">
 					<div class="flex items-center justify-between gap-2">
