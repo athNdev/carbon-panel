@@ -613,6 +613,7 @@
 							<Input
 								id="new-username"
 								type="text"
+								autocomplete="off"
 								bind:value={newUserForm.username}
 								placeholder="username"
 								required
@@ -626,6 +627,7 @@
 							<Input
 								id="new-email"
 								type="email"
+								autocomplete="off"
 								bind:value={newUserForm.email}
 								placeholder="user@example.com"
 							/>
@@ -638,6 +640,7 @@
 							<Input
 								id="new-password"
 								type="password"
+								autocomplete="new-password"
 								bind:value={newUserForm.password}
 								placeholder="Minimum 12 characters"
 								required

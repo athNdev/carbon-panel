@@ -381,6 +381,7 @@
 									revealable
 									type="password"
 									label="Current Password"
+									autocomplete="current-password"
 									bind:value={passwordForm.oldPassword}
 									required
 									disabled={saving}
@@ -389,6 +390,7 @@
 									revealable
 									type="password"
 									label="New Password"
+									autocomplete="new-password"
 									placeholder="Minimum 12 characters"
 									bind:value={passwordForm.newPassword}
 									required
@@ -398,6 +400,7 @@
 									revealable
 									type="password"
 									label="Confirm New Password"
+									autocomplete="new-password"
 									placeholder="Confirm your new password"
 									bind:value={passwordForm.confirmPassword}
 									required

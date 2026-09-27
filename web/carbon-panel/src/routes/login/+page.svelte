@@ -237,6 +237,7 @@
 			<form onsubmit={handleSubmit} class="space-y-4">
 				<CarbonTextInput
 					label="Admin Username"
+					autocomplete="username"
 					placeholder="Choose admin username"
 					bind:value={username}
 					required
@@ -244,6 +245,7 @@
 				/>
 				<CarbonTextInput
 					type="email"
+					autocomplete="email"
 					label="Email (optional)"
 					placeholder="admin@example.com"
 					bind:value={email}
@@ -253,6 +255,7 @@
 					revealable
 					type="password"
 					label="Password"
+					autocomplete="new-password"
 					placeholder="Choose a strong password (min 12 chars)"
 					bind:value={password}
 					required
@@ -262,6 +265,7 @@
 					revealable
 					type="password"
 					label="Confirm Password"
+					autocomplete="new-password"
 					placeholder="Confirm your password"
 					bind:value={confirmPassword}
 					required
@@ -300,6 +304,7 @@
 						<form onsubmit={handleSubmit} class="space-y-4">
 							<CarbonTextInput
 								label="Username"
+								autocomplete="username"
 								placeholder="Enter your username"
 								bind:value={username}
 								required
@@ -309,6 +314,7 @@
 								revealable
 								type="password"
 								label="Password"
+								autocomplete="current-password"
 								placeholder="Enter your password"
 								bind:value={password}
 								required
@@ -366,6 +372,7 @@
 					{/if}
 					<CarbonTextInput
 						label="Username"
+						autocomplete="username"
 						placeholder="Choose a username"
 						bind:value={username}
 						required
@@ -373,6 +380,7 @@
 					/>
 					<CarbonTextInput
 						type="email"
+						autocomplete="email"
 						label="Email (optional)"
 						placeholder="your@email.com"
 						bind:value={email}
@@ -382,6 +390,7 @@
 						revealable
 						type="password"
 						label="Password"
+						autocomplete="new-password"
 						placeholder="Choose a password (min 12 chars)"
 						bind:value={password}
 						required
@@ -401,6 +410,7 @@
 							revealable
 							type="password"
 							label="Invite PIN"
+							autocomplete="off"
 							placeholder="Enter invite PIN"
 							bind:value={invitePin}
 							required
@@ -433,6 +443,7 @@
 					revealable
 					type="password"
 					label="Recovery Key"
+					autocomplete="off"
 					placeholder="Paste your emergency recovery key"
 					bind:value={recoveryKey}
 					disabled={loading}
