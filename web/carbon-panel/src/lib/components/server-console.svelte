@@ -44,6 +44,30 @@
 	let command = $state('');
 	let loading = $state(false);
 	let autoScroll = $state(true);
+	// Command history (session-scoped): ArrowUp/ArrowDown recall.
+	let cmdHistory = $state<string[]>([]);
+	let histIdx = $state(-1);
+	function pushHistory(cmd: string) {
+		cmdHistory = [...cmdHistory.slice(-49), cmd];
+		histIdx = -1;
+	}
+	function handleCommandKey(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			sendCommand();
+			return;
+		}
+		if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			if (cmdHistory.length === 0) return;
+			histIdx = histIdx < 0 ? cmdHistory.length - 1 : Math.max(0, histIdx - 1);
+			command = cmdHistory[histIdx];
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			if (histIdx < 0) return;
+			histIdx = histIdx + 1;
+			command = histIdx >= cmdHistory.length ? ((histIdx = -1), '') : cmdHistory[histIdx];
+		}
+	}
 	// Assertive error announcer (MINE-135): mirrors error toasts into a
 	// role=alert node. The log stream itself is role=log (polite) so
 	// per-line output stays quiet for screen readers.
@@ -226,9 +250,11 @@
 
 		const currentCommand = command.trim();
 		command = '';
+		histIdx = -1;
 		loading = true;
 
 		if (wsClient.isReady) {
+			pushHistory(currentCommand);
 			wsClient.sendCommand(server.id, currentCommand);
 			loading = false;
 		} else {
@@ -244,6 +270,7 @@
 			});
 			const response = await rpcClient.server.sendCommand(request);
 			if (response.success) {
+				pushHistory(cmdText);
 				toast.success('Command executed');
 				await fetchLogs();
 			} else {
@@ -493,7 +520,7 @@
 				bind:value={command}
 				disabled={server.status !== ServerStatus.RUNNING &&
 					server.status !== ServerStatus.UNHEALTHY}
-				onkeydown={(e) => e.key === 'Enter' && sendCommand()}
+				onkeydown={handleCommandKey}
 				class="h-9 flex-1 rounded-none border border-[#525252] bg-[#161616] px-3 font-mono text-xs text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-[#0f62fe] focus:outline-none disabled:opacity-40"
 			/>
 			<button
