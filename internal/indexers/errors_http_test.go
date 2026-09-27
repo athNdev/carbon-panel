@@ -12,12 +12,12 @@ import (
 
 func TestErrorKindString(t *testing.T) {
 	cases := map[ErrorKind]string{
-		ErrAuth:      "authentication error",
-		ErrRateLimit: "rate limited",
-		ErrNotFound:  "not found",
-		ErrNetwork:   "network error",
-		ErrAPI:       "API error",
-		ErrDecode:    "decode error",
+		ErrAuth:       "authentication error",
+		ErrRateLimit:  "rate limited",
+		ErrNotFound:   "not found",
+		ErrNetwork:    "network error",
+		ErrAPI:        "API error",
+		ErrDecode:     "decode error",
 		ErrorKind(99): "unknown error",
 	}
 	for kind, want := range cases {
