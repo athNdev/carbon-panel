@@ -68,6 +68,15 @@ type Client struct {
 	conn *websocket.Conn
 	send chan []byte
 
+	// done is closed exactly once when the client is unregistered. It
+	// signals writePump to exit. send is deliberately NEVER closed: a
+	// forwardLogs goroutine may still be selecting on it while unregister
+	// runs, and a send on a closed channel panics even inside a select.
+	// The send channel is simply garbage-collected once every sender has
+	// stopped observing done.
+	done      chan struct{}
+	closeOnce sync.Once
+
 	// droppedLogs counts log lines discarded because send was full. The
 	// count is injected as a "… N lines skipped …" sentinel before the next
 	// delivered line so bursts are visible instead of silent. Touched from
@@ -131,7 +140,10 @@ func (h *Hub) Run() {
 			h.clientsMu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.send)
+				// Never close(client.send): forwardLogs may still send on
+				// it. Signal done instead; writePump exits and the channel
+				// is garbage-collected once all senders stop.
+				client.closeOnce.Do(func() { close(client.done) })
 			}
 			h.clientsMu.Unlock()
 			h.log.Debug("WebSocket client disconnected")
@@ -225,6 +237,7 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		hub:           h,
 		conn:          conn,
 		send:          make(chan []byte, 256),
+		done:          make(chan struct{}),
 		subscriptions: make(map[string]*subscription),
 	}
 
@@ -273,13 +286,10 @@ func (c *Client) writePump() {
 
 	for {
 		select {
-		case message, ok := <-c.send:
+		case <-c.done:
+			return
+		case message := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
 			if err := c.conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 				return
 			}
@@ -446,10 +456,20 @@ func (c *Client) handleSubscribe(msg *v1.SubscribeMessage) {
 	c.sendSubscribed(msg.ServerId)
 }
 
-// forwardLogs forwards log entries from the log streamer to the client
+// forwardLogs forwards log entries from the log streamer to the client.
+// It also exits when the client is unregistered so the goroutine cannot
+// outlive the client when the streamer channel stays open.
 func (c *Client) forwardLogs(serverId string, ch chan *v1.LogEntry) {
-	for entry := range ch {
-		c.sendLog(serverId, entry)
+	for {
+		select {
+		case <-c.done:
+			return
+		case entry, ok := <-ch:
+			if !ok {
+				return
+			}
+			c.sendLog(serverId, entry)
+		}
 	}
 }
 
@@ -569,6 +589,8 @@ func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 
 	select {
 	case c.send <- data:
+	case <-c.done:
+		// Client is gone; drop without waiting out the timeout.
 	case <-time.After(controlSendTimeout):
 		c.hub.log.Error("Dropped WebSocket control message type %v: client slow (channel full %v)", msg.Type, controlSendTimeout)
 	}
@@ -638,6 +660,13 @@ func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
 }
 
 func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
+	// Fast path: client is gone, drop without marshaling. send itself is
+	// never closed so any in-flight select-send below cannot panic.
+	select {
+	case <-c.done:
+		return
+	default:
+	}
 	// Flush any accumulated skip count first: the sentinel goes out before
 	// the next real line so the gap is visible in the console stream.
 	if skipped := c.droppedLogs.Swap(0); skipped > 0 {
