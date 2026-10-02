@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -37,9 +38,20 @@ type SupportService struct {
 	docker *docker.Client
 	config *config.Config
 	log    *logger.Logger
-	// Store generated bundles temporarily
-	bundles map[string]*BundleInfo
+	// Store generated bundles temporarily. Guarded by bundlesMu: take the
+	// write lock for mutations, the read lock for lookups. Never hold the
+	// mutex across I/O — snapshot what is needed under the lock, then do
+	// the slow work (file reads, archive generation) unlocked.
+	bundlesMu sync.RWMutex
+	bundles   map[string]*BundleInfo
 }
+
+// bundleTTL is how long a generated bundle is kept before it becomes
+// eligible for eviction. Expired bundles are evicted opportunistically on
+// the Generate/Download paths (see evictExpiredBundlesLocked) so no
+// per-bundle sleeper goroutine — and no background janitor goroutine that
+// would ignore shutdown — is needed.
+const bundleTTL = time.Hour
 
 // BundleInfo stores information about a generated bundle
 type BundleInfo struct {
@@ -154,7 +166,9 @@ func (s *SupportService) GenerateSupportBundle(ctx context.Context, req *connect
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get bundle info"))
 	}
 
-	// Store bundle info for download
+	// Store bundle info for download. The archive I/O above is already done,
+	// so only the map insert happens under the write lock. Expired bundles
+	// are evicted here instead of via one sleeper goroutine per bundle.
 	bundleInfo := &BundleInfo{
 		ID:        bundleID,
 		Filename:  bundleFileName,
@@ -162,13 +176,7 @@ func (s *SupportService) GenerateSupportBundle(ctx context.Context, req *connect
 		Size:      fileInfo.Size(),
 		CreatedAt: time.Now(),
 	}
-	s.bundles[bundleID] = bundleInfo
-
-	// Clean up old bundles after 1 hour
-	go func() {
-		time.Sleep(1 * time.Hour)
-		s.cleanupBundle(bundleID)
-	}()
+	s.storeBundle(bundleInfo)
 
 	return connect.NewResponse(&v1.GenerateSupportBundleResponse{
 		BundleId:  bundleID,
@@ -181,8 +189,10 @@ func (s *SupportService) GenerateSupportBundle(ctx context.Context, req *connect
 
 // DownloadSupportBundle downloads a support bundle
 func (s *SupportService) DownloadSupportBundle(ctx context.Context, req *connect.Request[v1.DownloadSupportBundleRequest]) (*connect.Response[v1.DownloadSupportBundleResponse], error) {
-	bundleInfo, exists := s.bundles[req.Msg.BundleId]
-	if !exists {
+	// Snapshot what is needed under the read lock; the file read below
+	// must not hold the mutex.
+	bundleInfo, ok := s.loadBundle(req.Msg.BundleId)
+	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("bundle not found or expired"))
 	}
 
@@ -193,8 +203,9 @@ func (s *SupportService) DownloadSupportBundle(ctx context.Context, req *connect
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read bundle"))
 	}
 
-	// Clean up the bundle after download
-	go s.cleanupBundle(req.Msg.BundleId)
+	// Clean up the bundle after download. Synchronous: removing one file
+	// and one map entry is fast, and it avoids a fire-and-forget goroutine.
+	s.cleanupBundle(req.Msg.BundleId)
 
 	return connect.NewResponse(&v1.DownloadSupportBundleResponse{
 		Content:  bundleData,
@@ -439,14 +450,60 @@ func (s *SupportService) getUploadSupportUrl() string {
 	return base + "/api/v1/uploads"
 }
 
+// storeBundle inserts a bundle and opportunistically evicts bundles older
+// than bundleTTL. Callers must not hold bundlesMu.
+func (s *SupportService) storeBundle(info *BundleInfo) {
+	s.bundlesMu.Lock()
+	defer s.bundlesMu.Unlock()
+	s.bundles[info.ID] = info
+	s.evictExpiredBundlesLocked(time.Now())
+}
+
+// loadBundle returns a copy of the bundle entry. Callers must not hold
+// bundlesMu. The copy keeps callers from mutating map state and lets them
+// do file I/O without holding the lock.
+func (s *SupportService) loadBundle(bundleID string) (BundleInfo, bool) {
+	s.bundlesMu.RLock()
+	defer s.bundlesMu.RUnlock()
+	info, ok := s.bundles[bundleID]
+	if !ok {
+		return BundleInfo{}, false
+	}
+	return *info, true
+}
+
+// evictExpiredBundlesLocked removes bundles older than bundleTTL.
+// Callers must hold bundlesMu for writing. File removal is best-effort:
+// the path was captured from the map entry while holding the lock.
+func (s *SupportService) evictExpiredBundlesLocked(now time.Time) {
+	for id, info := range s.bundles {
+		if now.Sub(info.CreatedAt) > bundleTTL {
+			delete(s.bundles, id)
+			// Best-effort file removal; the path was captured from the map
+			// entry while holding the lock.
+			os.Remove(info.Path)
+			if s.log != nil {
+				s.log.Debug("Evicted expired support bundle %s", id)
+			}
+		}
+	}
+}
+
 // cleanupBundle removes a bundle from memory and disk
 func (s *SupportService) cleanupBundle(bundleID string) {
-	if bundleInfo, exists := s.bundles[bundleID]; exists {
-		// Remove file
-		os.Remove(bundleInfo.Path)
-		// Remove from map
+	s.bundlesMu.Lock()
+	bundleInfo, exists := s.bundles[bundleID]
+	if exists {
 		delete(s.bundles, bundleID)
-		s.log.Debug("Cleaned up support bundle %s", bundleID)
+	}
+	s.bundlesMu.Unlock()
+
+	if exists {
+		// File I/O happens without holding the mutex.
+		os.Remove(bundleInfo.Path)
+		if s.log != nil {
+			s.log.Debug("Cleaned up support bundle %s", bundleID)
+		}
 	}
 }
 
