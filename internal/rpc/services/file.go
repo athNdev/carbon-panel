@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/internal/auth"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/download"
@@ -975,8 +976,15 @@ func (s *FileService) DownloadArchive(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to stat archive"))
 	}
 
-	// Register download session (temp zip â€” delete after expiry)
-	session := s.downloadManager.InitSession(tempPath, filename, info.Size(), true)
+	// Register download session (temp zip â€” delete after expiry). Bound to
+	// the owning server and creating user so the stream handler can authorize
+	// per-server rather than globally.
+	user := auth.GetUserFromContext(ctx)
+	creatorID := ""
+	if user != nil {
+		creatorID = user.ID
+	}
+	session := s.downloadManager.InitSessionFor(tempPath, filename, info.Size(), true, msg.ServerId, creatorID)
 
 	return connect.NewResponse(&v1.DownloadArchiveResponse{
 		SessionId: session.ID,
@@ -1012,9 +1020,14 @@ func (s *FileService) InitFileDownload(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("path is a directory, use DownloadArchive instead"))
 	}
 
-	// Point session at file
+	// Point session at file, bound to the owning server and creating user.
 	filename := filepath.Base(msg.Path)
-	session := s.downloadManager.InitSession(fullPath, filename, info.Size(), false)
+	user := auth.GetUserFromContext(ctx)
+	creatorID := ""
+	if user != nil {
+		creatorID = user.ID
+	}
+	session := s.downloadManager.InitSessionFor(fullPath, filename, info.Size(), false, msg.ServerId, creatorID)
 
 	return connect.NewResponse(&v1.InitFileDownloadResponse{
 		SessionId: session.ID,
