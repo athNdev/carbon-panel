@@ -13,7 +13,7 @@
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { toast } from 'svelte-sonner';
 	import { inspectManifest, exportServerManifest } from '$lib/utils/manifest-inspector';
-	import type { ManifestInspectionResult, InspectedMod } from '$lib/utils/manifest-inspector';
+	import type { ManifestInspectionResult } from '$lib/utils/manifest-inspector';
 	import {
 		FileSearch,
 		Upload,
@@ -22,8 +22,6 @@
 		Laptop,
 		Server,
 		Layers,
-		Check,
-		AlertTriangle,
 		ExternalLink
 	} from '@lucide/svelte';
 
@@ -49,8 +47,8 @@
 		try {
 			inspection = inspectManifest(rawInput);
 			toast.success(`Parsed ${inspection.name} (${inspection.totalMods} mods)`);
-		} catch (e: any) {
-			error = e.message || 'Failed to parse manifest.';
+		} catch (e) {
+			error = (e instanceof Error ? e.message : '') || 'Failed to parse manifest.';
 			inspection = null;
 		}
 	}
@@ -253,7 +251,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y">
-							{#each filteredMods as mod}
+							{#each filteredMods as mod (mod.name)}
 								<tr class="hover:bg-muted/20">
 									<td class="max-w-[250px] truncate p-2 font-medium">
 										{mod.name}
@@ -285,6 +283,7 @@
 									</td>
 									<td class="p-2 text-right">
 										{#if mod.downloadUrl}
+											<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
 											<a
 												href={mod.downloadUrl}
 												target="_blank"
@@ -293,6 +292,7 @@
 											>
 												<ExternalLink class="h-3 w-3" /> Link
 											</a>
+											<!-- eslint-enable svelte/no-navigation-without-resolve -->
 										{:else if mod.projectId}
 											<span class="font-mono text-[10px] text-muted-foreground">
 												#{mod.projectId}

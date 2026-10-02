@@ -832,9 +832,9 @@ type ModpackUpdateTaskConfig struct {
 	GracefulCountdownSeconds int    `json:"graceful_countdown_seconds"`
 	MaintenanceWindowCron    string `json:"maintenance_window_cron"`
 	StageConfigUpdates       bool   `json:"stage_config_updates"`
-	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`        // Create volume snapshot before applying updates (MINE-23)
-	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"`    // Automatically rollback snapshot if restart/update fails
-	BootGateTimeoutSecs      int    `json:"boot_gate_timeout_secs"`      // SLP boot verification after restart; 0 disables (MINE-145)
+	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`      // Create volume snapshot before applying updates (MINE-23)
+	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"` // Automatically rollback snapshot if restart/update fails
+	BootGateTimeoutSecs      int    `json:"boot_gate_timeout_secs"`   // SLP boot verification after restart; 0 disables (MINE-145)
 	AuthToken                string `json:"auth_token"`
 }
 
@@ -856,6 +856,16 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		branch = "main"
 	}
 
+	// Re-validate defensively at execution time, not only at task
+	// create/update time: a task row written before this fix, or by any other
+	// writer, must not be able to smuggle a hostile branch or URL into exec.
+	if err := validateGitBranch(branch); err != nil {
+		return "", err
+	}
+	if err := validateGitURL(cfg.GitURL); err != nil {
+		return "", err
+	}
+
 	// Prepare git repository clone directory inside server directory or app cache
 	cacheDir := filepath.Join(server.DataPath, ".carbon-panel_modpack_git")
 	gitURL := cfg.GitURL
@@ -874,8 +884,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		// Initial clone
 		_ = os.MkdirAll(cacheDir, 0755)
 		s.log.Info("ModpackTask %s: Performing initial clone from %s (branch: %s)", task.Name, cfg.GitURL, branch)
-		cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "-b", branch, gitURL, cacheDir)
-		if out, err := cmd.CombinedOutput(); err != nil {
+		if out, err := cloneFn(ctx, gitURL, branch, cacheDir); err != nil {
 			return string(out), fmt.Errorf("initial git clone failed: %w: %s", err, string(out))
 		}
 		cmdHead := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "HEAD")
@@ -886,8 +895,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		updateSummary = fmt.Sprintf("Initial modpack clone successful from %s on branch %s", cfg.GitURL, branch)
 	} else {
 		// Fetch and check if updates are available
-		cmdFetch := exec.CommandContext(ctx, "git", "-C", cacheDir, "fetch", "origin", branch)
-		if out, err := cmdFetch.CombinedOutput(); err != nil {
+		if out, err := fetchFn(ctx, cacheDir, branch); err != nil {
 			return string(out), fmt.Errorf("git fetch failed: %w: %s", err, string(out))
 		}
 
@@ -959,10 +967,12 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			s.log.Info("ModpackTask %s: Staged %d changed config/pack files in %s", task.Name, len(changedFiles), stagedDir)
 		}
 
-		// Source directory to copy from
-		srcDir := cacheDir
-		if cfg.TargetSubfolder != "" {
-			srcDir = filepath.Join(cacheDir, cfg.TargetSubfolder)
+		// Source directory to copy from, confined to the clone cache so a
+		// subfolder like "../../etc" cannot make the sync below read host
+		// files into the server directory or overwrite server data.
+		srcDir, err := resolveModpackSourceDir(cacheDir, cfg.TargetSubfolder)
+		if err != nil {
+			return updateSummary, err
 		}
 
 		// Sync files into server.DataPath (excluding internal directories)
@@ -1002,7 +1012,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			}
 		}
 
-			if shouldRestartNow {
+		if shouldRestartNow {
 			countdown := cfg.GracefulCountdownSeconds
 			if countdown <= 0 && cfg.GracefulRestart {
 				countdown = 10

@@ -11,6 +11,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import { Loader2, Save, X, Maximize2, Minimize2 } from '@lucide/svelte';
 	import type { FileInfo } from '$lib/proto/carbonpanel/v1/file_pb';
 	import * as monaco from 'monaco-editor';
@@ -147,10 +148,12 @@
 		}
 	}
 
+	let confirmDiscardOpen = $state(false);
+
 	function handleClose() {
 		if (isDirty) {
-			const confirmed = confirm('You have unsaved changes. Are you sure you want to close?');
-			if (!confirmed) return;
+			confirmDiscardOpen = true;
+			return;
 		}
 		onClose();
 	}
@@ -310,7 +313,7 @@
 				{#if file}
 					{file.name}
 					{#if isDirty}
-						<span class="text-sm text-muted-foreground">â—</span>
+						<span class="text-sm text-muted-foreground">●</span>
 					{/if}
 				{:else}
 					File Editor
@@ -346,9 +349,9 @@
 						{content.split('\n').length} lines, {content.length} characters
 					</span>
 					{#if isDirty}
-						<span class="text-orange-500">â— Modified</span>
+						<span class="text-orange-500">● Modified</span>
 					{:else}
-						<span class="text-green-500">â— Saved</span>
+						<span class="text-green-500">● Saved</span>
 					{/if}
 				</div>
 				<div class="flex items-center gap-2">
@@ -374,3 +377,11 @@
 		</DialogFooter>
 	</DialogContent>
 </Dialog>
+<CarbonConfirm
+	bind:open={confirmDiscardOpen}
+	title="Discard unsaved changes?"
+	message="Your edits will be lost."
+	confirmLabel="Discard Changes"
+	danger
+	onconfirm={onClose}
+/>

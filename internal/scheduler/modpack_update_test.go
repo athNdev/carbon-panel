@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -73,11 +73,29 @@ func TestModpackUpdate_CloningStagingAndSync(t *testing.T) {
 
 	s := NewScheduler(store, nil, nil, nil, nil, log)
 
+	// The product contract is an https:// modpack URL (see the proto field and
+	// the UI placeholder), so validation rejects a local path. Serve the local
+	// repo through the clone seam instead of weakening the allowlist.
+	origClone, origFetch := cloneFn, fetchFn
+	t.Cleanup(func() { cloneFn, fetchFn = origClone, origFetch })
+	// NOTE: deliberately NOT defaultGitClone. That applies
+	// GIT_ALLOW_PROTOCOL=https, which (correctly) refuses the local `file`
+	// transport this test needs. Using it here would defeat the hardening.
+	localSource := func(ctx context.Context, _ string, _ string, dir string) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, "git", "clone", "-b", "main", "--", remoteRepo, dir)
+		return cmd.CombinedOutput()
+	}
+	cloneFn = localSource
+	fetchFn = func(ctx context.Context, dir, branch string) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, "git", "-C", dir, "fetch", "origin", "--", branch)
+		return cmd.CombinedOutput()
+	}
+
 	cfg := ModpackUpdateTaskConfig{
-		GitURL:              remoteRepo,
-		Branch:              "main",
-		RestartImmediately:  false,
-		StageConfigUpdates:  true,
+		GitURL:             "https://example.invalid/modpack.git",
+		Branch:             "main",
+		RestartImmediately: false,
+		StageConfigUpdates: true,
 	}
 	cfgJSON, err := json.Marshal(cfg)
 	require.NoError(t, err)

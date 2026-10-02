@@ -168,33 +168,12 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 			return os.MkdirAll(targetPath, 0755)
 		}
 
-		// Make parent(s)
-		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-			return fmt.Errorf("failed to create parent directory: %w", err)
-		}
-
-		// Create file
-		outFile, err := os.Create(targetPath)
-		if err != nil {
-			return fmt.Errorf("failed to create file %s: %w", targetPath, err)
-		}
-		defer outFile.Close()
-
-		// Open the file from the archive
-		rc, err := f.Open()
-		if err != nil {
-			return fmt.Errorf("failed to open file in archive: %w", err)
-		}
-		defer rc.Close()
-
-		// Copy contents
-		if _, err := io.Copy(outFile, rc); err != nil {
-			return fmt.Errorf("failed to extract file %s: %w", targetPath, err)
-		}
-
-		// Set file perms
-		if f.Mode() != 0 {
-			os.Chmod(targetPath, f.Mode())
+		// Extract a single regular file entry. Kept as a separate function so
+		// the output handle and the archive-reader handle are closed when this
+		// entry is done — not held open until the whole extraction finishes
+		// (defer in a loop body only runs at function exit).
+		if err := extractArchiveEntry(destPath, f); err != nil {
+			return err
 		}
 
 		filesExtracted++
@@ -209,6 +188,51 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 	}
 
 	return filesExtracted, nil
+}
+
+// extractArchiveEntry extracts one regular-file entry of an archive into
+// destPath. It is a separate function (rather than inline code in the
+// per-entry callback) so the defers below release both handles — the output
+// file and the archive reader — when this entry finishes instead of holding
+// one pair of handles per entry for the whole extraction, which exhausts
+// file descriptors on large or crafted archives.
+func extractArchiveEntry(destPath string, f archives.FileInfo) error {
+	targetPath := filepath.Join(destPath, f.NameInArchive)
+	if !Within(destPath, targetPath) {
+		return fmt.Errorf("illegal file path in archive: %s", f.NameInArchive)
+	}
+
+	// Make parent(s)
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directory: %w", err)
+	}
+
+	// Create file
+	outFile, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file %s: %w", targetPath, err)
+	}
+	defer func() { _ = outFile.Close() }()
+
+	// Open the file from the archive
+	rc, err := f.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open file in archive: %w", err)
+	}
+	defer func() { _ = rc.Close() }()
+
+	// Copy contents
+	if _, err := io.Copy(outFile, rc); err != nil {
+		return fmt.Errorf("failed to extract file %s: %w", targetPath, err)
+	}
+
+	// Set file perms
+	if f.Mode() != 0 {
+		if err := os.Chmod(targetPath, f.Mode()); err != nil {
+			return fmt.Errorf("failed to set mode on extracted file %s: %w", targetPath, err)
+		}
+	}
+	return nil
 }
 
 func IsTextFile(path string) bool {
@@ -333,10 +357,18 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				// Explicit close (no defer): this callback runs once per file
+				// and a defer would pile up one open handle per entry.
 				_, err = io.Copy(writer, f)
+				closeErr := f.Close()
+				if err != nil {
+					return err
+				}
+				if closeErr != nil {
+					return closeErr
+				}
 				count++
-				return err
+				return nil
 			})
 			if err != nil {
 				return count, fmt.Errorf("failed to add directory %s to zip: %w", p, err)

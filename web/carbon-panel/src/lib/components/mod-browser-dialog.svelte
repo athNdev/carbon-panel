@@ -12,28 +12,24 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
 	import {
 		Search,
 		Download,
 		Package,
 		Loader2,
-		CheckCircle2,
-		ExternalLink,
 		ArrowLeft,
 		Boxes,
 		AlertTriangle,
 		Layers,
 		Filter,
-		X,
-		Plus,
-		Check
+		X
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import { formatBytes } from '$lib/utils';
 	import { apiFetch } from '$lib/api/fetch';
+	import { createRequestSequence } from '$lib/utils/request-sequence';
 
 	interface Props {
 		open: boolean;
@@ -197,8 +193,14 @@
 		return mods;
 	});
 
+	// Sequence guards: drop responses from superseded requests so a slow
+	// earlier keystroke/filter change can never overwrite newer results.
+	const searchSequence = createRequestSequence();
+	const versionsSequence = createRequestSequence();
+
 	async function searchMods() {
 		searching = true;
+		const seq = searchSequence.next();
 		searchError = '';
 		mods = [];
 		try {
@@ -225,22 +227,26 @@
 				throw new Error(errorText || `HTTP ${res.status}`);
 			}
 			const data = await res.json();
+			if (!searchSequence.isCurrent(seq)) return;
 			if (data.error) {
 				searchError = data.error;
 			} else {
 				mods = data.results || [];
 			}
-		} catch (err: any) {
+		} catch (err) {
+			if (!searchSequence.isCurrent(seq)) return;
 			console.error('Failed to search mods:', err);
-			searchError = `Failed to search mods: ${err.message || 'Please verify server connection.'}`;
+			const message = err instanceof Error ? err.message : '';
+			searchError = `Failed to search mods: ${message || 'Please verify server connection.'}`;
 		} finally {
-			searching = false;
+			if (searchSequence.isCurrent(seq)) searching = false;
 		}
 	}
 
 	async function viewModVersions(mod: SearchMod) {
 		selectedMod = mod;
 		loadingVersions = true;
+		const seq = versionsSequence.next();
 		versions = [];
 		selectedVersion = null;
 		selectedDependencies = {};
@@ -266,6 +272,7 @@
 				throw new Error(errorText || `HTTP ${res.status}`);
 			}
 			const data = await res.json();
+			if (!versionsSequence.isCurrent(seq)) return;
 			versions = data.versions || [];
 			if (versions.length > 0) {
 				selectedVersion = versions[0];
@@ -277,10 +284,11 @@
 				}
 			}
 		} catch (err) {
+			if (!versionsSequence.isCurrent(seq)) return;
 			console.error('Failed to load versions:', err);
 			toast.error('Failed to load compatible versions for this mod');
 		} finally {
-			loadingVersions = false;
+			if (versionsSequence.isCurrent(seq)) loadingVersions = false;
 		}
 	}
 
@@ -348,7 +356,7 @@
 </script>
 
 <DialogPrimitive.Root bind:open>
-	<DialogContent class="flex max-h-[90vh] !max-w-4xl flex-col overflow-hidden p-6">
+	<DialogContent class="flex max-h-[90vh] !max-w-4xl flex-col overflow-hidden p-4 sm:p-6">
 		<DialogHeader>
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-3">
@@ -409,7 +417,7 @@
 							title="Click to toggle version filter"
 						>
 							MC {server.mcVersion}
-							{filterByVersion ? 'âœ“' : '(any)'}
+							{filterByVersion ? '✓' : '(any)'}
 						</button>
 					{/if}
 				</div>
@@ -510,7 +518,7 @@
 								>
 									Filter Suggestions (type key:value)
 								</div>
-								{#each suggestions as s}
+								{#each suggestions as s (s.label)}
 									<button
 										type="button"
 										onmousedown={() => addFilter(s.label)}
@@ -527,7 +535,9 @@
 			</div>
 
 			<!-- Search Results / Mod List -->
-			<div class="mt-4 max-h-[500px] min-h-[360px] flex-1 space-y-3 overflow-y-auto pr-1">
+			<div
+				class="mt-4 max-h-[500px] min-h-[280px] flex-1 space-y-3 overflow-y-auto pr-1 sm:min-h-[360px]"
+			>
 				{#if searchError}
 					<Alert variant="destructive" class="my-4">
 						<AlertTriangle class="h-4 w-4" />
@@ -610,7 +620,7 @@
 														Client: {mod.client_side}
 													</Badge>
 												{/if}
-												{#each (mod.categories || []).slice(0, 3) as cat}
+												{#each (mod.categories || []).slice(0, 3) as cat (cat)}
 													<Badge variant="outline" class="h-5 px-1.5 text-[11px] capitalize">
 														{cat}
 													</Badge>
@@ -630,7 +640,9 @@
 			</div>
 		{:else}
 			<!-- Mod Versions & 1-Click Install View -->
-			<div class="mt-4 max-h-[500px] min-h-[360px] flex-1 space-y-4 overflow-y-auto pr-1">
+			<div
+				class="mt-4 max-h-[500px] min-h-[280px] flex-1 space-y-4 overflow-y-auto pr-1 sm:min-h-[360px]"
+			>
 				<div class="space-y-2 rounded-lg border bg-muted/20 p-4">
 					<div class="flex items-center justify-between">
 						<span class="text-base font-semibold">{selectedMod.title}</span>
@@ -700,7 +712,7 @@
 								This mod specifies {selectedVersion.dependencies.length} upstream dependency/dependencies:
 							</p>
 							<div class="space-y-1.5 pt-1">
-								{#each selectedVersion.dependencies as dep}
+								{#each selectedVersion.dependencies as dep (dep.project_id)}
 									<div class="flex items-center gap-2 text-xs">
 										<Badge variant="outline" class="font-mono text-[10px]">
 											{dep.dependency_type}

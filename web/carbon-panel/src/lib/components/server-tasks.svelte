@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
@@ -76,7 +77,7 @@
 	let creating = $state(false);
 	let activeSection = $state<DialogSection>('general');
 
-	// Form state â€” common
+	// Form state — common
 	let taskName = $state('');
 	let taskDescription = $state('');
 	let taskType = $state<TaskType>(TaskType.COMMAND);
@@ -163,10 +164,9 @@
 		}
 	});
 
-	let taskConfig = $state('');
 	let eventTriggers = $state<TriggeredEventType[]>([TriggeredEventType.SERVER_START]);
 
-	// Form state â€” webhook
+	// Form state — webhook
 	let webhookUrl = $state('');
 	let webhookSecret = $state('');
 	let payloadTemplate = $state('');
@@ -216,7 +216,7 @@
     },
     {
       "type": "section",
-      "text": {"type": "mrkdwn", "text": "*{{.server_name}}* â€” {{.server_status}}"}
+      "text": {"type": "mrkdwn", "text": "*{{.server_name}}* — {{.server_status}}"}
     },
     {
       "type": "section",
@@ -229,7 +229,7 @@
     },
     {
       "type": "context",
-      "elements": [{"type": "mrkdwn", "text": "Carbon Panel â€¢ {{.timestamp}}"}]
+      "elements": [{"type": "mrkdwn", "text": "Carbon Panel • {{.timestamp}}"}]
     }
   ]
 }`,
@@ -250,7 +250,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "**{{.server_name}}** â€” {{.server_status}}",
+          "text": "**{{.server_name}}** — {{.server_status}}",
           "wrap": true
         },
         {
@@ -264,7 +264,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "Carbon Panel â€¢ {{.timestamp}}",
+          "text": "Carbon Panel • {{.timestamp}}",
           "size": "small",
           "isSubtle": true
         }
@@ -275,7 +275,7 @@
 		ntfy: `{
   "topic": "carbon-panel",
   "title": "{{.title}}",
-  "message": "{{.server_name}} â€” {{.server_status}}",
+  "message": "{{.server_name}} — {{.server_status}}",
   "tags": ["video_game"],
   "priority": 3
 }`
@@ -383,7 +383,6 @@
 		backupMinBackups = 3;
 		backupMaxBackups = 0;
 		activeSection = 'general';
-		taskConfig = '';
 		eventTriggers = [TriggeredEventType.SERVER_START];
 		webhookUrl = '';
 		webhookSecret = '';
@@ -441,7 +440,6 @@
 		backupMinBackups = typeof parsed.min_backups === 'number' ? parsed.min_backups : 0;
 		backupMaxBackups = typeof parsed.max_backups === 'number' ? parsed.max_backups : 0;
 
-		taskConfig = task.config;
 		eventTriggers =
 			task.eventTriggers && task.eventTriggers.length > 0
 				? [...task.eventTriggers]
@@ -462,7 +460,7 @@
 				webhookRetryDelayMs = cfg.retry_delay_ms ?? 1000;
 				webhookTimeoutMs = cfg.timeout_ms ?? 5000;
 			} catch {
-				// Invalid config â€” leave defaults from resetForm
+				// Invalid config — leave defaults from resetForm
 			}
 		}
 
@@ -476,7 +474,7 @@
 				gitRestartImmediately = cfg.restart_immediately ?? true;
 				gitAuthToken = cfg.auth_token || '';
 			} catch {
-				// Invalid config â€” leave defaults
+				// Invalid config — leave defaults
 			}
 		}
 
@@ -528,7 +526,7 @@
 	function buildWebhookConfig(): string {
 		// The backend just renders payload_template, so always send a concrete
 		// template: the user's custom one, or the preset resolved from the URL.
-		const cfg: Record<string, any> = {
+		const cfg: Record<string, unknown> = {
 			url: webhookUrl,
 			payload_template: customizePayload ? payloadTemplate : getDefaultTemplate(webhookUrl),
 			max_retries: webhookMaxRetries,
@@ -540,9 +538,11 @@
 			cfg.secret = webhookSecret;
 		} else if (selectedTask && originalWebhookHasSecret) {
 			try {
-				const prev = JSON.parse(selectedTask.config || '{}');
+				const prev: Record<string, unknown> = JSON.parse(selectedTask.config || '{}');
 				if (prev.secret) cfg.secret = prev.secret;
-			} catch {}
+			} catch {
+				// Corrupt stored config: fall through without a secret.
+			}
 		}
 		return JSON.stringify(cfg);
 	}
@@ -675,8 +675,17 @@
 		}
 	}
 
+	let pendingDelete = $state<ScheduledTask | null>(null);
+	let confirmOpen = $state(false);
+
 	async function deleteTask(task: ScheduledTask) {
-		if (!confirm(`Are you sure you want to delete the task "${task.name}"?`)) return;
+		pendingDelete = task;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteTask() {
+		const task = pendingDelete;
+		if (!task) return;
 		try {
 			const request = create(DeleteTaskRequestSchema, { id: task.id });
 			await rpcClient.task.deleteTask(request);
@@ -684,6 +693,8 @@
 			await loadTasks();
 		} catch (_e) {
 			toast.error('Failed to delete task');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -939,7 +950,7 @@
 											{getTaskTypeLabel(task.taskType)}
 										</Badge>
 										{#if task.schedule === ScheduleType.EVENT}
-											{#each task.eventTriggers as trigger}
+											{#each task.eventTriggers as trigger (trigger)}
 												<Badge variant="outline" class="flex items-center gap-1 text-xs">
 													<Zap class="h-3 w-3" />
 													{getEventTypeLabel(trigger)}
@@ -1231,7 +1242,7 @@
 											</p>
 										</div>
 									</label>
-									<div class="grid grid-cols-3 gap-6">
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 										<div class="space-y-3">
 											<Label for="retentionDays">Retention (days)</Label>
 											<Input
@@ -1307,7 +1318,7 @@
 												GitHub or Git repository containing modpack files, configs, or mods.
 											</p>
 										</div>
-										<div class="grid grid-cols-2 gap-4">
+										<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 											<div class="space-y-3">
 												<Label for="gitBranch">Branch / Tag</Label>
 												<Input
@@ -1392,7 +1403,7 @@
 								<div class={!customizePayload ? 'pointer-events-none opacity-40' : ''}>
 									<p class="mb-1.5 text-sm font-medium text-muted-foreground">Presets</p>
 									<div class="flex flex-wrap gap-1">
-										{#each Object.keys(presetLabels) as key}
+										{#each Object.keys(presetLabels) as key (key)}
 											{#if webhookTemplatePresets[key]}
 												<Button
 													variant="outline"
@@ -1424,7 +1435,7 @@
 									<div
 										class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 rounded border border-border/50 bg-muted/20 p-2 font-mono text-xs text-muted-foreground"
 									>
-										{#each [['{{.event}}', 'Event name'], ['{{.timestamp}}', 'ISO 8601 timestamp'], ['{{.title}}', 'Event title'], ['{{.color}}', 'Color (int, for Discord)'], ['{{.server_id}}', 'Server ID'], ['{{.server_name}}', 'Server name'], ['{{.server_status}}', 'Server status'], ['{{.server_mc_version}}', 'MC version'], ['{{.server_mod_loader}}', 'Mod loader'], ['{{.server_players}}', 'Player count'], ['{{.server_max_players}}', 'Max players'], ['{{.server_port}}', 'Server port'], ['{{.player}}', 'Player name (player join/leave events)']] as [variable, description]}
+										{#each [['{{.event}}', 'Event name'], ['{{.timestamp}}', 'ISO 8601 timestamp'], ['{{.title}}', 'Event title'], ['{{.color}}', 'Color (int, for Discord)'], ['{{.server_id}}', 'Server ID'], ['{{.server_name}}', 'Server name'], ['{{.server_status}}', 'Server status'], ['{{.server_mc_version}}', 'MC version'], ['{{.server_mod_loader}}', 'Mod loader'], ['{{.server_players}}', 'Player count'], ['{{.server_max_players}}', 'Max players'], ['{{.server_port}}', 'Server port'], ['{{.player}}', 'Player name (player join/leave events)']] as [variable, description] (variable)}
 											<button
 												class="cursor-pointer text-left transition-colors hover:text-foreground"
 												title="Copy {variable}"
@@ -1510,7 +1521,7 @@
 										<div
 											class="grid grid-cols-1 gap-2 rounded-lg border border-border/50 bg-muted/20 p-3"
 										>
-											{#each SERVER_EVENT_TYPES as { type, label, description }}
+											{#each SERVER_EVENT_TYPES as { type, label, description } (type)}
 												<label
 													class="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-muted/40"
 												>
@@ -1546,7 +1557,7 @@
 										</p>
 									</div>
 
-									<div class="grid grid-cols-3 gap-6">
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 										<div class="space-y-3">
 											<Label for="maxRetries">Max Retries</Label>
 											<Input
@@ -1602,7 +1613,7 @@
 										</p>
 									</div>
 
-									<div class="grid grid-cols-2 gap-6">
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 										<div class="space-y-3">
 											<Label for="retryCount">Retry Count</Label>
 											<Input
@@ -1747,3 +1758,16 @@
 		</Dialog.Content>
 	</Dialog.Root>
 {/if}
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete task?"
+	message="Scheduled executions stop. Run history is kept. This cannot be undone."
+	confirmLabel="Delete Task"
+	danger
+	onconfirm={confirmDeleteTask}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

@@ -113,7 +113,8 @@
 		<div class="mb-1 flex items-center justify-between">
 			<h3 class="text-base font-semibold text-[#f4f4f4]">Backups</h3>
 			<button
-				class="h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c]"
+				type="button"
+				class="inline-flex h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 				onclick={loadBackups}
 				disabled={loading}
 			>
@@ -142,12 +143,19 @@
 				<tbody>
 					{#each backups as backup (backup.id)}
 						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
-							<td class="py-2 pr-4">{backup.name}{backup.locked ? ' 🔒' : ''}</td>
+							<td class="max-w-[220px] truncate py-2 pr-4" title={backup.name}>
+								{backup.name}{#if backup.locked}
+									<span class="ml-2 border border-[#f1c21b]/50 px-1 text-[10px] text-[#f1c21b]"
+										>LOCKED</span
+									>
+								{/if}</td
+							>
 							<td class="py-2 pr-4 whitespace-nowrap">{formatTime(backup.createdAt)}</td>
 							<td class="py-2 pr-4">{formatBytes(backup.sizeBytes)}</td>
 							<td class="py-2 pr-4">{backup.status}</td>
 							<td class="flex flex-wrap gap-2 py-2">
 								<button
+									type="button"
 									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null}
 									onclick={() => restoreBackup(backup.id)}
@@ -155,6 +163,7 @@
 									{acting === `restore:${backup.id}` ? '…' : 'Restore'}
 								</button>
 								<button
+									type="button"
 									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null}
 									onclick={() => toggleLock(backup.id, !backup.locked)}
@@ -162,6 +171,7 @@
 									{acting === `lock:${backup.id}` ? '…' : backup.locked ? 'Unlock' : 'Lock'}
 								</button>
 								<button
+									type="button"
 									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null || backup.locked}
 									onclick={() => deleteBackup(backup.id)}

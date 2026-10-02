@@ -78,7 +78,8 @@
 		<Button
 			size="icon"
 			onclick={scrollToTop}
-			class="bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110 hover:bg-primary/90 hover:shadow-xl"
+			aria-label="Scroll to top"
+			class="rounded-none border border-[#393939] bg-[#262626] text-[#f4f4f4] shadow-lg transition-colors hover:bg-[#0f62fe] hover:text-white"
 		>
 			<ArrowUp class="h-5 w-5" />
 		</Button>

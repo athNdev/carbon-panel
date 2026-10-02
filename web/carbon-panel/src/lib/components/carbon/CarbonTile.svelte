@@ -26,9 +26,11 @@
 </script>
 
 {#if href}
+	<!-- eslint-disable svelte/no-navigation-without-resolve -- generic component; callers must resolve -->
 	<a {href} class="{baseClasses} {hoverClasses} block {className}">
 		{@render children?.()}
 	</a>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
 {:else if clickable}
 	<div
 		role="button"

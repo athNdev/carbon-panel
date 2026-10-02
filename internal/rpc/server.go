@@ -32,8 +32,6 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"github.com/athNdev/carbon-panel/pkg/upload"
 	web "github.com/athNdev/carbon-panel/web/carbon-panel"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -259,8 +257,9 @@ func (s *Server) setupHandler() {
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
 
-	// h2c HTTP/2 cleartext
-	s.handler = h2c.NewHandler(mux, &http2.Server{})
+	// HTTP/2 cleartext is negotiated via http.Server.Protocols in main
+	// (security headers stamped inside, MINE-163)
+	s.handler = securityHeaders(mux)
 }
 
 // Registers all Connect RPC service handlers
@@ -281,6 +280,11 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	subuserService := services.NewSubuserService(s.store, s.log)
 	blueprintService := services.NewBlueprintService(s.store, s.log)
 	backupService := services.NewBackupService(s.store, s.docker, s.clientPool, s.config.Storage.S3, s.log)
+	// Backup delete/restore/lock carry a backup id rather than a server id, so
+	// the interceptor cannot scope them per-server. Inject the enforcer so the
+	// service can resolve the owning server and enforce against it; without
+	// this the handlers would fail closed for every caller.
+	backupService.SetEnforcer(s.enforcer)
 	userService := services.NewUserService(s.store, s.authManager, s.log)
 	roleService := services.NewRoleService(s.store, s.enforcer, s.log)
 	moduleService := services.NewModuleService(s.store, s.docker, s.moduleManager, s.proxyManager, s.authManager, s.config, s.logStreamer, s.log)
