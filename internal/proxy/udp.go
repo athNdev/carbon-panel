@@ -256,7 +256,7 @@ func (p *UDPProxy) getOrCreateSession(clientAddr *net.UDPAddr) (*udpSession, err
 	p.sessionsMu.Lock()
 	if existing, ok := p.sessions[clientKey]; ok {
 		p.sessionsMu.Unlock()
-		backendConn.Close()
+		_ = backendConn.Close()
 		return existing, nil
 	}
 	p.sessions[clientKey] = session

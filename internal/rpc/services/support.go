@@ -481,7 +481,9 @@ func (s *SupportService) evictExpiredBundlesLocked(now time.Time) {
 			delete(s.bundles, id)
 			// Best-effort file removal; the path was captured from the map
 			// entry while holding the lock.
-			os.Remove(info.Path)
+			if err := os.Remove(info.Path); err != nil && !os.IsNotExist(err) && s.log != nil {
+				s.log.Warn("Failed to remove expired support bundle %s: %v", id, err)
+			}
 			if s.log != nil {
 				s.log.Debug("Evicted expired support bundle %s", id)
 			}
@@ -500,7 +502,9 @@ func (s *SupportService) cleanupBundle(bundleID string) {
 
 	if exists {
 		// File I/O happens without holding the mutex.
-		os.Remove(bundleInfo.Path)
+		if err := os.Remove(bundleInfo.Path); err != nil && !os.IsNotExist(err) && s.log != nil {
+			s.log.Warn("Failed to remove support bundle %s: %v", bundleID, err)
+		}
 		if s.log != nil {
 			s.log.Debug("Cleaned up support bundle %s", bundleID)
 		}

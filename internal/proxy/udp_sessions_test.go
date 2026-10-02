@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -124,7 +123,7 @@ func TestGetOrCreateSessionNoBackend(t *testing.T) {
 
 	p := NewUDPProxy(&Config{ListenAddr: "127.0.0.1:0", Logger: logger.New()})
 	defer p.cancel()
-	addr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:50001"))
+	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:50001")
 	if _, err := p.getOrCreateSession(addr); err == nil {
 		t.Fatal("expected no-backend error")
 	}

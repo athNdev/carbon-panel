@@ -174,7 +174,7 @@ func assertRangeZero(t *testing.T, sess *Session, offset int64, length int) {
 	if err != nil {
 		t.Fatalf("open temp file: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	buf := make([]byte, length)
 	if _, err := f.ReadAt(buf, offset); err != nil {

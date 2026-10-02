@@ -212,14 +212,14 @@ func extractArchiveEntry(destPath string, f archives.FileInfo) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file %s: %w", targetPath, err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	// Open the file from the archive
 	rc, err := f.Open()
 	if err != nil {
 		return fmt.Errorf("failed to open file in archive: %w", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	// Copy contents
 	if _, err := io.Copy(outFile, rc); err != nil {
@@ -228,7 +228,9 @@ func extractArchiveEntry(destPath string, f archives.FileInfo) error {
 
 	// Set file perms
 	if f.Mode() != 0 {
-		os.Chmod(targetPath, f.Mode())
+		if err := os.Chmod(targetPath, f.Mode()); err != nil {
+			return fmt.Errorf("failed to set mode on extracted file %s: %w", targetPath, err)
+		}
 	}
 	return nil
 }
