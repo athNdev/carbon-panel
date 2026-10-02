@@ -321,6 +321,17 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 		}
 	}
 
+	// Validate modpack-update task config. A modpack task's git branch and URL
+	// reach `exec.CommandContext("git", ...)`; a branch beginning with "-" is
+	// parsed by git as an option and the ext::/file:// transports reach a
+	// shell and the local filesystem. Reject at create time so the user gets
+	// an InvalidArgument instead of a hostile task sitting in the database.
+	if taskType == storage.TaskTypeModpackUpdate {
+		if err := scheduler.ValidateModpackUpdateConfigJSON(msg.Config); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+	}
+
 	// Create task
 	task := &storage.ScheduledTask{
 		ID:                uuid.New().String(),
@@ -483,6 +494,13 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *connect.Request[v1.Up
 	// Validate webhook task config
 	if task.TaskType == storage.TaskTypeWebhook {
 		if err := validateWebhookConfig(task.Config); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+	}
+
+	// Validate modpack-update task config on update too; see CreateTask.
+	if task.TaskType == storage.TaskTypeModpackUpdate {
+		if err := scheduler.ValidateModpackUpdateConfigJSON(task.Config); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 	}
@@ -678,6 +696,16 @@ func validateWebhookConfig(cfg string) error {
 		if err := webhook.ValidateTemplate(wcfg.PayloadTemplate); err != nil {
 			return fmt.Errorf("invalid payload template: %v", err)
 		}
+	}
+	// Reject an out-of-range max_retries at configuration time. The backoff
+	// delay is exponential in the attempt number, so a very large value is
+	// never useful and can overflow the shift to a negative duration, which
+	// turns the backoff into an immediate retry loop.
+	if wcfg.MaxRetries < 0 || wcfg.MaxRetries > webhook.MaxRetryAttempts {
+		return fmt.Errorf("max_retries must be between 0 and %d, got %d", webhook.MaxRetryAttempts, wcfg.MaxRetries)
+	}
+	if wcfg.RetryDelayMs < 0 {
+		return fmt.Errorf("retry_delay_ms must not be negative, got %d", wcfg.RetryDelayMs)
 	}
 	return nil
 }
