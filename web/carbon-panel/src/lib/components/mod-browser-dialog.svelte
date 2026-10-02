@@ -29,6 +29,7 @@
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import { formatBytes } from '$lib/utils';
 	import { apiFetch } from '$lib/api/fetch';
+	import { createRequestSequence } from '$lib/utils/request-sequence';
 
 	interface Props {
 		open: boolean;
@@ -192,8 +193,14 @@
 		return mods;
 	});
 
+	// Sequence guards: drop responses from superseded requests so a slow
+	// earlier keystroke/filter change can never overwrite newer results.
+	const searchSequence = createRequestSequence();
+	const versionsSequence = createRequestSequence();
+
 	async function searchMods() {
 		searching = true;
+		const seq = searchSequence.next();
 		searchError = '';
 		mods = [];
 		try {
@@ -220,23 +227,26 @@
 				throw new Error(errorText || `HTTP ${res.status}`);
 			}
 			const data = await res.json();
+			if (!searchSequence.isCurrent(seq)) return;
 			if (data.error) {
 				searchError = data.error;
 			} else {
 				mods = data.results || [];
 			}
 		} catch (err) {
+			if (!searchSequence.isCurrent(seq)) return;
 			console.error('Failed to search mods:', err);
 			const message = err instanceof Error ? err.message : '';
 			searchError = `Failed to search mods: ${message || 'Please verify server connection.'}`;
 		} finally {
-			searching = false;
+			if (searchSequence.isCurrent(seq)) searching = false;
 		}
 	}
 
 	async function viewModVersions(mod: SearchMod) {
 		selectedMod = mod;
 		loadingVersions = true;
+		const seq = versionsSequence.next();
 		versions = [];
 		selectedVersion = null;
 		selectedDependencies = {};
@@ -262,6 +272,7 @@
 				throw new Error(errorText || `HTTP ${res.status}`);
 			}
 			const data = await res.json();
+			if (!versionsSequence.isCurrent(seq)) return;
 			versions = data.versions || [];
 			if (versions.length > 0) {
 				selectedVersion = versions[0];
@@ -273,10 +284,11 @@
 				}
 			}
 		} catch (err) {
+			if (!versionsSequence.isCurrent(seq)) return;
 			console.error('Failed to load versions:', err);
 			toast.error('Failed to load compatible versions for this mod');
 		} finally {
-			loadingVersions = false;
+			if (versionsSequence.isCurrent(seq)) loadingVersions = false;
 		}
 	}
 

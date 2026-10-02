@@ -79,6 +79,9 @@
 			}
 		}, 200);
 
+		// Post-load timer: cleared on unmount so it never writes state after teardown.
+		let loadTimer: ReturnType<typeof setTimeout> | undefined;
+
 		// Listen for load confirmation
 		const handleMessage = (e: MessageEvent) => {
 			if (e.data?.type === 'scalar-progress') {
@@ -88,7 +91,7 @@
 				loadingProgress = 100;
 
 				// Small delay for progress, makes transition smoother
-				setTimeout(() => {
+				loadTimer = setTimeout(() => {
 					isLoading = false;
 				}, 300);
 				window.removeEventListener('message', handleMessage);
@@ -99,6 +102,7 @@
 		// Cleanup on unmount
 		return () => {
 			clearInterval(progressInterval);
+			if (loadTimer) clearTimeout(loadTimer);
 			window.removeEventListener('message', handleMessage);
 		};
 	});

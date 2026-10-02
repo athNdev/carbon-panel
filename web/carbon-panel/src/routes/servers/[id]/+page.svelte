@@ -52,6 +52,7 @@
 		RecreateServerRequestSchema
 	} from '$lib/proto/carbonpanel/v1/server_pb';
 	import { enumToString } from '$lib/utils';
+	import { memoryUsagePercent } from '$lib/utils/safe-percent';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
 	import { CarbonTag, CarbonTabs, CarbonConfirm } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
@@ -596,10 +597,7 @@
 								class="h-full rounded-none bg-[#0f62fe] transition-all"
 								style="width: {server.status === ServerStatus.CREATING
 									? '100'
-									: Math.min(
-											server.memoryUsage ? (Number(server.memoryUsage) / server.memory) * 100 : 0,
-											100
-										)}%"
+									: memoryUsagePercent(server.memoryUsage, server.memory)}%"
 							></div>
 						</div>
 					</div>

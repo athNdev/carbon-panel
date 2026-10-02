@@ -12,6 +12,7 @@
 	import { ScrollText, RefreshCw, Download, Loader2, AlertCircle, ArrowDown } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { formatFileSize, parseFileSize } from '$lib/utils/format-file-size';
 
 	let loading = $state(true);
 	let refreshing = $state(false);
@@ -32,7 +33,7 @@
 			});
 			logs = response.content;
 			filename = response.filename;
-			fileSize = Number(response.size);
+			fileSize = parseFileSize(response.size);
 
 			if (showToast) {
 				toast.success('Logs refreshed');
@@ -69,14 +70,6 @@
 		a.click();
 		URL.revokeObjectURL(url);
 		toast.success('Logs downloaded');
-	}
-
-	function formatFileSize(bytes: number): string {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 	}
 
 	function scrollToBottom() {

@@ -115,7 +115,7 @@
 			if (typeof document !== 'undefined') {
 				previousActiveElement = document.activeElement as HTMLElement | null;
 				// Focus the modal or its first actionable element on open
-				setTimeout(() => {
+				const focusTimer = setTimeout(() => {
 					if (!modalElement) return;
 					const focusableSelectors = [
 						'input:not([disabled])',
@@ -132,6 +132,7 @@
 						modalElement.focus();
 					}
 				}, 50);
+				return () => clearTimeout(focusTimer);
 			}
 		} else {
 			if (previousActiveElement && typeof previousActiveElement.focus === 'function') {

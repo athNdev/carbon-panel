@@ -27,6 +27,7 @@
 	import FileTree from './file-tree.svelte';
 	import FileContextMenu from './file-context-menu.svelte';
 	import FileMoveDialog from './file-move-dialog.svelte';
+	import { onDestroy } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
@@ -50,6 +51,18 @@
 	let extracting = $state(false);
 	let extractionFilesExtracted = $state(0);
 	let extractionFilename = $state('');
+	// Progress-poll handle: cleared on completed/failed/error, on unmount,
+	// and when the user switches servers so it never fires RPCs for a stale server.
+	let extractionPoll: ReturnType<typeof setInterval> | null = null;
+	function stopExtractionPoll() {
+		if (extractionPoll) {
+			clearInterval(extractionPoll);
+			extractionPoll = null;
+		}
+	}
+	onDestroy(() => {
+		stopExtractionPoll();
+	});
 
 	// --- Tree state ---
 	let expandedDirs = $state<Set<string>>(new Set());
@@ -149,6 +162,8 @@
 	$effect(() => {
 		if (server.id !== previousServerId) {
 			previousServerId = server.id;
+			stopExtractionPoll();
+			extracting = false;
 			files = [];
 			loading = true;
 			uploading = false;
@@ -661,7 +676,8 @@
 			});
 
 			// Poll for progress
-			const poll = setInterval(async () => {
+			stopExtractionPoll();
+			extractionPoll = setInterval(async () => {
 				try {
 					const status = await rpcClient.file.getExtractionStatus(
 						{ operationId },
@@ -670,17 +686,17 @@
 					extractionFilesExtracted = status.filesExtracted;
 
 					if (status.state === 'completed') {
-						clearInterval(poll);
+						stopExtractionPoll();
 						extracting = false;
 						toast.success(`Extracted ${status.filesExtracted} files`);
 						await loadFiles();
 					} else if (status.state === 'failed') {
-						clearInterval(poll);
+						stopExtractionPoll();
 						extracting = false;
 						toast.error(status.error || 'Extraction failed');
 					}
 				} catch {
-					clearInterval(poll);
+					stopExtractionPoll();
 					extracting = false;
 					toast.error('Lost connection to extraction');
 				}

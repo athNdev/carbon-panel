@@ -212,19 +212,22 @@
 
 	async function fetchLogs() {
 		loading = true;
+		const requestedId = server.id;
 		try {
 			const request = create(GetServerLogsRequestSchema, {
-				id: server.id,
+				id: requestedId,
 				tail: tailLines
 			});
 			const response = await rpcClient.server.getServerLogs(request);
+			if (server.id !== requestedId) return;
 			logEntries = response.logs;
 		} catch (error) {
+			if (server.id !== requestedId) return;
 			reportError(
 				'Failed to fetch logs: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
 		} finally {
-			loading = false;
+			if (server.id === requestedId) loading = false;
 		}
 	}
 
