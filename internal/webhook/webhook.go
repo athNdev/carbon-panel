@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"strings"
 	"text/template"
@@ -63,18 +64,83 @@ type ServerPayload struct {
 	Port       int    `json:"port"`
 }
 
+const (
+	// MaxRetryAttempts is the ceiling on delivery attempts (initial try plus
+	// retries) enforced both at configuration time and at delivery time.
+	MaxRetryAttempts = maxRetryAttempts
+	// maxRetryAttempts is the ceiling on delivery attempts (initial try plus
+	// retries). cfg.MaxRetries is user-supplied and was previously unbounded.
+	//
+	// The ceiling matters because the backoff delay below is exponential in
+	// the attempt number: `1 << (attempt-1)` overflows int64 once the shift
+	// reaches 63, producing a NEGATIVE duration. time.After with a negative
+	// duration fires immediately, so an unbounded MaxRetries silently turns
+	// the backoff into a tight retry loop against the target endpoint.
+	maxRetryAttempts = 6
+
+	// maxBackoff caps any single backoff delay, independently of the attempt
+	// number, so a large configured base delay or attempt count can never
+	// produce an unbounded or negative wait.
+	maxBackoff = 30 * time.Second
+
+	// defaultRetryBaseMs is used when cfg.RetryDelayMs is unset.
+	defaultRetryBaseMs = 1000
+)
+
+// computeBackoff returns the delay before the given retry attempt.
+//
+// attempt is 1-based (the delay before the 2nd delivery). The result is
+// always finite, non-negative and <= maxBackoff, so the retry loop cannot
+// degenerate into a storm or hang.
+func computeBackoff(attempt int, baseMs int) time.Duration {
+	if baseMs <= 0 {
+		baseMs = defaultRetryBaseMs
+	}
+	delay := time.Duration(baseMs) * time.Millisecond
+	// Grow exponentially while the shift stays inside int64. Guarding the
+	// shift itself is what prevents the overflow, rather than hoping the
+	// attempt count is small.
+	for i := 1; i < attempt; i++ {
+		if delay >= maxBackoff/2 {
+			return maxBackoff
+		}
+		delay *= 2
+	}
+	if delay > maxBackoff {
+		return maxBackoff
+	}
+	return delay
+}
+
+// backoffJitter spreads retries so concurrent deliveries to the same target do
+// not synchronise into a thundering herd. Returns a fraction in [0,1).
+//
+// math/rand/v2 is used because its global source is safe for concurrent use
+// and does not require seeding; seeding a package-level rand from a fixed
+// value (the classic `rand.Seed(1)`) would make the jitter deterministic and
+// defeat the purpose entirely.
+func backoffJitter() float64 {
+	return rand.Float64()
+}
+
 // Renders the payload, signs it, POSTs it, and retries on failure - returned res reflects final attempt made
 func Deliver(ctx context.Context, cfg Config, payload *Payload) Result {
 	start := time.Now()
-	maxAttempts := cfg.MaxRetries
-	if maxAttempts < 1 {
-		maxAttempts = 1
-	} else {
-		maxAttempts++ // initial attempt + retries
+	// Clamp the retry count BEFORE incrementing. cfg.MaxRetries is user-supplied
+	// and unbounded, so `MaxRetries + 1` overflows int64 for values near
+	// MaxInt64 and yields a negative attempt count - which made the delivery
+	// loop below never execute and reported zero attempts with no error.
+	retries := cfg.MaxRetries
+	if retries < 0 {
+		retries = 0
 	}
+	if retries > MaxRetryAttempts-1 {
+		retries = MaxRetryAttempts - 1
+	}
+	maxAttempts := retries + 1
 	retryBaseMs := cfg.RetryDelayMs
 	if retryBaseMs <= 0 {
-		retryBaseMs = 1000
+		retryBaseMs = defaultRetryBaseMs
 	}
 
 	var last Result
@@ -87,14 +153,21 @@ func Deliver(ctx context.Context, cfg Config, payload *Payload) Result {
 		if attempt == maxAttempts {
 			break
 		}
-		// Exponential backoff: base * 2^(attempt-1)
-		delay := time.Duration(retryBaseMs) * time.Millisecond * time.Duration(1<<(attempt-1))
+		// Exponential backoff with jitter, bounded by computeBackoff.
+		delay := computeBackoff(attempt, retryBaseMs)
+		// Apply up to +25% jitter so simultaneous deliveries to the same
+		// target do not retry in lockstep. The jitter is proportional, so it
+		// can never exceed the cap by more than a quarter.
+		jittered := time.Duration(float64(delay) * (1 + 0.25*backoffJitter()))
+		if jittered > maxBackoff {
+			jittered = maxBackoff
+		}
 		select {
 		case <-ctx.Done():
 			last.ErrorMessage = ctx.Err().Error()
 			last.DurationMs = time.Since(start).Milliseconds()
 			return last
-		case <-time.After(delay):
+		case <-time.After(jittered):
 		}
 	}
 	last.DurationMs = time.Since(start).Milliseconds()

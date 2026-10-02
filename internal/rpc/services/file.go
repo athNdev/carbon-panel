@@ -521,6 +521,16 @@ func (s *FileService) GetExtractionStatus(ctx context.Context, req *connect.Requ
 	}), nil
 }
 
+// maxRemoteDownloadBytes bounds a remote-archive download.
+//
+// It MUST stay in step with the chunked-upload limit (max_upload_size in
+// pkg/upload); if that limit is ever exported or the two need to diverge,
+// change both together. A remote archive is attacker-controllable content, so
+// without a byte ceiling a hostile or misbehaving origin can fill the host
+// disk. The previous bound was a 15 minute timeout, which limits time but not
+// bytes, and ContentLength may be absent or simply wrong.
+const maxRemoteDownloadBytes = 1024 * 1024 * 1024 // 1 GiB
+
 // DownloadRemoteArchive downloads an archive from a remote URL (GitHub releases, S3, CDN) with progress, checksum validation, and optional auto-extraction
 func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error) {
 	msg := req.Msg
@@ -585,6 +595,15 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 		}
 
 		totalSize := resp.ContentLength
+		// Reject an over-large declared length up front, without reading the
+		// body at all. ContentLength is attacker-supplied, so this is only an
+		// optimisation; the streaming cap below is what actually enforces the
+		// bound.
+		if totalSize > maxRemoteDownloadBytes {
+			op.fail(fmt.Sprintf("remote archive too large: declared %d bytes exceeds limit of %d",
+				totalSize, int64(maxRemoteDownloadBytes)))
+			return
+		}
 		if totalSize > 0 {
 			op.TotalBytes.Store(totalSize)
 		}
@@ -606,6 +625,13 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 		for {
 			n, rErr := resp.Body.Read(buf)
 			if n > 0 {
+				// Enforce the ceiling while streaming. ContentLength cannot be
+				// trusted: it may be absent (chunked encoding) or simply lie.
+				if downloaded+int64(n) > maxRemoteDownloadBytes {
+					op.fail(fmt.Sprintf("remote archive too large: exceeded limit of %d bytes",
+						int64(maxRemoteDownloadBytes)))
+					return
+				}
 				if _, wErr := writer.Write(buf[:n]); wErr != nil {
 					op.fail(fmt.Sprintf("failed writing download stream: %v", wErr))
 					return
@@ -659,14 +685,26 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 				fileName = "downloaded_archive.zip"
 			}
 			targetPath := filepath.Join(destPath, fileName)
-			tmpFile.Seek(0, 0)
+			if _, err := tmpFile.Seek(0, 0); err != nil {
+				op.fail(fmt.Sprintf("failed to rewind downloaded archive: %v", err))
+				return
+			}
 			out, err := os.Create(targetPath)
 			if err != nil {
 				op.fail(fmt.Sprintf("failed to save file to destination: %v", err))
 				return
 			}
-			_, _ = io.Copy(out, tmpFile)
-			out.Close()
+			if _, err := out.ReadFrom(tmpFile); err != nil {
+				// A partial copy must never be reported as a completed
+				// download: the caller would treat a truncated file as intact.
+				out.Close()
+				op.fail(fmt.Sprintf("failed to write downloaded file: %v", err))
+				return
+			}
+			if err := out.Close(); err != nil {
+				op.fail(fmt.Sprintf("failed to close downloaded file: %v", err))
+				return
+			}
 		}
 
 		op.complete()
