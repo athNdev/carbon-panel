@@ -30,7 +30,7 @@ func TestRemoteDownloadCapRejectsOversizedDeclaration(t *testing.T) {
 	// `totalSize > maxRemoteDownloadBytes`. This test pins the arithmetic so
 	// a future edit to the constant or the comparison cannot invert it.
 	declared := int64(maxRemoteDownloadBytes) + 1
-	if !(declared > maxRemoteDownloadBytes) {
+	if declared <= maxRemoteDownloadBytes {
 		t.Fatalf("declared %d should exceed the cap %d", declared, int64(maxRemoteDownloadBytes))
 	}
 	atLimit := int64(maxRemoteDownloadBytes)

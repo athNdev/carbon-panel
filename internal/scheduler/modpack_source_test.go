@@ -280,7 +280,7 @@ func TestExecutorRejectsHostileSourceBeforeGit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			serverDir := t.TempDir()
 			store := setupTestStore(t)
-			defer store.Close()
+			t.Cleanup(func() { _ = store.Close() })
 
 			server := &storage.Server{
 				ID: uuid.NewString(), Name: "s", DataPath: serverDir,
@@ -336,7 +336,7 @@ func TestExecutorRejectsEscapingSubfolder(t *testing.T) {
 	}
 
 	store := setupTestStore(t)
-	defer store.Close()
+	t.Cleanup(func() { _ = store.Close() })
 	server := &storage.Server{
 		ID: uuid.NewString(), Name: "s", DataPath: serverDir,
 		Status: storage.StatusRunning,

@@ -697,7 +697,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 			if _, err := out.ReadFrom(tmpFile); err != nil {
 				// A partial copy must never be reported as a completed
 				// download: the caller would treat a truncated file as intact.
-				out.Close()
+				_ = out.Close()
 				op.fail(fmt.Sprintf("failed to write downloaded file: %v", err))
 				return
 			}
