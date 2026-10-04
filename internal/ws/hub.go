@@ -60,7 +60,25 @@ type Hub struct {
 	// Register/unregister channels
 	register   chan *Client
 	unregister chan *Client
+
+	// quit terminates the Run loop and releases every producer that would
+	// otherwise block forever on the unbuffered register/unregister channels.
+	//
+	// ServeHTTP sent on h.register unconditionally. With no Run loop running -
+	// or after it exited - that send never completed, hanging the HTTP handler
+	// goroutine indefinitely. readPump's unregister send had the same problem.
+	quit     chan struct{}
+	quitOnce sync.Once
+
+	// registerTimeout bounds how long a handshake waits to be accepted by the
+	// Run loop. A request goroutine must never block indefinitely on internal
+	// coordination: if the loop is wedged or was never started, the connection
+	// is rejected instead of leaking the handler.
+	registerTimeout time.Duration
 }
+
+// defaultRegisterTimeout bounds handshake acceptance by the hub loop.
+const defaultRegisterTimeout = 5 * time.Second
 
 // Client represents a single WebSocket connection
 type Client struct {
@@ -123,13 +141,83 @@ func NewHub(logStreamer *logger.LogStreamer, authManager *auth.Manager, enforcer
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		quit:       make(chan struct{}),
+
+		registerTimeout: defaultRegisterTimeout,
 	}
+}
+
+// sendRegister hands a client to the Run loop, reporting false rather than
+// blocking indefinitely when the loop is not running, has stopped, or the
+// request context is already cancelled.
+func (h *Hub) sendRegister(ctx context.Context, client *Client) bool {
+	timeout := h.registerTimeout
+	if timeout <= 0 {
+		timeout = defaultRegisterTimeout
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case h.register <- client:
+		return true
+	case <-h.quit:
+		h.log.Debug("WebSocket register rejected: hub stopped")
+		return false
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		h.log.Error("WebSocket register rejected: hub did not accept the client within %v", timeout)
+		return false
+	}
+}
+
+// sendUnregister releases a client from the Run loop without ever blocking the
+// caller: a pump tearing down after the hub stopped must not hang.
+func (h *Hub) sendUnregister(client *Client) {
+	select {
+	case h.unregister <- client:
+	case <-h.quit:
+		h.log.Debug("WebSocket unregister skipped: hub stopped")
+	}
+}
+
+// Stop terminates the Run loop, closes every connected client's done channel so
+// their pumps exit, and releases anything blocked on register/unregister.
+// Safe to call more than once and safe to call without Run having started.
+func (h *Hub) Stop() {
+	h.quitOnce.Do(func() {
+		close(h.quit)
+
+		h.clientsMu.RLock()
+		clients := make([]*Client, 0, len(h.clients))
+		for c := range h.clients {
+			clients = append(clients, c)
+		}
+		h.clientsMu.RUnlock()
+
+		for _, c := range clients {
+			if c == nil {
+				continue
+			}
+			c.closeOnce.Do(func() { close(c.done) })
+			// A client can be tracked before its pump has a live connection
+			// (and tests construct clients without one), so nil is expected.
+			if c.conn != nil {
+				_ = c.conn.Close()
+			}
+		}
+	})
 }
 
 // Run starts the hub's main loop
 func (h *Hub) Run() {
 	for {
 		select {
+		case <-h.quit:
+			h.log.Debug("WebSocket hub stopped")
+			return
+
 		case client := <-h.register:
 			h.clientsMu.Lock()
 			h.clients[client] = true
@@ -241,7 +329,10 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		subscriptions: make(map[string]*subscription),
 	}
 
-	h.register <- client
+	if !h.sendRegister(r.Context(), client) {
+		_ = conn.Close()
+		return
+	}
 
 	// Start read/write pumps
 	go client.writePump()
@@ -252,8 +343,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (c *Client) readPump() {
 	defer func() {
 		c.cleanup()
-		c.hub.unregister <- c
-		c.conn.Close()
+		c.hub.sendUnregister(c)
+		_ = c.conn.Close()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
