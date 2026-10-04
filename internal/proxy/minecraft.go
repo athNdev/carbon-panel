@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -324,18 +325,10 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 	}
 
 	// Connect to backend (with quick retries to allow socket bind right after unfreeze)
-	backendAddr := net.JoinHostPort(route.BackendHost, fmt.Sprintf("%d", route.BackendPort))
-	var backendConn net.Conn
-	var dialErr error
-	for attempt := 0; attempt < 5; attempt++ {
-		backendConn, dialErr = net.DialTimeout("tcp", backendAddr, 2*time.Second)
-		if dialErr == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	if dialErr != nil {
-		p.logger.Error("Failed to connect to backend %s: %v", backendAddr, dialErr)
+	backendAddr := net.JoinHostPort(route.BackendHost, strconv.Itoa(route.BackendPort))
+	backendConn, err := dialBackendWithRetry(p.ctx, backendAddr, backendDialAttempts, backendDialTimeout, backendDialBackoff)
+	if err != nil {
+		p.logger.Error("Failed to connect to backend %s: %v", backendAddr, err)
 		return
 	}
 	defer backendConn.Close()
@@ -505,4 +498,56 @@ func (p *MinecraftProxy) IsRunning() bool {
 	p.runningMutex.RLock()
 	defer p.runningMutex.RUnlock()
 	return p.running
+}
+
+// Backend dial retry budget. The retries exist to tolerate a socket that has
+// not finished binding right after a container unfreezes.
+const (
+	backendDialAttempts = 5
+	backendDialTimeout  = 2 * time.Second
+	backendDialBackoff  = 100 * time.Millisecond
+)
+
+// dialBackendWithRetry dials addr, retrying on failure.
+//
+// Both the wait between attempts and the attempt loop itself abort as soon as
+// ctx is done, so a proxy shutdown does not leave a per-connection goroutine
+// parked for the full retry budget.
+//
+// NOTE: this deliberately does not attempt to detect a client that has already
+// disconnected. Go offers no non-consuming liveness probe for a net.Conn — any
+// check requires reading, which would consume a pipelined client byte and
+// corrupt the protocol stream. The residual cost of a departed client is one
+// goroutine and one backend socket held for at most the retry budget; the relay
+// then closes them immediately.
+func dialBackendWithRetry(ctx context.Context, addr string, attempts int, dialTimeout, backoff time.Duration) (net.Conn, error) {
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 0; attempt < attempts; attempt++ {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("dial %s aborted: %w", addr, ctx.Err())
+		default:
+		}
+
+		conn, err := net.DialTimeout("tcp", addr, dialTimeout)
+		if err == nil {
+			return conn, nil
+		}
+		lastErr = err
+
+		if attempt == attempts-1 {
+			break
+		}
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, fmt.Errorf("dial %s aborted: %w", addr, ctx.Err())
+		case <-timer.C:
+		}
+	}
+	return nil, lastErr
 }
