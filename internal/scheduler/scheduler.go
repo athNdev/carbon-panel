@@ -289,7 +289,7 @@ func (s *Scheduler) checkAndRunDueTasks() {
 				s.runningTasksMu.Unlock()
 			}()
 			// A scheduled run is owned by the scheduler, not by any caller.
-			s.executeTask(context.Background(), t, "scheduled", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
+			_, _ = s.executeTask(context.Background(), t, "scheduled", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 		}(task)
 	}
 }
@@ -341,7 +341,7 @@ func (s *Scheduler) HandleServerEvent(ctx context.Context, event events.Event) {
 // type is threaded through to webhook executors so the rendered payload
 // reflects which event triggered the delivery.
 func (s *Scheduler) executeTaskForEvent(ctx context.Context, task *storage.ScheduledTask, eventType v1.TriggeredEventType, eventData map[string]any) {
-	s.executeTask(ctx, task, "event", eventType, eventData)
+	_, _ = s.executeTask(ctx, task, "event", eventType, eventData)
 }
 
 // executeTask runs a single task. eventTrigger names the event that drove an
