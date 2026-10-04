@@ -80,8 +80,12 @@ func TestMinecraftProxy_HibernationWake(t *testing.T) {
 	err = WriteHandshakePacket(clientConn, handshake)
 	require.NoError(t, err)
 
-	// Wait for proxy to handle handshake and wake server
-	time.Sleep(200 * time.Millisecond)
+	// Wait for the wake + backend dial rather than assuming a fixed sleep is
+	// long enough: under CI load 200ms was not sufficient and this flaked.
+	require.Eventually(t, func() bool {
+		return wakeCalled.Load() && backendAccepted.Load()
+	}, 5*time.Second, 10*time.Millisecond,
+		"proxy must invoke WakeHandler and dial the backend for a hibernated server")
 
 	assert.True(t, wakeCalled.Load(), "WakeHandler must be invoked for hibernated server")
 	assert.True(t, backendAccepted.Load(), "Backend must accept connection after wake")
