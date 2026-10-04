@@ -125,6 +125,13 @@ type FileService struct {
 	downloadManager *download.Manager
 	extractions     sync.Map
 	remoteDownloads sync.Map
+
+	// cleanupStop terminates the background cleanupExtractions ticker. It was
+	// previously started in the constructor with no way to stop it, leaking one
+	// goroutine (holding a timer) for every FileService ever constructed - which
+	// includes every test that builds one.
+	cleanupStop chan struct{}
+	stopOnce    sync.Once
 }
 
 // NewFileService creates a new file service
@@ -135,9 +142,17 @@ func NewFileService(store *storage.Store, docker *docker.Client, uploadManager *
 		log:             log,
 		uploadManager:   uploadManager,
 		downloadManager: downloadManager,
+		cleanupStop:     make(chan struct{}),
 	}
 	go svc.cleanupExtractions()
 	return svc
+}
+
+// Stop terminates the background cleanup goroutine. Safe to call more than once.
+// Callers that construct a FileService outside the normal server startup path
+// (notably tests) should defer this so they do not leak the goroutine.
+func (s *FileService) Stop() {
+	s.stopOnce.Do(func() { close(s.cleanupStop) })
 }
 
 // ListFiles lists files in a directory
@@ -740,16 +755,21 @@ func (s *FileService) GetRemoteArchiveProgress(ctx context.Context, req *connect
 func (s *FileService) cleanupExtractions() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		cutoff := time.Now().Add(-1 * time.Hour)
-		s.extractions.Range(func(key, value any) bool {
-			op := value.(*extractionOp)
-			_, _, completedAt := op.snapshot()
-			if !completedAt.IsZero() && completedAt.Before(cutoff) {
-				s.extractions.Delete(key)
-			}
-			return true
-		})
+	for {
+		select {
+		case <-s.cleanupStop:
+			return
+		case <-ticker.C:
+			cutoff := time.Now().Add(-1 * time.Hour)
+			s.extractions.Range(func(key, value any) bool {
+				op := value.(*extractionOp)
+				_, _, completedAt := op.snapshot()
+				if !completedAt.IsZero() && completedAt.Before(cutoff) {
+					s.extractions.Delete(key)
+				}
+				return true
+			})
+		}
 	}
 }
 

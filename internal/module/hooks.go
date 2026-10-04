@@ -33,12 +33,26 @@ func (m *Manager) autoStartModules(ctx context.Context, serverID string) {
 		return
 	}
 
+	// Each action gets its own goroutine but a shared, bounded slot, so a burst
+	// of server-start events across many modules cannot launch an unbounded
+	// number of concurrent Docker operations.
 	for _, module := range modules {
 		if module.AutoStart && !module.Detached {
 			go func(mod *storage.Module) {
-				// Small delay to let the server settle before starting modules
-				time.Sleep(2 * time.Second)
-				if err := m.StartModule(context.Background(), mod.ID); err != nil {
+				// The event that scheduled this outlives the dispatch, so keep
+				// the bus' Values but not its cancellation.
+				actCtx := context.WithoutCancel(ctx)
+				if !m.acquireHookSlot(actCtx) {
+					return
+				}
+				defer m.releaseHookSlot()
+
+				// Small delay to let the server settle before starting modules.
+				// Cancellable, so shutdown is not blocked for the full delay.
+				if !sleepCtx(actCtx, 2*time.Second) {
+					return
+				}
+				if err := m.StartModule(actCtx, mod.ID); err != nil {
 					m.logger.Error("Failed to start module %s on server start: %v", mod.Name, err)
 				} else {
 					m.logger.Info("Started module %s with server", mod.Name)
@@ -83,8 +97,16 @@ func (m *Manager) dispatchHooks(ctx context.Context, serverID string, eventType 
 			if hook == nil || hook.Event != eventType {
 				continue
 			}
-			// Execute hook asynchronously
-			go m.executeHook(context.Background(), module, hook, serverID)
+			// Execute hook asynchronously, with a shared bounded slot so the
+			// fan-out cannot spawn unbounded concurrent Docker operations.
+			go func(mod *storage.Module, h *v1.ModuleEventHook) {
+				actCtx := context.WithoutCancel(ctx)
+				if !m.acquireHookSlot(actCtx) {
+					return
+				}
+				defer m.releaseHookSlot()
+				m.executeHook(actCtx, mod, h, serverID)
+			}(module, hook)
 		}
 	}
 }
@@ -94,7 +116,12 @@ func (m *Manager) executeHook(ctx context.Context, module *storage.Module, hook 
 	// Apply delay if configured
 	if hook.DelaySeconds > 0 {
 		m.logger.Debug("Delaying hook action for module %s by %d seconds", module.Name, hook.DelaySeconds)
-		time.Sleep(time.Duration(hook.DelaySeconds) * time.Second)
+		// Cancellable: a hook configured with a long delay previously pinned a
+		// goroutine for that whole duration, ignoring shutdown entirely.
+		if !sleepCtx(ctx, time.Duration(hook.DelaySeconds)*time.Second) {
+			m.logger.Debug("Hook action for module %s cancelled during configured delay", module.Name)
+			return
+		}
 	}
 
 	// Evaluate condition if specified
