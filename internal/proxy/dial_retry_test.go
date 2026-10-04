@@ -107,7 +107,7 @@ func TestDialBackendWithRetrySucceedsOnFirstAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	accepted := make(chan struct{}, 1)
 	go func() {
@@ -122,7 +122,7 @@ func TestDialBackendWithRetrySucceedsOnFirstAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected a successful dial, got %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Fatalf("first-attempt success took %v; retries were not skipped", elapsed)
