@@ -445,6 +445,18 @@ func (s *Server) authInterceptor() connect.UnaryInterceptorFunc {
 	}
 }
 
+// Shutdown releases the server's background components.
+//
+// http.Server.Shutdown does NOT wait for hijacked connections, so without this
+// the WebSocket hub kept running and every connected client's pumps stayed
+// alive until the process exited. Call this before srv.Shutdown so live
+// consoles are closed deliberately instead of being torn down at exit.
+func (s *Server) Shutdown() {
+	if s.wsHub != nil {
+		s.wsHub.Stop()
+	}
+}
+
 // pollingProcedures lists endpoints that are called frequently and should be excluded from logging.
 var pollingProcedures = []string{
 	"/carbonpanel.v1.AuthService/GetAuthStatus",

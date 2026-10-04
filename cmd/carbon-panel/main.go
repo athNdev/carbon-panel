@@ -463,6 +463,11 @@ func main() {
 		}
 	}
 
+	// Close WebSocket clients first. http.Server.Shutdown does not wait for
+	// hijacked connections, so the hub and its client pumps would otherwise stay
+	// alive until the process exits.
+	rpcServer.Shutdown()
+
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Error("Server forced to shutdown: %v", err)
 	}
