@@ -55,7 +55,7 @@ one at https://mozilla.org/MPL/2.0/.
 				{/if}
 			</BreadcrumbItem>
 			{#each segments as segment, i (i)}
-				<BreadcrumbSeparator class="text-[#6f6f6f]" />
+				<BreadcrumbSeparator class="text-[#a8a8a8]" />
 				<BreadcrumbItem>
 					{#if i === segments.length - 1}
 						<BreadcrumbPage class="text-xs font-medium text-[#f4f4f4]">{segment}</BreadcrumbPage>

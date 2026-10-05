@@ -105,7 +105,7 @@ one at https://mozilla.org/MPL/2.0/.
 			</button>
 		</div>
 	{:else}
-		<span class="font-mono text-xs text-[#6f6f6f]"
+		<span class="font-mono text-xs text-[#a8a8a8]"
 			>Ctrl+Click to select • Right-click for file actions</span
 		>
 	{/if}
