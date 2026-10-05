@@ -90,6 +90,9 @@ one at https://mozilla.org/MPL/2.0/.
 			}
 		}, 200);
 
+		// Post-load timer: cleared on unmount so it never writes state after teardown.
+		let loadTimer: ReturnType<typeof setTimeout> | undefined;
+
 		// Listen for load confirmation
 		const handleMessage = (e: MessageEvent) => {
 			if (e.data?.type === 'scalar-progress') {
@@ -99,7 +102,7 @@ one at https://mozilla.org/MPL/2.0/.
 				loadingProgress = 100;
 
 				// Small delay for progress, makes transition smoother
-				setTimeout(() => {
+				loadTimer = setTimeout(() => {
 					isLoading = false;
 				}, 300);
 				window.removeEventListener('message', handleMessage);
@@ -110,6 +113,7 @@ one at https://mozilla.org/MPL/2.0/.
 		// Cleanup on unmount
 		return () => {
 			clearInterval(progressInterval);
+			if (loadTimer) clearTimeout(loadTimer);
 			window.removeEventListener('message', handleMessage);
 		};
 	});
@@ -213,17 +217,21 @@ one at https://mozilla.org/MPL/2.0/.
 			</div>
 			<p class="mt-1 font-sans text-xs text-[#8d8d8d]">
 				Live ConnectRPC + OpenAPI reference. Spec served from
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- static asset, not a route -->
 				<a href="/api/v1/openapi.yaml" class="font-mono text-[#78a9ff] hover:text-white"
 					>/api/v1/openapi.yaml</a
 				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				(regenerated via <span class="font-mono">make gen</span>)
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
+			<!-- eslint-disable svelte/no-navigation-without-resolve -- static asset, not a route -->
 			<a
 				href="/api/v1/openapi.yaml"
 				class="inline-flex h-8 items-center px-3 font-mono text-xs tracking-wider text-[#78a9ff] uppercase hover:bg-[#353535] hover:text-white"
 			>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				Open raw spec
 			</a>
 		</div>
@@ -293,7 +301,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<span class="font-mono text-[#c6c6c6]">/carbonpanel.v1.&lt;Service&gt;/&lt;Method&gt;</span>
 			</p>
 		</div>
-		<div class="grid gap-px bg-[#393939] sm:grid-cols-2 lg:grid-cols-3">
+		<div class="motion-stagger grid gap-px bg-[#393939] sm:grid-cols-2 lg:grid-cols-3">
 			{#each connectServices as service (service.name)}
 				<div class="bg-[#262626] p-4 transition-colors hover:bg-[#353535]">
 					<div class="flex items-center justify-between gap-2">

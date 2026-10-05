@@ -9,6 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		CarbonButton,
 		CarbonTile,
@@ -21,7 +23,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		CarbonStructuredList,
 		CarbonAccordion,
 		CarbonAccordionItem,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import {
 		ArrowLeft,
@@ -34,7 +37,6 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		PinOff,
 		Package,
 		Loader2,
-		Blocks,
 		CheckCircle2,
 		AlertTriangle,
 		RefreshCw,
@@ -196,7 +198,6 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	// Maintenance State
 	let refreshing = $state(false);
 	let rawPackToml = $state('');
-	let rawIndexToml = $state('');
 	let loadingRaw = $state(false);
 
 	// Deploy Dialog State
@@ -270,9 +271,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success(
 				`Exported ${format === 'mrpack' ? '.mrpack' : format === 'packwiz' ? 'Packwiz .zip' : 'CurseForge .zip'}`
 			);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to export modpack:', err);
-			toast.error(`Export failed: ${err.message || 'Unauthorized or server error'}`);
+			toast.error(
+				`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`
+			);
 		} finally {
 			exportingPack = null;
 		}
@@ -401,9 +404,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success(`Batch action applied to ${selectedSlugs.length} mods`);
 			selectedSlugs = [];
 			await loadPack();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Batch action failed:', err);
-			toast.error(err.message || 'Batch action failed');
+			toast.error((err instanceof Error ? err.message : '') || 'Batch action failed');
 		}
 	}
 
@@ -423,7 +426,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			}
 			updatesMap = map;
 			toast.success(`Checked updates: ${availableCount} newer versions available`);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Check updates failed:', err);
 			toast.error('Failed to check mod updates');
 		} finally {
@@ -462,7 +465,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success(`Saved override file: ${uploadFilePath}`);
 			uploadFileDialogOpen = false;
 			await loadFiles();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to save file:', err);
 			toast.error('Failed to save override file');
 		} finally {
@@ -470,8 +473,17 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
+	let pendingDeleteFile: string | null = $state(null);
+	let confirmDeleteOpen = $state(false);
+
 	async function handleDeleteFile(filePath: string) {
-		if (!confirm(`Delete "${filePath}" from packwiz overrides?`)) return;
+		pendingDeleteFile = filePath;
+		confirmDeleteOpen = true;
+	}
+
+	async function confirmDeleteFile() {
+		const filePath = pendingDeleteFile;
+		if (!filePath) return;
 		try {
 			const res = await apiFetch(
 				`/api/v1/packwiz/packs/${packId}/files?path=${encodeURIComponent(filePath)}`,
@@ -482,9 +494,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success(`Deleted file "${filePath}"`);
 			await loadFiles();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to delete file:', err);
 			toast.error('Failed to delete override file');
+		} finally {
+			pendingDeleteFile = null;
 		}
 	}
 
@@ -506,9 +520,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			} else {
 				toast.success(`Simulation complete: ${data.compatible_count} compatible mods found`);
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Migration failed:', err);
-			toast.error(err.message || 'Version migration simulation failed');
+			toast.error(
+				(err instanceof Error ? err.message : '') || 'Version migration simulation failed'
+			);
 		} finally {
 			migrating = false;
 		}
@@ -523,7 +539,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success('Packwiz re-indexed & refreshed successfully');
 			await loadPack();
 			await loadRawTomls();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Refresh failed:', err);
 			toast.error('Failed to refresh pack index');
 		} finally {
@@ -537,8 +553,6 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		try {
 			const pRes = await apiFetch(`/api/v1/packwiz/${packId}/pack.toml`);
 			if (pRes.ok) rawPackToml = await pRes.text();
-			const iRes = await apiFetch(`/api/v1/packwiz/${packId}/index.toml`);
-			if (iRes.ok) rawIndexToml = await iRes.text();
 		} catch (err) {
 			console.error('Failed to load raw tomls:', err);
 		} finally {
@@ -567,7 +581,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			} else {
 				searchResults = data.results || [];
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Search failed:', err);
 			searchError = 'Failed to fetch online mods';
 		} finally {
@@ -621,7 +635,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			toast.success(`Added ${item.title} (${side.toUpperCase()}) to pack!`);
 
 			// Resolve transitive required dependencies (best-effort, depth-bounded).
-			const visited = new Set<string>();
+			const visited = new SvelteSet<string>();
 			for (const m of pack.mods || []) {
 				if (m.project_id)
 					visited.add(
@@ -647,9 +661,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				console.warn('Dependency auto-resolve failed (non-fatal):', depErr);
 			}
 			await loadPack();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to add mod:', err);
-			toast.error(err.message || 'Failed to add mod to pack');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to add mod to pack');
 		}
 	}
 
@@ -761,9 +775,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			urlModFileName = '';
 			urlModDownloadUrl = '';
 			await loadPack();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to add mod from URL:', err);
-			toast.error(err.message || 'Failed to add direct URL mod');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to add direct URL mod');
 		} finally {
 			addingUrlMod = false;
 		}
@@ -817,17 +831,18 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				kind="ghost"
 				size="md"
 				iconOnly
-				onclick={() => goto('/modpacks/studio')}
+				onclick={() => goto(resolve('/modpacks/studio'))}
 				class="rounded-none text-[#c6c6c6] hover:text-white"
 				title="Back to Studio List"
+				aria-label="Back to Studio List"
 			>
 				<ArrowLeft class="h-5 w-5" />
 			</CarbonButton>
 
 			{#if pack}
-				<div class="space-y-0.5">
+				<div class="min-w-0 space-y-0.5">
 					<div class="flex items-center gap-3">
-						<h1 class="text-3xl font-semibold tracking-tight text-white">{pack.name}</h1>
+						<h1 class="truncate text-3xl font-semibold tracking-tight text-white">{pack.name}</h1>
 						<CarbonTag type="blue" size="sm" class="uppercase">
 							{pack.mod_loader}
 						</CarbonTag>
@@ -943,7 +958,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					<CarbonTextInput label="Pack Version" bind:value={pack.version} />
 
 					<CarbonSelect label="Minecraft Version" bind:value={pack.mc_version}>
-						{#each MC_VERSIONS as v}
+						{#each MC_VERSIONS as v (v)}
 							<option value={v}>{v}</option>
 						{/each}
 					</CarbonSelect>
@@ -960,7 +975,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						bind:value={pack.loader_version}
 						helperText={loadingLoaderVersions ? 'Fetching versions...' : undefined}
 					>
-						{#each availableLoaderVersions as v}
+						{#each availableLoaderVersions as v (v)}
 							<option value={v}>{v}</option>
 						{/each}
 					</CarbonSelect>
@@ -1019,7 +1034,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				<CarbonTabs
 					tabs={studioTabs}
 					selectedTab={activeTab}
-					onselect={(id) => (activeTab = id as any)}
+					onselect={(id) => (activeTab = id as unknown as typeof activeTab)}
+					class="sticky top-0 z-20 bg-[#161616]"
 				/>
 
 				<!-- TAB 1: MODS MANAGEMENT -->
@@ -1219,6 +1235,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 											<th scope="col" class="w-8 px-3 py-2.5">
 												<input
 													type="checkbox"
+													aria-label="Select all mods"
 													class="cursor-pointer rounded-none border-[#8d8d8d] bg-[#262626]"
 													checked={selectedSlugs.length > 0 &&
 														selectedSlugs.length === filteredMods.length}
@@ -1249,6 +1266,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 												<td class="px-3 py-3">
 													<input
 														type="checkbox"
+														aria-label={`Select ${mod.slug}`}
 														class="cursor-pointer rounded-none border-[#8d8d8d] bg-[#262626]"
 														checked={selectedSlugs.includes(mod.slug)}
 														onchange={(e) => {
@@ -1322,6 +1340,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 														class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 														onclick={() => removeMod(mod)}
 														title="Remove mod"
+														aria-label="Remove mod"
 													>
 														<Trash2 class="h-3.5 w-3.5" />
 													</CarbonButton>
@@ -1415,6 +1434,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 														class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 														onclick={() => handleDeleteFile(file.path)}
 														title="Delete file"
+														aria-label="Delete file"
 													>
 														<Trash2 class="h-3.5 w-3.5" />
 													</CarbonButton>
@@ -1443,7 +1463,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<CarbonSelect label="Target Minecraft Version" bind:value={migrateMC}>
-								{#each MC_VERSIONS as v}
+								{#each MC_VERSIONS as v (v)}
 									<option value={v}>{v}</option>
 								{/each}
 							</CarbonSelect>
@@ -1509,7 +1529,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 										</div>
 									{/snippet}
 
-									{#each migrationReport.mods as m}
+									{#each migrationReport.mods as m (m.slug)}
 										<div class="flex items-center justify-between px-4 py-2.5 font-mono text-xs">
 											<span class="font-medium text-white">{m.name}</span>
 											{#if m.compatible}
@@ -1643,7 +1663,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			tabs={addModSourceTabs}
 			selectedTab={addTab}
 			onselect={(id) => {
-				addTab = id as any;
+				addTab = id as unknown as typeof addTab;
 				if (addTab !== 'url') searchMods();
 			}}
 		/>
@@ -1715,7 +1735,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 											<Download class="mr-0.5 h-2.5 w-2.5" />
 											{formatDownloads(item.downloads)}
 										</CarbonTag>
-										{#each (item.categories || []).slice(0, 2) as cat}
+										{#each (item.categories || []).slice(0, 2) as cat (cat)}
 											<CarbonTag type="gray" size="sm">{cat}</CarbonTag>
 										{/each}
 									</div>
@@ -1880,3 +1900,16 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		modLoader={pack.mod_loader}
 	/>
 {/if}
+<CarbonConfirm
+	bind:open={confirmDeleteOpen}
+	title="Delete override file?"
+	message="The file is removed from the packwiz project. This cannot be undone."
+	confirmLabel="Delete File"
+	danger
+	onconfirm={confirmDeleteFile}
+	onclose={() => (pendingDeleteFile = null)}
+>
+	{#snippet details()}
+		{#if pendingDeleteFile}{pendingDeleteFile}{/if}
+	{/snippet}
+</CarbonConfirm>

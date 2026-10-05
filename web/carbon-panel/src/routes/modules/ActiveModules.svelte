@@ -14,7 +14,8 @@ one at https://mozilla.org/MPL/2.0/.
 		CarbonButton,
 		CarbonDataTable,
 		CarbonTag,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
@@ -28,7 +29,6 @@ one at https://mozilla.org/MPL/2.0/.
 		Settings,
 		Trash2,
 		Terminal,
-		Cpu,
 		Server,
 		Package,
 		RefreshCw
@@ -119,12 +119,17 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
-	async function handleDeleteModule(module: Module) {
-		const confirmed = confirm(
-			`Are you sure you want to delete "${module.name}"?\n\nThis will stop and remove the container and all module data.`
-		);
-		if (!confirmed) return;
+	let pendingDelete = $state<Module | null>(null);
+	let confirmOpen = $state(false);
 
+	async function handleDeleteModule(module: Module) {
+		pendingDelete = module;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteModule() {
+		const module = pendingDelete;
+		if (!module) return;
 		actionLoading = module.id;
 		try {
 			await rpcClient.module.deleteModule({ id: module.id });
@@ -136,6 +141,7 @@ one at https://mozilla.org/MPL/2.0/.
 			);
 		} finally {
 			actionLoading = null;
+			pendingDelete = null;
 		}
 	}
 
@@ -304,6 +310,7 @@ one at https://mozilla.org/MPL/2.0/.
 									onclick={() => handleStartModule(module)}
 									disabled={isLoading}
 									title="Start module"
+									aria-label="Start module"
 								>
 									{#if isLoading}
 										<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -320,6 +327,7 @@ one at https://mozilla.org/MPL/2.0/.
 									onclick={() => handleStopModule(module)}
 									disabled={isLoading}
 									title="Stop module"
+									aria-label="Stop module"
 								>
 									{#if isLoading}
 										<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -335,11 +343,19 @@ one at https://mozilla.org/MPL/2.0/.
 									onclick={() => handleRestartModule(module)}
 									disabled={isLoading}
 									title="Restart module"
+									aria-label="Restart module"
 								>
 									<RotateCw class="h-3.5 w-3.5" />
 								</CarbonButton>
 							{:else if module.status === ModuleStatus.STARTING || module.status === ModuleStatus.STOPPING || module.status === ModuleStatus.CREATING}
-								<CarbonButton kind="ghost" size="sm" iconOnly disabled class="rounded-none">
+								<CarbonButton
+									kind="ghost"
+									size="sm"
+									iconOnly
+									disabled
+									class="rounded-none"
+									aria-label="Module status loading"
+								>
 									<Loader2 class="h-3.5 w-3.5 animate-spin text-[#0f62fe]" />
 								</CarbonButton>
 							{:else if module.status === ModuleStatus.ERROR}
@@ -351,6 +367,7 @@ one at https://mozilla.org/MPL/2.0/.
 									onclick={() => handleStartModule(module)}
 									disabled={isLoading}
 									title="Retry start"
+									aria-label="Retry start"
 								>
 									{#if isLoading}
 										<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -368,6 +385,7 @@ one at https://mozilla.org/MPL/2.0/.
 								class="rounded-none text-[#c6c6c6] hover:text-white"
 								onclick={() => openLogsDialog(module)}
 								title="View logs"
+								aria-label="View logs"
 							>
 								<Terminal class="h-3.5 w-3.5" />
 							</CarbonButton>
@@ -380,6 +398,7 @@ one at https://mozilla.org/MPL/2.0/.
 								class="rounded-none text-[#c6c6c6] hover:text-white"
 								onclick={() => openEditDialog(module)}
 								title="Edit module"
+								aria-label="Edit module"
 							>
 								<Settings class="h-3.5 w-3.5" />
 							</CarbonButton>
@@ -393,6 +412,7 @@ one at https://mozilla.org/MPL/2.0/.
 								onclick={() => handleDeleteModule(module)}
 								disabled={isLoading}
 								title="Delete module"
+								aria-label="Delete module"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</CarbonButton>
@@ -414,3 +434,16 @@ one at https://mozilla.org/MPL/2.0/.
 
 	<ModuleLogsDialog bind:open={logsDialogOpen} module={selectedModule} />
 {/if}
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete module?"
+	message="This will stop and remove the container and all module data."
+	confirmLabel="Delete Module"
+	danger
+	onconfirm={confirmDeleteModule}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

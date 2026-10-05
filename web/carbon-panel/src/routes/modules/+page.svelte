@@ -48,11 +48,13 @@ one at https://mozilla.org/MPL/2.0/.
 	<!-- Carbon Navigation Tabs -->
 	<CarbonTabs tabs={moduleTabs} bind:selectedTab={activeTab} />
 
-	<div>
-		{#if activeTab === 'templates'}
-			<TemplateManagement />
-		{:else if activeTab === 'active'}
-			<ActiveModules />
-		{/if}
-	</div>
+	{#key activeTab}
+		<div class="motion-fade-in">
+			{#if activeTab === 'templates'}
+				<TemplateManagement />
+			{:else if activeTab === 'active'}
+				<ActiveModules />
+			{/if}
+		</div>
+	{/key}
 </div>

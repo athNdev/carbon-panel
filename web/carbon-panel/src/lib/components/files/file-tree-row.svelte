@@ -167,6 +167,7 @@ one at https://mozilla.org/MPL/2.0/.
 		<Checkbox
 			checked={isSelected}
 			onCheckedChange={() => onCheckboxToggle(file)}
+			aria-label={`Select ${file.name}`}
 			class="h-3.5 w-3.5 rounded-none"
 		/>
 	</div>
@@ -177,6 +178,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{#if file.isDir}
 			<button
 				class="cursor-pointer rounded-none p-0 text-[#8d8d8d] hover:text-[#f4f4f4]"
+				aria-label={isExpanded ? `Collapse ${file.name}` : `Expand ${file.name}`}
 				onclick={(e) => {
 					e.stopPropagation();
 					onToggleExpand(file.path);

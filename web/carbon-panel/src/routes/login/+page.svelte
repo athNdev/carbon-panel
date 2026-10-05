@@ -138,8 +138,8 @@ one at https://mozilla.org/MPL/2.0/.
 			return;
 		}
 
-		if (password.length < 8) {
-			error = 'Password must be at least 8 characters';
+		if (password.length < 12) {
+			error = 'Password must be at least 12 characters';
 			return;
 		}
 
@@ -217,7 +217,7 @@ one at https://mozilla.org/MPL/2.0/.
 	class="flex min-h-screen items-center justify-center rounded-none bg-[#161616] p-4 font-sans text-[#f4f4f4]"
 >
 	<div
-		class="motion-scale-in w-full max-w-md rounded-none border border-[#393939] bg-[#262626] p-8 shadow-2xl"
+		class="motion-scale-in w-full max-w-md rounded-none border border-[#393939] bg-[#262626] p-5 shadow-2xl sm:p-8"
 	>
 		<!-- Header -->
 		<div class="mb-8 text-center">
@@ -248,6 +248,7 @@ one at https://mozilla.org/MPL/2.0/.
 			<form onsubmit={handleSubmit} class="space-y-4">
 				<CarbonTextInput
 					label="Admin Username"
+					autocomplete="username"
 					placeholder="Choose admin username"
 					bind:value={username}
 					required
@@ -255,22 +256,27 @@ one at https://mozilla.org/MPL/2.0/.
 				/>
 				<CarbonTextInput
 					type="email"
+					autocomplete="email"
 					label="Email (optional)"
 					placeholder="admin@example.com"
 					bind:value={email}
 					disabled={loading}
 				/>
 				<CarbonTextInput
+					revealable
 					type="password"
 					label="Password"
-					placeholder="Choose a strong password (min 8 chars)"
+					autocomplete="new-password"
+					placeholder="Choose a strong password (min 12 chars)"
 					bind:value={password}
 					required
 					disabled={loading}
 				/>
 				<CarbonTextInput
+					revealable
 					type="password"
 					label="Confirm Password"
+					autocomplete="new-password"
 					placeholder="Confirm your password"
 					bind:value={confirmPassword}
 					required
@@ -309,14 +315,17 @@ one at https://mozilla.org/MPL/2.0/.
 						<form onsubmit={handleSubmit} class="space-y-4">
 							<CarbonTextInput
 								label="Username"
+								autocomplete="username"
 								placeholder="Enter your username"
 								bind:value={username}
 								required
 								disabled={loading}
 							/>
 							<CarbonTextInput
+								revealable
 								type="password"
 								label="Password"
+								autocomplete="current-password"
 								placeholder="Enter your password"
 								bind:value={password}
 								required
@@ -374,6 +383,7 @@ one at https://mozilla.org/MPL/2.0/.
 					{/if}
 					<CarbonTextInput
 						label="Username"
+						autocomplete="username"
 						placeholder="Choose a username"
 						bind:value={username}
 						required
@@ -381,20 +391,24 @@ one at https://mozilla.org/MPL/2.0/.
 					/>
 					<CarbonTextInput
 						type="email"
+						autocomplete="email"
 						label="Email (optional)"
 						placeholder="your@email.com"
 						bind:value={email}
 						disabled={loading}
 					/>
 					<CarbonTextInput
+						revealable
 						type="password"
 						label="Password"
-						placeholder="Choose a password (min 8 chars)"
+						autocomplete="new-password"
+						placeholder="Choose a password (min 12 chars)"
 						bind:value={password}
 						required
 						disabled={loading}
 					/>
 					<CarbonTextInput
+						revealable
 						type="password"
 						label="Confirm Password"
 						placeholder="Confirm your password"
@@ -404,8 +418,10 @@ one at https://mozilla.org/MPL/2.0/.
 					/>
 					{#if inviteValid && inviteRequiresPin}
 						<CarbonTextInput
+							revealable
 							type="password"
 							label="Invite PIN"
+							autocomplete="off"
 							placeholder="Enter invite PIN"
 							bind:value={invitePin}
 							required
@@ -435,8 +451,10 @@ one at https://mozilla.org/MPL/2.0/.
 					and data are preserved.
 				</div>
 				<CarbonTextInput
+					revealable
 					type="password"
 					label="Recovery Key"
+					autocomplete="off"
 					placeholder="Paste your emergency recovery key"
 					bind:value={recoveryKey}
 					disabled={loading}

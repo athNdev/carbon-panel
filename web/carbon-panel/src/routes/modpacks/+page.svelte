@@ -20,7 +20,8 @@ one at https://mozilla.org/MPL/2.0/.
 		CarbonSearch,
 		CarbonSelect,
 		CarbonModal,
-		CarbonTextInput
+		CarbonTextInput,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -368,13 +369,17 @@ one at https://mozilla.org/MPL/2.0/.
 		goto(resolve(`/servers/new?modpack=${modpack.id}`));
 	}
 
-	async function deleteModpack(modpack: IndexedModpack) {
-		if (
-			!confirm(`Are you sure you want to delete "${modpack.name}"? This action cannot be undone.`)
-		) {
-			return;
-		}
+	let pendingDelete = $state<IndexedModpack | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deleteModpack(modpack: IndexedModpack) {
+		pendingDelete = modpack;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteModpack() {
+		const modpack = pendingDelete;
+		if (!modpack) return;
 		try {
 			await rpcClient.modpack.deleteModpack({ id: modpack.id });
 			toast.success(`Modpack "${modpack.name}" deleted successfully`);
@@ -387,6 +392,8 @@ one at https://mozilla.org/MPL/2.0/.
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to delete modpack');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -490,7 +497,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	{#if selectedIndexer === 'fuego'}
 		<div
-			class="flex items-center justify-between rounded-none border-y border-r border-l-4 border-[#0f62fe] border-[#393939] bg-[#262626] p-3.5 text-xs text-[#c6c6c6]"
+			class="flex items-center justify-between rounded-none border-y border-r border-l-4 border-[#393939] border-l-[#0f62fe] bg-[#262626] p-3.5 text-xs text-[#c6c6c6]"
 		>
 			<div class="flex items-center gap-2">
 				<KeyRound class="h-4 w-4 shrink-0 text-[#78a9ff]" />
@@ -519,7 +526,13 @@ one at https://mozilla.org/MPL/2.0/.
 					<CarbonSearch
 						placeholder="Search modpacks by name or description..."
 						bind:value={searchParams.query}
-						onkeydown={(e) => e.key === 'Enter' && searchModpacks()}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') searchModpacks();
+							else if (e.key === 'Escape' && searchParams.query) {
+								searchParams.query = '';
+								searchModpacks();
+							}
+						}}
 						size="md"
 					/>
 				</div>
@@ -527,7 +540,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<div class="md:col-span-2">
 					<CarbonSelect bind:value={searchParams.gameVersion} disabled={loading}>
 						<option value="">All MC Versions</option>
-						{#each gameVersions as version}
+						{#each gameVersions as version (version)}
 							<option value={version}>{version}</option>
 						{/each}
 					</CarbonSelect>
@@ -535,11 +548,9 @@ one at https://mozilla.org/MPL/2.0/.
 
 				<div class="md:col-span-2">
 					<CarbonSelect bind:value={searchParams.modLoader} disabled={loading}>
-						<option value="">All Loaders</option>
-						<option value="forge">Forge</option>
-						<option value="fabric">Fabric</option>
-						<option value="neoforge">NeoForge</option>
-						<option value="quilt">Quilt</option>
+						{#each modLoaders as loader (loader.value)}
+							<option value={loader.value}>{loader.label}</option>
+						{/each}
 					</CarbonSelect>
 				</div>
 
@@ -611,9 +622,14 @@ one at https://mozilla.org/MPL/2.0/.
 					/>
 				</div>
 
-				<div class="font-mono text-xs text-[#8d8d8d]">
+				<div class="flex items-center gap-3 font-mono text-xs text-[#8d8d8d]">
 					{#if searchResults}
-						TOTAL: {searchResults.total} PACKS
+						<span>TOTAL: {searchResults.total} PACKS</span>
+					{/if}
+					{#if indexerStatus}
+						{#each Object.entries(indexerStatus.modpacksByIndexer ?? {}) as [name, count] (`${name}:${count}`)}
+							<span>{name.toUpperCase()}: {count}</span>
+						{/each}
 					{/if}
 				</div>
 			</div>
@@ -652,7 +668,7 @@ one at https://mozilla.org/MPL/2.0/.
 	{/if}
 
 	<!-- Modpack Packages Grid with CarbonTiles -->
-	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+	<div class="motion-stagger grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 		{#each displayModpacks as modpack (modpack.id)}
 			<CarbonTile
 				class="group flex flex-col justify-between rounded-none border-[#393939] p-5 transition-colors hover:border-[#525252]"
@@ -734,7 +750,9 @@ one at https://mozilla.org/MPL/2.0/.
 				<div class="mt-4 flex items-center justify-between gap-2 border-t border-[#393939] pt-3">
 					<div class="flex items-center gap-1">
 						{#if modpack.websiteUrl}
+							<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
 							<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 								<CarbonButton kind="ghost" size="sm" class="rounded-none">
 									<ExternalLink class="mr-1 h-3 w-3" />
 									View
@@ -791,6 +809,21 @@ one at https://mozilla.org/MPL/2.0/.
 					Click "Sync" to index popular modpacks or import a custom modpack from URL or ZIP.
 				{/if}
 			</p>
+			{#if !showFavorites && !loading && !syncing && (searchParams.query || searchParams.gameVersion || searchParams.modLoader)}
+				<CarbonButton
+					kind="secondary"
+					size="sm"
+					class="mt-4 justify-center rounded-none"
+					onclick={() => {
+						searchParams.query = '';
+						searchParams.gameVersion = '';
+						searchParams.modLoader = '';
+						searchModpacks();
+					}}
+				>
+					Clear search & filters
+				</CarbonButton>
+			{/if}
 		</div>
 	{/if}
 
@@ -917,4 +950,17 @@ one at https://mozilla.org/MPL/2.0/.
 		bind:open={showManifestInspector}
 		onOpenChange={(v) => (showManifestInspector = v)}
 	/>
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete modpack?"
+		message="This action cannot be undone."
+		confirmLabel="Delete Modpack"
+		danger
+		onconfirm={confirmDeleteModpack}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}{pendingDelete.name}{/if}
+		{/snippet}
+	</CarbonConfirm>
 </div>

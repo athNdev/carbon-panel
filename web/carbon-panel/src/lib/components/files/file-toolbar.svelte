@@ -66,7 +66,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{#if showSearch}
 			<div class="flex items-center gap-1">
 				<input
-					class="h-7 w-48 rounded-none border border-[#525252] bg-[#161616] px-2 font-sans text-xs text-[#f4f4f4] placeholder-[#6f6f6f] focus:border-[#0f62fe] focus:outline-none"
+					class="h-7 w-32 rounded-none border border-[#525252] bg-[#161616] px-2 font-sans text-xs text-[#f4f4f4] placeholder-[#6f6f6f] focus:border-[#0f62fe] focus:outline-none sm:w-48"
 					placeholder="Search files..."
 					value={filterText}
 					oninput={(e) => onFilterChange((e.target as HTMLInputElement).value)}
