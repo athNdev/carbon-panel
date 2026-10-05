@@ -191,16 +191,14 @@
 	</div>
 
 	<!-- Size (right-aligned) -->
-	<span class="w-20 shrink-0 text-right font-mono text-[11px] text-[#8d8d8d] tabular-nums">
+	<span class="w-20 shrink-0 text-right font-mono text-xs text-[#8d8d8d] tabular-nums">
 		{#if !file.isDir}
 			{formatBytes(Number(file.size))}
 		{/if}
 	</span>
 
 	<!-- Modified (right-aligned) -->
-	<span
-		class="hidden w-24 shrink-0 text-right font-mono text-[11px] text-[#8d8d8d] sm:inline-block"
-	>
+	<span class="hidden w-24 shrink-0 text-right font-mono text-xs text-[#8d8d8d] sm:inline-block">
 		{formatModified(file.modified)}
 	</span>
 </div>

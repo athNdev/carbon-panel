@@ -149,7 +149,7 @@
 		<div class="flex items-start justify-between border-b border-[#393939] pb-4">
 			<div class="space-y-1">
 				<h3 class="flex items-center gap-2 text-base font-normal text-[#f4f4f4]">
-					<Key class="h-4 w-4 text-[#0f62fe]" />
+					<Key class="h-4 w-4 text-accent-text" />
 					CurseForge API Key
 				</h3>
 				<p class="text-xs text-[#a8a8a8]">
@@ -261,7 +261,7 @@
 		<div class="flex items-start justify-between border-b border-[#393939] pb-4">
 			<div class="space-y-1">
 				<h3 class="flex items-center gap-2 text-base font-normal text-[#f4f4f4]">
-					<Key class="h-4 w-4 text-[#0f62fe]" />
+					<Key class="h-4 w-4 text-accent-text" />
 					Modrinth Credentials & User-Agent
 				</h3>
 				<p class="text-xs text-[#a8a8a8]">

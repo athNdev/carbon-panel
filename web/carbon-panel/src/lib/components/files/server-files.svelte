@@ -905,7 +905,7 @@
 				</div>
 			</div>
 			<Progress value={uploadProgress.percentComplete} class="h-1.5" />
-			<p class="mt-0.5 text-[10px] text-muted-foreground">
+			<p class="mt-0.5 text-xs text-muted-foreground">
 				{formatBytes(uploadProgress.bytesUploaded)} / {formatBytes(uploadProgress.totalBytes)}
 			</p>
 		</div>
@@ -980,7 +980,7 @@
 
 	<!-- Status bar -->
 	<div
-		class="flex items-center justify-between border-t bg-muted/20 px-3 py-1 text-[10px] text-muted-foreground"
+		class="flex items-center justify-between border-t bg-muted/20 px-3 py-1 text-xs text-muted-foreground"
 	>
 		<span>{flatFiles.length} items</span>
 		{#if selectedPaths.size > 0}

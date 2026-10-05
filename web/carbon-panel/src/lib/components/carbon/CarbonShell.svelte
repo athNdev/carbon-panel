@@ -177,7 +177,7 @@
 			<!-- Brand Logo & Name -->
 			<a
 				href={resolve('/')}
-				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-[#0f62fe]"
+				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-accent-text"
 			>
 				<img src="/carbon_panel_logo.png" alt="Carbon Panel" class="h-6 w-6 rounded-sm" />
 				<span class="font-semibold tracking-wide">Carbon Panel</span>
@@ -199,7 +199,7 @@
 			{#if user}
 				<div class="flex items-center gap-2 border-l border-[#393939] pl-2">
 					<div
-						class="flex h-6 w-6 items-center justify-center bg-[#393939] font-mono text-[11px] font-bold text-[#f4f4f4]"
+						class="flex h-6 w-6 items-center justify-center bg-[#393939] font-mono text-xs font-bold text-[#f4f4f4]"
 					>
 						{user.username.slice(0, 2).toUpperCase()}
 					</div>
@@ -238,7 +238,7 @@
 								<span class="flex-1 truncate">{item.label}</span>
 								{#if item.badge && runningCount > 0}
 									<span
-										class="flex h-4 items-center justify-center bg-[#0f62fe] px-1.5 font-mono text-[10px] font-semibold text-white"
+										class="flex h-4 items-center justify-center bg-[#0f62fe] px-1.5 font-mono text-xs font-semibold text-white"
 									>
 										{runningCount}
 									</span>
@@ -255,7 +255,7 @@
 					href={resolve('/settings?tab=nodes')}
 					onclick={closeMobileNav}
 					title="View Docker nodes"
-					class="absolute right-0 bottom-0 left-0 border-t border-[#393939] bg-[#161616] p-3 font-mono text-[11px] text-[#8d8d8d] transition-colors hover:bg-[#262626]"
+					class="absolute right-0 bottom-0 left-0 border-t border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#8d8d8d] transition-colors hover:bg-[#262626]"
 				>
 					<div class="flex items-center justify-between gap-2">
 						<span class="truncate"
@@ -269,7 +269,7 @@
 							>{primaryNodeStatus.label}</span
 						>
 					</div>
-					<div class="mt-1 text-[10px] text-[#6f6f6f]">PORT {appPort || '···'} · CARBON V11</div>
+					<div class="mt-1 text-xs text-[#6f6f6f]">PORT {appPort || '···'} · CARBON V11</div>
 				</a>
 			{/if}
 		</aside>

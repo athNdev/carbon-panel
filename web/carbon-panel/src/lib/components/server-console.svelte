@@ -367,7 +367,7 @@
 				class="flex flex-wrap items-center justify-between gap-y-1 border-b border-[#393939] bg-[#262626] px-4 py-2"
 			>
 				<div class="flex min-w-0 items-center gap-2.5">
-					<Terminal class="h-4 w-4 shrink-0 text-[#0f62fe]" />
+					<Terminal class="h-4 w-4 shrink-0 text-accent-text" />
 					<span
 						class="truncate font-mono text-xs font-semibold tracking-wider text-[#f4f4f4] uppercase"
 					>
@@ -517,7 +517,7 @@
 	<!-- Carbon Command Input Bar -->
 	<div class="flex flex-col bg-[#262626]">
 		<div class="flex shrink-0 items-center gap-2 p-3">
-			<span class="font-mono text-sm font-bold text-[#0f62fe] select-none">$</span>
+			<span class="font-mono text-sm font-bold text-accent-text select-none">$</span>
 			<input
 				type="text"
 				placeholder={server.status === ServerStatus.CREATING
@@ -575,7 +575,7 @@
 					</select>
 				</div>
 			</div>
-			<div class="font-mono text-[11px] text-[#8d8d8d]">
+			<div class="font-mono text-xs text-[#8d8d8d]">
 				{logEntries.length} lines in buffer
 			</div>
 		</div>

@@ -412,7 +412,7 @@
 	>
 		<div class="flex items-center gap-4">
 			<div
-				class="flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#0f62fe]"
+				class="flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-accent-text"
 			>
 				<Package class="h-6 w-6" />
 			</div>
@@ -468,7 +468,7 @@
 				class="rounded-none"
 				onclick={() => goto(resolve('/modpacks/studio'))}
 			>
-				<Boxes class="mr-1.5 h-4 w-4 text-[#0f62fe]" />
+				<Boxes class="mr-1.5 h-4 w-4 text-accent-text" />
 				Modpack Studio
 			</CarbonButton>
 
@@ -725,7 +725,7 @@
 						{/if}
 
 						{#if parseJsonArray(modpack.gameVersions).length > 0}
-							<div class="truncate font-mono text-[11px] text-[#8d8d8d]">
+							<div class="truncate font-mono text-xs text-[#8d8d8d]">
 								MC: {parseJsonArray(modpack.gameVersions).slice(0, 3).join(', ')}
 								{#if parseJsonArray(modpack.gameVersions).length > 3}
 									+{parseJsonArray(modpack.gameVersions).length - 3} more

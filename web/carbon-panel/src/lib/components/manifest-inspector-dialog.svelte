@@ -256,7 +256,7 @@
 									<td class="max-w-[250px] truncate p-2 font-medium">
 										{mod.name}
 										{#if mod.filename && mod.filename !== mod.name}
-											<div class="truncate font-mono text-[10px] text-muted-foreground">
+											<div class="truncate font-mono text-xs text-muted-foreground">
 												{mod.filename}
 											</div>
 										{/if}
@@ -288,13 +288,13 @@
 												href={mod.downloadUrl}
 												target="_blank"
 												rel="noreferrer"
-												class="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+												class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
 											>
 												<ExternalLink class="h-3 w-3" /> Link
 											</a>
 											<!-- eslint-enable svelte/no-navigation-without-resolve -->
 										{:else if mod.projectId}
-											<span class="font-mono text-[10px] text-muted-foreground">
+											<span class="font-mono text-xs text-muted-foreground">
 												#{mod.projectId}
 											</span>
 										{/if}

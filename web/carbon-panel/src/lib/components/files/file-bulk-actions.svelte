@@ -94,7 +94,7 @@
 			</button>
 		</div>
 	{:else}
-		<span class="font-mono text-[11px] text-[#6f6f6f]"
+		<span class="font-mono text-xs text-[#6f6f6f]"
 			>Ctrl+Click to select • Right-click for file actions</span
 		>
 	{/if}

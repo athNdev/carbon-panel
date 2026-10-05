@@ -331,7 +331,7 @@
 
 		<div class="flex items-center gap-3">
 			<CarbonButton kind="secondary" class="rounded-none" onclick={() => (importDialogOpen = true)}>
-				<UploadCloud class="mr-2 h-4 w-4 text-[#0f62fe]" />
+				<UploadCloud class="mr-2 h-4 w-4 text-accent-text" />
 				Import Modpack
 			</CarbonButton>
 
@@ -367,7 +367,7 @@
 			class="space-y-4 rounded-none border border-dashed border-[#393939] bg-[#262626] p-16 text-center"
 		>
 			<div
-				class="mx-auto flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#161616] text-[#0f62fe]"
+				class="mx-auto flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#161616] text-accent-text"
 			>
 				<Boxes class="h-6 w-6" />
 			</div>
@@ -412,7 +412,7 @@
 								<h3 class="truncate text-lg font-semibold">
 									<a
 										href={resolve('/modpacks/studio/[id]', { id: pack.id })}
-										class="text-white transition-colors hover:text-[#0f62fe]"
+										class="text-white transition-colors hover:text-accent-text"
 									>
 										{pack.name}
 									</a>
@@ -437,11 +437,11 @@
 							class="flex items-center justify-between border-y border-[#393939] py-2 text-xs text-[#a8a8a8]"
 						>
 							<span class="flex items-center gap-1.5 font-mono">
-								<Package class="h-3.5 w-3.5 text-[#0f62fe]" />
+								<Package class="h-3.5 w-3.5 text-accent-text" />
 								<strong class="text-white">{pack.mod_count}</strong>
 								{pack.mod_count === 1 ? 'mod' : 'mods'}
 							</span>
-							<span class="flex items-center gap-1 font-mono text-[11px] text-[#8d8d8d]">
+							<span class="flex items-center gap-1 font-mono text-xs text-[#8d8d8d]">
 								<Calendar class="h-3 w-3" />
 								{new Date(pack.updated_at).toLocaleDateString()}
 							</span>
@@ -479,7 +479,7 @@
 							<CarbonButton
 								kind="tertiary"
 								size="sm"
-								class="h-8 rounded-none px-2 text-[11px]"
+								class="h-8 rounded-none px-2 text-xs"
 								onclick={() => exportPack(pack.id, 'packwiz', pack.name)}
 								disabled={exportingPack === `${pack.id}-packwiz`}
 								title="Export Native Packwiz .zip"
@@ -489,7 +489,7 @@
 							<CarbonButton
 								kind="tertiary"
 								size="sm"
-								class="h-8 rounded-none px-2 text-[11px]"
+								class="h-8 rounded-none px-2 text-xs"
 								onclick={() => exportPack(pack.id, 'mrpack', pack.name)}
 								disabled={exportingPack === `${pack.id}-mrpack`}
 								title="Export Modrinth .mrpack"

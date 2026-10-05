@@ -657,7 +657,7 @@
 				<div class="mt-1 flex items-center gap-2">
 					<span class="text-sm font-semibold text-foreground">{server.nodeId || 'unassigned'}</span>
 					{#if nodes.find((n) => n.id === server.nodeId)?.isLocal}
-						<Badge variant="secondary" class="h-4 px-1.5 py-0 text-[10px]">Local</Badge>
+						<Badge variant="secondary" class="h-4 px-1.5 py-0 text-xs">Local</Badge>
 					{/if}
 				</div>
 			</div>
@@ -717,7 +717,7 @@
 
 			<!-- Migration Helper & Force Bypass -->
 			<div class="flex flex-col justify-between gap-2 pt-1 sm:flex-row sm:items-center">
-				<p class="text-[11px] text-muted-foreground">
+				<p class="text-xs text-muted-foreground">
 					{#if server.status === ServerStatus.RUNNING}
 						⚡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy
 						rerouting.

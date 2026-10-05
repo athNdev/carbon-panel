@@ -95,7 +95,7 @@
 		>
 			<span>{tab.label}</span>
 			{#if tab.badge !== undefined}
-				<span class="bg-[#393939] px-1.5 py-0.5 font-mono text-[10px] text-[#c6c6c6]">
+				<span class="bg-[#393939] px-1.5 py-0.5 font-mono text-xs text-[#c6c6c6]">
 					{tab.badge}
 				</span>
 			{/if}

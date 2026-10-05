@@ -422,7 +422,7 @@
 								{#if module.ports?.length}
 									<div class="flex flex-wrap gap-1.5">
 										{#each module.ports as port (port.name)}
-											<Badge variant="outline" class="px-1.5 py-0 font-mono text-[10px]">
+											<Badge variant="outline" class="px-1.5 py-0 font-mono text-xs">
 												{port.name || 'Port'}: {port.hostPort || '?'}→{port.containerPort}/{(
 													port.protocol || 'tcp'
 												).toUpperCase()}
@@ -505,14 +505,13 @@
 							<div class="flex items-center justify-between border-t pt-2">
 								<div class="flex items-center gap-1">
 									{#if module.autoStart}
-										<Badge variant="secondary" class="px-1.5 py-0 text-[10px]">Auto-start</Badge>
+										<Badge variant="secondary" class="px-1.5 py-0 text-xs">Auto-start</Badge>
 									{/if}
 									{#if module.followServerLifecycle}
-										<Badge variant="secondary" class="px-1.5 py-0 text-[10px]">Follows server</Badge
-										>
+										<Badge variant="secondary" class="px-1.5 py-0 text-xs">Follows server</Badge>
 									{/if}
 									{#if module.detached}
-										<Badge variant="secondary" class="px-1.5 py-0 text-[10px]">Detached</Badge>
+										<Badge variant="secondary" class="px-1.5 py-0 text-xs">Detached</Badge>
 									{/if}
 								</div>
 								<div class="flex items-center gap-1">

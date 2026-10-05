@@ -441,7 +441,7 @@
 							>
 								{step.title}
 							</p>
-							<p class="mt-0.5 truncate font-sans text-[11px] text-[#8d8d8d]">
+							<p class="mt-0.5 truncate font-sans text-xs text-[#8d8d8d]">
 								{step.subtitle}
 							</p>
 						</div>
@@ -481,7 +481,7 @@
 									: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
-									<Settings class="h-4 w-4 text-[#0f62fe]" />
+									<Settings class="h-4 w-4 text-accent-text" />
 									<h4 class="text-sm font-semibold text-[#f4f4f4]">Manual Configuration</h4>
 								</div>
 								<p class="mt-1 text-xs text-[#a8a8a8]">
@@ -945,7 +945,7 @@
 									: 'border-[#393939] bg-[#161616] hover:bg-[#2a2a2a]'}"
 							>
 								<div class="flex items-center gap-2">
-									<Activity class="h-4 w-4 text-[#0f62fe]" />
+									<Activity class="h-4 w-4 text-accent-text" />
 									<h4 class="text-sm font-semibold text-[#f4f4f4]">
 										Auto-Placement (Load Balanced)
 									</h4>
@@ -1025,7 +1025,7 @@
 														<span class="text-sm font-medium text-[#f4f4f4]">{node.name}</span>
 														{#if node.isLocal}
 															<span
-																class="py-0.2 bg-[#393939] px-1.5 font-mono text-[10px] text-[#c6c6c6]"
+																class="py-0.2 bg-[#393939] px-1.5 font-mono text-xs text-[#c6c6c6]"
 																>Local</span
 															>
 														{/if}
@@ -1102,7 +1102,7 @@
 								/>
 								<div>
 									<span class="block text-xs font-medium text-[#f4f4f4]">Start Immediately</span>
-									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+									<span class="block font-sans text-xs text-[#8d8d8d]"
 										>Boot container upon creation</span
 									>
 								</div>
@@ -1122,7 +1122,7 @@
 								/>
 								<div>
 									<span class="block text-xs font-medium text-[#f4f4f4]">Detached Mode</span>
-									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+									<span class="block font-sans text-xs text-[#8d8d8d]"
 										>Persists past daemon stop</span
 									>
 								</div>
@@ -1142,7 +1142,7 @@
 								/>
 								<div>
 									<span class="block text-xs font-medium text-[#f4f4f4]">Auto Start</span>
-									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+									<span class="block font-sans text-xs text-[#8d8d8d]"
 										>Start when host daemon starts</span
 									>
 								</div>
@@ -1159,7 +1159,7 @@
 								/>
 								<div>
 									<span class="block text-xs font-medium text-[#f4f4f4]">Freeze on Idle</span>
-									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+									<span class="block font-sans text-xs text-[#8d8d8d]"
 										>Pause container when empty</span
 									>
 								</div>
@@ -1176,7 +1176,7 @@
 								/>
 								<div>
 									<span class="block text-xs font-medium text-[#f4f4f4]">Deep Sleep on Idle</span>
-									<span class="block font-sans text-[11px] text-[#8d8d8d]"
+									<span class="block font-sans text-xs text-[#8d8d8d]"
 										>Stop container when empty</span
 									>
 								</div>
@@ -1289,7 +1289,7 @@
 							<p class="mt-1 line-clamp-2 text-xs text-[#a8a8a8]">
 								{modpack.summary}
 							</p>
-							<div class="mt-2 flex items-center gap-2 font-mono text-[11px] text-[#78a9ff]">
+							<div class="mt-2 flex items-center gap-2 font-mono text-xs text-[#78a9ff]">
 								{#if parseJsonArray(modpack.gameVersions).length > 0}
 									<span>MC {parseJsonArray(modpack.gameVersions)[0]}</span>
 								{/if}

@@ -117,9 +117,9 @@
 	<div class="flex items-center justify-between border-b border-[#393939] pb-6">
 		<div class="flex items-center gap-4">
 			<div
-				class="flex h-14 w-14 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#0f62fe]"
+				class="flex h-14 w-14 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-accent-text"
 			>
-				<Settings class="h-7 w-7 text-[#0f62fe]" />
+				<Settings class="h-7 w-7 text-accent-text" />
 			</div>
 			<div class="space-y-1">
 				<h1 class="font-sans text-2xl font-light tracking-tight text-[#f4f4f4]">Settings</h1>

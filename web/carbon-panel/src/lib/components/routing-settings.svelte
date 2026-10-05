@@ -261,7 +261,7 @@
 	<div class="space-y-4 rounded-none border border-[#393939] bg-[#262626] p-5 shadow-none">
 		<div class="flex items-center justify-between border-b border-[#393939] pb-4">
 			<div class="flex items-center gap-3">
-				<Network class="h-5 w-5 text-[#0f62fe]" />
+				<Network class="h-5 w-5 text-accent-text" />
 				<div>
 					<h3 class="font-sans text-base font-normal text-[#f4f4f4]">Proxy Configuration</h3>
 					<p class="text-xs text-[#a8a8a8]">Global proxy settings and base domain configuration</p>

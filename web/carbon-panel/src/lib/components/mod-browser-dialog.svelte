@@ -474,7 +474,7 @@
 						<span
 							class="inline-flex items-center gap-1 rounded-md border border-border/50 bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
 						>
-							<span class="font-mono text-[11px] text-muted-foreground">{f.key}:</span>
+							<span class="font-mono text-xs text-muted-foreground">{f.key}:</span>
 							<span class="font-semibold">{f.value}</span>
 							{#if f.removable}
 								<button
@@ -514,7 +514,7 @@
 								class="absolute top-full left-0 z-50 mt-1 w-80 overflow-hidden rounded-lg border bg-popover py-1 text-popover-foreground shadow-lg"
 							>
 								<div
-									class="mb-1 border-b px-2 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+									class="mb-1 border-b px-2 py-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
 								>
 									Filter Suggestions (type key:value)
 								</div>
@@ -525,7 +525,7 @@
 										class="flex w-full cursor-pointer flex-col px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
 									>
 										<span class="font-mono font-medium text-primary">{s.label}</span>
-										<span class="text-[10px] text-muted-foreground">{s.desc}</span>
+										<span class="text-xs text-muted-foreground">{s.desc}</span>
 									</button>
 								{/each}
 							</div>
@@ -589,7 +589,7 @@
 												{#if mod.installed}
 													<Badge
 														variant="default"
-														class="h-4 bg-emerald-600 px-1.5 py-0 text-[10px] text-white"
+														class="h-4 bg-emerald-600 px-1.5 py-0 text-xs text-white"
 													>
 														Installed
 													</Badge>
@@ -598,14 +598,14 @@
 											<p class="line-clamp-2 text-xs text-muted-foreground">{mod.description}</p>
 
 											<div class="flex flex-wrap items-center gap-1.5 pt-1">
-												<Badge variant="secondary" class="h-5 px-1.5 text-[11px]">
+												<Badge variant="secondary" class="h-5 px-1.5 text-xs">
 													<Download class="mr-1 h-3 w-3" />
 													{formatDownloads(mod.downloads)}
 												</Badge>
 												{#if mod.server_side}
 													<Badge
 														variant="outline"
-														class="h-5 px-1.5 text-[10px] {mod.server_side === 'required'
+														class="h-5 px-1.5 text-xs {mod.server_side === 'required'
 															? 'border-primary/60 text-primary'
 															: 'text-muted-foreground'}"
 													>
@@ -613,15 +613,12 @@
 													</Badge>
 												{/if}
 												{#if mod.client_side}
-													<Badge
-														variant="outline"
-														class="h-5 px-1.5 text-[10px] text-muted-foreground"
-													>
+													<Badge variant="outline" class="h-5 px-1.5 text-xs text-muted-foreground">
 														Client: {mod.client_side}
 													</Badge>
 												{/if}
 												{#each (mod.categories || []).slice(0, 3) as cat (cat)}
-													<Badge variant="outline" class="h-5 px-1.5 text-[11px] capitalize">
+													<Badge variant="outline" class="h-5 px-1.5 text-xs capitalize">
 														{cat}
 													</Badge>
 												{/each}
@@ -687,7 +684,7 @@
 										<span>{ver.version_number || ver.name}</span>
 										<Badge
 											variant={ver.version_type === 'release' ? 'default' : 'secondary'}
-											class="h-4 px-1 text-[10px] capitalize"
+											class="h-4 px-1 text-xs capitalize"
 										>
 											{ver.version_type}
 										</Badge>
@@ -714,7 +711,7 @@
 							<div class="space-y-1.5 pt-1">
 								{#each selectedVersion.dependencies as dep (dep.project_id)}
 									<div class="flex items-center gap-2 text-xs">
-										<Badge variant="outline" class="font-mono text-[10px]">
+										<Badge variant="outline" class="font-mono text-xs">
 											{dep.dependency_type}
 										</Badge>
 										<span class="font-medium text-foreground">{dep.title || dep.project_id}</span>
