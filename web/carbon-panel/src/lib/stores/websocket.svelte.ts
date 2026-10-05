@@ -166,7 +166,18 @@ class WebSocketClient {
 
 		for (const [serverId, logs] of this.logBuffer) {
 			if (logs.length > 0) {
-				this.logEntryHandlers.forEach((handler) => handler(serverId, logs));
+				// Isolate each subscriber. Previously a single throwing handler aborted
+				// the forEach (silently starving every later subscriber) and escaped the
+				// interval callback as an uncaught exception, which also skipped the
+				// logBuffer.clear() below and made it re-throw on every tick. Because
+				// no throw escapes now, the clear is always reached.
+				this.logEntryHandlers.forEach((handler) => {
+					try {
+						handler(serverId, logs);
+					} catch (error) {
+						console.error('[WS] log entry handler threw; isolating subscriber', error);
+					}
+				});
 			}
 		}
 		this.logBuffer.clear();
