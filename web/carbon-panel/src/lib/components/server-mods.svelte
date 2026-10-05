@@ -388,7 +388,7 @@
 							style="width: {uploadProgress.percentComplete}%"
 						></div>
 					</div>
-					<p class="mt-1 font-mono text-[10px] text-[#8d8d8d]">
+					<p class="mt-1 font-mono text-xs text-[#8d8d8d]">
 						{formatBytes(uploadProgress.bytesUploaded)} / {formatBytes(uploadProgress.totalBytes)}
 					</p>
 				</div>
@@ -440,10 +440,10 @@
 									>
 										{#if mod.enabled}
 											<Check class="h-3 w-3" />
-											<span class="text-[10px] uppercase">Active</span>
+											<span class="text-xs uppercase">Active</span>
 										{:else}
 											<Ban class="h-3 w-3" />
-											<span class="text-[10px] uppercase">Disabled</span>
+											<span class="text-xs uppercase">Disabled</span>
 										{/if}
 									</button>
 
@@ -459,7 +459,7 @@
 											</h4>
 											{#if mod.version}
 												<span
-													class="border border-[#393939] bg-[#161616] px-1.5 py-0 font-mono text-[10px] text-[#c6c6c6]"
+													class="border border-[#393939] bg-[#161616] px-1.5 py-0 font-mono text-xs text-[#c6c6c6]"
 												>
 													{mod.version}
 												</span>

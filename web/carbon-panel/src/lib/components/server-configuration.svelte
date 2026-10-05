@@ -589,7 +589,7 @@
 								<span class="truncate">{category.name}</span>
 								{#if modCount > 0}
 									<span
-										class="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-none px-1 font-mono text-[10px] font-medium
+										class="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-none px-1 font-mono text-xs font-medium
 										{isActive ? 'bg-[#ff832b] font-semibold text-black' : 'bg-[#ff832b] text-black'}"
 									>
 										{modCount}
@@ -639,31 +639,31 @@
 										</Label>
 										{#if prop.required}
 											<span
-												class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/20 px-1 py-0.5 font-mono text-[10px] font-medium text-[#ff8389]"
+												class="rounded-none border border-[#da1e28]/40 bg-[#da1e28]/20 px-1 py-0.5 font-mono text-xs font-medium text-[#ff8389]"
 												>required</span
 											>
 										{/if}
 										{#if prop.system}
 											<span
-												class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-1 py-0.5 font-mono text-[10px] font-medium text-[#78a9ff]"
+												class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-1 py-0.5 font-mono text-xs font-medium text-[#78a9ff]"
 												>system</span
 											>
 										{/if}
 										{#if isModified}
 											<span
-												class="rounded-none border border-[#ff832b]/40 bg-[#ff832b]/20 px-1 py-0.5 font-mono text-[10px] font-medium text-[#ff832b]"
+												class="rounded-none border border-[#ff832b]/40 bg-[#ff832b]/20 px-1 py-0.5 font-mono text-xs font-medium text-[#ff832b]"
 												>modified</span
 											>
 										{/if}
 										{#if !isEnabled}
 											<span
-												class="rounded-none border border-[#525252] bg-[#353535] px-1 py-0.5 font-mono text-[10px] text-[#8d8d8d]"
+												class="rounded-none border border-[#525252] bg-[#353535] px-1 py-0.5 font-mono text-xs text-[#8d8d8d]"
 												>(unset)</span
 											>
 										{/if}
 										{#if prop.key === 'cfApiKey'}
 											<span
-												class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#78a9ff]"
+												class="rounded-none border border-[#0f62fe]/40 bg-[#0f62fe]/20 px-1.5 py-0.5 font-mono text-xs font-medium text-[#78a9ff]"
 											>
 												Optional (Keyless Fallback)
 											</span>

@@ -1,6 +1,24 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/*
+	Self-hosted IBM Plex.
+
+	These were previously requested from the Google Fonts CDN via a <link> in
+	app.html, which the server's `style-src 'self' 'unsafe-inline'` CSP blocked.
+	The block was silent: the declared UI font never loaded and every screen
+	rendered in the fallback face.
+
+	- Plex Sans ships a variable font with a weight axis, so one file covers
+	  100-700 and no faux-bold synthesis is needed.
+	- Plex Mono has no variable release, so 400/500/600 are loaded statically.
+	- Latin subset only, to keep the payload proportionate for a panel UI.
+*/
+@import '@fontsource-variable/ibm-plex-sans/wght.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -23,6 +41,12 @@
 	--border: #e0e0e0;
 	--input: #e0e0e0;
 	--ring: #0f62fe;
+	/*
+		Accent colour for TEXT/links. #0f62fe (IBM Blue 60) reaches 4.63:1 on
+		the white --background, which clears WCAG AA for body text, so it is
+		correct here and is left alone in the light theme.
+	*/
+	--accent-text: #0f62fe;
 	--chart-1: #0f62fe;
 	--chart-2: #198038;
 	--chart-3: #b28600;
@@ -58,6 +82,14 @@
 	--border: #393939; /* Carbon subtle border */
 	--input: #393939;
 	--ring: #0f62fe; /* Carbon focus border */
+	/*
+		#0f62fe is only 3.62:1 against the dark --background and 3.03:1 against
+		--card, so it FAILS WCAG AA as text here. Carbon's dark-theme link
+		colour is #78a9ff (inverse link-01), which measures 7.68:1 on
+		--background and 6.43:1 on --card. Using --accent-text keeps every
+		accent-coloured label and link legible in both themes.
+	*/
+	--accent-text: #78a9ff;
 	--chart-1: #4589ff;
 	--chart-2: #42be65;
 	--chart-3: #f1c21b;
@@ -74,6 +106,15 @@
 }
 
 @theme inline {
+	/*
+		Without these, `font-sans` and `font-mono` resolved to Tailwind's default
+		stacks rather than IBM Plex, so the ~420 utility uses across the app never
+		actually applied the design font even once it loaded.
+	*/
+	--font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+		sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+		'Liberation Mono', 'Courier New', monospace;
 	--radius-sm: 0px;
 	--radius-md: 0px;
 	--radius-lg: 0px;
@@ -96,6 +137,7 @@
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-accent-text: var(--accent-text);
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -118,21 +160,21 @@
 	}
 	html,
 	body {
-		font-family:
-			'IBM Plex Sans',
-			-apple-system,
-			BlinkMacSystemFont,
-			'Segoe UI',
-			Roboto,
-			sans-serif;
+		font-family: var(--font-sans);
 		@apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
-		font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+		/*
+			Tabular figures keep changing numbers from jittering and stop columns of
+			metrics (RAM, CPU, TPS, player counts, uptimes) shifting horizontally as
+			digits change. Costs nothing and is applied globally so no component has
+			to remember it.
+		*/
+		font-variant-numeric: tabular-nums lining-nums;
 	}
 	code,
 	kbd,
 	samp,
 	pre {
-		font-family: 'IBM Plex Mono', 'Courier New', Courier, monospace;
+		font-family: var(--font-mono);
 	}
 }
 

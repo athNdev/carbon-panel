@@ -53,7 +53,7 @@
 >
 	<!-- Column header - matches row layout exactly -->
 	<div
-		class="sticky top-0 z-10 flex h-[26px] items-center border-b bg-background pr-3 text-[11px] text-muted-foreground"
+		class="sticky top-0 z-10 flex h-[26px] items-center border-b bg-background pr-3 text-xs text-muted-foreground"
 	>
 		<!-- Checkbox column -->
 		<div

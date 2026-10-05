@@ -178,11 +178,11 @@
 					<td class="px-4 py-3 font-medium text-white">
 						<div class="flex items-center gap-2.5">
 							<div
-								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#161616] text-[#0f62fe]"
+								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#161616] text-accent-text"
 							>
 								<DynamicIcon
 									name={template.icon}
-									class="h-4 w-4 text-[#0f62fe]"
+									class="h-4 w-4 text-accent-text"
 									fallback="Package"
 								/>
 							</div>

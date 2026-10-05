@@ -332,7 +332,7 @@
 					<div
 						class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#f4f4f4] select-none"
 					>
-						<Loader2 class="h-4 w-4 animate-spin text-[#0f62fe]" />
+						<Loader2 class="h-4 w-4 animate-spin text-accent-text" />
 						<span>Creating Server...</span>
 					</div>
 				{:else if server.status === ServerStatus.STOPPED || !server.containerId}
@@ -508,7 +508,7 @@
 					<ExternalLink class="h-4 w-4 text-[#78a9ff]" />
 				</div>
 				<div class="py-3">
-					<p class="font-mono text-[11px] text-[#8d8d8d] uppercase">Connect String</p>
+					<p class="font-mono text-xs text-[#8d8d8d] uppercase">Connect String</p>
 					<p class="mt-0.5 truncate font-mono text-base font-semibold text-[#f4f4f4]">
 						{#if server.proxyHostname}
 							{server.proxyHostname}
@@ -560,7 +560,7 @@
 					{/if}
 				</div>
 				<div
-					class="flex items-center justify-between border-t border-[#393939] pt-2 font-mono text-[11px] text-[#8d8d8d]"
+					class="flex items-center justify-between border-t border-[#393939] pt-2 font-mono text-xs text-[#8d8d8d]"
 				>
 					<span>Port: {server.port}</span>
 					<span>Max Players: {server.maxPlayers}</span>
@@ -620,7 +620,7 @@
 				</div>
 
 				<div
-					class="flex items-center justify-between border-t border-[#393939] pt-2 font-mono text-[11px]"
+					class="flex items-center justify-between border-t border-[#393939] pt-2 font-mono text-xs"
 				>
 					<span class="text-[#8d8d8d]">TPS:</span>
 					<span
@@ -642,7 +642,7 @@
 				class="flex flex-col items-start justify-between gap-3 border border-l-4 border-[#393939] border-l-[#0f62fe] bg-[#161616] p-4 sm:flex-row sm:items-center"
 			>
 				<div class="flex items-center gap-3">
-					<Loader2 class="h-5 w-5 shrink-0 animate-spin text-[#0f62fe]" />
+					<Loader2 class="h-5 w-5 shrink-0 animate-spin text-accent-text" />
 					<div>
 						<p class="text-sm font-semibold text-[#f4f4f4]">Server is starting up</p>
 						<p class="mt-0.5 text-xs text-[#a8a8a8]">
@@ -664,7 +664,7 @@
 			<div
 				class="flex items-center gap-3 border border-l-4 border-[#393939] border-l-[#0f62fe] bg-[#161616] p-4"
 			>
-				<Loader2 class="h-5 w-5 shrink-0 animate-spin text-[#0f62fe]" />
+				<Loader2 class="h-5 w-5 shrink-0 animate-spin text-accent-text" />
 				<div>
 					<p class="text-sm font-semibold text-[#f4f4f4]">Creating server environment</p>
 					<p class="mt-0.5 text-xs text-[#a8a8a8]">

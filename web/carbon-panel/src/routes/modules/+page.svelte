@@ -21,7 +21,7 @@
 	<div class="flex items-center justify-between rounded-none border-b border-[#393939] pb-6">
 		<div class="flex items-center gap-4">
 			<div
-				class="flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#0f62fe] shadow-sm"
+				class="flex h-12 w-12 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-accent-text shadow-sm"
 			>
 				<Puzzle class="h-6 w-6" />
 			</div>

@@ -183,7 +183,7 @@
 						<div class="space-y-1 text-left">
 							<div class="flex items-center gap-2">
 								<span class="text-sm font-semibold">Mode A: Live Sync URL (itzg bootstrap)</span>
-								<Badge variant="secondary" class="px-1 py-0 text-[10px]">Recommended</Badge>
+								<Badge variant="secondary" class="px-1 py-0 text-xs">Recommended</Badge>
 							</div>
 							<p class="text-xs text-muted-foreground">
 								Configures container environment with <code
@@ -206,7 +206,7 @@
 						<div class="space-y-1 text-left">
 							<div class="flex items-center gap-2">
 								<span class="text-sm font-semibold">Mode B: Bake to Server Data (/data/mods)</span>
-								<Badge variant="outline" class="px-1 py-0 text-[10px]">Standalone</Badge>
+								<Badge variant="outline" class="px-1 py-0 text-xs">Standalone</Badge>
 							</div>
 							<p class="text-xs text-muted-foreground">
 								Downloads and installs all server-side mod JARs directly into the server's mods

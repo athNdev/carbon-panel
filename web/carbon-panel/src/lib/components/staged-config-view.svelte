@@ -161,7 +161,7 @@
 	<div class="flex items-center justify-between border-b border-[#393939] pb-3">
 		<div>
 			<h2 class="flex items-center gap-2 text-base font-semibold text-white">
-				<Layers class="h-4 w-4 text-[#0f62fe]" />
+				<Layers class="h-4 w-4 text-accent-text" />
 				Staged Config Rollout
 			</h2>
 			<p class="text-xs text-[#a8a8a8]">
@@ -226,7 +226,7 @@
 							{:else}
 								<CarbonTag type="cyan" size="sm">on restart</CarbonTag>
 							{/if}
-							<span class="font-mono text-[11px] text-[#8d8d8d]">
+							<span class="font-mono text-xs text-[#8d8d8d]">
 								{new Date(change.created_at).toLocaleString()}
 							</span>
 						</div>
@@ -255,7 +255,7 @@
 						</div>
 					</div>
 					<pre
-						class="overflow-x-auto rounded-none border border-[#393939] bg-[#262626] p-2 font-mono text-[11px] text-[#c6c6c6]">{JSON.stringify(
+						class="overflow-x-auto rounded-none border border-[#393939] bg-[#262626] p-2 font-mono text-xs text-[#c6c6c6]">{JSON.stringify(
 							parsedPayload(change.payload),
 							null,
 							2

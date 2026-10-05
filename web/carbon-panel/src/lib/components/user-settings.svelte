@@ -488,11 +488,11 @@
 										<span class="truncate text-sm font-medium"
 											>{invite.description || 'Untitled'}</span
 										>
-										<Badge variant={getStatusVariant(status)} class="shrink-0 text-[10px]">
+										<Badge variant={getStatusVariant(status)} class="shrink-0 text-xs">
 											{status}
 										</Badge>
 										{#if invite.hasPin}
-											<Badge variant="outline" class="shrink-0 text-[10px]">PIN</Badge>
+											<Badge variant="outline" class="shrink-0 text-xs">PIN</Badge>
 										{/if}
 									</div>
 									<div class="flex shrink-0 items-center gap-0.5">
@@ -518,9 +518,7 @@
 										{/if}
 									</div>
 								</div>
-								<div
-									class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"
-								>
+								<div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
 									<span
 										>{invite.useCount}{invite.maxUses > 0 ? `/${invite.maxUses}` : '/\u221e'} uses</span
 									>
@@ -724,7 +722,7 @@
 									<p class="text-muted-foreground">Current roles</p>
 									<div class="mt-1 flex flex-wrap gap-1">
 										{#each editingUser.roles || [] as role (role)}
-											<Badge variant={getRoleBadgeVariant(role)} class="text-[10px]">{role}</Badge>
+											<Badge variant={getRoleBadgeVariant(role)} class="text-xs">{role}</Badge>
 										{/each}
 										{#if !editingUser.roles?.length}
 											<span class="text-xs text-muted-foreground">None</span>

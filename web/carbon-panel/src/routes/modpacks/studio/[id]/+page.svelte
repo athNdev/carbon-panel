@@ -857,7 +857,7 @@
 					class="rounded-none"
 					onclick={() => (deployDialogOpen = true)}
 				>
-					<Rocket class="mr-1.5 h-3.5 w-3.5 text-[#0f62fe]" />
+					<Rocket class="mr-1.5 h-3.5 w-3.5 text-accent-text" />
 					Deploy to Server
 				</CarbonButton>
 
@@ -872,7 +872,7 @@
 					{#if exportingPack === 'packwiz'}
 						<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />
 					{:else}
-						<Download class="mr-1.5 h-3.5 w-3.5 text-[#0f62fe]" />
+						<Download class="mr-1.5 h-3.5 w-3.5 text-accent-text" />
 					{/if}
 					Packwiz .zip
 				</CarbonButton>
@@ -1273,12 +1273,12 @@
 												</td>
 												<td class="px-3 py-3 font-semibold text-white">
 													<div class="flex items-center gap-2">
-														<Package class="h-4 w-4 shrink-0 text-[#0f62fe]" />
+														<Package class="h-4 w-4 shrink-0 text-accent-text" />
 														<span>{mod.name}</span>
 													</div>
 												</td>
 												<td
-													class="max-w-[180px] truncate px-3 py-3 font-mono text-[11px] text-[#a8a8a8]"
+													class="max-w-[180px] truncate px-3 py-3 font-mono text-xs text-[#a8a8a8]"
 												>
 													{mod.file_name}
 												</td>
@@ -1291,7 +1291,7 @@
 													<button
 														type="button"
 														onclick={() => toggleSide(mod)}
-														class="inline-flex cursor-pointer items-center rounded-none border px-2 py-0.5 font-mono text-[10px] font-semibold
+														class="inline-flex cursor-pointer items-center rounded-none border px-2 py-0.5 font-mono text-xs font-semibold
 															{mod.side === 'both' ? 'border-[#0f62fe] bg-[#0f62fe]/20 text-[#78a9ff]' : ''}
 															{mod.side === 'server' ? 'border-[#198038] bg-[#198038]/20 text-[#6fdc8c]' : ''}
 															{mod.side === 'client' ? 'border-[#8a3ffc] bg-[#8a3ffc]/20 text-[#d4bbff]' : ''}"
@@ -1311,7 +1311,7 @@
 															: `Pin version for ${mod.name}`}
 													>
 														{#if mod.pinned}
-															<Pin class="h-3.5 w-3.5 text-[#0f62fe]" />
+															<Pin class="h-3.5 w-3.5 text-accent-text" />
 														{:else}
 															<PinOff class="h-3.5 w-3.5 opacity-40 hover:opacity-100" />
 														{/if}
@@ -1321,7 +1321,7 @@
 													{#if updatesMap[mod.slug]?.update_available}
 														<CarbonTag type="magenta" size="sm">Update Ready</CarbonTag>
 													{:else}
-														<span class="font-mono text-[11px] text-[#8d8d8d]">Up to date</span>
+														<span class="font-mono text-xs text-[#8d8d8d]">Up to date</span>
 													{/if}
 												</td>
 												<td class="px-3 py-3 text-right">
@@ -1407,7 +1407,7 @@
 									<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
 										{#each packFiles as file (file.path)}
 											<tr class="transition-colors hover:bg-[#353535]">
-												<td class="px-4 py-2.5 font-mono text-[11px] font-semibold text-white">
+												<td class="px-4 py-2.5 font-mono text-xs font-semibold text-white">
 													{file.path}
 												</td>
 												<td class="px-4 py-2.5">
@@ -1479,7 +1479,7 @@
 								{#if migrating}
 									<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />
 								{:else}
-									<Sparkles class="mr-1.5 h-3.5 w-3.5 text-[#0f62fe]" />
+									<Sparkles class="mr-1.5 h-3.5 w-3.5 text-accent-text" />
 								{/if}
 								Simulate Compatibility
 							</CarbonButton>
@@ -1581,7 +1581,7 @@
 									? `${window.location.origin}/api/v1/packwiz/${pack?.id}/pack.toml`
 									: `/api/v1/packwiz/${pack?.id}/pack.toml`}
 							</div>
-							<p class="text-[11px] text-[#8d8d8d]">
+							<p class="text-xs text-[#8d8d8d]">
 								Set this URL in Docker container environments or packwiz-installer to dynamically
 								provision this modpack on startup.
 							</p>
@@ -1608,7 +1608,7 @@
 								{#if refreshing}
 									<Loader2 class="mr-1.5 h-3.5 w-3.5 animate-spin" />
 								{:else}
-									<RefreshCw class="mr-1.5 h-3.5 w-3.5 text-[#0f62fe]" />
+									<RefreshCw class="mr-1.5 h-3.5 w-3.5 text-accent-text" />
 								{/if}
 								Run Refresh
 							</CarbonButton>
@@ -1621,7 +1621,7 @@
 								<CarbonButton
 									kind="ghost"
 									size="sm"
-									class="rounded-none text-[11px]"
+									class="rounded-none text-xs"
 									onclick={loadRawTomls}
 									disabled={loadingRaw}
 								>
@@ -1629,7 +1629,7 @@
 								</CarbonButton>
 							</div>
 							<pre
-								class="max-h-48 overflow-y-auto rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-[11px] text-[#c6c6c6]">{rawPackToml ||
+								class="max-h-48 overflow-y-auto rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#c6c6c6]">{rawPackToml ||
 									'Loading pack.toml...'}</pre>
 						</div>
 					</CarbonTile>
@@ -1719,7 +1719,7 @@
 								<div class="min-w-0 flex-1 space-y-0.5">
 									<div class="flex items-center gap-2">
 										<span class="truncate text-sm font-semibold text-white">{item.title}</span>
-										<span class="text-[11px] text-[#8d8d8d]">by {item.author}</span>
+										<span class="text-xs text-[#8d8d8d]">by {item.author}</span>
 									</div>
 									<p class="line-clamp-1 text-xs text-[#a8a8a8]">{item.description}</p>
 									<div class="flex items-center gap-1.5 pt-1">

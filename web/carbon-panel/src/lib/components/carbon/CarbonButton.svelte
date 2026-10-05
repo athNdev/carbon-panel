@@ -46,7 +46,7 @@
 		tertiary:
 			'bg-transparent text-white hover:bg-[#393939] active:bg-[#525252] border border-[#f4f4f4] hover:border-transparent disabled:border-[#6f6f6f] disabled:text-[#8d8d8d]',
 		ghost:
-			'bg-transparent text-[#0f62fe] hover:bg-[#353535] active:bg-[#525252] border border-transparent disabled:text-[#8d8d8d] disabled:hover:bg-transparent',
+			'bg-transparent text-accent-text hover:bg-[#353535] active:bg-[#525252] border border-transparent disabled:text-[#8d8d8d] disabled:hover:bg-transparent',
 		danger:
 			'bg-[#da1e28] text-white hover:bg-[#ba1b23] active:bg-[#750e13] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]'
 	};

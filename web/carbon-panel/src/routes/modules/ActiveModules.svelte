@@ -247,7 +247,7 @@
 								<span>{module.name}</span>
 							</div>
 							<div class="flex items-center gap-1.5 font-mono text-xs text-[#a8a8a8]">
-								<Server class="h-3 w-3 text-[#0f62fe]" />
+								<Server class="h-3 w-3 text-accent-text" />
 								<span>{module.serverName || module.serverId}</span>
 							</div>
 						</div>
@@ -345,7 +345,7 @@
 									class="rounded-none"
 									aria-label="Module status loading"
 								>
-									<Loader2 class="h-3.5 w-3.5 animate-spin text-[#0f62fe]" />
+									<Loader2 class="h-3.5 w-3.5 animate-spin text-accent-text" />
 								</CarbonButton>
 							{:else if module.status === ModuleStatus.ERROR}
 								<CarbonButton
