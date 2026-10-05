@@ -274,45 +274,16 @@ func TestClassifyExit(t *testing.T) {
 }
 
 // --- debouncer tests -------------------------------------------------------
-
-func TestDebouncerCoalescesBurst(t *testing.T) {
-	d := newDebouncer(40 * time.Millisecond)
-
-	var mu sync.Mutex
-	fires := 0
-	for i := 0; i < 20; i++ {
-		d.enqueue("server-1", func() {
-			mu.Lock()
-			fires++
-			mu.Unlock()
-		})
-	}
-
-	time.Sleep(120 * time.Millisecond)
-
-	mu.Lock()
-	defer mu.Unlock()
-	if fires != 1 {
-		t.Fatalf("burst of 20 enqueues fired %d times, want 1", fires)
-	}
-}
-
-func TestDebouncerKeepsKeysIndependent(t *testing.T) {
-	d := newDebouncer(30 * time.Millisecond)
-
-	var mu sync.Mutex
-	seen := map[string]int{}
-	d.enqueue("a", func() { mu.Lock(); seen["a"]++; mu.Unlock() })
-	d.enqueue("b", func() { mu.Lock(); seen["b"]++; mu.Unlock() })
-
-	time.Sleep(100 * time.Millisecond)
-
-	mu.Lock()
-	defer mu.Unlock()
-	if seen["a"] != 1 || seen["b"] != 1 {
-		t.Fatalf("seen = %v, want a:1 b:1", seen)
-	}
-}
+//
+// NOTE: the debouncer's coalescing and per-key independence behaviour is
+// covered deterministically by TestDebouncer_CoalescesBurst and
+// TestDebouncer_DistinctKeysFireIndependently in debouncer_synctest_test.go,
+// which run under testing/synctest with virtual time. Those tests are strictly
+// stronger (they also assert the debounce does not fire INSIDE the window) and
+// are immune to CI scheduling delays. The wall-clock variants that used to live
+// here slept for a fixed duration and then asserted an exact fire count, which
+// flaked under load whenever a debounce timer fired late. Removed rather than
+// duplicated.
 
 // --- integration-ish tests over ReconcileServer ----------------------------
 

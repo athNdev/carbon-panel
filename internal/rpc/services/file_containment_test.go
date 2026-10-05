@@ -41,6 +41,7 @@ func TestFileServicePathContainment(t *testing.T) {
 	}
 
 	svc := NewFileService(store, nil, nil, nil, logger.New())
+	t.Cleanup(svc.Stop)
 	ctx := context.Background()
 
 	rejected := func(name string, err error) {

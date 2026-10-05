@@ -12,7 +12,8 @@ import (
 	"github.com/athNdev/carbon-panel/internal/indexers"
 )
 
-const (
+// BaseURL is a var (not const) so tests can point the client at an httptest server.
+var (
 	BaseURL = "https://api.modrinth.com/v2"
 )
 

@@ -46,19 +46,19 @@ func NewDownloadStreamHandler(downloadManager *download.Manager, authManager *au
 			return
 		}
 
-		// Check RBAC permission (files:read)
-		if enforcer != nil {
-			allowed, rbacErr := enforcer.Enforce(user.Roles, rbac.ResourceFiles, rbac.ActionRead, "*")
-			if rbacErr != nil || !allowed {
-				http.Error(w, "forbidden", http.StatusForbidden)
-				return
-			}
-		}
-
-		// Look up download session
+		// Look up the download session BEFORE authorizing. The session records
+		// the server it belongs to, so the permission check can be scoped to
+		// that server. Enforcing globally first could only ever answer "does
+		// this user hold files:read anywhere", which let any such user fetch
+		// another user's download if they learned the session id.
 		session, err := downloadManager.GetSession(sessionID)
 		if err != nil {
 			http.Error(w, "download session not found or expired", http.StatusNotFound)
+			return
+		}
+
+		if !authorizeDownload(enforcer, user, session) {
+			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 
@@ -90,4 +90,25 @@ func NewDownloadStreamHandler(downloadManager *download.Manager, authManager *au
 		// Handles range headers, conditional requests, and Content-Length
 		http.ServeContent(w, r, session.Filename, stat.ModTime(), file)
 	})
+}
+
+// authorizeDownload decides whether user may stream the bytes of session.
+//
+// The session records the server it belongs to, so the permission check is
+// scoped to that server. Sessions created before download sessions carried a
+// server id (or when no enforcer is configured) fall back to the global
+// check, which is the pre-existing behaviour rather than a new denial.
+//
+// Extracted from ServeHTTP so the security decision is directly testable
+// without standing up an auth manager and a full HTTP round trip.
+func authorizeDownload(e *rbac.Enforcer, user *auth.AuthenticatedUser, session *download.Session) bool {
+	if e == nil || user == nil || session == nil {
+		return false
+	}
+	objectID := session.ServerID
+	if objectID == "" {
+		objectID = "*"
+	}
+	allowed, err := e.Enforce(user.Roles, rbac.ResourceFiles, rbac.ActionRead, objectID)
+	return err == nil && allowed
 }

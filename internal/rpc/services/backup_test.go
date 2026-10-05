@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/internal/auth"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
@@ -23,6 +25,17 @@ func TestBackupService_ListDeleteLock(t *testing.T) {
 	ctx := context.Background()
 	log := logger.New()
 	svc := NewBackupService(store, nil, nil, appconfig.S3Config{}, log)
+	// Backup delete/lock/restore are authorized against the OWNING server, so
+	// the service needs an enforcer and an authenticated user in context.
+	enforcer, err := rbac.NewEnforcer(store.DB())
+	if err != nil {
+		t.Fatalf("NewEnforcer: %v", err)
+	}
+	if err := enforcer.SeedDefaultPolicies(false); err != nil {
+		t.Fatalf("SeedDefaultPolicies: %v", err)
+	}
+	svc.SetEnforcer(enforcer)
+	ctx = auth.WithUser(ctx, &auth.AuthenticatedUser{ID: "u-admin", Username: "admin", Roles: []string{"admin"}})
 
 	dir := t.TempDir()
 	archive := filepath.Join(dir, "srv_20200101-000000.zip")

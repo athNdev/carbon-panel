@@ -319,9 +319,9 @@
 				<CardContent>
 					<div class="space-y-2">
 						{#each allRoutes as route (route.serverId)}
-							<div class="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-								<div>
-									<p class="font-mono text-sm">{route.hostname}</p>
+							<div class="flex items-center justify-between gap-3 rounded-lg bg-muted/50 p-3">
+								<div class="min-w-0">
+									<p class="truncate font-mono text-sm" title={route.hostname}>{route.hostname}</p>
 									<p class="text-xs text-muted-foreground">
 										{route.serverId === server.id
 											? '(This server)'
@@ -329,9 +329,9 @@
 									</p>
 								</div>
 								{#if route.active}
-									<Badge variant="default" class="text-xs">Active</Badge>
+									<Badge variant="default" class="shrink-0 text-xs">Active</Badge>
 								{:else}
-									<Badge variant="outline" class="text-xs">Inactive</Badge>
+									<Badge variant="outline" class="shrink-0 text-xs">Inactive</Badge>
 								{/if}
 							</div>
 						{/each}

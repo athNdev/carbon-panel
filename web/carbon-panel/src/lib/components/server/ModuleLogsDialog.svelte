@@ -95,6 +95,7 @@
 			return;
 		}
 
+		loading = true;
 		try {
 			const response = await rpcClient.module.getModuleLogs({
 				id: module.id,
@@ -103,6 +104,8 @@
 			logEntries = response.logs || [];
 		} catch (error) {
 			console.error('Failed to fetch module logs:', error);
+		} finally {
+			loading = false;
 		}
 	}
 

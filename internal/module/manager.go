@@ -27,7 +27,18 @@ type Manager struct {
 	logStreamer  *logger.LogStreamer
 	mu           sync.Mutex
 	running      bool
+
+	// hookSem bounds how many module lifecycle actions run concurrently. Hook
+	// dispatch fans out one goroutine per matching hook, each of which performs
+	// Docker operations (start/stop/restart). Without a cap, a burst of events
+	// across many modules could launch an unbounded number of concurrent
+	// Docker calls. Actions above the cap wait rather than being dropped, so
+	// no configured hook is silently skipped.
+	hookSem chan struct{}
 }
+
+// maxConcurrentHookActions caps concurrent module lifecycle actions.
+const maxConcurrentHookActions = 16
 
 // NewManager creates a new module manager
 func NewManager(store *storage.Store, dockerCli *docker.Client, sender *command.Sender, cfg *config.Config, proxyManager *proxy.Manager, log *logger.Logger) *Manager {
@@ -48,6 +59,48 @@ func NewManagerWithPool(store *storage.Store, dockerCli *docker.Client, pool *do
 		config:       cfg,
 		proxyManager: proxyManager,
 		logger:       log,
+		hookSem:      make(chan struct{}, maxConcurrentHookActions),
+	}
+}
+
+// acquireHookSlot blocks until a module lifecycle action slot is free, or until
+// ctx is done. Callers run this inside their fan-out goroutine so the event bus
+// is never stalled.
+func (m *Manager) acquireHookSlot(ctx context.Context) bool {
+	if m.hookSem == nil {
+		return true // manager built without the semaphore (defensive)
+	}
+	select {
+	case m.hookSem <- struct{}{}:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (m *Manager) releaseHookSlot() {
+	if m.hookSem == nil {
+		return
+	}
+	select {
+	case <-m.hookSem:
+	default:
+	}
+}
+
+// sleepCtx waits for d, returning false if ctx is cancelled first. Used instead
+// of time.Sleep so a shutdown or cancellation is not blocked for the full delay.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	if d <= 0 {
+		return true
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return true
+	case <-ctx.Done():
+		return false
 	}
 }
 

@@ -8,18 +8,9 @@
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { create } from '@bufbuild/protobuf';
 	import { toast } from 'svelte-sonner';
-	import {
-		Loader2,
-		Save,
-		AlertCircle,
-		Network,
-		Server as ServerIcon,
-		ArrowRightLeft,
-		ShieldCheck,
-		CheckCircle2,
-		RefreshCw
-	} from '@lucide/svelte';
+	import { Loader2, Save, AlertCircle, Network, ArrowRightLeft } from '@lucide/svelte';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import * as _ from 'lodash-es';
 	import { ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { UpdateServerRequest } from '$lib/proto/carbonpanel/v1/server_pb';
@@ -189,6 +180,11 @@
 		}
 	}
 
+	let confirmOpen = $state(false);
+	let confirmTitle = $state('');
+	let confirmMessage = $state('');
+	let pendingMigrate = $state<{ targetNodeId: string; isLive: boolean } | null>(null);
+
 	async function handleMigrate() {
 		if (!targetNodeId || targetNodeId === server.nodeId) {
 			toast.error('Please select a different target node to migrate to');
@@ -196,11 +192,21 @@
 		}
 		const target = nodes.find((n) => n.id === targetNodeId);
 		const isLive = server.status === ServerStatus.RUNNING;
-		const confirmMsg = isLive
-			? `Perform live migration of "${server.name}" to node "${target?.name || targetNodeId}"?\n\n- World state will be flushed to disk\n- Server container will transition cleanly\n- Proxy routing will be updated with zero player disconnection`
-			: `Migrate "${server.name}" to node "${target?.name || targetNodeId}"?`;
-		if (!confirm(confirmMsg)) return;
+		confirmTitle = `Migrate "${server.name}"?`;
+		confirmMessage =
+			(target?.name || targetNodeId) +
+			(isLive
+				? ' — world state is flushed, the container transitions cleanly, proxy routing updates with zero player disconnection.'
+				: ' — the container is recreated on the target node.');
+		confirmOpen = true;
+		pendingMigrate = { targetNodeId, isLive };
+	}
 
+	async function confirmMigrate() {
+		const pending = pendingMigrate;
+		if (!pending) return;
+		const target = nodes.find((n) => n.id === pending.targetNodeId);
+		const isLive = pending.isLive;
 		migrating = true;
 		migrationStep = isLive
 			? 'Flushing world chunks and migrating container...'
@@ -221,12 +227,14 @@
 			} else {
 				toast.error(res.message || 'Migration did not succeed');
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Live migration failed:', err);
-			toast.error(`Migration failed: ${err.message || 'Unknown error'}`);
+			const message = err instanceof Error ? err.message : '';
+			toast.error(`Migration failed: ${message || 'Unknown error'}`);
 		} finally {
 			migrating = false;
 			migrationStep = '';
+			pendingMigrate = null;
 		}
 	}
 
@@ -683,7 +691,7 @@
 											{:else}
 												<span class="text-rose-400">Offline</span>
 											{/if}
-											â€¢ {(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB RAM
+											• {(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB RAM
 										</div>
 									</div>
 								</SelectItem>
@@ -711,7 +719,7 @@
 			<div class="flex flex-col justify-between gap-2 pt-1 sm:flex-row sm:items-center">
 				<p class="text-[11px] text-muted-foreground">
 					{#if server.status === ServerStatus.RUNNING}
-						âš¡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy
+						⚡ <b>Live zero-downtime migration</b>: Memory & world state are synced before proxy
 						rerouting.
 					{:else}
 						ðŸ’¤ <b>Offline migration</b>: Container will be initialized on the selected node.
@@ -747,3 +755,11 @@
 		</Button>
 	</div>
 </div>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title={confirmTitle}
+	message={confirmMessage}
+	confirmLabel="Migrate Server"
+	onconfirm={confirmMigrate}
+	onclose={() => (pendingMigrate = null)}
+/>

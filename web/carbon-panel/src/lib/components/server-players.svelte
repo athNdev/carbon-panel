@@ -88,7 +88,8 @@
 					({onlineCount} online){/if}
 			</h3>
 			<button
-				class="h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c]"
+				type="button"
+				class="inline-flex h-8 items-center rounded-none bg-[#393939] px-4 text-xs text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 				onclick={loadPlayers}
 				disabled={loading}
 			>
@@ -104,6 +105,7 @@
 			placeholder="Search players…"
 			aria-label="Search players"
 			bind:value={search}
+			onkeydown={(e) => e.key === 'Escape' && (search = '')}
 			class="mb-4 h-9 w-full max-w-xs rounded-none border border-[#393939] bg-[#161616] px-3 text-xs text-[#f4f4f4]"
 		/>
 
@@ -122,10 +124,11 @@
 				<tbody>
 					{#each filtered as player (player)}
 						<tr class="border-b border-[#262626] font-mono text-[#f4f4f4]">
-							<td class="py-2 pr-4">{player}</td>
+							<td class="max-w-[180px] truncate py-2 pr-4" title={player}>{player}</td>
 							<td class="flex flex-wrap gap-2 py-2">
-								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label]}
+								{#each [['kick', 'Kick'], ['ban', 'Ban'], ['op', 'Op'], ['deop', 'Deop']] as [cmd, label] (cmd)}
 									<button
+										type="button"
 										class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 										disabled={acting !== null}
 										onclick={() => runPlayerCommand(player, cmd)}
