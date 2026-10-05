@@ -512,7 +512,7 @@ one at https://mozilla.org/MPL/2.0/.
 										</span>
 									</div>
 								{:else}
-									<span class="font-mono text-xs text-[#6f6f6f]">—</span>
+									<span class="font-mono text-xs text-[#a8a8a8]">—</span>
 								{/if}
 							</td>
 

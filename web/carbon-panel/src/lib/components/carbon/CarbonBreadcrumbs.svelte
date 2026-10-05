@@ -26,7 +26,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 >
 	{#each items as item, i (item.label + i)}
 		{#if i > 0}
-			<span class="text-[#6f6f6f]">/</span>
+			<span class="text-[#a8a8a8]">/</span>
 		{/if}
 		{#if item.href && i < items.length - 1}
 			<!-- eslint-disable svelte/no-navigation-without-resolve -- generic component; callers must resolve -->
