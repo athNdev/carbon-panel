@@ -53,7 +53,7 @@
 			bind:value
 			onkeyup={type === 'password' ? trackCaps : undefined}
 			onkeydown={type === 'password' ? trackCaps : undefined}
-			class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] px-4 text-sm text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] focus:outline-none disabled:border-[#393939] disabled:bg-[#161616] disabled:text-[#6f6f6f] {error
+			class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] px-4 text-sm text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] focus:outline-none disabled:border-[#393939] disabled:bg-[#161616] disabled:text-[#a8a8a8] {error
 				? '!border-b-2 !border-[#da1e28]'
 				: ''} {revealable && type === 'password' ? 'pr-10' : ''}"
 			{...restProps}

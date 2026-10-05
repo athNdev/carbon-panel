@@ -126,7 +126,7 @@
 		</p>
 
 		{#if backups.length === 0}
-			<p class="py-8 text-center font-mono text-xs text-[#6f6f6f]">
+			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading ? 'Loading backups…' : 'No backups yet. Create one from a scheduled backup task.'}
 			</p>
 		{:else}

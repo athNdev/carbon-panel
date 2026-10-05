@@ -269,7 +269,7 @@
 							>{primaryNodeStatus.label}</span
 						>
 					</div>
-					<div class="mt-1 text-xs text-[#6f6f6f]">PORT {appPort || '···'} · CARBON V11</div>
+					<div class="mt-1 text-xs text-[#a8a8a8]">PORT {appPort || '···'} · CARBON V11</div>
 				</a>
 			{/if}
 		</aside>

@@ -490,7 +490,7 @@
 			>
 				<div class="font-mono text-xs leading-relaxed text-[#f4f4f4]">
 					{#if logEntries.length === 0}
-						<div class="py-12 text-center font-mono text-xs text-[#6f6f6f]">
+						<div class="py-12 text-center font-mono text-xs text-[#a8a8a8]">
 							{#if server.status === ServerStatus.CREATING}
 								Server container is being initialized and configured...
 							{:else if [ServerStatus.RUNNING, ServerStatus.STARTING, ServerStatus.UNHEALTHY].includes(server.status)}

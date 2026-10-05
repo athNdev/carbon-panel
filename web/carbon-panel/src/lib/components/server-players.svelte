@@ -110,7 +110,7 @@
 		/>
 
 		{#if filtered.length === 0}
-			<p class="py-8 text-center font-mono text-xs text-[#6f6f6f]">
+			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading ? 'Loading players…' : 'No players online.'}
 			</p>
 		{:else}

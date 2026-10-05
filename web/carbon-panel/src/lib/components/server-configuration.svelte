@@ -568,7 +568,7 @@
 		{:else if filteredCategories.length === 0}
 			<div class="flex flex-col items-center justify-center py-12 text-[#8d8d8d]">
 				<p class="mb-2 text-sm">No configuration found</p>
-				<p class="text-xs text-[#6f6f6f]">Unable to load server configuration</p>
+				<p class="text-xs text-[#a8a8a8]">Unable to load server configuration</p>
 			</div>
 		{:else}
 			<div class="flex h-full">
