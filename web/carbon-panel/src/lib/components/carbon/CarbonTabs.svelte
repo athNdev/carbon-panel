@@ -39,8 +39,9 @@
 	}
 
 	$effect(() => {
-		tabs;
-		selectedTab;
+		// Track tab identity/selection so the indicator re-measures on change.
+		const _deps = [tabs, selectedTab];
+		void _deps;
 		tick().then(() => requestAnimationFrame(measure));
 	});
 
@@ -54,18 +55,36 @@
 		selectedTab = id;
 		onselect?.(id);
 	}
+
+	// APG tablist keyboard support: arrows move selection and focus.
+	function handleTablistKeydown(event: KeyboardEvent) {
+		if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+		event.preventDefault();
+		const ids = tabs.map((tab) => tab.id);
+		let index = ids.indexOf(selectedTab);
+		if (index < 0) index = 0;
+		if (event.key === 'ArrowRight') index = (index + 1) % ids.length;
+		else if (event.key === 'ArrowLeft') index = (index - 1 + ids.length) % ids.length;
+		else if (event.key === 'Home') index = 0;
+		else index = ids.length - 1;
+		handleTabClick(ids[index]);
+		container?.querySelectorAll<HTMLButtonElement>('[data-tab]')[index]?.focus();
+	}
 </script>
 
 <div
 	bind:this={container}
 	role="tablist"
+	aria-label="Sections"
+	onkeydown={handleTablistKeydown}
 	class="relative flex items-center border-b border-[#393939] bg-[#161616] font-sans {className}"
 >
-	{#each tabs as tab}
+	{#each tabs as tab (tab.id)}
 		<button
 			type="button"
 			role="tab"
 			aria-selected={selectedTab === tab.id}
+			tabindex={selectedTab === tab.id ? 0 : -1}
 			data-tab
 			data-testid="tab-{tab.id}"
 			onclick={() => handleTabClick(tab.id)}

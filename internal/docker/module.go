@@ -7,13 +7,14 @@ import (
 	"os"
 
 	shellparse "github.com/arkady-emelyanov/go-shellparse"
+	"github.com/athNdev/carbon-panel/internal/alias"
+	"github.com/athNdev/carbon-panel/internal/config"
+	models "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/athNdev/carbon-panel/internal/alias"
-	"github.com/athNdev/carbon-panel/internal/config"
-	models "github.com/athNdev/carbon-panel/internal/db"
 )
 
 // ModuleVolumeMount represents a volume mount from module configuration
@@ -84,11 +85,45 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 	}
 
 	// Build mounts from module configuration only (frontend sends complete config)
-	vols := c.parseModuleVolumes(module.VolumeOverrides, aliasCtx)
+	vols, err := c.parseModuleVolumes(module.VolumeOverrides, aliasCtx)
+	if err != nil {
+		return "", fmt.Errorf("invalid module volume overrides: %w", err)
+	}
 
-	// Pre-create bind mounts
+	// Confinement roots in the panel's own filesystem view (pre-translation):
+	// the owning server's data path and the global backup directory. Any
+	// absolute bind source outside these was already rejected by
+	// parseModuleVolumes; the MkdirAll gate below re-checks so a host
+	// directory is never created as a side effect of a rejected mount.
+	mkdirRoots := ModuleSafeRoots(server.DataPath, backupDirOf(cfg))
+	// Mount validation runs against host-translated roots because bind
+	// sources are translated to host paths in moduleVolumesToMounts.
+	mountRoots := expandWithHostTranslation(mkdirRoots)
+	if err := ValidateModuleVolumeMounts(vols, mountRoots...); err != nil {
+		return "", err
+	}
+
+	// Pre-create bind mounts, confined to the validated safe roots. Creating
+	// host directories outside the server data path / backup dir as a side
+	// effect of a module create is itself a host-write primitive, so mounts
+	// that fail the gate are skipped (they cannot reach ContainerCreate
+	// either, per the check above).
 	for _, vol := range vols {
 		if vol.CreateDir && !vol.ReadOnly && (vol.Type == "" || vol.Type == "bind") {
+			if vol.Source == "" || vol.Target == "" {
+				continue
+			}
+			allowed := false
+			for _, root := range mkdirRoots {
+				if files.Within(root, vol.Source) {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				c.log.Warn("Skipping pre-create of mount directory outside safe roots: %q", vol.Source)
+				continue
+			}
 			if _, err := os.Stat(vol.Source); os.IsNotExist(err) {
 				if err := os.MkdirAll(vol.Source, 0755); err != nil {
 					c.log.Warn("Failed to pre-create mount directory %s: %v", vol.Source, err)
@@ -97,7 +132,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 		}
 	}
 
-	mounts := c.moduleVolumesToMounts(vols)
+	mounts := c.moduleVolumesToMounts(vols, mountRoots...)
 
 	config := &container.Config{
 		Image:        imageName,
@@ -152,8 +187,8 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 	}
 
 	hostConfig := &container.HostConfig{
-		PortBindings: portBindings,
-		Mounts:       mounts,
+		PortBindings:  portBindings,
+		Mounts:        mounts,
 		RestartPolicy: DefaultRestartPolicy,
 		Resources: container.Resources{
 			Memory:     memory * 1024 * 1024,
@@ -233,16 +268,28 @@ func (c *Client) buildModuleEnv(module *models.Module, server *models.Server, al
 	return env
 }
 
-// JSON volume configuration and substitutes
-func (c *Client) parseModuleVolumes(volumeJSON string, aliasCtx *alias.Context) []ModuleVolumeMount {
+// backupDirOf extracts the global backup directory, tolerating a nil config.
+func backupDirOf(cfg *config.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.Storage.BackupDir
+}
+
+// JSON volume configuration and substitutes. Alias substitution runs first
+// (attackers cannot hide a host path behind a {{...}} placeholder), then the
+// result is validated against the owning server's safe roots derived from
+// the alias context; an escape is returned as an error so the caller aborts
+// container creation instead of mounting a host path.
+func (c *Client) parseModuleVolumes(volumeJSON string, aliasCtx *alias.Context) ([]ModuleVolumeMount, error) {
 	if volumeJSON == "" || volumeJSON == "[]" {
-		return nil
+		return nil, nil
 	}
 
 	var volumes []ModuleVolumeMount
 	if err := json.Unmarshal([]byte(volumeJSON), &volumes); err != nil {
 		c.log.Warn("Failed to parse volume configuration: %v", err)
-		return nil
+		return nil, nil
 	}
 
 	// Sub aliases in paths
@@ -251,11 +298,26 @@ func (c *Client) parseModuleVolumes(volumeJSON string, aliasCtx *alias.Context) 
 		volumes[i].Target = alias.Substitute(volumes[i].Target, aliasCtx)
 	}
 
-	return volumes
+	var serverDataPath, backupDir string
+	if aliasCtx != nil {
+		if aliasCtx.Server != nil {
+			serverDataPath = aliasCtx.Server.DataPath
+		}
+		if aliasCtx.Config != nil {
+			backupDir = aliasCtx.Config.Storage.BackupDir
+		}
+	}
+	if err := ValidateModuleVolumeMounts(volumes, ModuleSafeRoots(serverDataPath, backupDir)...); err != nil {
+		return nil, err
+	}
+
+	return volumes, nil
 }
 
-// Module volumes to Docker mount specs
-func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount) []mount.Mount {
+// Module volumes to Docker mount specs. safeRoots is the already-validated
+// confinement set; entries that fail it are skipped defensively so a caller
+// that bypassed parseModuleVolumes can never turn a host path into a mount.
+func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount, safeRoots ...string) []mount.Mount {
 	var mounts []mount.Mount
 
 	for _, vol := range volumes {
@@ -274,6 +336,13 @@ func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount) []mount.Moun
 		source := vol.Source
 		if mountType == mount.TypeBind {
 			source = TranslateToHostPath(source)
+		}
+
+		if mountType == mount.TypeBind {
+			if err := ValidateVolumeSource(source, "bind", safeRoots...); err != nil {
+				c.log.Warn("Skipping volume mount outside safe roots: source=%q, target=%q: %v", vol.Source, vol.Target, err)
+				continue
+			}
 		}
 
 		mounts = append(mounts, mount.Mount{

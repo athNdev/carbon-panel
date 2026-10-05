@@ -21,7 +21,8 @@
 		ArrowRight
 	} from '@lucide/svelte';
 	import { type Server, ServerStatus, ModLoader } from '$lib/proto/carbonpanel/v1/common_pb';
-	import { CarbonTag, CarbonButton } from '$lib/components/carbon';
+	import { CarbonTag, CarbonButton, CarbonConfirm } from '$lib/components/carbon';
+	import { onMount } from 'svelte';
 
 	let servers = $derived($serversStore);
 	let filteredServers = $state<Server[]>([]);
@@ -29,6 +30,23 @@
 	let statusFilter = $state<'all' | 'running' | 'stopped' | 'issues'>('all');
 	let viewMode = $state<'table' | 'tiles'>('table');
 	let loading = $state(false);
+	let pendingDelete = $state<Server | null>(null);
+	let confirmOpen = $state(false);
+	// Cold direct loads render before the layout's fetch lands; hold the
+	// empty state until the first fetch settles so "no servers" never
+	// flashes for fleets that simply haven't loaded yet.
+	let hydrated = $state(servers.length > 0);
+
+	onMount(async () => {
+		if (hydrated) return;
+		try {
+			await serversStore.fetchServers(false);
+		} catch (err) {
+			console.error('Failed to fetch servers:', err);
+		} finally {
+			hydrated = true;
+		}
+	});
 
 	$effect(() => {
 		filterServers();
@@ -100,12 +118,13 @@
 
 	async function deleteServer(server: Server, event?: MouseEvent) {
 		event?.stopPropagation();
-		if (
-			!confirm(`Are you sure you want to delete "${server.name}"? This action cannot be undone.`)
-		) {
-			return;
-		}
+		pendingDelete = server;
+		confirmOpen = true;
+	}
 
+	async function confirmDeleteServer() {
+		const server = pendingDelete;
+		if (!server) return;
 		loading = true;
 		try {
 			await rpcClient.server.deleteServer({ id: server.id });
@@ -117,6 +136,7 @@
 			);
 		} finally {
 			loading = false;
+			pendingDelete = null;
 		}
 	}
 
@@ -216,6 +236,7 @@
 					type="search"
 					placeholder="Search by name, description, version, loader, or port..."
 					bind:value={searchQuery}
+					onkeydown={(e) => e.key === 'Escape' && (searchQuery = '')}
 					class="h-9 w-full rounded-none border-b border-[#8d8d8d] bg-[#161616] pr-3 pl-9 font-sans text-xs text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:outline-none"
 				/>
 			</div>
@@ -228,6 +249,7 @@
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'all')}
+					aria-pressed={statusFilter === 'all'}
 					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 					'all'
 						? 'border-[#0f62fe] bg-[#0f62fe] text-white'
@@ -238,6 +260,7 @@
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'running')}
+					aria-pressed={statusFilter === 'running'}
 					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 					'running'
 						? 'border-[#198038] bg-[#198038] text-white'
@@ -248,6 +271,7 @@
 				<button
 					type="button"
 					onclick={() => (statusFilter = 'stopped')}
+					aria-pressed={statusFilter === 'stopped'}
 					class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 					'stopped'
 						? 'border-[#525252] bg-[#525252] text-white'
@@ -259,6 +283,7 @@
 					<button
 						type="button"
 						onclick={() => (statusFilter = 'issues')}
+						aria-pressed={statusFilter === 'issues'}
 						class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {statusFilter ===
 						'issues'
 							? 'border-[#da1e28] bg-[#da1e28] text-white'
@@ -278,6 +303,7 @@
 					onclick={() => (viewMode = 'table')}
 					title="Table View"
 					aria-label="Table View"
+					aria-pressed={viewMode === 'table'}
 					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none transition-colors {viewMode ===
 					'table'
 						? 'bg-[#393939] text-[#f4f4f4]'
@@ -290,6 +316,7 @@
 					onclick={() => (viewMode = 'tiles')}
 					title="Tile View"
 					aria-label="Tile View"
+					aria-pressed={viewMode === 'tiles'}
 					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none transition-colors {viewMode ===
 					'tiles'
 						? 'bg-[#393939] text-[#f4f4f4]'
@@ -301,8 +328,28 @@
 		</div>
 	</div>
 
-	<!-- Empty State -->
-	{#if filteredServers.length === 0}
+	<!-- Loading skeleton (cold direct load, before first fetch settles) -->
+	{#if !hydrated}
+		<div
+			class="w-full overflow-hidden rounded-none border border-[#393939] bg-[#161616]"
+			role="status"
+			aria-label="Loading servers"
+		>
+			{#each [0, 1, 2, 3] as _, i (i)}
+				<div class="flex items-center gap-3 border-b border-[#393939] px-4 py-3.5 last:border-b-0">
+					<div class="motion-skeleton h-5 w-16"></div>
+					<div class="motion-skeleton h-8 w-8"></div>
+					<div class="min-w-0 flex-1">
+						<div class="motion-skeleton h-4 w-40"></div>
+						<div class="motion-skeleton mt-1.5 h-3 w-24"></div>
+					</div>
+					<div class="motion-skeleton hidden h-4 w-20 sm:block"></div>
+				</div>
+			{/each}
+		</div>
+
+		<!-- Empty State -->
+	{:else if filteredServers.length === 0}
 		<div class="rounded-none border border-[#393939] bg-[#262626] p-12 text-center">
 			{#if servers.length === 0}
 				<div
@@ -358,15 +405,15 @@
 						<th scope="col" class="w-28 px-4 py-3">Status</th>
 						<th scope="col" class="px-4 py-3">Server Instance</th>
 						<th scope="col" class="px-4 py-3">Engine & Loader</th>
-						<th scope="col" class="px-4 py-3">Host / Port</th>
-						<th scope="col" class="px-4 py-3">Memory</th>
+						<th scope="col" class="hidden px-4 py-3 md:table-cell">Host / Port</th>
+						<th scope="col" class="hidden px-4 py-3 md:table-cell">Memory</th>
 						<th scope="col" class="px-4 py-3">Players & TPS</th>
 						<th scope="col" class="px-4 py-3 text-right">Actions</th>
 					</tr>
 				</thead>
 
 				<!-- Sharp Alternating/Hover Rows #353535 -->
-				<tbody class="divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
+				<tbody class="motion-stagger divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
 					{#each filteredServers as server (server.id)}
 						<tr
 							class="group cursor-pointer transition-colors hover:bg-[#353535]"
@@ -417,7 +464,7 @@
 							</td>
 
 							<!-- Host / Port -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="hidden px-4 py-3.5 whitespace-nowrap md:table-cell">
 								<div class="flex items-center gap-1.5 font-mono text-xs">
 									<Wifi class="h-3.5 w-3.5 text-[#8d8d8d]" />
 									<span class="text-[#c6c6c6]">
@@ -427,7 +474,7 @@
 							</td>
 
 							<!-- Memory -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="hidden px-4 py-3.5 whitespace-nowrap md:table-cell">
 								<div class="flex items-center gap-1.5 font-mono text-xs text-[#c6c6c6]">
 									<MemoryStick class="h-3.5 w-3.5 text-[#8d8d8d]" />
 									<span>{(server.memory / 1024).toFixed(1)} GB</span>
@@ -538,7 +585,7 @@
 
 		<!-- Carbon Tile / Grid Layout -->
 	{:else}
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="motion-stagger grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredServers as server (server.id)}
 				<div
 					class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4 transition-colors hover:border-[#525252]"
@@ -715,4 +762,21 @@
 			{/each}
 		</div>
 	{/if}
+
+	<CarbonConfirm
+		bind:open={confirmOpen}
+		title="Delete server?"
+		message="This action cannot be undone. Containers, volumes, and configuration are removed."
+		confirmLabel="Delete Server"
+		danger
+		confirming={loading}
+		onconfirm={confirmDeleteServer}
+		onclose={() => (pendingDelete = null)}
+	>
+		{#snippet details()}
+			{#if pendingDelete}
+				{pendingDelete.name} · {pendingDelete.mcVersion || 'Latest'}
+			{/if}
+		{/snippet}
+	</CarbonConfirm>
 </div>

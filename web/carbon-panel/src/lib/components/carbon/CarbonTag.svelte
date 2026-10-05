@@ -10,6 +10,7 @@
 			| 'cyan'
 			| 'teal'
 			| 'magenta'
+			| 'yellow'
 			| 'gray'
 			| 'warm-gray'
 			| 'cool-gray';
@@ -39,6 +40,7 @@
 		cyan: 'bg-[#00539a]/30 text-[#33b1ff] border border-[#00539a]/60',
 		teal: 'bg-[#005d5d]/30 text-[#08bdba] border border-[#005d5d]/60',
 		magenta: 'bg-[#9f1853]/30 text-[#ff7eb6] border border-[#9f1853]/60',
+		yellow: 'bg-[#f1c21b]/15 text-[#f1c21b] border border-[#f1c21b]/50',
 		gray: 'bg-[#525252]/40 text-[#c6c6c6] border border-[#6f6f6f]/50',
 		'warm-gray': 'bg-[#57534e]/40 text-[#d6d3d1] border border-[#78716c]/50',
 		'cool-gray': 'bg-[#475569]/40 text-[#cbd5e1] border border-[#64748b]/50'

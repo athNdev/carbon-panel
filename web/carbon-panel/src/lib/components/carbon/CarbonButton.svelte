@@ -53,6 +53,7 @@
 </script>
 
 {#if href}
+	<!-- eslint-disable svelte/no-navigation-without-resolve -- generic component; callers must resolve -->
 	<a
 		{href}
 		aria-busy={loading ? 'true' : undefined}
@@ -69,6 +70,7 @@
 		{/if}
 		{@render children?.()}
 	</a>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
 {:else}
 	<button
 		type="button"

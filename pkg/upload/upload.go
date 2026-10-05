@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 )
 
 var (
@@ -20,6 +20,9 @@ var (
 	ErrInvalidChunk     = errors.New("invalid chunk index")
 	ErrChunkExists      = errors.New("chunk already received")
 	ErrFileTooLarge     = errors.New("file exceeds maximum allowed size")
+	ErrInvalidChunkSize = errors.New("invalid chunk size")
+	ErrChunkTooLarge    = errors.New("chunk exceeds declared chunk size")
+	ErrUploadOverflow   = errors.New("chunk would exceed declared total size")
 )
 
 // Session represents an active upload session
@@ -73,6 +76,15 @@ func NewManager(tempDir string, sessionTTL time.Duration, maxUploadSize int64, l
 
 // InitSession creates a new upload session
 func (m *Manager) InitSession(filename string, totalSize int64, chunkSize int32) (*Session, error) {
+	// Validate chunk size first: InitSession must not rely on an upstream
+	// caller having checked it (a non-positive size would divide by zero below).
+	if chunkSize <= 0 {
+		return nil, fmt.Errorf("%w: %d", ErrInvalidChunkSize, chunkSize)
+	}
+	if totalSize < 0 {
+		return nil, fmt.Errorf("%w: negative total size %d", ErrFileTooLarge, totalSize)
+	}
+
 	// Validate max upload size
 	if m.maxUploadSize > 0 && totalSize > m.maxUploadSize {
 		return nil, ErrFileTooLarge
@@ -169,11 +181,26 @@ func (m *Manager) WriteChunk(sessionID string, chunkIndex int32, data []byte) (c
 		return session.Completed, nil
 	}
 
+	// Validate chunk size before touching disk: an oversized chunk (or a
+	// replayed chunk counted twice) must never push BytesReceived or disk
+	// usage past the declared total. All checks run before the write so a
+	// rejected chunk leaves no partial bytes and no counter change.
+	if int64(len(data)) > int64(session.ChunkSize) {
+		return false, fmt.Errorf("%w: got %d bytes, max %d", ErrChunkTooLarge, len(data), session.ChunkSize)
+	}
+	if session.BytesReceived+int64(len(data)) > session.TotalSize {
+		return false, fmt.Errorf("%w: received %d + %d exceeds total %d",
+			ErrUploadOverflow, session.BytesReceived, len(data), session.TotalSize)
+	}
 	// Calculate offset for this chunk
-	offset := int64(chunkIndex) * int64(session.ChunkSize)
+	writeOffset := int64(chunkIndex) * int64(session.ChunkSize)
+	if writeOffset+int64(len(data)) > session.TotalSize {
+		return false, fmt.Errorf("%w: chunk %d (%d bytes at offset %d) exceeds total %d",
+			ErrUploadOverflow, chunkIndex, len(data), writeOffset, session.TotalSize)
+	}
 
 	// Write data at offset
-	_, err = session.file.WriteAt(data, offset)
+	_, err = session.file.WriteAt(data, writeOffset)
 	if err != nil {
 		return false, fmt.Errorf("failed to write chunk: %w", err)
 	}

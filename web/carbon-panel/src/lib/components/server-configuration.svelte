@@ -106,7 +106,7 @@
 		}
 
 		const slugMatch = trimmed.match(
-			/\/(?:minecraft\/(?:modpacks|mc-mods|customization|worlds|texture-packs)|projects)\/([a-zA-Z0-9_\-]+)/
+			/\/(?:minecraft\/(?:modpacks|mc-mods|customization|worlds|texture-packs)|projects)\/([a-zA-Z0-9_-]+)/
 		);
 		if (slugMatch) {
 			slug = slugMatch[1];
@@ -248,15 +248,18 @@
 
 	async function loadServerConfig() {
 		if (!server) return;
+		const requestedId = server.id;
 		loading = true;
 		try {
-			const response = await rpcClient.config.getServerConfig({ serverId: server.id });
+			const response = await rpcClient.config.getServerConfig({ serverId: requestedId });
+			if (server?.id !== requestedId) return;
 			processConfig(response.categories);
 		} catch (error) {
+			if (server?.id !== requestedId) return;
 			toast.error('Failed to load server configuration');
 			console.error(error);
 		} finally {
-			loading = false;
+			if (server?.id === requestedId) loading = false;
 		}
 	}
 

@@ -407,13 +407,17 @@ func main() {
 		reconcilerEngine.Wait()
 	}()
 
-	// Setup HTTP server
+	// Setup HTTP server (unencrypted HTTP/2 via Protocols; h2c handler removed, SA1019)
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
 		Handler:      rpcServer.Handler(),
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
+		Protocols:    protocols,
 	}
 
 	// Start server in goroutine
@@ -458,6 +462,11 @@ func main() {
 			}
 		}
 	}
+
+	// Close WebSocket clients first. http.Server.Shutdown does not wait for
+	// hijacked connections, so the hub and its client pumps would otherwise stay
+	// alive until the process exits.
+	rpcServer.Shutdown()
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Error("Server forced to shutdown: %v", err)

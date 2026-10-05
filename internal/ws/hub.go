@@ -2,9 +2,11 @@ package ws
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
@@ -16,6 +18,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -31,6 +34,12 @@ const (
 	// Maximum message size allowed from peer
 	maxMessageSize = 512 * 1024 // 512KB
 )
+
+// controlSendTimeout bounds how long a control message waits for room in a
+// congested client channel. Log lines are droppable (see sendLog); control
+// messages (auth results, acks, errors) block up to this long instead. It is
+// a var so tests can shrink it.
+var controlSendTimeout = 5 * time.Second
 
 // Hub manages WebSocket connections and log subscriptions
 type Hub struct {
@@ -51,13 +60,46 @@ type Hub struct {
 	// Register/unregister channels
 	register   chan *Client
 	unregister chan *Client
+
+	// quit terminates the Run loop and releases every producer that would
+	// otherwise block forever on the unbuffered register/unregister channels.
+	//
+	// ServeHTTP sent on h.register unconditionally. With no Run loop running -
+	// or after it exited - that send never completed, hanging the HTTP handler
+	// goroutine indefinitely. readPump's unregister send had the same problem.
+	quit     chan struct{}
+	quitOnce sync.Once
+
+	// registerTimeout bounds how long a handshake waits to be accepted by the
+	// Run loop. A request goroutine must never block indefinitely on internal
+	// coordination: if the loop is wedged or was never started, the connection
+	// is rejected instead of leaking the handler.
+	registerTimeout time.Duration
 }
+
+// defaultRegisterTimeout bounds handshake acceptance by the hub loop.
+const defaultRegisterTimeout = 5 * time.Second
 
 // Client represents a single WebSocket connection
 type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
+
+	// done is closed exactly once when the client is unregistered. It
+	// signals writePump to exit. send is deliberately NEVER closed: a
+	// forwardLogs goroutine may still be selecting on it while unregister
+	// runs, and a send on a closed channel panics even inside a select.
+	// The send channel is simply garbage-collected once every sender has
+	// stopped observing done.
+	done      chan struct{}
+	closeOnce sync.Once
+
+	// droppedLogs counts log lines discarded because send was full. The
+	// count is injected as a "… N lines skipped …" sentinel before the next
+	// delivered line so bursts are visible instead of silent. Touched from
+	// forwardLogs goroutines and the read pump; hence atomic.
+	droppedLogs atomic.Uint64
 
 	// Authentication
 	user          *auth.AuthenticatedUser
@@ -99,13 +141,83 @@ func NewHub(logStreamer *logger.LogStreamer, authManager *auth.Manager, enforcer
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		quit:       make(chan struct{}),
+
+		registerTimeout: defaultRegisterTimeout,
 	}
+}
+
+// sendRegister hands a client to the Run loop, reporting false rather than
+// blocking indefinitely when the loop is not running, has stopped, or the
+// request context is already cancelled.
+func (h *Hub) sendRegister(ctx context.Context, client *Client) bool {
+	timeout := h.registerTimeout
+	if timeout <= 0 {
+		timeout = defaultRegisterTimeout
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case h.register <- client:
+		return true
+	case <-h.quit:
+		h.log.Debug("WebSocket register rejected: hub stopped")
+		return false
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		h.log.Error("WebSocket register rejected: hub did not accept the client within %v", timeout)
+		return false
+	}
+}
+
+// sendUnregister releases a client from the Run loop without ever blocking the
+// caller: a pump tearing down after the hub stopped must not hang.
+func (h *Hub) sendUnregister(client *Client) {
+	select {
+	case h.unregister <- client:
+	case <-h.quit:
+		h.log.Debug("WebSocket unregister skipped: hub stopped")
+	}
+}
+
+// Stop terminates the Run loop, closes every connected client's done channel so
+// their pumps exit, and releases anything blocked on register/unregister.
+// Safe to call more than once and safe to call without Run having started.
+func (h *Hub) Stop() {
+	h.quitOnce.Do(func() {
+		close(h.quit)
+
+		h.clientsMu.RLock()
+		clients := make([]*Client, 0, len(h.clients))
+		for c := range h.clients {
+			clients = append(clients, c)
+		}
+		h.clientsMu.RUnlock()
+
+		for _, c := range clients {
+			if c == nil {
+				continue
+			}
+			c.closeOnce.Do(func() { close(c.done) })
+			// A client can be tracked before its pump has a live connection
+			// (and tests construct clients without one), so nil is expected.
+			if c.conn != nil {
+				_ = c.conn.Close()
+			}
+		}
+	})
 }
 
 // Run starts the hub's main loop
 func (h *Hub) Run() {
 	for {
 		select {
+		case <-h.quit:
+			h.log.Debug("WebSocket hub stopped")
+			return
+
 		case client := <-h.register:
 			h.clientsMu.Lock()
 			h.clients[client] = true
@@ -116,7 +228,10 @@ func (h *Hub) Run() {
 			h.clientsMu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.send)
+				// Never close(client.send): forwardLogs may still send on
+				// it. Signal done instead; writePump exits and the channel
+				// is garbage-collected once all senders stop.
+				client.closeOnce.Do(func() { close(client.done) })
 			}
 			h.clientsMu.Unlock()
 			h.log.Debug("WebSocket client disconnected")
@@ -162,8 +277,44 @@ func (c *Client) migrateSubscription(serverID, newContainerID string) {
 	}
 }
 
+// authorizeHandshake validates the caller's credential before the socket
+// upgrade (MINE-164), so unauthenticated TCP callers never get a socket.
+// It accepts ?token= (what the frontend sends), an Authorization bearer,
+// then falls back to the anonymous-access policy. Message-AUTH stays as a
+// compatible re-auth path with identical checks.
+func (h *Hub) authorizeHandshake(r *http.Request) bool {
+	if !h.authManager.IsAnyAuthEnabled() {
+		return h.authManager.NoAuthAllowed()
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		if ah := r.Header.Get("Authorization"); strings.HasPrefix(ah, "Bearer ") {
+			token = strings.TrimPrefix(ah, "Bearer ")
+		}
+	}
+	if token != "" {
+		ctx := context.Background()
+		var err error
+		if strings.HasPrefix(token, "dp_") {
+			_, err = h.authManager.ValidateAPIToken(ctx, token)
+		} else {
+			_, err = h.authManager.ValidateSession(ctx, token)
+		}
+		if err == nil {
+			return true
+		}
+	}
+	return h.authManager.IsAnonymousAccessEnabled()
+}
+
 // ServeHTTP handles WebSocket upgrade requests
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !h.authorizeHandshake(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.log.Error("WebSocket upgrade failed: %v", err)
@@ -174,10 +325,14 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		hub:           h,
 		conn:          conn,
 		send:          make(chan []byte, 256),
+		done:          make(chan struct{}),
 		subscriptions: make(map[string]*subscription),
 	}
 
-	h.register <- client
+	if !h.sendRegister(r.Context(), client) {
+		_ = conn.Close()
+		return
+	}
 
 	// Start read/write pumps
 	go client.writePump()
@@ -188,8 +343,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (c *Client) readPump() {
 	defer func() {
 		c.cleanup()
-		c.hub.unregister <- c
-		c.conn.Close()
+		c.hub.sendUnregister(c)
+		_ = c.conn.Close()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
@@ -222,13 +377,10 @@ func (c *Client) writePump() {
 
 	for {
 		select {
-		case message, ok := <-c.send:
+		case <-c.done:
+			return
+		case message := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
 			if err := c.conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 				return
 			}
@@ -395,10 +547,20 @@ func (c *Client) handleSubscribe(msg *v1.SubscribeMessage) {
 	c.sendSubscribed(msg.ServerId)
 }
 
-// forwardLogs forwards log entries from the log streamer to the client
+// forwardLogs forwards log entries from the log streamer to the client.
+// It also exits when the client is unregistered so the goroutine cannot
+// outlive the client when the streamer channel stays open.
 func (c *Client) forwardLogs(serverId string, ch chan *v1.LogEntry) {
-	for entry := range ch {
-		c.sendLog(serverId, entry)
+	for {
+		select {
+		case <-c.done:
+			return
+		case entry, ok := <-ch:
+			if !ok {
+				return
+			}
+			c.sendLog(serverId, entry)
+		}
 	}
 }
 
@@ -504,7 +666,11 @@ func (c *Client) cleanup() {
 	c.subscriptions = make(map[string]*subscription)
 }
 
-// sendMessage marshals and sends a server message
+// sendMessage marshals and sends a server control message. Control messages
+// (auth results, acks, errors) take the priority path: a bounded blocking
+// send that waits for room instead of dropping on a full channel the way log
+// lines do. If the client stays congested past controlSendTimeout the message
+// is dropped, but the loss is logged server-side — never silent.
 func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 	data, err := proto.Marshal(msg)
 	if err != nil {
@@ -514,8 +680,10 @@ func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 
 	select {
 	case c.send <- data:
-	default:
-		// Channel full, skip
+	case <-c.done:
+		// Client is gone; drop without waiting out the timeout.
+	case <-time.After(controlSendTimeout):
+		c.hub.log.Error("Dropped WebSocket control message type %v: client slow (channel full %v)", msg.Type, controlSendTimeout)
 	}
 }
 
@@ -583,7 +751,43 @@ func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
 }
 
 func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	// Fast path: client is gone, drop without marshaling. send itself is
+	// never closed so any in-flight select-send below cannot panic.
+	select {
+	case <-c.done:
+		return
+	default:
+	}
+	// Flush any accumulated skip count first: the sentinel goes out before
+	// the next real line so the gap is visible in the console stream.
+	if skipped := c.droppedLogs.Swap(0); skipped > 0 {
+		sentinel, err := proto.Marshal(&v1.WebSocketServerMessage{
+			Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
+			Payload: &v1.WebSocketServerMessage_Log{
+				Log: &v1.LogMessage{
+					ServerId: serverId,
+					Log: &v1.LogEntry{
+						Timestamp: timestamppb.Now(),
+						Message:   fmt.Sprintf("… %d log lines skipped (slow connection) …", skipped),
+						Level:     "warn",
+						Source:    "carbon-panel",
+					},
+				},
+			},
+		})
+		if err == nil {
+			select {
+			case c.send <- sentinel:
+			default:
+				// Still congested: restore the count (plus this line) and
+				// report the larger gap on the next flush.
+				c.droppedLogs.Add(skipped + 1)
+				return
+			}
+		}
+	}
+
+	data, err := proto.Marshal(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
 		Payload: &v1.WebSocketServerMessage_Log{
 			Log: &v1.LogMessage{
@@ -592,6 +796,16 @@ func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
 			},
 		},
 	})
+	if err != nil {
+		c.hub.log.Error("Failed to marshal WebSocket log message: %v", err)
+		return
+	}
+
+	select {
+	case c.send <- data:
+	default:
+		c.droppedLogs.Add(1)
+	}
 }
 
 func (c *Client) sendCommandResult(serverId string, success bool, output, errMsg string) {

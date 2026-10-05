@@ -15,6 +15,7 @@
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { authStore } from '$lib/stores/auth';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type { FileInfo } from '$lib/proto/carbonpanel/v1/file_pb';
 	import { formatBytes } from '$lib/utils';
@@ -26,6 +27,7 @@
 	import FileTree from './file-tree.svelte';
 	import FileContextMenu from './file-context-menu.svelte';
 	import FileMoveDialog from './file-move-dialog.svelte';
+	import { onDestroy } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
@@ -49,6 +51,18 @@
 	let extracting = $state(false);
 	let extractionFilesExtracted = $state(0);
 	let extractionFilename = $state('');
+	// Progress-poll handle: cleared on completed/failed/error, on unmount,
+	// and when the user switches servers so it never fires RPCs for a stale server.
+	let extractionPoll: ReturnType<typeof setInterval> | null = null;
+	function stopExtractionPoll() {
+		if (extractionPoll) {
+			clearInterval(extractionPoll);
+			extractionPoll = null;
+		}
+	}
+	onDestroy(() => {
+		stopExtractionPoll();
+	});
 
 	// --- Tree state ---
 	let expandedDirs = $state<Set<string>>(new Set());
@@ -148,6 +162,8 @@
 	$effect(() => {
 		if (server.id !== previousServerId) {
 			previousServerId = server.id;
+			stopExtractionPoll();
+			extracting = false;
 			files = [];
 			loading = true;
 			uploading = false;
@@ -442,9 +458,17 @@
 		a.click();
 	}
 
+	let pendingDelete = $state<FileInfo | null>(null);
+	let confirmOpen = $state(false);
+
 	async function deleteFile(file: FileInfo) {
-		const confirmed = confirm(`Delete "${file.name}"${file.isDir ? ' and all its contents' : ''}?`);
-		if (!confirmed) return;
+		pendingDelete = file;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteFile() {
+		const file = pendingDelete;
+		if (!file) return;
 		try {
 			await rpcClient.file.deleteFile({
 				serverId: server.id,
@@ -454,6 +478,8 @@
 			await loadFiles();
 		} catch {
 			toast.error('Failed to delete');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -517,11 +543,22 @@
 	}
 
 	// --- Bulk operations ---
+	let pendingBulkCount = $state(0);
+	let confirmBulkOpen = $state(false);
+
 	async function bulkDelete() {
 		const paths = Array.from(selectedPaths);
 		if (paths.length === 0) return;
-		const confirmed = confirm(`Delete ${paths.length} item(s)?`);
-		if (!confirmed) return;
+		pendingBulkCount = paths.length;
+		confirmBulkOpen = true;
+	}
+
+	async function confirmBulkDelete() {
+		const paths = Array.from(selectedPaths);
+		if (paths.length === 0) {
+			pendingBulkCount = 0;
+			return;
+		}
 		try {
 			await rpcClient.file.deleteFile({
 				serverId: server.id,
@@ -533,6 +570,8 @@
 			await loadFiles();
 		} catch {
 			toast.error('Failed to delete items');
+		} finally {
+			pendingBulkCount = 0;
 		}
 	}
 
@@ -637,7 +676,8 @@
 			});
 
 			// Poll for progress
-			const poll = setInterval(async () => {
+			stopExtractionPoll();
+			extractionPoll = setInterval(async () => {
 				try {
 					const status = await rpcClient.file.getExtractionStatus(
 						{ operationId },
@@ -646,17 +686,17 @@
 					extractionFilesExtracted = status.filesExtracted;
 
 					if (status.state === 'completed') {
-						clearInterval(poll);
+						stopExtractionPoll();
 						extracting = false;
 						toast.success(`Extracted ${status.filesExtracted} files`);
 						await loadFiles();
 					} else if (status.state === 'failed') {
-						clearInterval(poll);
+						stopExtractionPoll();
 						extracting = false;
 						toast.error(status.error || 'Extraction failed');
 					}
 				} catch {
-					clearInterval(poll);
+					stopExtractionPoll();
 					extracting = false;
 					toast.error('Lost connection to extraction');
 				}
@@ -816,7 +856,11 @@
 	});
 </script>
 
-<div bind:this={containerEl} class="flex flex-col overflow-hidden rounded-lg border bg-background">
+<div
+	bind:this={containerEl}
+	style={heightStyle}
+	class="flex flex-col overflow-hidden rounded-lg border bg-background"
+>
 	<!-- Toolbar -->
 	<FileToolbar
 		{filterText}
@@ -902,8 +946,15 @@
 	{:else if files.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center text-muted-foreground">
 			<Folder class="mb-4 h-12 w-12" />
-			<p>No files found</p>
-			<p class="mt-2 text-sm">Upload files to get started</p>
+			<p>This folder is empty</p>
+			<p class="mt-2 text-sm">Upload files or create a new file to get started</p>
+			<button
+				type="button"
+				onclick={() => triggerUpload('')}
+				class="mt-4 inline-flex h-8 cursor-pointer items-center rounded-none bg-[#0f62fe] px-4 font-sans text-xs text-white transition-colors hover:bg-[#0353e9]"
+			>
+				Upload files
+			</button>
 		</div>
 	{:else}
 		<!-- File tree -->
@@ -1078,3 +1129,29 @@
 	onConfirm={confirmCopy}
 	onClose={() => (showCopyDialog = false)}
 />
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete from server?"
+	message="Files are permanently removed from the server volume."
+	confirmLabel="Delete"
+	danger
+	onconfirm={confirmDeleteFile}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.path}{/if}
+	{/snippet}
+</CarbonConfirm>
+<CarbonConfirm
+	bind:open={confirmBulkOpen}
+	title="Delete selected items?"
+	message="The selected files and folders are permanently removed."
+	confirmLabel="Delete All"
+	danger
+	onconfirm={confirmBulkDelete}
+	onclose={() => (pendingBulkCount = 0)}
+>
+	{#snippet details()}
+		{pendingBulkCount} item(s)
+	{/snippet}
+</CarbonConfirm>

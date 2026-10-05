@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		CarbonButton,
 		CarbonTile,
@@ -9,7 +10,8 @@
 		CarbonSelect,
 		CarbonModal,
 		CarbonTextInput,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import {
 		Package,
@@ -132,9 +134,11 @@
 			toast.success(
 				`Exported ${format === 'mrpack' ? '.mrpack' : format === 'packwiz' ? 'Packwiz .zip' : 'CurseForge .zip'}`
 			);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to export modpack:', err);
-			toast.error(`Export failed: ${err.message || 'Unauthorized or server error'}`);
+			toast.error(
+				`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`
+			);
 		} finally {
 			exportingPack = null;
 		}
@@ -180,10 +184,10 @@
 			const created = await res.json();
 			toast.success(`Created modpack project "${created.name}"`);
 			createDialogOpen = false;
-			goto(`/modpacks/studio/${created.id}`);
-		} catch (err: any) {
+			goto(resolve('/modpacks/studio/[id]', { id: created.id }));
+		} catch (err) {
 			console.error('Failed to create pack:', err);
-			toast.error(err.message || 'Failed to create pack');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to create pack');
 		} finally {
 			creating = false;
 		}
@@ -222,10 +226,10 @@
 			importFile = null;
 			importName = '';
 			await loadPacks();
-			goto(`/modpacks/studio/${imported.id}`);
-		} catch (err: any) {
+			goto(resolve('/modpacks/studio/[id]', { id: imported.id }));
+		} catch (err) {
 			console.error('Import failed:', err);
-			toast.error(err.message || 'Failed to import modpack');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to import modpack');
 		} finally {
 			importing = false;
 		}
@@ -242,26 +246,34 @@
 			const cloned = await res.json();
 			toast.success(`Duplicated "${pack.name}"`);
 			await loadPacks();
-			goto(`/modpacks/studio/${cloned.id}`);
-		} catch (err: any) {
+			goto(resolve('/modpacks/studio/[id]', { id: cloned.id }));
+		} catch (err) {
 			console.error('Clone failed:', err);
-			toast.error(err.message || 'Failed to duplicate pack');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to duplicate pack');
 		}
 	}
 
-	async function deletePack(pack: PackSummary) {
-		if (!confirm(`Are you sure you want to delete "${pack.name}"? This cannot be undone.`)) {
-			return;
-		}
+	let pendingDelete = $state<PackSummary | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deletePack(pack: PackSummary) {
+		pendingDelete = pack;
+		confirmOpen = true;
+	}
+
+	async function confirmDeletePack() {
+		const pack = pendingDelete;
+		if (!pack) return;
 		try {
 			const res = await apiFetch(`/api/v1/packwiz/packs/${pack.id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success(`Deleted modpack "${pack.name}"`);
 			packs = packs.filter((p) => p.id !== pack.id);
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to delete pack:', err);
-			toast.error(err.message || 'Failed to delete modpack');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to delete modpack');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -297,9 +309,10 @@
 				kind="ghost"
 				size="md"
 				iconOnly
-				onclick={() => goto('/modpacks')}
+				onclick={() => goto(resolve('/modpacks'))}
 				class="rounded-none text-[#c6c6c6] hover:text-white"
 				title="Back to Modpacks"
+				aria-label="Back to Modpacks"
 			>
 				<ArrowLeft class="h-5 w-5" />
 			</CarbonButton>
@@ -330,9 +343,14 @@
 	</div>
 
 	<!-- Search & Summary Bar -->
-	<div class="flex items-center justify-between gap-4">
-		<div class="w-72">
-			<CarbonSearch placeholder="Search modpack projects..." bind:value={filterQuery} size="sm" />
+	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+		<div class="w-full sm:w-72">
+			<CarbonSearch
+				placeholder="Search modpack projects..."
+				bind:value={filterQuery}
+				size="sm"
+				onkeydown={(e) => e.key === 'Escape' && (filterQuery = '')}
+			/>
 		</div>
 		<p class="font-mono text-xs text-[#8d8d8d]">
 			SHOWING {filteredPacks.length} OF {packs.length} PROJECTS
@@ -382,7 +400,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<div class="motion-stagger grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredPacks as pack (pack.id)}
 				<CarbonTile
 					class="group flex flex-col justify-between rounded-none border-[#393939] p-5 transition-colors hover:border-[#525252]"
@@ -393,7 +411,7 @@
 							<div class="min-w-0 flex-1 space-y-1">
 								<h3 class="truncate text-lg font-semibold">
 									<a
-										href={`/modpacks/studio/${pack.id}`}
+										href={resolve('/modpacks/studio/[id]', { id: pack.id })}
 										class="text-white transition-colors hover:text-[#0f62fe]"
 									>
 										{pack.name}
@@ -440,6 +458,7 @@
 								class="rounded-none text-[#a8a8a8] hover:text-white"
 								onclick={() => clonePack(pack)}
 								title="Duplicate / Clone modpack"
+								aria-label="Duplicate modpack"
 							>
 								<Copy class="h-3.5 w-3.5" />
 							</CarbonButton>
@@ -450,6 +469,7 @@
 								class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 								onclick={() => deletePack(pack)}
 								title="Delete modpack"
+								aria-label="Delete modpack"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</CarbonButton>
@@ -481,7 +501,7 @@
 								kind="primary"
 								size="sm"
 								class="h-8 rounded-none text-xs"
-								onclick={() => goto(`/modpacks/studio/${pack.id}`)}
+								onclick={() => goto(resolve('/modpacks/studio/[id]', { id: pack.id }))}
 							>
 								Open Studio
 							</CarbonButton>
@@ -509,7 +529,7 @@
 			disabled={creating}
 		/>
 
-		<div class="grid grid-cols-2 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<CarbonTextInput
 				label="Author"
 				placeholder="Admin"
@@ -524,9 +544,9 @@
 			/>
 		</div>
 
-		<div class="grid grid-cols-2 gap-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<CarbonSelect label="Minecraft Version" bind:value={newMcVersion} disabled={creating}>
-				{#each MC_VERSIONS as v}
+				{#each MC_VERSIONS as v (v)}
 					<option value={v}>{v}</option>
 				{/each}
 			</CarbonSelect>
@@ -545,7 +565,7 @@
 			disabled={creating}
 			helperText={loadingLoaderVersions ? 'Fetching compatible loader versions...' : undefined}
 		>
-			{#each availableLoaderVersions as v}
+			{#each availableLoaderVersions as v (v)}
 				<option value={v}>{v}</option>
 			{/each}
 		</CarbonSelect>
@@ -644,3 +664,16 @@
 		</div>
 	</div>
 </CarbonModal>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete modpack project?"
+	message="The project, overrides, and local metadata are removed. This cannot be undone."
+	confirmLabel="Delete Project"
+	danger
+	onconfirm={confirmDeletePack}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

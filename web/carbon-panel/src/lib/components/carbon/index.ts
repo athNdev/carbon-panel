@@ -3,6 +3,7 @@ export { default as CarbonTile } from './CarbonTile.svelte';
 export { default as CarbonTag } from './CarbonTag.svelte';
 export { default as CarbonDataTable } from './CarbonDataTable.svelte';
 export { default as CarbonModal } from './CarbonModal.svelte';
+export { default as CarbonConfirm } from './CarbonConfirm.svelte';
 export { default as CarbonTextInput } from './CarbonTextInput.svelte';
 export { default as CarbonSelect } from './CarbonSelect.svelte';
 export { default as CarbonTabs } from './CarbonTabs.svelte';

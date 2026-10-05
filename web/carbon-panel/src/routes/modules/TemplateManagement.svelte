@@ -4,7 +4,8 @@
 		CarbonDataTable,
 		CarbonTag,
 		CarbonSelect,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
@@ -14,6 +15,7 @@
 	import { Plus, Trash2, Settings, RefreshCw, Layers } from '@lucide/svelte';
 	import ModuleTemplateCreateDialog from '$lib/components/server/ModuleTemplateCreateDialog.svelte';
 	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let templates = $state<ModuleTemplate[]>([]);
 	let loading = $state(true);
@@ -39,12 +41,17 @@
 		}
 	}
 
-	async function handleDeleteTemplate(template: ModuleTemplate) {
-		const confirmed = confirm(
-			`Are you sure you want to delete template "${template.name}"?\n\nThis cannot be undone and will not affect existing instances.`
-		);
-		if (!confirmed) return;
+	let pendingDelete = $state<ModuleTemplate | null>(null);
+	let confirmOpen = $state(false);
 
+	async function handleDeleteTemplate(template: ModuleTemplate) {
+		pendingDelete = template;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteTemplate() {
+		const template = pendingDelete;
+		if (!template) return;
 		try {
 			await rpcClient.module.deleteModuleTemplate({ id: template.id });
 			toast.success(`Template "${template.name}" deleted`);
@@ -53,6 +60,8 @@
 			toast.error(
 				`Failed to delete template: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -62,7 +71,7 @@
 	}
 
 	let categories = $derived.by(() => {
-		const cats = new Set<string>();
+		const cats = new SvelteSet<string>();
 		templates.forEach((t) => {
 			if (t.category) cats.add(t.category);
 		});
@@ -83,7 +92,7 @@
 			<div class="w-36">
 				<CarbonSelect bind:value={selectedCategory}>
 					<option value="">All Categories</option>
-					{#each categories as cat}
+					{#each categories as cat (cat)}
 						<option value={cat}>{cat}</option>
 					{/each}
 				</CarbonSelect>
@@ -221,6 +230,7 @@
 									class="rounded-none text-[#c6c6c6] hover:text-white"
 									onclick={() => openEditDialog(template)}
 									title="Edit template"
+									aria-label="Edit template"
 								>
 									<Settings class="h-3.5 w-3.5" />
 								</CarbonButton>
@@ -231,6 +241,7 @@
 									class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 									onclick={() => handleDeleteTemplate(template)}
 									title="Delete template"
+									aria-label="Delete template"
 								>
 									<Trash2 class="h-3.5 w-3.5" />
 								</CarbonButton>
@@ -259,3 +270,16 @@
 		onSuccess={() => loadTemplates(true)}
 	/>
 {/if}
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete template?"
+	message="This cannot be undone and will not affect existing instances."
+	confirmLabel="Delete Template"
+	danger
+	onconfirm={confirmDeleteTemplate}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

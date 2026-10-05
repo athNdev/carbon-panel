@@ -8,7 +8,8 @@
 		CarbonModal,
 		CarbonTextInput,
 		CarbonSelect,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -76,7 +77,7 @@
 					month: 'long',
 					day: 'numeric'
 				})
-			: 'Unknown'
+			: 'Not recorded'
 	);
 
 	let lastActive = $derived(
@@ -132,7 +133,18 @@
 		}
 	}
 
-	async function deleteToken(id: string) {
+	let pendingDeleteToken = $state<ApiToken | null>(null);
+	let confirmDeleteOpen = $state(false);
+
+	async function deleteToken(token: ApiToken) {
+		pendingDeleteToken = token;
+		confirmDeleteOpen = true;
+	}
+
+	async function confirmDeleteToken() {
+		const token = pendingDeleteToken;
+		if (!token) return;
+		const id = token.id;
 		deletingTokenId = id;
 		try {
 			await rpcClient.auth.deleteAPIToken({ id });
@@ -142,6 +154,7 @@
 			toast.error(error instanceof Error ? error.message : 'Failed to delete API token');
 		} finally {
 			deletingTokenId = null;
+			pendingDeleteToken = null;
 		}
 	}
 
@@ -191,8 +204,8 @@
 			return;
 		}
 
-		if (passwordForm.newPassword.length < 8) {
-			toast.error('New password must be at least 8 characters');
+		if (passwordForm.newPassword.length < 12) {
+			toast.error('New password must be at least 12 characters');
 			return;
 		}
 
@@ -226,9 +239,9 @@
 			>
 				{initials}
 			</div>
-			<div class="space-y-1">
+			<div class="min-w-0 space-y-1">
 				<div class="flex items-center gap-3">
-					<h1 class="text-3xl font-semibold tracking-tight text-white">{user.username}</h1>
+					<h1 class="truncate text-3xl font-semibold tracking-tight text-white">{user.username}</h1>
 					<CarbonTag type={getRoleTagType(primaryRole)} size="md">{primaryRole}</CarbonTag>
 				</div>
 				<p class="text-sm text-[#a8a8a8]">
@@ -278,13 +291,15 @@
 					<!-- Email -->
 					{#if user.email}
 						<div
-							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3"
+							class="flex items-center justify-between gap-3 rounded-none border border-[#393939] bg-[#161616] p-3"
 						>
-							<div class="flex items-center gap-2 text-xs text-[#c6c6c6]">
+							<div class="flex shrink-0 items-center gap-2 text-xs text-[#c6c6c6]">
 								<Mail class="h-3.5 w-3.5 text-[#a8a8a8]" />
 								<span>Email</span>
 							</div>
-							<span class="font-mono text-sm text-white">{user.email}</span>
+							<span class="truncate font-mono text-sm text-white" title={user.email ?? ''}
+								>{user.email}</span
+							>
 						</div>
 					{/if}
 
@@ -378,23 +393,29 @@
 								class="space-y-3"
 							>
 								<CarbonTextInput
+									revealable
 									type="password"
 									label="Current Password"
+									autocomplete="current-password"
 									bind:value={passwordForm.oldPassword}
 									required
 									disabled={saving}
 								/>
 								<CarbonTextInput
+									revealable
 									type="password"
 									label="New Password"
-									placeholder="Minimum 8 characters"
+									autocomplete="new-password"
+									placeholder="Minimum 12 characters"
 									bind:value={passwordForm.newPassword}
 									required
 									disabled={saving}
 								/>
 								<CarbonTextInput
+									revealable
 									type="password"
 									label="Confirm New Password"
+									autocomplete="new-password"
 									placeholder="Confirm your new password"
 									bind:value={passwordForm.confirmPassword}
 									required
@@ -487,10 +508,10 @@
 				{:else}
 					{#each apiTokens as token (token.id)}
 						<tr class="transition-colors hover:bg-[#353535]">
-							<td class="px-4 py-3 font-medium text-white">
+							<td class="max-w-[200px] px-4 py-3 font-medium text-white">
 								<div class="flex items-center gap-2">
 									<KeyRound class="h-3.5 w-3.5 shrink-0 text-[#0f62fe]" />
-									<span class="font-mono text-sm">{token.name}</span>
+									<span class="truncate font-mono text-sm" title={token.name}>{token.name}</span>
 								</div>
 							</td>
 							<td class="px-4 py-3 font-mono text-xs text-[#a8a8a8]">
@@ -514,9 +535,10 @@
 									size="sm"
 									iconOnly
 									class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
-									onclick={() => deleteToken(token.id)}
+									onclick={() => deleteToken(token)}
 									disabled={deletingTokenId === token.id}
 									title="Delete token"
+									aria-label="Delete token"
 								>
 									{#if deletingTokenId === token.id}
 										<Loader2 class="h-3.5 w-3.5 animate-spin" />
@@ -678,3 +700,16 @@
 		</div>
 	{/if}
 </CarbonModal>
+<CarbonConfirm
+	bind:open={confirmDeleteOpen}
+	title="Revoke API token?"
+	message="Any automation using this token stops working immediately."
+	confirmLabel="Revoke Token"
+	danger
+	onconfirm={confirmDeleteToken}
+	onclose={() => (pendingDeleteToken = null)}
+>
+	{#snippet details()}
+		{#if pendingDeleteToken}{pendingDeleteToken.name}{/if}
+	{/snippet}
+</CarbonConfirm>

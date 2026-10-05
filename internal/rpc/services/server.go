@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/command"
@@ -27,7 +26,6 @@ import (
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
-	"github.com/athNdev/carbon-panel/pkg/utils"
 	"github.com/athNdev/carbon-panel/internal/module"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/rbac"
@@ -35,6 +33,8 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/athNdev/carbon-panel/pkg/utils"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -168,6 +168,21 @@ func (s *ServerService) checkDockerPrivilegedOverrides(ctx context.Context, over
 	return nil
 }
 
+// checkDockerOverridesConfinement rejects host-breakout-capable Docker
+// overrides (host-path bind mounts outside the server's own data path, host
+// device mappings, host/none networking) for ALL callers, including holders
+// of the elevated docker permission. Unlike the permission-gated
+// checkDockerPrivilegedOverrides above, this is a pure payload check that
+// maps to CodeInvalidArgument. It must run before the overrides are persisted
+// to the server record; container creation (ApplyOverrides) trusts the stored
+// value and does not re-check.
+func (s *ServerService) checkDockerOverridesConfinement(overrides *v1.DockerOverrides, serverDataPath string) error {
+	if err := docker.ValidateDockerOverridesConfinement(overrides, docker.ServerOverrideSafeRoots(serverDataPath)...); err != nil {
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	return nil
+}
+
 // dbServerToProto converts a database server model to proto server
 func dbServerToProto(server *storage.Server) *v1.Server {
 	if server == nil {
@@ -178,37 +193,37 @@ func dbServerToProto(server *storage.Server) *v1.Server {
 	javaVersion, _ := strconv.ParseInt(server.JavaVersion, 10, 32)
 
 	protoServer := &v1.Server{
-		Id:              server.ID,
-		Name:            server.Name,
-		Description:     server.Description,
-		McVersion:       server.MCVersion,
-		Port:            int32(server.Port),
-		ProxyHostname:   server.ProxyHostname,
-		ProxyListenerId: server.ProxyListenerID,
-		ProxyPort:       int32(server.ProxyPort),
-		MaxPlayers:      int32(server.MaxPlayers),
-		Memory:          int32(server.Memory),
-		DataPath:        server.DataPath,
-		ContainerId:     server.ContainerID,
-		JavaVersion:     int32(javaVersion),
-		DockerImage:     server.DockerImage,
-		AutoStart:       server.AutoStart,
-		Detached:        server.Detached,
-		TpsCommand:      server.TPSCommand,
-		AutoHibernate:   server.AutoHibernate,
-		IdleTimeoutMinutes: int32(server.IdleTimeoutMinutes),
-		AutoDeepSleep:   server.AutoDeepSleep,
+		Id:                      server.ID,
+		Name:                    server.Name,
+		Description:             server.Description,
+		McVersion:               server.MCVersion,
+		Port:                    int32(server.Port),
+		ProxyHostname:           server.ProxyHostname,
+		ProxyListenerId:         server.ProxyListenerID,
+		ProxyPort:               int32(server.ProxyPort),
+		MaxPlayers:              int32(server.MaxPlayers),
+		Memory:                  int32(server.Memory),
+		DataPath:                server.DataPath,
+		ContainerId:             server.ContainerID,
+		JavaVersion:             int32(javaVersion),
+		DockerImage:             server.DockerImage,
+		AutoStart:               server.AutoStart,
+		Detached:                server.Detached,
+		TpsCommand:              server.TPSCommand,
+		AutoHibernate:           server.AutoHibernate,
+		IdleTimeoutMinutes:      int32(server.IdleTimeoutMinutes),
+		AutoDeepSleep:           server.AutoDeepSleep,
 		DeepSleepTimeoutMinutes: int32(server.DeepSleepTimeoutMinutes),
-		MemoryUsage:     int64(server.MemoryUsage),
-		CpuPercent:      server.CPUPercent,
-		DiskUsage:       server.DiskUsage,
-		DiskTotal:       server.DiskTotal,
-		WorldSize:       server.WorldSize,
-		PlayersOnline:   int32(server.PlayersOnline),
-		Tps:             server.TPS,
-		AdditionalPorts: server.AdditionalPorts,
-		CreatedAt:       timestamppb.New(server.CreatedAt),
-		UpdatedAt:       timestamppb.New(server.UpdatedAt),
+		MemoryUsage:             int64(server.MemoryUsage),
+		CpuPercent:              server.CPUPercent,
+		DiskUsage:               server.DiskUsage,
+		DiskTotal:               server.DiskTotal,
+		WorldSize:               server.WorldSize,
+		PlayersOnline:           int32(server.PlayersOnline),
+		Tps:                     server.TPS,
+		AdditionalPorts:         server.AdditionalPorts,
+		CreatedAt:               timestamppb.New(server.CreatedAt),
+		UpdatedAt:               timestamppb.New(server.UpdatedAt),
 
 		// SLP fields
 		SlpAvailable:    server.SLPAvailable,
@@ -677,6 +692,14 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		DockerOverrides: msg.DockerOverrides,
 	}
 
+	// Confinement check for the volume/device/network gap. This runs here —
+	// not next to the privileged-overrides check at the top of this function
+	// — because the safe roots are derived from the server's own data path,
+	// which is only assigned above.
+	if err := s.checkDockerOverridesConfinement(msg.DockerOverrides, serverDataPath); err != nil {
+		return nil, err
+	}
+
 	// Set defaults
 	if server.MaxPlayers == 0 {
 		server.MaxPlayers = 20
@@ -1041,6 +1064,9 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	// Handle docker overrides update
 	if msg.DockerOverrides != nil {
 		if err := s.checkDockerPrivilegedOverrides(ctx, msg.DockerOverrides); err != nil {
+			return nil, err
+		}
+		if err := s.checkDockerOverridesConfinement(msg.DockerOverrides, server.DataPath); err != nil {
 			return nil, err
 		}
 
@@ -2007,4 +2033,3 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 		Server:       dbServerToProto(server),
 	}), nil
 }
-

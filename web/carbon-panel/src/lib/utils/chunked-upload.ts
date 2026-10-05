@@ -1,5 +1,6 @@
 import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 import { authStore } from '$lib/stores/auth';
+import { safePercent } from './safe-percent';
 
 export interface UploadProgress {
 	sessionId: string;
@@ -172,7 +173,7 @@ function streamUpload(
 					totalBytes: file.size,
 					chunksUploaded: 0,
 					totalChunks: 1,
-					percentComplete: file.size > 0 ? (bytesUploaded / file.size) * 100 : 0
+					percentComplete: safePercent(bytesUploaded, file.size)
 				});
 			}
 		};
@@ -223,7 +224,7 @@ export async function getUploadStatus(sessionId: string): Promise<UploadStatus> 
 		totalBytes: Number(response.totalBytes),
 		chunksUploaded: response.chunksReceived,
 		totalChunks: response.totalChunks,
-		percentComplete: (Number(response.bytesReceived) / Number(response.totalBytes)) * 100,
+		percentComplete: safePercent(Number(response.bytesReceived), Number(response.totalBytes)),
 		missingChunks: response.missingChunks,
 		completed: response.completed,
 		tempPath: response.tempPath

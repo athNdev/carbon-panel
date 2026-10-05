@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 )
 
 var (
@@ -23,6 +23,14 @@ type Session struct {
 	TotalSize   int64
 	DeleteAfter bool // if true, file is deleted on session cleanup
 	ExpiresAt   time.Time
+
+	// ServerID is the server this file belongs to and CreatorUserID the user
+	// who requested it. The stream handler serves bytes straight off disk
+	// using only the session id, so without these it can only enforce a
+	// global permission - meaning any user holding files:read anywhere could
+	// fetch another user's download if they learned the id.
+	ServerID      string
+	CreatorUserID string
 }
 
 // Handles download sessions and their temp-file lifecycle
@@ -59,13 +67,22 @@ func (m *Manager) TempDir() string {
 
 // Registers a file that is ready to be downloaded. Deletes file on cleanup if deleteAfter is true
 func (m *Manager) InitSession(filePath, filename string, totalSize int64, deleteAfter bool) *Session {
+	return m.InitSessionFor(filePath, filename, totalSize, deleteAfter, "", "")
+}
+
+// InitSessionFor creates a download session bound to an owning server and
+// creating user, so the stream handler can authorize per-server instead of
+// globally.
+func (m *Manager) InitSessionFor(filePath, filename string, totalSize int64, deleteAfter bool, serverID, creatorUserID string) *Session {
 	session := &Session{
-		ID:          uuid.New().String(),
-		FilePath:    filePath,
-		Filename:    filename,
-		TotalSize:   totalSize,
-		DeleteAfter: deleteAfter,
-		ExpiresAt:   time.Now().Add(m.sessionTTL),
+		ID:            uuid.New().String(),
+		FilePath:      filePath,
+		Filename:      filename,
+		TotalSize:     totalSize,
+		DeleteAfter:   deleteAfter,
+		ExpiresAt:     time.Now().Add(m.sessionTTL),
+		ServerID:      serverID,
+		CreatorUserID: creatorUserID,
 	}
 
 	m.mu.Lock()

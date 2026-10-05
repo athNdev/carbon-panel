@@ -2,14 +2,17 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"connectrpc.com/connect"
 
+	"github.com/athNdev/carbon-panel/internal/auth"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/rbac"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -22,15 +25,71 @@ var _ carbonpanelv1connect.BackupServiceHandler = (*BackupService)(nil)
 
 // BackupService manages on-demand backup records (MINE-138).
 type BackupService struct {
-	store  *storage.Store
-	docker *docker.Client
-	pool   *docker.ClientPool
-	s3cfg  appconfig.S3Config
-	log    *logger.Logger
+	store    *storage.Store
+	docker   *docker.Client
+	pool     *docker.ClientPool
+	s3cfg    appconfig.S3Config
+	log      *logger.Logger
+	enforcer *rbac.Enforcer
 }
 
 func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *docker.ClientPool, s3cfg appconfig.S3Config, log *logger.Logger) *BackupService {
 	return &BackupService{store: store, docker: dockerCli, pool: pool, s3cfg: s3cfg, log: log}
+}
+
+// SetEnforcer injects the RBAC enforcer used for per-server authorization on
+// backup records. Kept as a setter so the constructor signature (and therefore
+// every existing call site) stays stable.
+func (s *BackupService) SetEnforcer(e *rbac.Enforcer) {
+	s.enforcer = e
+}
+
+// authorizeServerBackup enforces that the caller may perform `action` on the
+// SERVER that owns the given backup.
+//
+// Why this exists: DeleteBackup, RestoreBackup and SetBackupLocked carry a
+// backup id in their request, not a server id, so the interceptor cannot
+// resolve a per-server ObjectIDField and falls back to enforcing against "*".
+// That means a caller holding `backups:delete` anywhere could delete or restore
+// a backup belonging to a server they have no rights on - a cross-server
+// escalation. This resolves the owning server from the record and enforces
+// against it, including the same subuser-grant fallback the interceptor applies
+// for server-scoped procedures (MINE-139), so a legitimately granted subuser
+// still works.
+func (s *BackupService) authorizeServerBackup(ctx context.Context, serverID string, action string) error {
+	if s.enforcer == nil {
+		// Fail closed, matching the interceptor: an unavailable enforcer must
+		// not silently skip the check.
+		return connect.NewError(connect.CodePermissionDenied,
+			errors.New("rbac enforcer unavailable"))
+	}
+	user := auth.GetUserFromContext(ctx)
+	if user == nil {
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+	if serverID == "" {
+		return connect.NewError(connect.CodeInternal, errors.New("backup record has no server id"))
+	}
+
+	allowed, err := s.enforcer.Enforce(user.Roles, rbac.ResourceBackups, action, serverID)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("rbac enforcement error: %w", err))
+	}
+	if !allowed {
+		// Subuser grant fallback, mirroring the interceptor's server_id path.
+		want := rbac.ResourceBackups + "." + action
+		for _, p := range s.store.SubuserPermissions(ctx, serverID, user.ID) {
+			if p == want {
+				allowed = true
+				break
+			}
+		}
+	}
+	if !allowed {
+		return connect.NewError(connect.CodePermissionDenied,
+			fmt.Errorf("insufficient permissions for %s/%s on this server", rbac.ResourceBackups, action))
+	}
+	return nil
 }
 
 func (s *BackupService) dockerFor(nodeID string) *docker.Client {
@@ -67,6 +126,11 @@ func (s *BackupService) DeleteBackup(ctx context.Context, req *connect.Request[v
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("backup not found"))
 	}
+	// Resolve the owning server BEFORE touching the archive, so a caller with
+	// no rights on that server cannot delete its backup.
+	if err := s.authorizeServerBackup(ctx, rec.ServerID, rbac.ActionDelete); err != nil {
+		return nil, err
+	}
 	if rec.Locked {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("backup is locked"))
 	}
@@ -81,13 +145,17 @@ func (s *BackupService) DeleteBackup(ctx context.Context, req *connect.Request[v
 }
 
 func (s *BackupService) SetBackupLocked(ctx context.Context, req *connect.Request[v1.SetBackupLockedRequest]) (*connect.Response[v1.SetBackupLockedResponse], error) {
-	if _, err := s.store.GetBackupRecord(ctx, req.Msg.Id); err != nil {
+	rec, err := s.store.GetBackupRecord(ctx, req.Msg.Id)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("backup not found"))
+	}
+	if err := s.authorizeServerBackup(ctx, rec.ServerID, rbac.ActionUpdate); err != nil {
+		return nil, err
 	}
 	if err := s.store.SetBackupLocked(ctx, req.Msg.Id, req.Msg.Locked); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update lock"))
 	}
-	rec, err := s.store.GetBackupRecord(ctx, req.Msg.Id)
+	rec, err = s.store.GetBackupRecord(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read backup"))
 	}
@@ -98,6 +166,11 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	rec, err := s.store.GetBackupRecord(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("backup not found"))
+	}
+	// Authorize against the owning server before starting a restore, which
+	// overwrites that server's data.
+	if err := s.authorizeServerBackup(ctx, rec.ServerID, rbac.ActionUpdate); err != nil {
+		return nil, err
 	}
 	server, err := s.store.GetServer(ctx, rec.ServerID)
 	if err != nil {

@@ -16,7 +16,8 @@
 		CarbonTag,
 		CarbonTextInput,
 		CarbonSelect,
-		CarbonInlineLoading
+		CarbonInlineLoading,
+		CarbonConfirm
 	} from '$lib/components/carbon';
 	import { Clock, Rocket, Trash2, Plus, Layers } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
@@ -97,9 +98,9 @@
 					: 'Change staged — applies on next restart'
 			);
 			await loadChanges();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to stage change:', err);
-			toast.error(err.message || 'Failed to stage change');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to stage change');
 		} finally {
 			staging = false;
 		}
@@ -117,16 +118,25 @@
 			}
 			toast.success('Staged change applied to live config');
 			await loadChanges();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to apply staged change:', err);
-			toast.error(err.message || 'Failed to apply staged change');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to apply staged change');
 		} finally {
 			applyingId = null;
 		}
 	}
 
+	let pendingDiscard: string | null = $state(null);
+	let confirmOpen = $state(false);
+
 	async function discard(id: string) {
-		if (!confirm('Discard this staged change?')) return;
+		pendingDiscard = id;
+		confirmOpen = true;
+	}
+
+	async function confirmDiscard() {
+		const id = pendingDiscard;
+		if (!id) return;
 		try {
 			const res = await apiFetch(`/api/v1/staged-config/${serverId}/staged/${id}`, {
 				method: 'DELETE'
@@ -134,9 +144,11 @@
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			toast.success('Staged change discarded');
 			await loadChanges();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to discard staged change:', err);
-			toast.error(err.message || 'Failed to discard staged change');
+			toast.error((err instanceof Error ? err.message : '') || 'Failed to discard staged change');
+		} finally {
+			pendingDiscard = null;
 		}
 	}
 
@@ -236,6 +248,7 @@
 								class="rounded-none text-[#da1e28] hover:bg-[#da1e28]/20"
 								onclick={() => discard(change.id)}
 								title="Discard"
+								aria-label="Discard"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</CarbonButton>
@@ -252,3 +265,12 @@
 		</div>
 	{/if}
 </CarbonTile>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Discard staged change?"
+	message="The pending change is dropped and will never apply."
+	confirmLabel="Discard Change"
+	danger
+	onconfirm={confirmDiscard}
+	onclose={() => (pendingDiscard = null)}
+/>

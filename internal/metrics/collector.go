@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/client"
 	"github.com/athNdev/carbon-panel/internal/command"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -18,6 +17,7 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/docker/docker/client"
 )
 
 type ServerMetrics struct {
@@ -148,6 +148,11 @@ func (c *Collector) Start() error {
 	}
 	c.running = true
 	c.stopChan = make(chan struct{})
+	// Capture the channel once while holding the lock. Each loop receives
+	// this stable reference as a parameter and never reads c.stopChan in
+	// its select — otherwise a concurrent Stop (which reassigns the field
+	// on the next Start) races with the read and a loop can miss the stop.
+	stop := c.stopChan
 	c.mu.Unlock()
 
 	c.log.Info("Starting metrics collector")
@@ -158,12 +163,12 @@ func (c *Collector) Start() error {
 		loopCount += 1
 	}
 	c.wg.Add(loopCount)
-	go c.collectDockerStatsLoop()
-	go c.collectRCONDataLoop()
-	go c.collectDiskUsageLoop()
-	go c.collectLifecycleEventsLoop()
+	go c.collectDockerStatsLoop(stop)
+	go c.collectRCONDataLoop(stop)
+	go c.collectDiskUsageLoop(stop)
+	go c.collectLifecycleEventsLoop(stop)
 	if c.collectorConfig.SLPEnabled {
-		go c.collectSLPDataLoop()
+		go c.collectSLPDataLoop(stop)
 	}
 
 	return nil
@@ -217,7 +222,7 @@ func (c *Collector) PruneStale(maxAge time.Duration) int {
 }
 
 // Collects Docker container stats periodically
-func (c *Collector) collectDockerStatsLoop() {
+func (c *Collector) collectDockerStatsLoop(stop <-chan struct{}) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(c.collectorConfig.StatsInterval)
@@ -230,14 +235,14 @@ func (c *Collector) collectDockerStatsLoop() {
 		select {
 		case <-ticker.C:
 			c.collectDockerStats()
-		case <-c.stopChan:
+		case <-stop:
 			return
 		}
 	}
 }
 
 // Collects RCON data (player count, TPS) periodically
-func (c *Collector) collectRCONDataLoop() {
+func (c *Collector) collectRCONDataLoop(stop <-chan struct{}) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(c.collectorConfig.RCONInterval)
@@ -250,14 +255,14 @@ func (c *Collector) collectRCONDataLoop() {
 		select {
 		case <-ticker.C:
 			c.collectRCONData()
-		case <-c.stopChan:
+		case <-stop:
 			return
 		}
 	}
 }
 
 // Collects disk usage periodically
-func (c *Collector) collectDiskUsageLoop() {
+func (c *Collector) collectDiskUsageLoop(stop <-chan struct{}) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(c.collectorConfig.DiskInterval)
@@ -270,7 +275,7 @@ func (c *Collector) collectDiskUsageLoop() {
 		select {
 		case <-ticker.C:
 			c.collectDiskUsage()
-		case <-c.stopChan:
+		case <-stop:
 			return
 		}
 	}
@@ -452,7 +457,7 @@ func (c *Collector) RemoveMetrics(serverID string) {
 }
 
 // Collects SLP data
-func (c *Collector) collectSLPDataLoop() {
+func (c *Collector) collectSLPDataLoop(stop <-chan struct{}) {
 	defer c.wg.Done()
 
 	ticker := time.NewTicker(c.collectorConfig.SLPInterval)
@@ -465,7 +470,7 @@ func (c *Collector) collectSLPDataLoop() {
 		select {
 		case <-ticker.C:
 			c.collectSLPData()
-		case <-c.stopChan:
+		case <-stop:
 			return
 		}
 	}
@@ -549,7 +554,7 @@ func (c *Collector) collectSLPData() {
 }
 
 // Derives lifecycle events (SERVER_HEALTHY, PLAYER_JOIN, PLAYER_LEAVE) from state and emits on event bus
-func (c *Collector) collectLifecycleEventsLoop() {
+func (c *Collector) collectLifecycleEventsLoop(stop <-chan struct{}) {
 	defer c.wg.Done()
 
 	interval := c.collectorConfig.RCONInterval
@@ -566,7 +571,7 @@ func (c *Collector) collectLifecycleEventsLoop() {
 		select {
 		case <-ticker.C:
 			c.detectLifecycleEvents()
-		case <-c.stopChan:
+		case <-stop:
 			return
 		}
 	}

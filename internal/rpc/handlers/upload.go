@@ -17,7 +17,9 @@ type uploadStreamResponse struct {
 	SessionID     string `json:"session_id"`
 	BytesReceived int64  `json:"bytes_received"`
 	Completed     bool   `json:"completed"`
-	TempPath      string `json:"temp_path,omitempty"`
+	// TempPath is intentionally never populated: see the completion
+	// handler below. Kept in the struct so the JSON contract is unchanged.
+	TempPath string `json:"temp_path,omitempty"`
 }
 
 // NewUploadStreamHandler creates an HTTP handler for streaming file uploads.
@@ -98,11 +100,13 @@ func NewUploadStreamHandler(uploadManager *upload.Manager, authManager *auth.Man
 			Completed:     completed,
 		}
 
-		if completed {
-			if tempPath, _, tempErr := uploadManager.GetTempPath(sessionID); tempErr == nil {
-				resp.TempPath = tempPath
-			}
-		}
+		// Deliberately NOT returning the server-local temp path to the client.
+		// It disclosed the host filesystem layout (data dir, temp dir naming,
+		// the user the process runs as) to any caller holding uploads:create,
+		// which materially assists the path-traversal and bind-mount work.
+		// The path is logged server-side instead; clients that legitimately
+		// need the file should go through the file API, which is itself
+		// path-confined.
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)

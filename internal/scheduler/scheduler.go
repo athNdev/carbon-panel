@@ -288,7 +288,8 @@ func (s *Scheduler) checkAndRunDueTasks() {
 				delete(s.runningTasks, t.ID)
 				s.runningTasksMu.Unlock()
 			}()
-			s.executeTask(t, "scheduled", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
+			// A scheduled run is owned by the scheduler, not by any caller.
+			_, _ = s.executeTask(context.Background(), t, "scheduled", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 		}(task)
 	}
 }
@@ -304,7 +305,9 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 	if s.IsTaskRunning(taskID) {
 		return nil, ErrTaskAlreadyRunning
 	}
-	execution, err := s.executeTask(task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
+	// Thread the caller context so an RPC cancel (or client disconnect)
+	// actually interrupts the task instead of the work outliving the request.
+	execution, err := s.executeTask(ctx, task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 	return execution, err
 }
 
@@ -326,7 +329,10 @@ func (s *Scheduler) HandleServerEvent(ctx context.Context, event events.Event) {
 		s.wg.Add(1)
 		go func(t *storage.ScheduledTask) {
 			defer s.wg.Done()
-			s.executeTaskForEvent(t, event.Type, event.Data)
+			// WithoutCancel keeps the bus dispatch context's Values (trace ids)
+			// but not its cancellation: a task legitimately outlives the dispatch
+			// that scheduled it, so inheriting the bus cancel would kill it.
+			s.executeTaskForEvent(context.WithoutCancel(ctx), t, event.Type, event.Data)
 		}(task)
 	}
 }
@@ -334,21 +340,20 @@ func (s *Scheduler) HandleServerEvent(ctx context.Context, event events.Event) {
 // executeTaskForEvent runs a task as a result of an event firing. The event
 // type is threaded through to webhook executors so the rendered payload
 // reflects which event triggered the delivery.
-func (s *Scheduler) executeTaskForEvent(task *storage.ScheduledTask, eventType v1.TriggeredEventType, eventData map[string]any) {
-	s.executeTask(task, "event", eventType, eventData)
+func (s *Scheduler) executeTaskForEvent(ctx context.Context, task *storage.ScheduledTask, eventType v1.TriggeredEventType, eventData map[string]any) {
+	_, _ = s.executeTask(ctx, task, "event", eventType, eventData)
 }
 
 // executeTask runs a single task. eventTrigger names the event that drove an
 // event-triggered run (empty for scheduled/manual runs).
-func (s *Scheduler) executeTask(task *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any) (*storage.TaskExecution, error) {
-	return s.executeTaskAtDepth(task, trigger, eventType, eventData, 0)
+func (s *Scheduler) executeTask(ctx context.Context, task *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any) (*storage.TaskExecution, error) {
+	return s.executeTaskAtDepth(ctx, task, trigger, eventType, eventData, 0)
 }
 
 // maxChainDepth caps reaction-chain nesting (MINE-142).
 const maxChainDepth = 4
 
-func (s *Scheduler) executeTaskAtDepth(task *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) (*storage.TaskExecution, error) {
-	ctx := context.Background()
+func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) (*storage.TaskExecution, error) {
 
 	// Check if server exists
 	server, err := s.store.GetServer(ctx, task.ServerID)
@@ -380,7 +385,7 @@ func (s *Scheduler) executeTaskAtDepth(task *storage.ScheduledTask, trigger stri
 		// Skipped steps still fan out to children (each child applies its
 		// own online gate), so chains degrade to per-step skip records.
 		if depth < maxChainDepth {
-			s.runChildChain(task, trigger, eventType, eventData, depth)
+			s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
 		}
 
 		// Update next run time if not already updated at dispatch
@@ -482,7 +487,7 @@ func (s *Scheduler) executeTaskAtDepth(task *storage.ScheduledTask, trigger stri
 	// Each child runs through the normal path, so RequireOnline and retries
 	// apply per step.
 	if depth < maxChainDepth && (execErr == nil || task.ContinueOnFailure) {
-		s.runChildChain(task, trigger, eventType, eventData, depth)
+		s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
 	}
 
 	// Update next run time if not already updated at dispatch
@@ -494,8 +499,8 @@ func (s *Scheduler) executeTaskAtDepth(task *storage.ScheduledTask, trigger stri
 }
 
 // runChildChain executes a task's children sequentially.
-func (s *Scheduler) runChildChain(parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) {
-	children, err := s.store.ListChildTasks(context.Background(), parent.ID)
+func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) {
+	children, err := s.store.ListChildTasks(ctx, parent.ID)
 	if err != nil {
 		s.log.Error("Task %s: failed to list child tasks: %v", parent.Name, err)
 		return
@@ -503,9 +508,18 @@ func (s *Scheduler) runChildChain(parent *storage.ScheduledTask, trigger string,
 	for _, child := range children {
 		if child.TimeOffsetSecs > 0 {
 			s.log.Info("Task %s: waiting %ds before child step %s", parent.Name, child.TimeOffsetSecs, child.Name)
-			time.Sleep(time.Duration(child.TimeOffsetSecs) * time.Second)
+			// Cancellable wait: an uninterruptible time.Sleep meant a cancel or
+			// shutdown had to sit out the full offset before the chain noticed.
+			timer := time.NewTimer(time.Duration(child.TimeOffsetSecs) * time.Second)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				s.log.Info("Task %s: chain cancelled while waiting before step %s", parent.Name, child.Name)
+				return
+			case <-timer.C:
+			}
 		}
-		_, childErr := s.executeTaskAtDepth(child, trigger, eventType, eventData, depth+1)
+		_, childErr := s.executeTaskAtDepth(ctx, child, trigger, eventType, eventData, depth+1)
 		if childErr != nil && !child.ContinueOnFailure {
 			s.log.Warn("Task %s: chain aborted at step %s: %v", parent.Name, child.Name, childErr)
 			return
@@ -832,9 +846,9 @@ type ModpackUpdateTaskConfig struct {
 	GracefulCountdownSeconds int    `json:"graceful_countdown_seconds"`
 	MaintenanceWindowCron    string `json:"maintenance_window_cron"`
 	StageConfigUpdates       bool   `json:"stage_config_updates"`
-	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`        // Create volume snapshot before applying updates (MINE-23)
-	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"`    // Automatically rollback snapshot if restart/update fails
-	BootGateTimeoutSecs      int    `json:"boot_gate_timeout_secs"`      // SLP boot verification after restart; 0 disables (MINE-145)
+	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`      // Create volume snapshot before applying updates (MINE-23)
+	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"` // Automatically rollback snapshot if restart/update fails
+	BootGateTimeoutSecs      int    `json:"boot_gate_timeout_secs"`   // SLP boot verification after restart; 0 disables (MINE-145)
 	AuthToken                string `json:"auth_token"`
 }
 
@@ -856,6 +870,16 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		branch = "main"
 	}
 
+	// Re-validate defensively at execution time, not only at task
+	// create/update time: a task row written before this fix, or by any other
+	// writer, must not be able to smuggle a hostile branch or URL into exec.
+	if err := validateGitBranch(branch); err != nil {
+		return "", err
+	}
+	if err := validateGitURL(cfg.GitURL); err != nil {
+		return "", err
+	}
+
 	// Prepare git repository clone directory inside server directory or app cache
 	cacheDir := filepath.Join(server.DataPath, ".carbon-panel_modpack_git")
 	gitURL := cfg.GitURL
@@ -874,8 +898,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		// Initial clone
 		_ = os.MkdirAll(cacheDir, 0755)
 		s.log.Info("ModpackTask %s: Performing initial clone from %s (branch: %s)", task.Name, cfg.GitURL, branch)
-		cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "-b", branch, gitURL, cacheDir)
-		if out, err := cmd.CombinedOutput(); err != nil {
+		if out, err := cloneFn(ctx, gitURL, branch, cacheDir); err != nil {
 			return string(out), fmt.Errorf("initial git clone failed: %w: %s", err, string(out))
 		}
 		cmdHead := exec.CommandContext(ctx, "git", "-C", cacheDir, "rev-parse", "HEAD")
@@ -886,8 +909,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		updateSummary = fmt.Sprintf("Initial modpack clone successful from %s on branch %s", cfg.GitURL, branch)
 	} else {
 		// Fetch and check if updates are available
-		cmdFetch := exec.CommandContext(ctx, "git", "-C", cacheDir, "fetch", "origin", branch)
-		if out, err := cmdFetch.CombinedOutput(); err != nil {
+		if out, err := fetchFn(ctx, cacheDir, branch); err != nil {
 			return string(out), fmt.Errorf("git fetch failed: %w: %s", err, string(out))
 		}
 
@@ -959,10 +981,12 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			s.log.Info("ModpackTask %s: Staged %d changed config/pack files in %s", task.Name, len(changedFiles), stagedDir)
 		}
 
-		// Source directory to copy from
-		srcDir := cacheDir
-		if cfg.TargetSubfolder != "" {
-			srcDir = filepath.Join(cacheDir, cfg.TargetSubfolder)
+		// Source directory to copy from, confined to the clone cache so a
+		// subfolder like "../../etc" cannot make the sync below read host
+		// files into the server directory or overwrite server data.
+		srcDir, err := resolveModpackSourceDir(cacheDir, cfg.TargetSubfolder)
+		if err != nil {
+			return updateSummary, err
 		}
 
 		// Sync files into server.DataPath (excluding internal directories)
@@ -1002,7 +1026,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			}
 		}
 
-			if shouldRestartNow {
+		if shouldRestartNow {
 			countdown := cfg.GracefulCountdownSeconds
 			if countdown <= 0 && cfg.GracefulRestart {
 				countdown = 10

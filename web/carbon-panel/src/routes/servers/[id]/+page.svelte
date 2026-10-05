@@ -14,14 +14,12 @@
 		RefreshCcw,
 		MoreVertical,
 		Package,
-		Activity,
 		Loader2,
 		Copy,
 		ExternalLink,
 		Trash2,
 		Cpu,
 		Info,
-		Network,
 		ArrowLeft,
 		HardDrive,
 		Terminal,
@@ -53,9 +51,10 @@
 		RestartServerRequestSchema,
 		RecreateServerRequestSchema
 	} from '$lib/proto/carbonpanel/v1/server_pb';
-	import { formatBytes, enumToString } from '$lib/utils';
+	import { enumToString } from '$lib/utils';
+	import { memoryUsagePercent } from '$lib/utils/safe-percent';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
-	import { CarbonTag, CarbonButton, CarbonTabs } from '$lib/components/carbon';
+	import { CarbonTag, CarbonTabs, CarbonConfirm } from '$lib/components/carbon';
 	import ServerConsole from '$lib/components/server-console.svelte';
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
 	import ServerSettings from '$lib/components/server-settings.svelte';
@@ -184,15 +183,15 @@
 		}
 	}
 
+	let confirmDeleteOpen = $state(false);
+
 	async function handleDeleteServer() {
 		if (!server) return;
+		confirmDeleteOpen = true;
+	}
 
-		const confirmed = confirm(
-			`Are you sure you want to delete "${server.name}"?\n\nThis will:\n- Stop and remove the Docker container\n- Delete all server files and data\n- Remove all mods and configurations\n\nThis action cannot be undone!`
-		);
-
-		if (!confirmed) return;
-
+	async function confirmDeleteServer() {
+		if (!server) return;
 		actionLoading = true;
 		try {
 			const deleteRequest = create(DeleteServerRequestSchema, { id: server.id });
@@ -290,9 +289,10 @@
 		>
 			<div class="flex items-center gap-4">
 				<a
-					href="/servers"
+					href={resolve('/servers')}
 					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-[#393939] bg-[#262626] text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
 					title="Back to Servers"
+					aria-label="Back to Servers"
 				>
 					<ArrowLeft class="h-4 w-4" />
 				</a>
@@ -301,9 +301,11 @@
 				>
 					<Package class="h-6 w-6" />
 				</div>
-				<div>
+				<div class="min-w-0">
 					<div class="flex flex-wrap items-center gap-2.5">
-						<h1 class="text-2xl font-light tracking-tight text-[#f4f4f4]">{server.name}</h1>
+						<h1 class="truncate text-2xl font-light tracking-tight text-[#f4f4f4]">
+							{server.name}
+						</h1>
 						<!-- Status Badge (Carbon Tag Requirement) -->
 						<CarbonTag type={getStatusTagType(server.status)} size="md">
 							{getStatusDisplayName(server.status)}
@@ -325,7 +327,7 @@
 			</div>
 
 			<!-- Sharp Action Buttons -->
-			<div class="flex items-center gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				{#if server.status === ServerStatus.CREATING}
 					<div
 						class="flex h-10 items-center gap-2 rounded-none border border-[#393939] bg-[#262626] px-4 font-sans text-sm text-[#f4f4f4] select-none"
@@ -441,7 +443,7 @@
 		</div>
 
 		<!-- Carbon Metric Tiles (ZERO rounded corners) -->
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+		<div class="motion-stagger grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 			<!-- Tile 1: Status & Heartbeat -->
 			<div
 				class="flex flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-4"
@@ -595,10 +597,7 @@
 								class="h-full rounded-none bg-[#0f62fe] transition-all"
 								style="width: {server.status === ServerStatus.CREATING
 									? '100'
-									: Math.min(
-											server.memoryUsage ? (Number(server.memoryUsage) / server.memory) * 100 : 0,
-											100
-										)}%"
+									: memoryUsagePercent(server.memoryUsage, server.memory)}%"
 							></div>
 						</div>
 					</div>
@@ -682,47 +681,49 @@
 				tabs={subViewTabs}
 				bind:selectedTab={activeTab}
 				onselect={(tab) => (activeTab = tab)}
-				class="overflow-x-auto"
+				class="sticky top-0 z-20 overflow-x-auto bg-[#161616]"
 			/>
 
 			<!-- Tab Content Areas -->
-			<div class="min-h-0 flex-1">
-				{#if activeTab === 'overview'}
-					<div class="rounded-none border border-[#393939] bg-[#262626] p-6">
-						<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Server Settings</h3>
-						<p class="mb-6 text-xs text-[#a8a8a8]">
-							Modify runtime container settings and server parameters
-						</p>
-						<ServerSettings {server} onUpdate={loadServer} />
-					</div>
-				{:else if activeTab === 'console'}
-					<ServerConsole {server} active={activeTab === 'console'} />
-				{:else if activeTab === 'configuration'}
-					<div class="h-full overflow-y-auto">
-						<ServerConfiguration {server} />
-					</div>
-				{:else if activeTab === 'mods'}
-					<ServerMods {server} active={activeTab === 'mods'} />
-				{:else if activeTab === 'modules'}
-					<ServerModules {server} active={activeTab === 'modules'} />
-				{:else if activeTab === 'files'}
-					<ServerFiles {server} active={activeTab === 'files'} />
-				{:else if activeTab === 'tasks'}
-					<div class="h-full overflow-y-auto">
-						<ServerTasks {server} active={activeTab === 'tasks'} />
-					</div>
-				{:else if activeTab === 'backups'}
-					<ServerBackups {server} active={activeTab === 'backups'} />
-				{:else if activeTab === 'players'}
-					<ServerPlayers {server} active={activeTab === 'players'} />
-				{:else if activeTab === 'activity'}
-					<ServerActivity {server} active={activeTab === 'activity'} />
-				{:else if activeTab === 'routing'}
-					<div class="h-full overflow-y-auto">
-						<ServerRouting {server} bind:router={routingInfo} active={activeTab === 'routing'} />
-					</div>
-				{/if}
-			</div>
+			{#key activeTab}
+				<div class="motion-fade-in min-h-0 flex-1">
+					{#if activeTab === 'overview'}
+						<div class="rounded-none border border-[#393939] bg-[#262626] p-4 sm:p-6">
+							<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Server Settings</h3>
+							<p class="mb-6 text-xs text-[#a8a8a8]">
+								Modify runtime container settings and server parameters
+							</p>
+							<ServerSettings {server} onUpdate={loadServer} />
+						</div>
+					{:else if activeTab === 'console'}
+						<ServerConsole {server} active={activeTab === 'console'} />
+					{:else if activeTab === 'configuration'}
+						<div class="h-full overflow-y-auto">
+							<ServerConfiguration {server} />
+						</div>
+					{:else if activeTab === 'mods'}
+						<ServerMods {server} active={activeTab === 'mods'} />
+					{:else if activeTab === 'modules'}
+						<ServerModules {server} active={activeTab === 'modules'} />
+					{:else if activeTab === 'files'}
+						<ServerFiles {server} active={activeTab === 'files'} />
+					{:else if activeTab === 'tasks'}
+						<div class="h-full overflow-y-auto">
+							<ServerTasks {server} active={activeTab === 'tasks'} />
+						</div>
+					{:else if activeTab === 'backups'}
+						<ServerBackups {server} active={activeTab === 'backups'} />
+					{:else if activeTab === 'players'}
+						<ServerPlayers {server} active={activeTab === 'players'} />
+					{:else if activeTab === 'activity'}
+						<ServerActivity {server} active={activeTab === 'activity'} />
+					{:else if activeTab === 'routing'}
+						<div class="h-full overflow-y-auto">
+							<ServerRouting {server} bind:router={routingInfo} active={activeTab === 'routing'} />
+						</div>
+					{/if}
+				</div>
+			{/key}
 		</div>
 	</div>
 {:else}
@@ -730,7 +731,7 @@
 		<div class="rounded-none border border-[#393939] bg-[#262626] p-8 text-center">
 			<p class="font-mono text-sm text-[#ff8389]">Server instance not found</p>
 			<a
-				href="/servers"
+				href={resolve('/servers')}
 				class="mt-4 inline-flex h-8 items-center rounded-none bg-[#393939] px-4 font-sans text-xs text-white transition-colors hover:bg-[#4c4c4c]"
 			>
 				Back to servers
@@ -740,6 +741,22 @@
 {/if}
 
 <ScrollToTop />
+
+{#if server}
+	<CarbonConfirm
+		bind:open={confirmDeleteOpen}
+		title="Delete server?"
+		message="This will stop and remove the container, delete all files and data, and remove mods and configurations. This action cannot be undone."
+		confirmLabel="Delete Server"
+		danger
+		confirming={actionLoading}
+		onconfirm={confirmDeleteServer}
+	>
+		{#snippet details()}
+			{#if server}{server.name}{/if}
+		{/snippet}
+	</CarbonConfirm>
+{/if}
 
 <style>
 	.heartbeat-container {

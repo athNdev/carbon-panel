@@ -136,7 +136,7 @@
 		/>
 
 		{#if activeTab === 'server-config' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				{#if loading}
 					<div class="flex items-center justify-center border border-[#393939] bg-[#262626] p-16">
 						<CarbonInlineLoading description="Loading settings..." />
@@ -146,35 +146,35 @@
 				{/if}
 			</div>
 		{:else if activeTab === 'api-keys' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<ApiKeysSettings />
 			</div>
 		{:else if activeTab === 'routing' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<RoutingSettings />
 			</div>
 		{:else if activeTab === 'nodes' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<NodeSettings />
 			</div>
 		{:else if activeTab === 'auth' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<AuthSettings />
 			</div>
 		{:else if activeTab === 'logs' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<LogsSettings />
 			</div>
 		{:else if activeTab === 'support' && showSettings}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<SupportSettings />
 			</div>
 		{:else if activeTab === 'users' && showUsers}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<UserSettings />
 			</div>
 		{:else if activeTab === 'roles' && showRoles}
-			<div class="space-y-4">
+			<div class="motion-fade-in space-y-4">
 				<RoleSettings />
 			</div>
 		{/if}

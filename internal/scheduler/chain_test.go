@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 )
 
 func setupChainTest(t *testing.T) (*Scheduler, *storage.Store, context.Context, *storage.Server) {
@@ -59,7 +59,7 @@ func TestChainRunsChildrenInOrder(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := s.executeTask(parent, "manual", 0, nil); err != nil {
+	if _, err := s.executeTask(context.Background(), parent, "manual", 0, nil); err != nil {
 		t.Fatalf("parent: %v", err)
 	}
 	if n := countExecutions(t, store, ctx, parent.ID); n != 1 {
@@ -96,7 +96,7 @@ func TestChainAbortsOnFailure(t *testing.T) {
 	if err := store.CreateScheduledTask(ctx, child); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.executeTask(parent, "manual", 0, nil); err == nil {
+	if _, err := s.executeTask(context.Background(), parent, "manual", 0, nil); err == nil {
 		t.Fatalf("expected parent failure")
 	}
 	if n := countExecutions(t, store, ctx, child.ID); n != 0 {
@@ -122,7 +122,7 @@ func TestChainContinuesWhenAllowed(t *testing.T) {
 	if err := store.CreateScheduledTask(ctx, child); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.executeTask(parent, "manual", 0, nil); err == nil {
+	if _, err := s.executeTask(context.Background(), parent, "manual", 0, nil); err == nil {
 		t.Fatalf("expected parent failure")
 	}
 	// Chain attempted the child despite parent failure (child itself fails

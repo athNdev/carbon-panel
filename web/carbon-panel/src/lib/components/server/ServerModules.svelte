@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
@@ -176,12 +177,17 @@
 		}
 	}
 
-	async function handleDeleteModule(module: Module) {
-		const confirmed = confirm(
-			`Are you sure you want to delete "${module.name}"?\n\nThis will stop and remove the container and all module data.`
-		);
-		if (!confirmed) return;
+	let pendingDelete = $state<Module | null>(null);
+	let confirmOpen = $state(false);
 
+	async function handleDeleteModule(module: Module) {
+		pendingDelete = module;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteModule() {
+		const module = pendingDelete;
+		if (!module) return;
 		actionLoading = module.id;
 		try {
 			await rpcClient.module.deleteModule({ id: module.id });
@@ -193,6 +199,7 @@
 			);
 		} finally {
 			actionLoading = null;
+			pendingDelete = null;
 		}
 	}
 
@@ -416,7 +423,7 @@
 									<div class="flex flex-wrap gap-1.5">
 										{#each module.ports as port (port.name)}
 											<Badge variant="outline" class="px-1.5 py-0 font-mono text-[10px]">
-												{port.name || 'Port'}: {port.hostPort || '?'}â†’{port.containerPort}/{(
+												{port.name || 'Port'}: {port.hostPort || '?'}→{port.containerPort}/{(
 													port.protocol || 'tcp'
 												).toUpperCase()}
 											</Badge>
@@ -571,3 +578,16 @@
 	bind:open={templateCreateDialogOpen}
 	onSuccess={handleTemplateCreated}
 />
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete module?"
+	message="This will stop and remove the container and all module data."
+	confirmLabel="Delete Module"
+	danger
+	onconfirm={confirmDeleteModule}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

@@ -205,6 +205,11 @@ func (p *UDPProxy) proxyLoop() {
 	}
 }
 
+// udpListen creates the per-session backend socket. It is a variable (not a
+// direct net.ListenUDP call) so tests can count creations/closes and prove
+// the loser of a session-creation race cleans up its socket.
+var udpListen = net.ListenUDP
+
 // getOrCreateSession gets an existing session or creates a new one
 func (p *UDPProxy) getOrCreateSession(clientAddr *net.UDPAddr) (*udpSession, error) {
 	clientKey := clientAddr.String()
@@ -233,7 +238,7 @@ func (p *UDPProxy) getOrCreateSession(clientAddr *net.UDPAddr) (*udpSession, err
 	}
 
 	// Use unconnected socket to debug response routing
-	backendConn, err := net.ListenUDP("udp", nil)
+	backendConn, err := udpListen("udp", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backend socket: %w", err)
 	}
@@ -245,7 +250,15 @@ func (p *UDPProxy) getOrCreateSession(clientAddr *net.UDPAddr) (*udpSession, err
 		lastActive:  time.Now(),
 	}
 
+	// Re-check under the write lock: another goroutine may have created the
+	// session while this one was dialling. The loser closes the socket it
+	// just created, starts no response goroutine, and returns the winner.
 	p.sessionsMu.Lock()
+	if existing, ok := p.sessions[clientKey]; ok {
+		p.sessionsMu.Unlock()
+		_ = backendConn.Close()
+		return existing, nil
+	}
 	p.sessions[clientKey] = session
 	p.sessionsMu.Unlock()
 

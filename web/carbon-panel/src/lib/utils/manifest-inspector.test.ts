@@ -68,7 +68,7 @@ test('inspectManifest accurately parses Modrinth manifest and separates client v
 	const serverExport = exportServerManifest(result);
 	const parsedExport = JSON.parse(serverExport);
 	assert.equal(parsedExport.files.length, 2);
-	assert.ok(!parsedExport.files.some((f: any) => f.path.includes('sodium')));
+	assert.ok(!parsedExport.files.some((f: { path: string }) => f.path.includes('sodium')));
 });
 
 test('inspectManifest parses CurseForge manifest and excludes client-only mods', () => {
