@@ -501,7 +501,7 @@
 										</span>
 									</div>
 								{:else}
-									<span class="font-mono text-xs text-[#6f6f6f]">—</span>
+									<span class="font-mono text-xs text-[#a8a8a8]">—</span>
 								{/if}
 							</td>
 

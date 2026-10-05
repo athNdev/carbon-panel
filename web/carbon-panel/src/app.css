@@ -111,8 +111,14 @@
 		stacks rather than IBM Plex, so the ~420 utility uses across the app never
 		actually applied the design font even once it loaded.
 	*/
-	--font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
-		sans-serif;
+	/*
+		Fontsource names the variable build 'IBM Plex Sans Variable'. Asking for
+		plain 'IBM Plex Sans' matches no @font-face at all, so the browser
+		silently falls back to the system stack. Both names are listed, variable
+		first. Mono has no variable release, so 'IBM Plex Mono' is correct as-is.
+	*/
+	--font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont,
+		'Segoe UI', Helvetica, Arial, sans-serif;
 	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
 		'Liberation Mono', 'Courier New', monospace;
 	--radius-sm: 0px;

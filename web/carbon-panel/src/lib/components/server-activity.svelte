@@ -63,7 +63,7 @@
 		<p class="mb-6 text-xs text-[#a8a8a8]">Who did what on this server, newest first</p>
 
 		{#if entries.length === 0}
-			<p class="py-8 text-center font-mono text-xs text-[#6f6f6f]">
+			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading
 					? 'Loading activity…'
 					: 'No activity recorded yet. Start or stop the server to generate entries.'}
