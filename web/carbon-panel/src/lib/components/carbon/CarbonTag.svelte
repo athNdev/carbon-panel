@@ -55,7 +55,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	};
 
 	const sizeClasses = {
-		sm: 'h-5 px-1.5 text-[10px] font-mono',
+		sm: 'h-5 px-1.5 text-xs font-mono',
 		md: 'h-6 px-2 text-xs font-mono'
 	};
 </script>

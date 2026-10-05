@@ -777,7 +777,7 @@ one at https://mozilla.org/MPL/2.0/.
 							class="flex items-center justify-between rounded-none border border-[#393939] bg-[#161616] p-3 font-mono text-xs text-[#f4f4f4] transition-colors hover:bg-[#353535]"
 						>
 							<div class="flex items-center gap-2.5">
-								<Plus class="h-4 w-4 text-[#0f62fe]" />
+								<Plus class="h-4 w-4 text-accent-text" />
 								<span>Deploy Game Server</span>
 							</div>
 							<ChevronRight class="h-4 w-4 text-[#8d8d8d]" />
@@ -866,7 +866,7 @@ one at https://mozilla.org/MPL/2.0/.
 					</div>
 					<div class="mt-4 grid grid-cols-2 gap-2">
 						<div class="rounded-none border border-[#393939] bg-[#161616] p-3">
-							<p class="font-mono text-[10px] text-[#8d8d8d] uppercase">ACTIVE RATIO</p>
+							<p class="font-mono text-xs text-[#8d8d8d] uppercase">ACTIVE RATIO</p>
 							<p class="mt-1 font-mono text-xl font-bold text-[#24a148]">
 								{stats.running > 0
 									? `${((stats.running / Math.max(stats.total, 1)) * 100).toFixed(0)}%`
@@ -874,7 +874,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</p>
 						</div>
 						<div class="rounded-none border border-[#393939] bg-[#161616] p-3">
-							<p class="font-mono text-[10px] text-[#8d8d8d] uppercase">AVG CPU</p>
+							<p class="font-mono text-xs text-[#8d8d8d] uppercase">AVG CPU</p>
 							<p
 								class="font-mono text-xl font-bold {stats.avgCpu > 80
 									? 'text-[#da1e28]'
@@ -884,7 +884,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</p>
 						</div>
 						<div class="rounded-none border border-[#393939] bg-[#161616] p-3">
-							<p class="font-mono text-[10px] text-[#8d8d8d] uppercase">TICK RATE</p>
+							<p class="font-mono text-xs text-[#8d8d8d] uppercase">TICK RATE</p>
 							<p
 								class="font-mono text-xl font-bold {stats.avgTps >= 18 || stats.avgTps === 0
 									? 'text-[#24a148]'
@@ -894,7 +894,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</p>
 						</div>
 						<div class="rounded-none border border-[#393939] bg-[#161616] p-3">
-							<p class="font-mono text-[10px] text-[#8d8d8d] uppercase">PLAYERS</p>
+							<p class="font-mono text-xs text-[#8d8d8d] uppercase">PLAYERS</p>
 							<p class="mt-1 font-mono text-xl font-bold text-[#24a148]">
 								{stats.totalPlayers}
 							</p>

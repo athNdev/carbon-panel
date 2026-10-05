@@ -41,7 +41,7 @@ one at https://mozilla.org/MPL/2.0/.
 			<BreadcrumbItem>
 				{#if segments.length === 0}
 					<BreadcrumbPage class="flex items-center gap-1.5 text-xs font-medium text-[#f4f4f4]">
-						<FolderRoot class="h-3.5 w-3.5 text-[#0f62fe]" />
+						<FolderRoot class="h-3.5 w-3.5 text-accent-text" />
 						<span>/ (root)</span>
 					</BreadcrumbPage>
 				{:else}
@@ -49,7 +49,7 @@ one at https://mozilla.org/MPL/2.0/.
 						class="flex cursor-pointer items-center gap-1.5 text-xs text-[#c6c6c6] transition-colors hover:text-[#78a9ff]"
 						onclick={() => onNavigate('')}
 					>
-						<FolderRoot class="h-3.5 w-3.5 text-[#0f62fe]" />
+						<FolderRoot class="h-3.5 w-3.5 text-accent-text" />
 						<span>/ (root)</span>
 					</BreadcrumbLink>
 				{/if}
