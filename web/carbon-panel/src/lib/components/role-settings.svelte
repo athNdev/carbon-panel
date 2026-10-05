@@ -593,7 +593,7 @@ one at https://mozilla.org/MPL/2.0/.
 													/>
 													<span class="text-sm capitalize">{formatResourceName(ra.resource)}</span>
 													{#if count > 0}
-														<Badge variant="secondary" class="ml-auto px-1.5 py-0 text-[10px]"
+														<Badge variant="secondary" class="ml-auto px-1.5 py-0 text-xs"
 															>{count}/{total}</Badge
 														>
 													{/if}
@@ -689,9 +689,7 @@ one at https://mozilla.org/MPL/2.0/.
 																)}</span
 															>
 															{#if activeForeign}
-																<div
-																	class="text-[10px] font-normal text-muted-foreground normal-case"
-																>
+																<div class="text-xs font-normal text-muted-foreground normal-case">
 																	scoping {formatResourceName(scopedResource)}
 																</div>
 															{/if}
@@ -706,7 +704,7 @@ one at https://mozilla.org/MPL/2.0/.
 																		: ''}">{action}</span
 																>
 																{#if coveredByGlobal}
-																	<div class="text-[9px] font-normal text-muted-foreground">
+																	<div class="text-xs font-normal text-muted-foreground">
 																		(global)
 																	</div>
 																{/if}

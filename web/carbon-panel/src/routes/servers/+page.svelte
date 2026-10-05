@@ -209,7 +209,7 @@ one at https://mozilla.org/MPL/2.0/.
 	>
 		<div class="flex items-center gap-4">
 			<div
-				class="flex h-12 w-12 shrink-0 items-center justify-center border border-[#393939] bg-[#262626] text-[#0f62fe]"
+				class="flex h-12 w-12 shrink-0 items-center justify-center border border-[#393939] bg-[#262626] text-accent-text"
 			>
 				<ServerIcon class="h-6 w-6" />
 			</div>
@@ -364,7 +364,7 @@ one at https://mozilla.org/MPL/2.0/.
 		<div class="rounded-none border border-[#393939] bg-[#262626] p-12 text-center">
 			{#if servers.length === 0}
 				<div
-					class="mx-auto mb-4 flex h-14 w-14 items-center justify-center border border-[#393939] bg-[#161616] text-[#0f62fe]"
+					class="mx-auto mb-4 flex h-14 w-14 items-center justify-center border border-[#393939] bg-[#161616] text-accent-text"
 				>
 					<ServerIcon class="h-7 w-7" />
 				</div>
@@ -469,7 +469,7 @@ one at https://mozilla.org/MPL/2.0/.
 											{getModLoaderDisplay(server.modLoader)}
 										</CarbonTag>
 									{:else}
-										<span class="text-[11px] text-[#8d8d8d]">Vanilla</span>
+										<span class="text-xs text-[#8d8d8d]">Vanilla</span>
 									{/if}
 								</div>
 							</td>
@@ -699,7 +699,7 @@ one at https://mozilla.org/MPL/2.0/.
 							>
 								<Wifi class="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
 								<div class="min-w-0">
-									<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">Port</p>
+									<p class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase">Port</p>
 									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">
 										{server.port}
 									</p>
@@ -710,9 +710,7 @@ one at https://mozilla.org/MPL/2.0/.
 							>
 								<MemoryStick class="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
 								<div class="min-w-0">
-									<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">
-										Memory
-									</p>
+									<p class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase">Memory</p>
 									<p class="truncate font-mono text-xs font-semibold text-[#f4f4f4]">
 										{(server.memory / 1024).toFixed(1)} GB
 									</p>
@@ -724,9 +722,7 @@ one at https://mozilla.org/MPL/2.0/.
 								>
 									<Users class="h-3.5 w-3.5 shrink-0 text-[#6fdc8c]" />
 									<div class="min-w-0">
-										<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">
-											Players
-										</p>
+										<p class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase">Players</p>
 										<p class="font-mono text-xs font-semibold text-[#6fdc8c]">
 											{server.playersOnline || 0} / {server.maxPlayers}
 										</p>
@@ -743,7 +739,7 @@ one at https://mozilla.org/MPL/2.0/.
 												: 'text-[#ff8389]'}"
 									/>
 									<div class="min-w-0">
-										<p class="font-mono text-[10px] tracking-wider text-[#8d8d8d] uppercase">TPS</p>
+										<p class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase">TPS</p>
 										<p
 											class="font-mono text-xs font-semibold {server.tps && server.tps >= 18
 												? 'text-[#6fdc8c]'
