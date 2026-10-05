@@ -108,7 +108,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	{#if flatFiles.length === 0}
 		<div class="flex flex-col items-center justify-center py-12 text-sm text-muted-foreground">
-			<p>No files found</p>
+			<p>This folder is empty</p>
 		</div>
 	{/if}
 </div>

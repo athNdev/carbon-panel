@@ -58,6 +58,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { create } from '@bufbuild/protobuf';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import type { User, Role } from '$lib/proto/carbonpanel/v1/common_pb';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import type { RegistrationInvite } from '$lib/proto/carbonpanel/v1/auth_pb';
 	import {
 		CreateUserRequestSchema,
@@ -165,8 +166,8 @@ one at https://mozilla.org/MPL/2.0/.
 			return;
 		}
 
-		if (newUserForm.password.length < 8) {
-			toast.error('Password must be at least 8 characters');
+		if (newUserForm.password.length < 12) {
+			toast.error('Password must be at least 12 characters');
 			return;
 		}
 
@@ -214,11 +215,17 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
-	async function deleteUser(user: User) {
-		if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) {
-			return;
-		}
+	let pendingDelete = $state<User | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deleteUser(user: User) {
+		pendingDelete = user;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteUser() {
+		const user = pendingDelete;
+		if (!user) return;
 		try {
 			const request = create(DeleteUserRequestSchema, { id: user.id });
 			await rpcClient.user.deleteUser(request);
@@ -227,6 +234,8 @@ one at https://mozilla.org/MPL/2.0/.
 			await loadUsers();
 		} catch (error: unknown) {
 			toast.error(error instanceof Error ? error.message : 'Failed to delete user');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -594,7 +603,7 @@ one at https://mozilla.org/MPL/2.0/.
 					<div class="rounded-lg bg-muted/50 p-4">
 						<p class="mb-1 text-sm font-medium">Password policy</p>
 						<p class="text-xs text-muted-foreground">
-							Passwords must be at least 8 characters. The user can change their password later.
+							Passwords must be at least 12 characters. The user can change their password later.
 						</p>
 					</div>
 				</div>
@@ -624,6 +633,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<Input
 								id="new-username"
 								type="text"
+								autocomplete="off"
 								bind:value={newUserForm.username}
 								placeholder="username"
 								required
@@ -637,6 +647,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<Input
 								id="new-email"
 								type="email"
+								autocomplete="off"
 								bind:value={newUserForm.email}
 								placeholder="user@example.com"
 							/>
@@ -649,8 +660,9 @@ one at https://mozilla.org/MPL/2.0/.
 							<Input
 								id="new-password"
 								type="password"
+								autocomplete="new-password"
 								bind:value={newUserForm.password}
-								placeholder="Minimum 8 characters"
+								placeholder="Minimum 12 characters"
 								required
 							/>
 						</div>
@@ -952,7 +964,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</div>
 						</div>
 
-						<div class="grid grid-cols-2 gap-4">
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<div class="space-y-2">
 								<div class="flex items-center gap-2">
 									<Hash class="h-4 w-4 text-muted-foreground" />
@@ -1045,3 +1057,16 @@ one at https://mozilla.org/MPL/2.0/.
 		</div>
 	</DialogContent>
 </Dialog>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete user?"
+	message="Their sessions end and the account is removed. This cannot be undone."
+	confirmLabel="Delete User"
+	danger
+	onconfirm={confirmDeleteUser}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.username}{/if}
+	{/snippet}
+</CarbonConfirm>

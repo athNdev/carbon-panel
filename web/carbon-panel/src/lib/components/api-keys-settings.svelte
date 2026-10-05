@@ -91,7 +91,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			} else {
 				toast.error(data.message);
 			}
-		} catch (err) {
+		} catch {
 			cfTestResult = { valid: false, message: 'Failed to contact validation endpoint' };
 			toast.error('Connection test failed');
 		} finally {
@@ -119,7 +119,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			} else {
 				toast.error(data.message);
 			}
-		} catch (err) {
+		} catch {
 			modrinthTestResult = { valid: false, message: 'Failed to contact validation endpoint' };
 			toast.error('Connection test failed');
 		} finally {

@@ -16,8 +16,6 @@ one at https://mozilla.org/MPL/2.0/.
 		Upload,
 		Download,
 		Trash2,
-		ToggleLeft,
-		ToggleRight,
 		Package,
 		FileText,
 		X,
@@ -33,7 +31,12 @@ one at https://mozilla.org/MPL/2.0/.
 	import { formatBytes } from '$lib/utils';
 	import { uploadFile, cancelUpload, type UploadProgress } from '$lib/utils/chunked-upload';
 	import ModBrowserDialog from '$lib/components/mod-browser-dialog.svelte';
-	import { CarbonTag, CarbonInlineLoading, CarbonButton } from '$lib/components/carbon';
+	import {
+		CarbonTag,
+		CarbonInlineLoading,
+		CarbonButton,
+		CarbonConfirm
+	} from '$lib/components/carbon';
 
 	interface Props {
 		server: Server;
@@ -177,10 +180,17 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
-	async function deleteMod(mod: Mod) {
-		const confirmed = confirm(`Are you sure you want to delete "${mod.displayName}"?`);
-		if (!confirmed) return;
+	let pendingDelete = $state<Mod | null>(null);
+	let confirmOpen = $state(false);
 
+	async function deleteMod(mod: Mod) {
+		pendingDelete = mod;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteMod() {
+		const mod = pendingDelete;
+		if (!mod) return;
 		try {
 			await rpcClient.mod.deleteMod({
 				serverId: server.id,
@@ -190,6 +200,8 @@ one at https://mozilla.org/MPL/2.0/.
 			await loadMods();
 		} catch (_e) {
 			toast.error('Failed to delete mod');
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -316,6 +328,7 @@ one at https://mozilla.org/MPL/2.0/.
 							type="search"
 							placeholder="Search installed mods..."
 							bind:value={searchQuery}
+							onkeydown={(e) => e.key === 'Escape' && (searchQuery = '')}
 							class="h-8 w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] pr-3 pl-8 text-xs text-[#f4f4f4] placeholder-[#6f6f6f] focus:border-b-2 focus:border-[#0f62fe] focus:outline-none"
 						/>
 					</div>
@@ -325,6 +338,7 @@ one at https://mozilla.org/MPL/2.0/.
 						<button
 							type="button"
 							onclick={() => (modFilter = 'all')}
+							aria-pressed={modFilter === 'all'}
 							class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {modFilter ===
 							'all'
 								? 'border-[#0f62fe] bg-[#0f62fe] text-white'
@@ -335,6 +349,7 @@ one at https://mozilla.org/MPL/2.0/.
 						<button
 							type="button"
 							onclick={() => (modFilter = 'enabled')}
+							aria-pressed={modFilter === 'enabled'}
 							class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {modFilter ===
 							'enabled'
 								? 'border-[#198038] bg-[#198038] text-white'
@@ -345,6 +360,7 @@ one at https://mozilla.org/MPL/2.0/.
 						<button
 							type="button"
 							onclick={() => (modFilter = 'disabled')}
+							aria-pressed={modFilter === 'disabled'}
 							class="cursor-pointer rounded-none border px-2.5 py-1 font-mono text-xs uppercase transition-colors {modFilter ===
 							'disabled'
 								? 'border-[#525252] bg-[#525252] text-white'
@@ -513,3 +529,16 @@ one at https://mozilla.org/MPL/2.0/.
 </ResizablePaneGroup>
 
 <ModBrowserDialog bind:open={browserDialogOpen} {server} onInstalled={loadMods} />
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete mod?"
+	message="The file is removed from the server. This cannot be undone."
+	confirmLabel="Delete Mod"
+	danger
+	onconfirm={confirmDeleteMod}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.displayName}{/if}
+	{/snippet}
+</CarbonConfirm>

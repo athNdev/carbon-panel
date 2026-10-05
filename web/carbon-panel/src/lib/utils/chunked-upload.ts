@@ -1,5 +1,15 @@
+// SPDX-License-Identifier: MIT AND MPL-2.0
+// This file includes DiscoPanel material under the MIT License,
+// Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+// and still applies to that inherited material.
+// Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+// If a copy of the MPL was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
+
 import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 import { authStore } from '$lib/stores/auth';
+import { safePercent } from './safe-percent';
 
 export interface UploadProgress {
 	sessionId: string;
@@ -172,7 +182,7 @@ function streamUpload(
 					totalBytes: file.size,
 					chunksUploaded: 0,
 					totalChunks: 1,
-					percentComplete: file.size > 0 ? (bytesUploaded / file.size) * 100 : 0
+					percentComplete: safePercent(bytesUploaded, file.size)
 				});
 			}
 		};
@@ -223,7 +233,7 @@ export async function getUploadStatus(sessionId: string): Promise<UploadStatus> 
 		totalBytes: Number(response.totalBytes),
 		chunksUploaded: response.chunksReceived,
 		totalChunks: response.totalChunks,
-		percentComplete: (Number(response.bytesReceived) / Number(response.totalBytes)) * 100,
+		percentComplete: safePercent(Number(response.bytesReceived), Number(response.totalBytes)),
 		missingChunks: response.missingChunks,
 		completed: response.completed,
 		tempPath: response.tempPath

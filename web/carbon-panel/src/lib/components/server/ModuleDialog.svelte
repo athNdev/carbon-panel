@@ -23,6 +23,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import ModuleTemplateMenu from './ModuleTemplateMenu.svelte';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 	import type {
 		ModuleTemplate,
@@ -393,12 +394,17 @@ one at https://mozilla.org/MPL/2.0/.
 		step = 'configure';
 	}
 
-	async function handleDeleteTemplate(template: ModuleTemplate) {
-		const confirmed = confirm(
-			`Are you sure you want to delete template "${template.name}"?\n\nThis cannot be undone.`
-		);
-		if (!confirmed) return;
+	let pendingDelete = $state<ModuleTemplate | null>(null);
+	let confirmOpen = $state(false);
 
+	async function handleDeleteTemplate(template: ModuleTemplate) {
+		pendingDelete = template;
+		confirmOpen = true;
+	}
+
+	async function confirmDeleteTemplate() {
+		const template = pendingDelete;
+		if (!template) return;
 		try {
 			await rpcClient.module.deleteModuleTemplate({ id: template.id });
 			toast.success(`Template "${template.name}" deleted`);
@@ -409,6 +415,8 @@ one at https://mozilla.org/MPL/2.0/.
 			toast.error(
 				`Failed to delete template: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+		} finally {
+			pendingDelete = null;
 		}
 	}
 
@@ -1371,7 +1379,7 @@ one at https://mozilla.org/MPL/2.0/.
 																	<span>{getEventTypeLabel(hook.event)}</span>
 																</SelectTrigger>
 																<SelectContent>
-																	{#each SERVER_EVENT_TYPES as { type, label }}
+																	{#each SERVER_EVENT_TYPES as { type, label } (type)}
 																		<SelectItem value={String(type)}>{label}</SelectItem>
 																	{/each}
 																</SelectContent>
@@ -1582,3 +1590,16 @@ one at https://mozilla.org/MPL/2.0/.
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+<CarbonConfirm
+	bind:open={confirmOpen}
+	title="Delete template?"
+	message="This cannot be undone and will not affect existing instances."
+	confirmLabel="Delete Template"
+	danger
+	onconfirm={confirmDeleteTemplate}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>

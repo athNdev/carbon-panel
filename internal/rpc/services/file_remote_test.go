@@ -81,6 +81,7 @@ func TestFileService_DownloadRemoteArchive_AutoExtract(t *testing.T) {
 	defer ts.Close()
 
 	svc := NewFileService(store, nil, nil, nil, logger.New())
+	t.Cleanup(svc.Stop)
 
 	req := connect.NewRequest(&v1.DownloadRemoteArchiveRequest{
 		ServerId:        server.ID,
@@ -167,12 +168,13 @@ func TestFileService_DownloadRemoteArchive_ChecksumMismatch(t *testing.T) {
 	defer ts.Close()
 
 	svc := NewFileService(store, nil, nil, nil, logger.New())
+	t.Cleanup(svc.Stop)
 
 	req := connect.NewRequest(&v1.DownloadRemoteArchiveRequest{
-		ServerId:        server.ID,
-		Url:             ts.URL + "/test.zip",
-		Sha256Checksum:  "0000000000000000000000000000000000000000000000000000000000000000",
-		AutoExtract:     true,
+		ServerId:       server.ID,
+		Url:            ts.URL + "/test.zip",
+		Sha256Checksum: "0000000000000000000000000000000000000000000000000000000000000000",
+		AutoExtract:    true,
 	})
 
 	resp, err := svc.DownloadRemoteArchive(context.Background(), req)
