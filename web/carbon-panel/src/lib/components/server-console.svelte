@@ -81,8 +81,15 @@
 	const MAX_LOG_ENTRIES = 5000;
 
 	let wsConnectionState = $derived(wsClient.state.connectionState);
-	let previousConnectionState = $state('disconnected');
 	let everConnected = $state(false);
+	// Deliberately NOT `$state`: this is effect-local bookkeeping used only to
+	// detect a connected -> disconnected transition. As `$state` it was both read
+	// and written by the effect below, making the effect self-dependent; a
+	// rapidly toggling connectionState could drive the effect into
+	// `effect_update_depth_exceeded`, which unlinks and abandons the whole
+	// flushed batch (including this page's poll interval). Plain `let` keeps the
+	// value out of the reactivity graph entirely.
+	let previousConnectionState = 'disconnected';
 	$effect(() => {
 		const s = wsConnectionState;
 		if (s === 'connected' || s === 'authenticated') everConnected = true;
