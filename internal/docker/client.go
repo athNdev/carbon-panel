@@ -730,7 +730,7 @@ func (c *Client) preflightResolveForCreate(ctx context.Context, kind, id string,
 // treated as a stale leftover to remove.
 func isAliveContainerState(state container.ContainerState) bool {
 	switch state {
-	case container.StateRunning, container.StateRestarting, container.StatePaused:
+	case container.StateRunning, container.StateRestarting, container.StatePaused, container.StateCreated:
 		return true
 	default:
 		return false
@@ -740,8 +740,25 @@ func isAliveContainerState(state container.ContainerState) bool {
 // createContainerWithConflictRetry calls ContainerCreate and, on a 409 name-conflict error
 // (belt-and-suspenders against a race between the preflight check and this call - e.g. another
 // process created the same deterministically-named container in between), re-resolves the
-// conflicting container via resolve, force-removes it if found, and retries creation exactly
-// once. If the retry also fails, the error is returned as-is.
+// conflicting container via resolve. If an alive or created container exists, it adopts it.
+// Otherwise it force-removes the stale container and retries creation.
+func parseConflictingContainerID(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	const marker = "is already in use by container \""
+	idx := strings.Index(msg, marker)
+	if idx != -1 {
+		rest := msg[idx+len(marker):]
+		end := strings.Index(rest, "\"")
+		if end != -1 {
+			return rest[:end]
+		}
+	}
+	return ""
+}
+
 func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkConfig *network.NetworkingConfig, containerName string, resolve func() (*container.Summary, error)) (string, error) {
 	resp, err := c.docker.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, containerName)
 	if err == nil {
@@ -751,9 +768,20 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 		return "", err
 	}
 
-	c.log.Warn("Container name %q conflicted on create (%v), resolving and removing stale container before retrying once", containerName, err)
+	c.log.Warn("Container name %q conflicted on create (%v), resolving conflict", containerName, err)
+
+	if conflictID := parseConflictingContainerID(err); conflictID != "" {
+		if _, inspectErr := c.docker.ContainerInspect(ctx, conflictID); inspectErr == nil {
+			c.log.Info("Adopting conflicting container %s directly from conflict error for %s", conflictID, containerName)
+			return conflictID, nil
+		}
+	}
 
 	if existing, resolveErr := resolve(); resolveErr == nil {
+		if isAliveContainerState(existing.State) {
+			c.log.Info("Adopting conflicting container %s (name=%s, state=%s) instead of failing", existing.ID, containerName, existing.State)
+			return existing.ID, nil
+		}
 		if rmErr := c.docker.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
 			return "", fmt.Errorf("container name %q already in use and stale container %s could not be removed: %w (original conflict: %v)", containerName, existing.ID, rmErr, err)
 		}
@@ -763,6 +791,12 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 
 	resp, retryErr := c.docker.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, containerName)
 	if retryErr != nil {
+		if isConflictError(retryErr) {
+			if existing, resolveErr := resolve(); resolveErr == nil && existing.ID != "" {
+				c.log.Info("Adopting container %s after retry conflict on %s", existing.ID, containerName)
+				return existing.ID, nil
+			}
+		}
 		return "", retryErr
 	}
 	return resp.ID, nil
@@ -908,6 +942,33 @@ func (c *Client) StartContainer(ctx context.Context, containerID string) error {
 	return nil
 }
 
+// GetAllocatedHostPorts returns a set of host ports currently allocated/bound by running containers.
+func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error) {
+	if c == nil || c.docker == nil {
+		return nil, nil
+	}
+
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+
+	containers, err := c.docker.ContainerList(ctx, container.ListOptions{
+		All: false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers for host ports: %w", err)
+	}
+
+	allocated := make(map[int]bool)
+	for _, cont := range containers {
+		for _, port := range cont.Ports {
+			if port.PublicPort > 0 {
+				allocated[int(port.PublicPort)] = true
+			}
+		}
+	}
+	return allocated, nil
+}
+
 // StopContainer stops a container. Returns (containerFound, error).
 // If container doesn't exist, returns (false, nil) so caller can clean up stale references.
 func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, error) {
@@ -928,9 +989,11 @@ func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, e
 			c.log.Debug("Container %s not found, treating as already stopped", containerID)
 			return false, nil
 		}
-		// If graceful stop fails, force kill the container
+		// If graceful stop fails, force kill the container with a dedicated timeout context
 		c.log.Warn("Graceful stop failed for container %s: %v, attempting force kill", containerID, err)
-		killErr := c.docker.ContainerKill(ctx, containerID, "KILL")
+		killCtx, killCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer killCancel()
+		killErr := c.docker.ContainerKill(killCtx, containerID, "KILL")
 		if killErr != nil {
 			// If container non-existent on kill
 			if errdefs.IsNotFound(killErr) {
@@ -1437,6 +1500,9 @@ func buildEnvFromConfig(config *models.ServerConfig) []string {
 		switch fieldValue.Kind() {
 		case reflect.String:
 			if str := fieldValue.String(); str != "" {
+				if envTag == "TYPE" {
+					str = normalizeTypeEnv(str)
+				}
 				env = append(env, fmt.Sprintf("%s=%s", envTag, str))
 			}
 		case reflect.Int, reflect.Int32, reflect.Int64:
@@ -1511,4 +1577,48 @@ func (c *Client) DetectContainerJavaVersion(ctx context.Context, containerID str
 		return 8, nil
 	}
 	return 21, nil
+}
+
+func normalizeTypeEnv(s string) string {
+	clean := strings.TrimPrefix(strings.TrimSpace(s), "MOD_LOADER_")
+	switch strings.ToLower(clean) {
+	case "vanilla":
+		return "VANILLA"
+	case "forge":
+		return "FORGE"
+	case "fabric":
+		return "FABRIC"
+	case "quilt":
+		return "QUILT"
+	case "paper":
+		return "PAPER"
+	case "folia":
+		return "FOLIA"
+	case "spigot":
+		return "SPIGOT"
+	case "bukkit":
+		return "BUKKIT"
+	case "purpur":
+		return "PURPUR"
+	case "spongevanilla", "sponge_vanilla":
+		return "SPONGEVANILLA"
+	case "mohist":
+		return "MOHIST"
+	case "catserver":
+		return "CATSERVER"
+	case "arclight":
+		return "ARCLIGHT"
+	case "auto_curseforge", "curseforge":
+		return "AUTO_CURSEFORGE"
+	case "modrinth":
+		return "MODRINTH"
+	case "neoforge":
+		return "NEOFORGE"
+	case "custom":
+		return "CUSTOM"
+	case "bedrock":
+		return "BEDROCK"
+	default:
+		return strings.ToUpper(clean)
+	}
 }
