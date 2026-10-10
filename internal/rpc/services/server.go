@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -331,6 +332,56 @@ func protoModLoaderToDB(loader v1.ModLoader) storage.ModLoader {
 		return storage.ModLoaderNeoForge
 	default:
 		return storage.ModLoaderVanilla
+	}
+}
+
+// parseModLoaderString normalizes any modloader string or proto enum name to storage.ModLoader
+func parseModLoaderString(s string) storage.ModLoader {
+	clean := strings.TrimSpace(s)
+	if clean == "" {
+		return storage.ModLoaderVanilla
+	}
+	if val, ok := v1.ModLoader_value[clean]; ok {
+		return protoModLoaderToDB(v1.ModLoader(val))
+	}
+	clean = strings.TrimPrefix(clean, "MOD_LOADER_")
+	switch strings.ToLower(clean) {
+	case "vanilla":
+		return storage.ModLoaderVanilla
+	case "forge":
+		return storage.ModLoaderForge
+	case "fabric":
+		return storage.ModLoaderFabric
+	case "quilt":
+		return storage.ModLoaderQuilt
+	case "paper":
+		return storage.ModLoaderPaper
+	case "folia":
+		return storage.ModLoaderFolia
+	case "spigot":
+		return storage.ModLoaderSpigot
+	case "bukkit":
+		return storage.ModLoaderBukkit
+	case "purpur":
+		return storage.ModLoaderPurpur
+	case "spongevanilla", "sponge_vanilla":
+		return storage.ModLoaderSpongeVanilla
+	case "mohist":
+		return storage.ModLoaderMohist
+	case "catserver":
+		return storage.ModLoaderCatserver
+	case "arclight":
+		return storage.ModLoaderArclight
+	case "auto_curseforge", "curseforge":
+		return storage.ModLoaderAutoCurseForge
+	case "modrinth":
+		return storage.ModLoaderModrinth
+	case "neoforge":
+		return storage.ModLoaderNeoForge
+	case "custom":
+		return storage.ModLoaderCustom
+	default:
+		return storage.ModLoader(strings.ToLower(clean))
 	}
 }
 
@@ -722,11 +773,14 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 	// Determine node placement
 	nodeID := msg.NodeId
-	if nodeID == "" && msg.PlacementStrategy != "" && s.placementEngine != nil {
-		strategy := docker.PlacementStrategy(strings.ToLower(msg.PlacementStrategy))
+	if nodeID == "" && s.placementEngine != nil {
+		strategy := docker.StrategyRoundRobin
+		if msg.PlacementStrategy != "" {
+			strategy = docker.PlacementStrategy(strings.ToLower(msg.PlacementStrategy))
+		}
 		selectedNode, err := s.placementEngine.SelectNode(ctx, strategy, int64(server.Memory))
 		if err != nil {
-			s.log.Error("Failed to select node using strategy %s: %v", msg.PlacementStrategy, err)
+			s.log.Error("Failed to select node using strategy %s: %v", strategy, err)
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("placement failed: %w", err))
 		}
 		nodeID = selectedNode.ID
@@ -745,6 +799,19 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no Docker nodes available: register and enable a node in Settings before creating servers"))
 	}
 	server.NodeID = nodeID
+
+	// Check port availability on host and target node for non-proxy servers
+	if server.ProxyHostname == "" && server.Port > 0 {
+		dockerCli := s.getDockerClient(server.NodeID)
+		if dockerCli != nil {
+			if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil && allocated[server.Port] {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", server.Port))
+			}
+		}
+		if isHostPortBound(server.Port) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", server.Port))
+		}
+	}
 
 	// Create data directory
 	if err := os.MkdirAll(server.DataPath, 0755); err != nil {
@@ -956,6 +1023,17 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port is already in use by the proxy server"))
 		}
 
+		dockerCli := s.getDockerClient(server.NodeID)
+		if dockerCli != nil {
+			if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil && allocated[newPort] {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", newPort))
+			}
+		}
+
+		if isHostPortBound(newPort) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", newPort))
+		}
+
 		server.Port = newPort
 		needsRecreation = true
 	}
@@ -970,10 +1048,13 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			s.log.Error("Failed to update server config memory: %v", err)
 		}
 	}
-	if msg.ModLoader != "" && storage.ModLoader(msg.ModLoader) != originalModLoader {
-		server.ModLoader = storage.ModLoader(msg.ModLoader)
-		server.TPSCommand = minecraft.GetTPSCommand(server.ModLoader)
-		needsRecreation = true
+	if msg.ModLoader != "" {
+		newLoader := parseModLoaderString(msg.ModLoader)
+		if newLoader != originalModLoader {
+			server.ModLoader = newLoader
+			server.TPSCommand = minecraft.GetTPSCommand(server.ModLoader)
+			needsRecreation = true
+		}
 	}
 	if msg.McVersion != "" && msg.McVersion != originalMCVersion {
 		server.MCVersion = msg.McVersion
@@ -1289,6 +1370,8 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
 		if err != nil {
 			s.log.Error("Failed to get server config: %v", err)
+			server.Status = storage.StatusError
+			_ = s.store.UpdateServer(ctx, server)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration"))
 		}
 
@@ -1299,22 +1382,29 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			if result != nil && result.NewContainerID != "" {
 				// Container was created but failed to start
 				server.ContainerID = result.NewContainerID
-				server.Status = storage.StatusError
 			} else {
 				// Complete failure
-				server.Status = storage.StatusError
 				server.ContainerID = ""
 			}
-		} else {
-			server.ContainerID = result.NewContainerID
-			if result.WasRunning {
-				server.Status = storage.StatusRunning
-			} else {
-				server.Status = storage.StatusStopped
+			server.Status = storage.StatusError
+			_ = s.store.UpdateServer(ctx, server)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", err))
+		}
+
+		server.ContainerID = result.NewContainerID
+
+		// RecreateContainer only starts the container if result.WasRunning was true.
+		// Since StartServer was requested, start the newly recreated container.
+		if !result.WasRunning {
+			if startErr := dockerCli.StartContainer(ctx, result.NewContainerID); startErr != nil {
+				s.log.Error("Failed to start recreated container: %v", startErr)
+				server.Status = storage.StatusError
+				_ = s.store.UpdateServer(ctx, server)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", startErr))
 			}
 		}
 
-		// Update server with new container ID and status
+		// Update server with new container ID
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server after container recreation: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server after container recreation"))
@@ -1388,10 +1478,8 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	if !found {
 		s.log.Warn("Container %s not found, cleaning up stale reference", server.ContainerID)
 		server.ContainerID = ""
-		server.Status = storage.StatusStopped
-	} else {
-		server.Status = storage.StatusStopping
 	}
+	server.Status = storage.StatusStopped
 
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		s.log.Error("Failed to update server status: %v", err)
@@ -1415,12 +1503,8 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	// Audit trail (MINE-141): never break the op on audit failure.
 	s.auditPower(ctx, req.Peer().Addr, activity.EventServerStop, server.ID)
 
-	status := "stopping"
-	if !found {
-		status = "stopped"
-	}
 	return connect.NewResponse(&v1.StopServerResponse{
-		Status: status,
+		Status: "stopped",
 	}), nil
 }
 
@@ -1544,10 +1628,21 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 		if updateErr := s.store.UpdateServer(ctx, server); updateErr != nil {
 			s.log.Error("Failed to update server status: %v", updateErr)
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server container"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server container: %w", err))
 	}
 
 	server.ContainerID = result.NewContainerID
+
+	// If the container was not already running (and thus not started by RecreateContainer),
+	// start it now since RecreateServer intends to start the freshly recreated container.
+	if !result.WasRunning {
+		if startErr := dockerCli.StartContainer(ctx, result.NewContainerID); startErr != nil {
+			s.log.Error("Failed to start recreated container: %v", startErr)
+			server.Status = storage.StatusError
+			_ = s.store.UpdateServer(ctx, server)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start recreated container: %w", startErr))
+		}
+	}
 
 	// Update server status
 	now := time.Now()
@@ -1774,6 +1869,16 @@ func (s *ServerService) ClearServerLogs(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(&v1.ClearServerLogsResponse{}), nil
 }
 
+// isHostPortBound checks if a port is already bound by an OS process in the local network namespace.
+func isHostPortBound(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return true
+	}
+	_ = ln.Close()
+	return false
+}
+
 // GetNextAvailablePort gets the next available port
 func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.Request[v1.GetNextAvailablePortRequest]) (*connect.Response[v1.GetNextAvailablePortResponse], error) {
 	// Get all servers
@@ -1799,9 +1904,22 @@ func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.R
 		}
 	}
 
+	// Mark ports allocated on the Docker daemon as used
+	dockerCli := s.getDockerClient("")
+	if dockerCli != nil {
+		if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
+			for port := range allocated {
+				usedPortsMap[int32(port)] = true
+			}
+		} else {
+			s.log.Warn("Failed to query docker host ports for availability: %v", err)
+		}
+	}
+
 	// Find the next available port starting from 25565
 	var nextPort int32 = 25565
-	for usedPortsMap[nextPort] {
+	for usedPortsMap[nextPort] || isHostPortBound(int(nextPort)) {
+		usedPortsMap[nextPort] = true
 		nextPort++
 		// Safety check to avoid infinite loop
 		if nextPort > 65535 {
