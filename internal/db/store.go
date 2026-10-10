@@ -11,6 +11,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"fmt"
 	"reflect"
 	"time"
@@ -255,7 +256,7 @@ func (s *Store) SyncServerConfigWithServer(ctx context.Context, server *Server) 
 
 	stringPtr := func(s string) *string { return &s }
 	intPtr := func(i int) *int { return &i }
-	config.Type = stringPtr(string(server.ModLoader))
+	config.Type = stringPtr(NormalizeModLoaderForType(server.ModLoader))
 	config.Version = stringPtr(server.MCVersion)
 	config.ServerPort = intPtr(server.Port)
 	config.MaxPlayers = intPtr(server.MaxPlayers)
@@ -1658,4 +1659,49 @@ func (s *Store) ListEventTriggeredTasks(ctx context.Context, serverID string, ev
 		}
 	}
 	return matching, nil
+}
+
+// NormalizeModLoaderForType normalizes modloader string to uppercase TYPE for Minecraft server containers
+func NormalizeModLoaderForType(loader ModLoader) string {
+	s := strings.TrimPrefix(string(loader), "MOD_LOADER_")
+	switch strings.ToLower(s) {
+	case "vanilla":
+		return "VANILLA"
+	case "forge":
+		return "FORGE"
+	case "fabric":
+		return "FABRIC"
+	case "quilt":
+		return "QUILT"
+	case "paper":
+		return "PAPER"
+	case "folia":
+		return "FOLIA"
+	case "spigot":
+		return "SPIGOT"
+	case "bukkit":
+		return "BUKKIT"
+	case "purpur":
+		return "PURPUR"
+	case "spongevanilla", "sponge_vanilla":
+		return "SPONGEVANILLA"
+	case "mohist":
+		return "MOHIST"
+	case "catserver":
+		return "CATSERVER"
+	case "arclight":
+		return "ARCLIGHT"
+	case "auto_curseforge", "curseforge":
+		return "AUTO_CURSEFORGE"
+	case "modrinth":
+		return "MODRINTH"
+	case "neoforge":
+		return "NEOFORGE"
+	case "custom":
+		return "CUSTOM"
+	case "bedrock":
+		return "BEDROCK"
+	default:
+		return strings.ToUpper(s)
+	}
 }
