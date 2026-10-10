@@ -78,7 +78,7 @@
 		create(CreateServerRequestSchema, {
 			name: '',
 			description: '',
-			modLoader: ModLoader.UNSPECIFIED,
+			modLoader: ModLoader.VANILLA,
 			mcVersion: '',
 			port: 25565,
 			maxPlayers: 20,

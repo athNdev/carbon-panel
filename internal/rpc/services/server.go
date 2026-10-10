@@ -662,6 +662,16 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port is already in use by the proxy server"))
 			}
 		}
+
+		// Also check if this port is already allocated by any Docker container on the target node
+		dockerCli := s.getDockerClient(msg.NodeId)
+		if dockerCli != nil {
+			if allocatedPorts, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
+				if allocatedPorts[port] {
+					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use by a container on this node", port))
+				}
+			}
+		}
 	}
 
 	// Determine Docker image if not specified
@@ -704,6 +714,13 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 		if s.config.Proxy.Enabled && slices.Contains(s.config.Proxy.ListenPorts, int(protoPort.HostPort)) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use by the proxy server", protoPort.HostPort))
+		}
+		if dockerCli := s.getDockerClient(msg.NodeId); dockerCli != nil {
+			if allocatedPorts, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
+				if allocatedPorts[int(protoPort.HostPort)] {
+					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("additional port %d is already in use by a container on this node", protoPort.HostPort))
+				}
+			}
 		}
 
 		additionalPorts = append(additionalPorts, &v1.AdditionalPort{
@@ -1376,9 +1393,9 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		}
 
 		// Recreate container
-		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
-		if err != nil {
-			s.log.Error("Failed to recreate container: %v", err)
+		result, recreateErr := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+		if recreateErr != nil {
+			s.log.Error("Failed to recreate container: %v", recreateErr)
 			if result != nil && result.NewContainerID != "" {
 				// Container was created but failed to start
 				server.ContainerID = result.NewContainerID
@@ -1387,8 +1404,10 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 				server.ContainerID = ""
 			}
 			server.Status = storage.StatusError
-			_ = s.store.UpdateServer(ctx, server)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", err))
+			if updateErr := s.store.UpdateServer(ctx, server); updateErr != nil {
+				s.log.Error("Failed to update server status after recreation failure: %v", updateErr)
+			}
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start container: %w", recreateErr))
 		}
 
 		server.ContainerID = result.NewContainerID
@@ -1399,8 +1418,10 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			if startErr := dockerCli.StartContainer(ctx, result.NewContainerID); startErr != nil {
 				s.log.Error("Failed to start recreated container: %v", startErr)
 				server.Status = storage.StatusError
-				_ = s.store.UpdateServer(ctx, server)
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", startErr))
+				if updateErr := s.store.UpdateServer(ctx, server); updateErr != nil {
+					s.log.Error("Failed to update server status after start failure: %v", updateErr)
+				}
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start container after recreation: %w", startErr))
 			}
 		}
 
@@ -1633,14 +1654,14 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 
 	server.ContainerID = result.NewContainerID
 
-	// If the container was not already running (and thus not started by RecreateContainer),
+// If the container was not already running (and thus not started by RecreateContainer),
 	// start it now since RecreateServer intends to start the freshly recreated container.
 	if !result.WasRunning {
 		if startErr := dockerCli.StartContainer(ctx, result.NewContainerID); startErr != nil {
 			s.log.Error("Failed to start recreated container: %v", startErr)
 			server.Status = storage.StatusError
 			_ = s.store.UpdateServer(ctx, server)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start recreated container: %w", startErr))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate container start: %w", startErr))
 		}
 	}
 
@@ -1904,7 +1925,7 @@ func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.R
 		}
 	}
 
-	// Mark ports allocated on the Docker daemon as used
+// Mark ports allocated on the Docker daemon as used
 	dockerCli := s.getDockerClient("")
 	if dockerCli != nil {
 		if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
