@@ -189,6 +189,7 @@ one at https://mozilla.org/MPL/2.0/.
 			toast.error(
 				`Failed to ${action} server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+			await loadServer(true);
 		} finally {
 			actionLoading = false;
 		}
