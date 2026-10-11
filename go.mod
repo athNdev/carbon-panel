@@ -1,6 +1,6 @@
 module github.com/athNdev/carbon-panel
 
-go 1.25.13
+go 1.26.0
 
 require (
 	connectrpc.com/connect v1.19.1
@@ -28,7 +28,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	golang.org/x/crypto v0.53.0
-	golang.org/x/oauth2 v0.36.0
+	golang.org/x/oauth2 v0.37.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
