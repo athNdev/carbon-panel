@@ -15,7 +15,7 @@ require (
 	github.com/casbin/gorm-adapter/v3 v3.41.0
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-connections v0.8.1
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-gormigrate/gormigrate/v2 v2.1.7
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -84,7 +84,7 @@ require (
 )
 
 require (
-	github.com/Microsoft/go-winio v0.4.21 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
