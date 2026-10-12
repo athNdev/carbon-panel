@@ -33,8 +33,8 @@ type SleepCommander interface {
 // RouteRefresher re-resolves a server's proxy route after a transition.
 type RouteRefresher func(serverID string)
 
-// Deep sleep power timings.
-const (
+// Deep sleep power timings (vars to allow fast test execution).
+var (
 	deepSleepStopPollInterval = 2 * time.Second
 	deepSleepStopTimeout      = 90 * time.Second
 	deepSleepStartTimeout     = 120 * time.Second
@@ -110,6 +110,14 @@ func (m *DeepSleepManager) endTransition(serverID string) {
 	m.inflightMu.Lock()
 	defer m.inflightMu.Unlock()
 	delete(m.inflight, serverID)
+}
+
+// IsTransitioning returns whether the server is currently transitioning (sleeping or waking).
+func (m *DeepSleepManager) IsTransitioning(serverID string) bool {
+	m.inflightMu.Lock()
+	defer m.inflightMu.Unlock()
+	_, busy := m.inflight[serverID]
+	return busy
 }
 
 // Start begins the background idle-checker routine.
@@ -212,9 +220,25 @@ func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
 	return nil
 }
 
+// rollbackSleep undoes the pre-set DeepSleep status after a sleep attempt that
+// aborted while the container was still running. It uses a detached context so
+// the write still lands when the caller's context has already been cancelled,
+// and refreshes proxy routes so the backend comes back into the routing table.
+func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID string) {
+	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusRunning); err != nil && m.logger != nil {
+		m.logger.Error("Deep sleep: failed to roll back status to running for server %s: %v", serverID, err)
+	}
+	if m.refresher != nil {
+		m.refresher(serverID)
+	}
+}
+
 // SleepServer gracefully stops a server container and marks it deeply asleep.
-// The container must exit (releasing session.lock) before the status flips,
-// so the reconciler never observes a running container under a sleep status.
+// The status is pre-set to StatusDeepSleep and proxy route updated before stopping
+// the container, so the reconciler never misclassifies the container exit as an
+// unexpected stop or clobbers proxy routes (MINE-121, MINE-172).
 func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) error {
 	if !m.tryBeginTransition(serverID, "sleep") {
 		return fmt.Errorf("sleep already in flight for server %s", serverID)
@@ -234,7 +258,18 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		return fmt.Errorf("cannot deep-sleep server %s in status %s", serverID, srv.Status)
 	}
 
-	// 1. Flush world and ask the JVM to exit cleanly via RCON. Best effort:
+	// 1. Pre-set status to db.StatusDeepSleep and refresh routes before stopping the container.
+	// This ensures that when the JVM exits and Docker emits the container die/stop event,
+	// the Reconciler observes desired == StatusDeepSleep and never clobbers the status
+	// to StatusStopped or tears down the proxy routes (MINE-121, MINE-172).
+	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusDeepSleep); err != nil {
+		return fmt.Errorf("failed to pre-set server status to deepsleep: %w", err)
+	}
+	if m.refresher != nil {
+		m.refresher(serverID)
+	}
+
+	// 2. Flush world and ask the JVM to exit cleanly via RCON. Best effort:
 	// without RCON the docker stop backstop below still applies.
 	if m.commander != nil {
 		if _, err := m.commander.SendCommand(ctx, serverID, "save-all"); err != nil {
@@ -249,7 +284,7 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		}
 	}
 
-	// 2. Wait for natural exit (session.lock released by the JVM itself).
+	// 3. Wait for natural exit (session.lock released by the JVM itself).
 	deadline := time.Now().Add(deepSleepStopTimeout)
 	for {
 		status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID)
@@ -261,23 +296,25 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		}
 		select {
 		case <-ctx.Done():
+			// The container is still alive, so the pre-set DeepSleep status is
+			// now a lie. Undo it or the server is wedged: reconciler refuses to
+			// heal a DeepSleep server and the proxy route stays down, so nothing
+			// can bring it back without a manual edit (MINE-172).
+			m.rollbackSleep(ctx, serverID)
 			return ctx.Err()
 		case <-time.After(deepSleepStopPollInterval):
 		}
 	}
 
-	// 3. Backstop: force the container down if it is still alive.
+	// 4. Backstop: force the container down if it is still alive.
 	if status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID); err == nil && status == db.StatusRunning {
 		if m.logger != nil {
 			m.logger.Warn("Deep sleep: server %s did not exit on RCON stop, forcing container stop", srv.Name)
 		}
 		if _, err := m.controller.StopContainer(ctx, srv.ContainerID); err != nil {
+			m.rollbackSleep(ctx, serverID)
 			return fmt.Errorf("container stop failed for server %s: %w", serverID, err)
 		}
-	}
-
-	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusDeepSleep); err != nil {
-		return fmt.Errorf("failed to update server status to deepsleep: %w", err)
 	}
 
 	m.trackerMu.Lock()

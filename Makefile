@@ -162,6 +162,8 @@ check:
 proto:
 	@echo "Generating protocol buffer code (using Docker)..."
 	$(BUF_RUN) generate
+	@echo "Formatting generated TypeScript..."
+	cd $(FRONTEND_DIR) && ./node_modules/.bin/prettier --write "src/lib/proto" >/dev/null
 	@echo "Proto generation complete!"
 
 proto-clean:

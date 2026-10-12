@@ -27,6 +27,23 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
+// shouldAutoStartOnBoot reports whether a persisted server should be started
+// when the panel boots.
+//
+// A deeply-asleep server is excluded here even though it also looks "stopped":
+// its container is stopped on purpose to release RAM, and auto-start would
+// resurrect it on every panel restart, silently undoing deep sleep. The
+// DeepSleepManager, not auto-start, owns that lifecycle (MINE-172).
+func shouldAutoStartOnBoot(server *storage.Server) bool {
+	if server == nil {
+		return false
+	}
+	if server.Status == storage.StatusDeepSleep {
+		return false
+	}
+	return server.AutoStart && !server.Detached
+}
+
 func main() {
 	var configPath = flag.String("config", "./config.yaml", "Path to configuration file")
 	flag.Parse()
@@ -287,7 +304,11 @@ func main() {
 	}
 
 	for i := range autoStartServers {
-		if autoStartServers[i].AutoStart && !autoStartServers[i].Detached {
+		if autoStartServers[i].Status == storage.StatusDeepSleep {
+			log.Info("Skipping auto-start for deeply-asleep server: %s", autoStartServers[i].Name)
+			continue
+		}
+		if shouldAutoStartOnBoot(autoStartServers[i]) {
 			server := autoStartServers[i]
 			log.Info("Auto-starting server: %s", server.Name)
 			go func() {

@@ -385,6 +385,26 @@ func parseModLoaderString(s string) storage.ModLoader {
 	}
 }
 
+// preserveStoredStatus reports whether the stored DB status owns the display
+// value and must not be clobbered by a live Docker inspect in List/Get.
+//
+//   - DeepSleep: the container is EXPECTED to be stopped (exited). Docker
+//     reports StatusStopped for it, which would flip the UI to OFFLINE/STOPPED
+//     and hide the DEEP SLEEP state + Wake action (MINE-172). The
+//     DeepSleepManager owns this state and flips it to Running on wake.
+//   - Paused: the container is cgroup-frozen and still exists. A Stopped
+//     reading means the daemon lost the pause state; keep PAUSED until the
+//     reconciler converges rather than flapping the UI (MINE-172).
+func preserveStoredStatus(stored, live storage.ServerStatus) bool {
+	if stored == storage.StatusDeepSleep {
+		return true
+	}
+	if stored == storage.StatusPaused && live == storage.StatusStopped {
+		return true
+	}
+	return false
+}
+
 // dbStatusToProto converts database status to proto
 func dbStatusToProto(status storage.ServerStatus) v1.ServerStatus {
 	switch status {
@@ -402,6 +422,10 @@ func dbStatusToProto(status storage.ServerStatus) v1.ServerStatus {
 		return v1.ServerStatus_SERVER_STATUS_ERROR
 	case storage.StatusUnhealthy:
 		return v1.ServerStatus_SERVER_STATUS_UNHEALTHY
+	case storage.StatusPaused:
+		return v1.ServerStatus_SERVER_STATUS_PAUSED
+	case storage.StatusDeepSleep:
+		return v1.ServerStatus_SERVER_STATUS_DEEPSLEEP
 	default:
 		return v1.ServerStatus_SERVER_STATUS_UNSPECIFIED
 	}
@@ -444,7 +468,7 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 		if server.ContainerID != "" {
 			dockerCli := s.getDockerClient(server.NodeID)
 			status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
-			if err == nil {
+			if err == nil && !preserveStoredStatus(server.Status, status) {
 				server.Status = status
 			}
 
@@ -505,7 +529,7 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 		statusCtx, cancelStatus := context.WithTimeout(ctx, statusRefreshTimeout)
 		status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
 		cancelStatus()
-		if err == nil {
+		if err == nil && !preserveStoredStatus(server.Status, status) {
 			server.Status = status
 		}
 	}
@@ -591,6 +615,21 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	proxyHostname := msg.ProxyHostname
 	proxyListenerID := msg.ProxyListenerId
 	port := int(msg.Port)
+
+	// If auto deep sleep is enabled but no proxy hostname is provided,
+	// auto-generate one if proxy is enabled globally so wake-on-login works (MINE-172).
+	if msg.AutoDeepSleep && proxyHostname == "" && s.config != nil && s.config.Proxy.Enabled {
+		baseName := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(msg.Name), " ", "-"))
+		if baseName == "" {
+			baseName = "mc-server"
+		}
+		proxyConfig, _, err := s.store.GetProxyConfig(ctx)
+		if err == nil && proxyConfig != nil && proxyConfig.BaseURL != "" {
+			proxyHostname = baseName + "." + proxyConfig.BaseURL
+		} else {
+			proxyHostname = baseName
+		}
+	}
 
 	if proxyHostname != "" {
 		// If using base URL, append it to the hostname
@@ -1326,6 +1365,24 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	}
 
 	dockerCli := s.getDockerClient(server.NodeID)
+
+	// If server is paused, unpause container (MINE-172)
+	if server.Status == storage.StatusPaused && server.ContainerID != "" {
+		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
+			s.log.Error("Failed to unpause container: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
+		}
+		server.Status = storage.StatusRunning
+		if err := s.store.UpdateServer(ctx, server); err != nil {
+			s.log.Error("Failed to update server status after unpause: %v", err)
+		}
+		if s.proxy != nil && server.ProxyHostname != "" {
+			_ = s.proxy.UpdateServerRoute(server)
+		}
+		return connect.NewResponse(&v1.StartServerResponse{
+			Status: "running",
+		}), nil
+	}
 
 	// If container doesn't exist (e.g. ContainerID lost/never persisted), try to recover an
 	// existing-but-untracked container before creating a duplicate (MINE-103).
