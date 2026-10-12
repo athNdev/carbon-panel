@@ -11,6 +11,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { formatBytes, getStringForEnum } from '$lib/utils';
 	import {
@@ -33,7 +34,6 @@ one at https://mozilla.org/MPL/2.0/.
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { CarbonButton, CarbonTag } from '$lib/components/carbon';
-	import { resolve } from '$app/paths';
 	import type { Timestamp } from '@bufbuild/protobuf/wkt';
 
 	// Dashboard data
@@ -258,7 +258,7 @@ one at https://mozilla.org/MPL/2.0/.
 			</div>
 		</div>
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			{#each [0, 1, 2, 3] as _, i (i)}
+			{#each [0, 1, 2, 3] as _ (_)}
 				<div
 					class="flex h-[140px] flex-col justify-between rounded-none border border-[#393939] bg-[#262626] p-5 select-none"
 				>

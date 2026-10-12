@@ -217,7 +217,7 @@ one at https://mozilla.org/MPL/2.0/.
 			</div>
 			<p class="mt-1 font-sans text-xs text-[#8d8d8d]">
 				Live ConnectRPC + OpenAPI reference. Spec served from
-				<!-- eslint-disable svelte/no-navigation-without-resolve -- static asset, not a route -->
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- backend API endpoint, not a SvelteKit route; resolve() is inapplicable -->
 				<a href="/api/v1/openapi.yaml" class="font-mono text-[#78a9ff] hover:text-white"
 					>/api/v1/openapi.yaml</a
 				>
@@ -226,7 +226,7 @@ one at https://mozilla.org/MPL/2.0/.
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<!-- eslint-disable svelte/no-navigation-without-resolve -- static asset, not a route -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -- backend API endpoint, not a SvelteKit route; resolve() is inapplicable -->
 			<a
 				href="/api/v1/openapi.yaml"
 				class="inline-flex h-8 items-center px-3 font-mono text-xs tracking-wider text-[#78a9ff] uppercase hover:bg-[#353535] hover:text-white"
@@ -234,6 +234,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				Open raw spec
 			</a>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		</div>
 	</div>
 

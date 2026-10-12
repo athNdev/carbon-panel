@@ -7,10 +7,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		CarbonButton,
 		CarbonTile,
@@ -274,7 +274,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		} catch (err) {
 			console.error('Failed to export modpack:', err);
 			toast.error(
-				`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`
+				`Export failed: ${(err instanceof Error ? err.message : undefined) || 'Unauthorized or server error'}`
 			);
 		} finally {
 			exportingPack = null;
@@ -406,7 +406,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			await loadPack();
 		} catch (err) {
 			console.error('Batch action failed:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Batch action failed');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Batch action failed');
 		}
 	}
 
@@ -523,7 +523,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		} catch (err) {
 			console.error('Migration failed:', err);
 			toast.error(
-				(err instanceof Error ? err.message : '') || 'Version migration simulation failed'
+				(err instanceof Error ? err.message : undefined) || 'Version migration simulation failed'
 			);
 		} finally {
 			migrating = false;
@@ -663,7 +663,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			await loadPack();
 		} catch (err) {
 			console.error('Failed to add mod:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to add mod to pack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to add mod to pack');
 		}
 	}
 
@@ -777,7 +777,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			await loadPack();
 		} catch (err) {
 			console.error('Failed to add mod from URL:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to add direct URL mod');
+			toast.error(
+				(err instanceof Error ? err.message : undefined) || 'Failed to add direct URL mod'
+			);
 		} finally {
 			addingUrlMod = false;
 		}
@@ -1034,8 +1036,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				<CarbonTabs
 					tabs={studioTabs}
 					selectedTab={activeTab}
-					onselect={(id) => (activeTab = id as unknown as typeof activeTab)}
-					class="sticky top-0 z-20 bg-[#161616]"
+					onselect={(id) => {
+						if (id === 'mods' || id === 'overrides' || id === 'migrate' || id === 'maintenance') {
+							activeTab = id;
+						}
+					}}
 				/>
 
 				<!-- TAB 1: MODS MANAGEMENT -->
@@ -1663,8 +1668,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			tabs={addModSourceTabs}
 			selectedTab={addTab}
 			onselect={(id) => {
-				addTab = id as unknown as typeof addTab;
-				if (addTab !== 'url') searchMods();
+				if (id === 'modrinth' || id === 'curseforge' || id === 'url') {
+					addTab = id;
+					if (addTab !== 'url') searchMods();
+				}
 			}}
 		/>
 

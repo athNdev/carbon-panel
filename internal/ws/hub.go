@@ -11,6 +11,7 @@ package ws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -286,41 +287,80 @@ func (c *Client) migrateSubscription(serverID, newContainerID string) {
 	}
 }
 
-// authorizeHandshake validates the caller's credential before the socket
-// upgrade (MINE-164), so unauthenticated TCP callers never get a socket.
-// It accepts ?token= (what the frontend sends), an Authorization bearer,
-// then falls back to the anonymous-access policy. Message-AUTH stays as a
-// compatible re-auth path with identical checks.
-func (h *Hub) authorizeHandshake(r *http.Request) bool {
+// Pre-upgrade credential failures (MINE-164). The handshake is rejected
+// with 401 before a socket exists; the AUTH message path reports the same
+// failures over the socket it already holds.
+var (
+	errWSNoAuthProvider = errors.New("no authentication provider is enabled")
+	errWSInvalidToken   = errors.New("invalid token")
+	errWSAuthRequired   = errors.New("authentication required")
+)
+
+// authenticateToken applies the WS credential policy shared by the
+// pre-upgrade handshake check and the AUTH message path: explicit no-auth
+// mode, session/API tokens, then the anonymous fallback.
+func (h *Hub) authenticateToken(ctx context.Context, token string) (*auth.AuthenticatedUser, error) {
+	// If no auth providers are enabled the panel is running without
+	// authentication. That is only permitted when the operator explicitly
+	// opted in (auth.allow_no_auth); otherwise fail closed rather than grant
+	// every client admin.
 	if !h.authManager.IsAnyAuthEnabled() {
-		return h.authManager.NoAuthAllowed()
+		if !h.authManager.NoAuthAllowed() {
+			return nil, errWSNoAuthProvider
+		}
+		return &auth.AuthenticatedUser{
+			ID:       "admin",
+			Username: "admin",
+			Roles:    []string{"admin"},
+			Provider: "none",
+		}, nil
 	}
 
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		if ah := r.Header.Get("Authorization"); strings.HasPrefix(ah, "Bearer ") {
-			token = strings.TrimPrefix(ah, "Bearer ")
-		}
-	}
 	if token != "" {
-		ctx := context.Background()
+		var user *auth.AuthenticatedUser
 		var err error
 		if strings.HasPrefix(token, "dp_") {
-			_, err = h.authManager.ValidateAPIToken(ctx, token)
+			user, err = h.authManager.ValidateAPIToken(ctx, token)
 		} else {
-			_, err = h.authManager.ValidateSession(ctx, token)
+			user, err = h.authManager.ValidateSession(ctx, token)
 		}
 		if err == nil {
-			return true
+			return user, nil
 		}
+		// Try anonymous access
+		if h.authManager.IsAnonymousAccessEnabled() {
+			return h.authManager.AnonymousUser(), nil
+		}
+		return nil, errWSInvalidToken
 	}
-	return h.authManager.IsAnonymousAccessEnabled()
+	if h.authManager.IsAnonymousAccessEnabled() {
+		return h.authManager.AnonymousUser(), nil
+	}
+	return nil, errWSAuthRequired
+}
+
+// handshakeToken extracts the pre-upgrade credential: explicit ?token=
+// query parameter first (what the web console sends), then the
+// Authorization header (Bearer session/dp_ token, same as the RPC API).
+func handshakeToken(r *http.Request) string {
+	if token := r.URL.Query().Get("token"); token != "" {
+		return token
+	}
+	if header := r.Header.Get("Authorization"); header != "" {
+		token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(header, "Bearer "), "bearer "))
+		return token
+	}
+	return ""
 }
 
 // ServeHTTP handles WebSocket upgrade requests
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !h.authorizeHandshake(r) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	// Authenticate before upgrading (MINE-164): unauthenticated callers
+	// get 401 and never hold a socket. The credential policy matches the
+	// AUTH message path exactly (see authenticateToken).
+	user, err := h.authenticateToken(r.Context(), handshakeToken(r))
+	if err != nil {
+		http.Error(w, "unauthorized: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -336,6 +376,10 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		send:          make(chan []byte, 256),
 		done:          make(chan struct{}),
 		subscriptions: make(map[string]*subscription),
+		// Pre-authenticated from the handshake; the client may still send
+		// AUTH to refresh its identity.
+		user:          user,
+		authenticated: true,
 	}
 
 	if !h.sendRegister(r.Context(), client) {
@@ -428,64 +472,22 @@ func (c *Client) handleMessage(data []byte) {
 	}
 }
 
-// handleAuth authenticates the client
+// handleAuth (re-)authenticates the client over an existing socket using
+// the same policy as the pre-upgrade handshake check.
 func (c *Client) handleAuth(msg *v1.AuthMessage) {
 	if msg == nil {
 		c.sendAuthFail("missing auth message")
 		return
 	}
 
-	// If no auth providers are enabled the panel is running without
-	// authentication. That is only permitted when the operator explicitly
-	// opted in (auth.allow_no_auth); otherwise fail closed rather than grant
-	// every client admin.
-	if !c.hub.authManager.IsAnyAuthEnabled() {
-		if !c.hub.authManager.NoAuthAllowed() {
-			c.sendAuthFail("no authentication provider is enabled")
-			return
-		}
-		c.user = &auth.AuthenticatedUser{
-			ID:       "admin",
-			Username: "admin",
-			Roles:    []string{"admin"},
-			Provider: "none",
-		}
-		c.authenticated = true
-		c.sendAuthOk()
+	user, err := c.hub.authenticateToken(context.Background(), msg.Token)
+	if err != nil {
+		c.sendAuthFail(err.Error())
 		return
 	}
-
-	ctx := context.Background()
-
-	if msg.Token != "" {
-		var user *auth.AuthenticatedUser
-		var err error
-		if strings.HasPrefix(msg.Token, "dp_") {
-			user, err = c.hub.authManager.ValidateAPIToken(ctx, msg.Token)
-		} else {
-			user, err = c.hub.authManager.ValidateSession(ctx, msg.Token)
-		}
-		if err != nil {
-			// Try anonymous access
-			if c.hub.authManager.IsAnonymousAccessEnabled() {
-				c.user = c.hub.authManager.AnonymousUser()
-				c.authenticated = true
-				c.sendAuthOk()
-				return
-			}
-			c.sendAuthFail("invalid token")
-			return
-		}
-		c.user = user
-		c.authenticated = true
-		c.sendAuthOk()
-	} else if c.hub.authManager.IsAnonymousAccessEnabled() {
-		c.user = c.hub.authManager.AnonymousUser()
-		c.authenticated = true
-		c.sendAuthOk()
-	} else {
-		c.sendAuthFail("authentication required")
-	}
+	c.user = user
+	c.authenticated = true
+	c.sendAuthOk()
 }
 
 // handleSubscribe subscribes to server logs
@@ -675,12 +677,36 @@ func (c *Client) cleanup() {
 	c.subscriptions = make(map[string]*subscription)
 }
 
-// sendMessage marshals and sends a server control message. Control messages
-// (auth results, acks, errors) take the priority path: a bounded blocking
-// send that waits for room instead of dropping on a full channel the way log
-// lines do. If the client stays congested past controlSendTimeout the message
-// is dropped, but the loss is logged server-side — never silent.
+// sendMessage marshals and best-effort enqueues a server message,
+// dropping it if the client's send buffer is full. Log lines use this
+// (see sendLog); control messages must use sendControl instead.
 func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
+		return
+	}
+	c.trySend(data)
+}
+
+// trySend enqueues one marshalled message, reporting whether buffer space
+// was available. Single non-blocking select shared by the log path so drop
+// accounting stays exact under concurrent forwardLogs goroutines.
+func (c *Client) trySend(data []byte) bool {
+	select {
+	case c.send <- data:
+		return true
+	default:
+		return false
+	}
+}
+
+// sendControl marshals and delivers a control message (auth, acks, errors,
+// command results, history batches), waiting up to controlSendTimeout for
+// buffer space instead of dropping it like log lines. A stuck socket can
+// delay the caller briefly but control traffic is tiny and rare, while a
+// dropped AUTH_OK or error would leave the console in a wrong state.
+func (c *Client) sendControl(msg *v1.WebSocketServerMessage) {
 	data, err := proto.Marshal(msg)
 	if err != nil {
 		c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
@@ -689,10 +715,8 @@ func (c *Client) sendMessage(msg *v1.WebSocketServerMessage) {
 
 	select {
 	case c.send <- data:
-	case <-c.done:
-		// Client is gone; drop without waiting out the timeout.
 	case <-time.After(controlSendTimeout):
-		c.hub.log.Error("Dropped WebSocket control message type %v: client slow (channel full %v)", msg.Type, controlSendTimeout)
+		c.hub.log.Warn("Dropped control message to slow WebSocket client (buffer full for %v)", controlSendTimeout)
 	}
 }
 
@@ -703,7 +727,7 @@ func (c *Client) sendAuthOk() {
 		userId = c.user.ID
 		username = c.user.Username
 	}
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_AUTH_OK,
 		Payload: &v1.WebSocketServerMessage_AuthOk{
 			AuthOk: &v1.AuthOkMessage{
@@ -715,7 +739,7 @@ func (c *Client) sendAuthOk() {
 }
 
 func (c *Client) sendAuthFail(errMsg string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_AUTH_FAIL,
 		Payload: &v1.WebSocketServerMessage_AuthFail{
 			AuthFail: &v1.AuthFailMessage{
@@ -726,7 +750,7 @@ func (c *Client) sendAuthFail(errMsg string) {
 }
 
 func (c *Client) sendSubscribed(serverId string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_SUBSCRIBED,
 		Payload: &v1.WebSocketServerMessage_Subscribed{
 			Subscribed: &v1.SubscribedMessage{
@@ -737,7 +761,7 @@ func (c *Client) sendSubscribed(serverId string) {
 }
 
 func (c *Client) sendUnsubscribed(serverId string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_UNSUBSCRIBED,
 		Payload: &v1.WebSocketServerMessage_Unsubscribed{
 			Unsubscribed: &v1.UnsubscribedMessage{
@@ -748,7 +772,7 @@ func (c *Client) sendUnsubscribed(serverId string) {
 }
 
 func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOGS,
 		Payload: &v1.WebSocketServerMessage_Logs{
 			Logs: &v1.LogsMessage{
@@ -760,39 +784,28 @@ func (c *Client) sendLogs(serverId string, logs []*v1.LogEntry) {
 }
 
 func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
-	// Fast path: client is gone, drop without marshaling. send itself is
-	// never closed so any in-flight select-send below cannot panic.
-	select {
-	case <-c.done:
-		return
-	default:
-	}
-	// Flush any accumulated skip count first: the sentinel goes out before
-	// the next real line so the gap is visible in the console stream.
+	// Flush a pending skip notice first so the gap is visible in the
+	// console instead of vanishing silently (MINE-165). If the notice
+	// itself drops, the count is re-armed and reported with the next
+	// delivered line.
 	if skipped := c.droppedLogs.Swap(0); skipped > 0 {
-		sentinel, err := proto.Marshal(&v1.WebSocketServerMessage{
+		if notice, err := proto.Marshal(&v1.WebSocketServerMessage{
 			Type: v1.WSMessageType_WS_MESSAGE_TYPE_LOG,
 			Payload: &v1.WebSocketServerMessage_Log{
 				Log: &v1.LogMessage{
 					ServerId: serverId,
 					Log: &v1.LogEntry{
-						Timestamp: timestamppb.Now(),
-						Message:   fmt.Sprintf("… %d log lines skipped (slow connection) …", skipped),
+						Timestamp: timestamppb.New(time.Now()),
+						Message:   fmt.Sprintf("… %d log lines skipped (client slow, buffer full) …", skipped),
 						Level:     "warn",
-						Source:    "carbon-panel",
+						Source:    "panel",
 					},
 				},
 			},
-		})
-		if err == nil {
-			select {
-			case c.send <- sentinel:
-			default:
-				// Still congested: restore the count (plus this line) and
-				// report the larger gap on the next flush.
-				c.droppedLogs.Add(skipped + 1)
-				return
-			}
+		}); err != nil {
+			c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
+		} else if !c.trySend(notice) {
+			c.droppedLogs.Add(skipped)
 		}
 	}
 
@@ -806,19 +819,17 @@ func (c *Client) sendLog(serverId string, log *v1.LogEntry) {
 		},
 	})
 	if err != nil {
-		c.hub.log.Error("Failed to marshal WebSocket log message: %v", err)
+		c.hub.log.Error("Failed to marshal WebSocket message: %v", err)
 		return
 	}
 
-	select {
-	case c.send <- data:
-	default:
+	if !c.trySend(data) {
 		c.droppedLogs.Add(1)
 	}
 }
 
 func (c *Client) sendCommandResult(serverId string, success bool, output, errMsg string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_COMMAND_RESULT,
 		Payload: &v1.WebSocketServerMessage_CommandResult{
 			CommandResult: &v1.CommandResultMessage{
@@ -832,7 +843,7 @@ func (c *Client) sendCommandResult(serverId string, success bool, output, errMsg
 }
 
 func (c *Client) sendError(errMsg string) {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_ERROR,
 		Payload: &v1.WebSocketServerMessage_Error{
 			Error: &v1.ErrorMessage{
@@ -843,7 +854,7 @@ func (c *Client) sendError(errMsg string) {
 }
 
 func (c *Client) sendPong() {
-	c.sendMessage(&v1.WebSocketServerMessage{
+	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_PONG,
 	})
 }

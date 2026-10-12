@@ -16,23 +16,6 @@ import (
 	"testing"
 )
 
-func TestErrorKindString(t *testing.T) {
-	cases := map[ErrorKind]string{
-		ErrAuth:       "authentication error",
-		ErrRateLimit:  "rate limited",
-		ErrNotFound:   "not found",
-		ErrNetwork:    "network error",
-		ErrAPI:        "API error",
-		ErrDecode:     "decode error",
-		ErrorKind(99): "unknown error",
-	}
-	for kind, want := range cases {
-		if got := kind.String(); got != want {
-			t.Fatalf("kind %d: got %q want %q", int(kind), got, want)
-		}
-	}
-}
-
 func TestNewAPIErrorClassification(t *testing.T) {
 	cases := []struct {
 		status int

@@ -170,5 +170,8 @@ jobs:
       - name: Unit Tests
         run: bun run test
 
+      - name: Lint (Prettier & ESLint)
+        run: bun run lint
+
       - name: Production Vite Build
         run: bun run build

@@ -7,30 +7,8 @@
 package rbac
 
 import (
-	"fmt"
-	"strings"
 	"testing"
-
-	"github.com/glebarez/sqlite"
-	"gorm.io/gorm"
 )
-
-func newTestEnforcer(t *testing.T, anonymous bool) *Enforcer {
-	t.Helper()
-	name := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
-	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=shared", name)), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	e, err := NewEnforcer(db)
-	if err != nil {
-		t.Fatalf("NewEnforcer: %v", err)
-	}
-	if err := e.SeedDefaultPolicies(anonymous); err != nil {
-		t.Fatalf("SeedDefaultPolicies: %v", err)
-	}
-	return e
-}
 
 func mustEnforce(t *testing.T, e *Enforcer, roles []string, resource, action, obj string, want bool) {
 	t.Helper()

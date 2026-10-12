@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -677,8 +678,9 @@ func (s *SupportService) addSystemInfoToBundle(ctx context.Context, tarWriter *t
 		// Get Docker version and info
 		dockerClient := s.docker.GetDockerClient()
 		if dockerClient != nil {
-			info, err := dockerClient.Info(ctx)
+			infoResult, err := dockerClient.Info(ctx, client.InfoOptions{})
 			if err == nil {
+				info := infoResult.Info
 				dockerInfo = &v1.DockerInfo{
 					Version:     info.ServerVersion,
 					Containers:  int32(info.Containers),

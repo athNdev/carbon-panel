@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	db "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -32,7 +32,7 @@ type Manager struct {
 	logger           *logger.Logger
 	mu               sync.Mutex
 	networkName      string
-	dockerClient     client.CommonAPIClient
+	dockerClient     DockerInspector
 	ownsDockerClient bool
 	wakeHandler      WakeHandler
 	activityHandler  ActivityHandler
@@ -40,8 +40,14 @@ type Manager struct {
 	valkeySync       *ValkeySyncManager
 }
 
+// DockerInspector is the subset of the Docker client used for container IP
+// resolution. It exists so tests can fake inspection without a daemon.
+type DockerInspector interface {
+	ContainerInspect(ctx context.Context, containerID string, options client.ContainerInspectOptions) (client.ContainerInspectResult, error)
+}
+
 // NewManager creates a new proxy manager
-func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...client.CommonAPIClient) *Manager {
+func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...DockerInspector) *Manager {
 	m := &Manager{
 		proxies:     make(map[int]Proxier),
 		store:       store,
@@ -869,7 +875,7 @@ func (m *Manager) GetContainerIP(containerID string) (string, error) {
 }
 
 // GetContainerIP gets the IP address of a container on the specified network using the provided Docker client
-func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName string) (string, error) {
+func GetContainerIP(cli DockerInspector, containerID string, networkName string) (string, error) {
 	if cli == nil {
 		c, err := docker.NewAPIClient(client.FromEnv)
 		if err != nil {
@@ -883,22 +889,23 @@ func GetContainerIP(cli client.CommonAPIClient, containerID string, networkName 
 	// (proxy route refresh, wake handlers) past its own budget.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	containerInfo, err := cli.ContainerInspect(ctx, containerID)
+	inspectResult, err := cli.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to inspect container: %w", err)
 	}
+	containerInfo := inspectResult.Container
 
 	// Look for the IP on the specified network
 	if networkName != "" {
-		if network, ok := containerInfo.NetworkSettings.Networks[networkName]; ok && network.IPAddress != "" {
-			return network.IPAddress, nil
+		if network, ok := containerInfo.NetworkSettings.Networks[networkName]; ok && network.IPAddress.IsValid() {
+			return network.IPAddress.String(), nil
 		}
 	}
 
 	// Fallback to any available IP
 	for _, network := range containerInfo.NetworkSettings.Networks {
-		if network.IPAddress != "" {
-			return network.IPAddress, nil
+		if network.IPAddress.IsValid() {
+			return network.IPAddress.String(), nil
 		}
 	}
 

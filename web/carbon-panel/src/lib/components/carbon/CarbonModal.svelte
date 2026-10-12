@@ -222,8 +222,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						size="lg"
 						class="w-1/2 justify-center rounded-none"
 						onclick={() => {
-							if (onsecondary) onsecondary();
-							else handleClose();
+							if (onsecondary) {
+								onsecondary();
+							} else {
+								handleClose();
+							}
 						}}
 					>
 						{secondaryButtonText}

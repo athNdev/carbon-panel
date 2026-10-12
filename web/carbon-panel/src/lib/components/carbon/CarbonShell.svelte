@@ -14,7 +14,6 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	import { resolve } from '$app/paths';
 	import { runningServers, activitySortedServers } from '$lib/stores/servers';
 	import { currentUser, canAccessSettings } from '$lib/stores/auth';
-
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { type Node } from '$lib/proto/carbonpanel/v1/node_pb';
 	import { describeNodeStatus, pickPrimaryNode } from '$lib/utils/node-status';
@@ -85,7 +84,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		if (event.key === 'Escape') closeMobileNav();
 	}
 
-	const navItems: {
+	interface NavItem {
 		href:
 			| '/'
 			| '/servers'
@@ -98,7 +97,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		label: string;
 		icon: string;
 		badge?: boolean;
-	}[] = [
+	}
+
+	const navItems: NavItem[] = [
 		{
 			href: '/',
 			label: 'Overview',
@@ -185,7 +186,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			<!-- Brand Logo & Name -->
 			<a
 				href={resolve('/')}
-				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-accent-text"
+				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-[#0f62fe]"
 			>
 				<img src="/carbon_panel_logo.png" alt="Carbon Panel" class="h-6 w-6 rounded-sm" />
 				<span class="font-semibold tracking-wide">Carbon Panel</span>
