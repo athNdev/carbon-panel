@@ -458,3 +458,6 @@ result
 *.pem
 *.p12
 *.pfx
+
+# Local Proxmox job tracker state (runtime artifact)
+proxmox-jobs.sqlite3*

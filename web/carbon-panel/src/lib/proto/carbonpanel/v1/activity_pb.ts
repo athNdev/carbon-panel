@@ -85,6 +85,8 @@ export const ActivityLogEntrySchema: GenMessage<ActivityLogEntry> =
 	messageDesc(file_carbonpanel_v1_activity, 0);
 
 /**
+ * List request with optional filters
+ *
  * @generated from message carbonpanel.v1.ListActivityLogsRequest
  */
 export type ListActivityLogsRequest = Message<'carbonpanel.v1.ListActivityLogsRequest'> & {
@@ -118,6 +120,8 @@ export const ListActivityLogsRequestSchema: GenMessage<ListActivityLogsRequest> 
 	messageDesc(file_carbonpanel_v1_activity, 1);
 
 /**
+ * Newest-first audit records
+ *
  * @generated from message carbonpanel.v1.ListActivityLogsResponse
  */
 export type ListActivityLogsResponse = Message<'carbonpanel.v1.ListActivityLogsResponse'> & {
