@@ -700,7 +700,16 @@ func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool)
 		// Deeply-asleep servers are owned by the DeepSleepManager: an exited
 		// or missing container IS the expected state, and a running container
 		// is a boot in flight. Never heal, recreate, or reflap (MINE-121).
-		return decision{}
+		//
+		// The proxy route MUST still be reconciled though. A deep-asleep route has
+		// to be marked Down so the proxy answers pings with the asleep MOTD and
+		// wakes the server on login. Leaving that to DeepSleepManager's one-shot
+		// refresher meant a single missed refresh (nil refresher, a refresh error,
+		// or a proxy restart reloading routes without re-reading status) left a
+		// live-but-not-Down route: login then skipped the wake path entirely and
+		// dialled a container that no longer existed, so the knock silently did
+		// nothing and the server had to be started by hand (MINE-172 follow-up).
+		return decision{reconcileRoute: true}
 	}
 	if !obs.Exists {
 		if desired == db.StatusRunning {

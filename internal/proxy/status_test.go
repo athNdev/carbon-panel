@@ -160,7 +160,7 @@ func TestDownRoute_StatusPingDuringBootGetsLoadingMOTD(t *testing.T) {
 	assert.Equal(t, loadingMOTD, payload.Description.Text)
 }
 
-func TestDownRoute_LoginWithoutHandlerHangsUp(t *testing.T) {
+func TestDownRoute_LoginWithoutHandlerRefusesLoudly(t *testing.T) {
 	proxy := NewMinecraftProxy(&Config{ListenAddr: "127.0.0.1:0"})
 	require.NoError(t, proxy.Start())
 	t.Cleanup(func() { _ = proxy.Stop() })
@@ -188,12 +188,12 @@ func TestDownRoute_LoginWithoutHandlerHangsUp(t *testing.T) {
 	conn := dialDownRoute(t, proxy, 2)
 	defer func() { _ = conn.Close() }()
 
-	// Proxy must hang up: the login handshake gets no backend and the
-	// connection closes (read times out or EOFs).
-	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	one := make([]byte, 1)
-	_, err = conn.Read(one)
-	assert.Error(t, err, "Connection must hang up when no sleep wake handler is set")
+	// An unwired wake handler is a wiring fault, not a normal outcome, so the
+	// client must be told rather than left staring at a bare TCP close it can
+	// neither read nor report. This used to hang up silently, which is exactly
+	// how "it didn't respond when I knocked" presented to the player.
+	msg := readLoginDisconnect(t, conn)
+	assert.Equal(t, wakeFailedMessage, msg, "handler-less down route must explain the refusal")
 
 	time.Sleep(200 * time.Millisecond)
 	assert.False(t, backendDialed.Load(), "Down backend must NOT be dialed without a wake handler")

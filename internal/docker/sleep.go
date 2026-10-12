@@ -313,7 +313,22 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 	}
 
 	if srv.Status != db.StatusDeepSleep {
-		return fmt.Errorf("cannot wake server %s with non-deepsleep status %s", serverID, srv.Status)
+		// A deep-asleep server's recorded status drifts to "stopped" without anyone
+		// asking for it: the live Docker refresh reports the exited container as
+		// stopped, which is indistinguishable from an operator stop. Refusing the
+		// wake in that state made the server unrecoverable through the proxy - the
+		// knock returned a wakeFailed disconnect and the only way out was starting
+		// it by hand. This path is only reachable via a Down route, which is only
+		// ever installed for a deep-asleep server, so treating drift as recoverable
+		// cannot boot a server somebody deliberately took offline.
+		drifted := srv.AutoDeepSleep && (srv.Status == db.StatusStopped || srv.Status == db.StatusCreating)
+		if !drifted {
+			return fmt.Errorf("cannot wake server %s with non-deepsleep status %s", serverID, srv.Status)
+		}
+		if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusDeepSleep); err != nil {
+			return fmt.Errorf("failed to restore deepsleep status for server %s before wake: %w", serverID, err)
+		}
+		srv.Status = db.StatusDeepSleep
 	}
 
 	if !m.tryBeginTransition(serverID, "wake") {

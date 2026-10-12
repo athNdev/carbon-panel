@@ -386,6 +386,27 @@ func parseModLoaderString(s string) storage.ModLoader {
 }
 
 // dbStatusToProto converts database status to proto
+// preserveStoredStatus keeps a stored deep-sleep/paused status when Docker reports
+// the container as merely gone. Docker cannot distinguish an intentional deep sleep
+// (the DeepSleepManager stopped the container) from an ordinary stop - both are
+// "exited", and mapContainerState maps exited/dead/created to StatusStopped. So the
+// unconditional overwrite turned every deep-asleep server into a plain stopped
+// server on each poll, and the UI lost both the "asleep" state and the fact that
+// the server was still reachable via knock.
+//
+// Only the opposite direction overwrites: a container that is alive while the
+// record says asleep/paused is real news, because it means a wake is in flight.
+func preserveStoredStatus(stored, observed storage.ServerStatus) storage.ServerStatus {
+	switch stored {
+	case storage.StatusDeepSleep, storage.StatusPaused:
+		if observed == storage.StatusStopped || observed == storage.StatusCreating {
+			return stored
+		}
+	}
+	return observed
+}
+
+// dbStatusToProto maps a stored server status onto the wire enum.
 func dbStatusToProto(status storage.ServerStatus) v1.ServerStatus {
 	switch status {
 	case storage.StatusCreating:
@@ -445,7 +466,7 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 			dockerCli := s.getDockerClient(server.NodeID)
 			status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
 			if err == nil {
-				server.Status = status
+				server.Status = preserveStoredStatus(server.Status, status)
 			}
 
 			// Apply cached metrics from the background collector
@@ -506,7 +527,7 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 		status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
 		cancelStatus()
 		if err == nil {
-			server.Status = status
+			server.Status = preserveStoredStatus(server.Status, status)
 		}
 	}
 

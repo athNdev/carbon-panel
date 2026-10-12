@@ -423,7 +423,11 @@ func (p *MinecraftProxy) handleDownRoute(clientConn net.Conn, handshake *Handsha
 	}
 
 	if p.sleepWakeHandler == nil {
-		p.logger.Debug("Login for down route %s with no sleep wake handler; hanging up", hostname)
+		// This is a wiring fault, not a normal outcome. Hanging up without a
+		// disconnect message leaves the client staring at a silent TCP close and
+		// gives the operator nothing to act on, so say so and log loudly.
+		p.logger.Error("Login for down route %s with no sleep wake handler wired; refusing with wakeFailed", hostname)
+		_ = sendLoginDisconnect(clientConn, wakeFailedMessage)
 		return false
 	}
 
