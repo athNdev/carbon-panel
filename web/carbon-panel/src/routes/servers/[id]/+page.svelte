@@ -232,7 +232,10 @@ one at https://mozilla.org/MPL/2.0/.
 			case ServerStatus.CREATING:
 				return 'blue';
 			case ServerStatus.RESTARTING:
+			case ServerStatus.DEEPSLEEP:
 				return 'purple';
+			case ServerStatus.PAUSED:
+				return 'blue';
 			case ServerStatus.STOPPING:
 				return 'warm-gray';
 			case ServerStatus.ERROR:
@@ -261,6 +264,10 @@ one at https://mozilla.org/MPL/2.0/.
 				return 'RESTARTING';
 			case ServerStatus.UNHEALTHY:
 				return 'UNHEALTHY';
+			case ServerStatus.DEEPSLEEP:
+				return 'DEEP SLEEP';
+			case ServerStatus.PAUSED:
+				return 'PAUSED';
 			default:
 				return 'UNKNOWN';
 		}
@@ -347,6 +354,43 @@ one at https://mozilla.org/MPL/2.0/.
 						<Loader2 class="h-4 w-4 animate-spin text-accent-text" />
 						<span>Creating Server...</span>
 					</div>
+				{:else if server.status === ServerStatus.DEEPSLEEP}
+					<button
+						type="button"
+						onclick={() => handleServerAction('start')}
+						disabled={actionLoading}
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#8a3ffc] px-4 font-sans text-sm text-white transition-colors hover:bg-[#a56eff] disabled:opacity-50"
+					>
+						{#if actionLoading}
+							<Loader2 class="h-4 w-4 animate-spin" />
+						{:else}
+							<Play class="h-4 w-4 fill-current" />
+						{/if}
+						<span>Wake Server</span>
+					</button>
+				{:else if server.status === ServerStatus.PAUSED}
+					<button
+						type="button"
+						onclick={() => handleServerAction('start')}
+						disabled={actionLoading}
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-4 font-sans text-sm text-white transition-colors hover:bg-[#4589ff] disabled:opacity-50"
+					>
+						{#if actionLoading}
+							<Loader2 class="h-4 w-4 animate-spin" />
+						{:else}
+							<Play class="h-4 w-4 fill-current" />
+						{/if}
+						<span>Resume Server</span>
+					</button>
+					<button
+						type="button"
+						onclick={() => handleServerAction('stop')}
+						disabled={actionLoading}
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#da1e28] px-4 font-sans text-sm text-white transition-colors hover:bg-[#ba1b23] disabled:opacity-50"
+					>
+						<Square class="h-4 w-4 fill-current" />
+						<span>Stop</span>
+					</button>
 				{:else if server.status === ServerStatus.STOPPED || !server.containerId}
 					<button
 						type="button"
@@ -500,6 +544,10 @@ one at https://mozilla.org/MPL/2.0/.
 							Starting server (modpack downloads may take several minutes)
 						{:else if server.status === ServerStatus.RESTARTING}
 							Restarting server container
+						{:else if server.status === ServerStatus.DEEPSLEEP}
+							Deep sleeping (container stopped, proxy listening for login wake)
+						{:else if server.status === ServerStatus.PAUSED}
+							Paused via cgroup freezer (instant resume available)
 						{:else if server.status === ServerStatus.STOPPING}
 							Gracefully shutting down
 						{:else}

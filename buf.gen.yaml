@@ -20,19 +20,29 @@ plugins:
       - path=schemav1.yaml
 
   # Generate Go code with protoc-gen-go
-  - remote: buf.build/protocolbuffers/go
+  #
+  # Pinned to v1.36.12: the version that produced the committed pkg/proto tree.
+  # Leaving this remote unpinned makes every `make proto` reformat the entire
+  # generated tree when the plugin is upgraded upstream, burying the real change
+  # in thousands of lines of churn (MINE-172).
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: pkg/proto
     opt:
       - paths=source_relative
 
-  # Generate Connect-Go
-  - remote: buf.build/connectrpc/go
+  # Generate Connect-Go (pinned to match go.mod connectrpc.com/connect v1.19.1)
+  - remote: buf.build/connectrpc/go:v1.19.1
     out: pkg/proto
     opt:
       - paths=source_relative
 
   # Generate TypeScript
-  - remote: buf.build/bufbuild/es
+  #
+  # Pinned to v2.15.0 to match the committed tree and the installed runtime
+  # floor in package.json ("@bufbuild/protobuf": "^2.10.0"). Bumping either side
+  # independently means the generated code targets runtime APIs that may not
+  # exist, so they move together and deliberately.
+  - remote: buf.build/bufbuild/es:v2.15.0
     out: web/carbon-panel/src/lib/proto
     opt:
       - target=ts

@@ -163,7 +163,10 @@ one at https://mozilla.org/MPL/2.0/.
 			case ServerStatus.CREATING:
 				return 'blue';
 			case ServerStatus.RESTARTING:
+			case ServerStatus.DEEPSLEEP:
 				return 'purple';
+			case ServerStatus.PAUSED:
+				return 'blue';
 			case ServerStatus.STOPPING:
 				return 'warm-gray';
 			case ServerStatus.ERROR:
@@ -192,6 +195,10 @@ one at https://mozilla.org/MPL/2.0/.
 				return 'RESTARTING';
 			case ServerStatus.UNHEALTHY:
 				return 'UNHEALTHY';
+			case ServerStatus.DEEPSLEEP:
+				return 'DEEP SLEEP';
+			case ServerStatus.PAUSED:
+				return 'PAUSED';
 			default:
 				return 'UNKNOWN';
 		}
@@ -522,10 +529,10 @@ one at https://mozilla.org/MPL/2.0/.
 								onclick={(e) => e.stopPropagation()}
 							>
 								<div class="inline-flex items-center border border-[#393939] bg-[#161616]">
-									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
+									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR || server.status === ServerStatus.DEEPSLEEP || server.status === ServerStatus.PAUSED}
 										<button
-											title="Start"
-											aria-label={`Start server ${server.name}`}
+											title={server.status === ServerStatus.DEEPSLEEP ? "Wake" : server.status === ServerStatus.PAUSED ? "Resume" : "Start"}
+											aria-label={`${server.status === ServerStatus.DEEPSLEEP ? "Wake" : server.status === ServerStatus.PAUSED ? "Resume" : "Start"} server ${server.name}`}
 											disabled={loading}
 											class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#6fdc8c] transition-colors hover:bg-[#198038]/20 disabled:opacity-40"
 											onclick={(e) => handleServerAction('start', server, e)}
@@ -625,10 +632,10 @@ one at https://mozilla.org/MPL/2.0/.
 
 							<!-- Action Buttons Bar -->
 							<div class="flex shrink-0 border border-[#393939] bg-[#161616]">
-								{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
+								{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR || server.status === ServerStatus.DEEPSLEEP || server.status === ServerStatus.PAUSED}
 									<button
-										title="Start"
-										aria-label={`Start server ${server.name}`}
+										title={server.status === ServerStatus.DEEPSLEEP ? "Wake" : server.status === ServerStatus.PAUSED ? "Resume" : "Start"}
+										aria-label={`${server.status === ServerStatus.DEEPSLEEP ? "Wake" : server.status === ServerStatus.PAUSED ? "Resume" : "Start"} server ${server.name}`}
 										disabled={loading}
 										class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border-r border-[#393939] text-[#6fdc8c] transition-colors hover:bg-[#198038]/20 disabled:opacity-50"
 										onclick={(e) => handleServerAction('start', server, e)}
