@@ -8,14 +8,15 @@ package reconciler
 
 import (
 	"context"
+	"net/netip"
 	"errors"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -520,7 +521,7 @@ func summaryWithIP(id, ip string) *container.Summary {
 		ID: id,
 		NetworkSettings: &container.NetworkSettingsSummary{
 			Networks: map[string]*network.EndpointSettings{
-				"carbon-panel-network": {IPAddress: ip},
+				"carbon-panel-network": {IPAddress: netip.MustParseAddr(ip)},
 			},
 		},
 	}

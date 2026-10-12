@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -116,7 +116,7 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 		rconPassword = *serverCfg.RCONPassword
 	}
 
-	var cli client.CommonAPIClient
+	var cli proxy.DockerInspector
 	if dc, ok := executor.(interface{ GetDockerClient() *client.Client }); ok {
 		cli = dc.GetDockerClient()
 	}

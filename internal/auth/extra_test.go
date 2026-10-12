@@ -16,7 +16,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func testOIDCHandler(t *testing.T, cfg *config.OIDCConfig) (*Manager, *OIDCHandler) {
+func newTestOIDCHandler(t *testing.T, cfg *config.OIDCConfig) (*Manager, *OIDCHandler) {
 	t.Helper()
 	m, store := newTestManager(t, testAuthConfig())
 	h, err := NewOIDCHandler(m, store, cfg, logger.New())
@@ -27,14 +27,14 @@ func testOIDCHandler(t *testing.T, cfg *config.OIDCConfig) (*Manager, *OIDCHandl
 }
 
 func TestOIDCDisabledHandler(t *testing.T) {
-	_, h := testOIDCHandler(t, &config.OIDCConfig{Enabled: false})
+	_, h := newTestOIDCHandler(t, &config.OIDCConfig{Enabled: false})
 	if h.IsEnabled() {
 		t.Fatal("disabled handler must report disabled")
 	}
 }
 
 func TestResolveClaimRoles(t *testing.T) {
-	_, h := testOIDCHandler(t, &config.OIDCConfig{RoleClaim: "groups"})
+	_, h := newTestOIDCHandler(t, &config.OIDCConfig{RoleClaim: "groups"})
 
 	if got := h.resolveClaimRoles(map[string]any{}); got != nil {
 		t.Fatalf("missing claim=%v", got)
@@ -56,7 +56,7 @@ func TestResolveClaimRoles(t *testing.T) {
 	}
 
 	// Mapping with case-insensitive match.
-	_, mapped := testOIDCHandler(t, &config.OIDCConfig{
+	_, mapped := newTestOIDCHandler(t, &config.OIDCConfig{
 		RoleClaim:   "groups",
 		RoleMapping: map[string]string{"Devs": "developer"},
 	})
@@ -66,7 +66,7 @@ func TestResolveClaimRoles(t *testing.T) {
 	}
 
 	// Reject-unmapped drops everything without a mapping.
-	_, strict := testOIDCHandler(t, &config.OIDCConfig{
+	_, strict := newTestOIDCHandler(t, &config.OIDCConfig{
 		RoleClaim:      "groups",
 		RoleMapping:    map[string]string{"devs": "developer"},
 		RejectUnmapped: true,
@@ -76,14 +76,14 @@ func TestResolveClaimRoles(t *testing.T) {
 	}
 
 	// Empty role claim name disables resolution.
-	_, noClaim := testOIDCHandler(t, &config.OIDCConfig{})
+	_, noClaim := newTestOIDCHandler(t, &config.OIDCConfig{})
 	if got := noClaim.resolveClaimRoles(map[string]any{"groups": []any{"x"}}); got != nil {
 		t.Fatalf("no-claim=%v", got)
 	}
 }
 
 func TestCheckRequiredClaim(t *testing.T) {
-	_, h := testOIDCHandler(t, &config.OIDCConfig{
+	_, h := newTestOIDCHandler(t, &config.OIDCConfig{
 		RequiredClaim:  "hd",
 		RequiredValues: []string{"example.com"},
 	})

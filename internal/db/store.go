@@ -532,8 +532,17 @@ func (s *Store) DeleteIndexedModpack(ctx context.Context, modpackID string) erro
 
 // Modpack Favorite operations
 func (s *Store) AddModpackFavorite(ctx context.Context, modpackID string) error {
+	// Idempotent: a second add is a no-op instead of a duplicate row (and,
+	// previously, a UNIQUE collision when two adds landed in the same second).
+	fav, err := s.IsModpackFavorited(ctx, modpackID)
+	if err != nil {
+		return err
+	}
+	if fav {
+		return nil
+	}
 	favorite := &ModpackFavorite{
-		ID:        fmt.Sprintf("fav-%s-%d", modpackID, time.Now().Unix()),
+		ID:        fmt.Sprintf("fav-%s-%s", modpackID, uuid.New().String()[:8]),
 		ModpackID: modpackID,
 	}
 	return s.db.WithContext(ctx).Create(favorite).Error

@@ -83,6 +83,8 @@ one at https://mozilla.org/MPL/2.0/.
 	let favoriteModpacks = $state<IndexedModpack[]>([]);
 	let modpackVersions = $state<Version[]>([]);
 	let selectedVersionId = $state<string>('');
+	// Tracks an in-flight version fetch so the select can show a loading state
+	// instead of briefly presenting an empty list.
 	let loadingModpackVersions = $state(false);
 
 	let formData = $state<CreateServerRequest>(
