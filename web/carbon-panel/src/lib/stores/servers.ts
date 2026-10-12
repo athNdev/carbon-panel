@@ -51,6 +51,14 @@ export const stoppedServers = derived(serversStore, ($servers) =>
 	$servers.filter((server) => server.status === ServerStatus.STOPPED)
 );
 
+export const pausedServers = derived(serversStore, ($servers) =>
+	$servers.filter((server) => server.status === ServerStatus.PAUSED)
+);
+
+export const deepsleepServers = derived(serversStore, ($servers) =>
+	$servers.filter((server) => server.status === ServerStatus.DEEPSLEEP)
+);
+
 function getTimestampMs(ts: { seconds: bigint } | undefined): number {
 	if (!ts) return 0;
 	return Number(ts.seconds) * 1000;

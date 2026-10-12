@@ -150,7 +150,7 @@
 		return () => clearInterval(interval);
 	});
 
-	function getStatusTagType(status: ServerStatus): 'green' | 'red' | 'purple' | 'gray' {
+	function getStatusTagType(status: ServerStatus): 'green' | 'red' | 'purple' | 'blue' | 'gray' {
 		switch (status) {
 			case ServerStatus.RUNNING:
 				return 'green';
@@ -158,7 +158,10 @@
 			case ServerStatus.STOPPING:
 			case ServerStatus.CREATING:
 			case ServerStatus.RESTARTING:
+			case ServerStatus.DEEPSLEEP:
 				return 'purple';
+			case ServerStatus.PAUSED:
+				return 'blue';
 			case ServerStatus.ERROR:
 			case ServerStatus.UNHEALTHY:
 				return 'red';
@@ -613,7 +616,9 @@
 													type={getStatusTagType(server.status)}
 													size="sm"
 													pulse={server.status !== ServerStatus.RUNNING &&
-														server.status !== ServerStatus.STOPPED}
+														server.status !== ServerStatus.STOPPED &&
+														server.status !== ServerStatus.PAUSED &&
+														server.status !== ServerStatus.DEEPSLEEP}
 												>
 													{getStringForEnum(ServerStatus, server.status)}
 												</CarbonTag>
@@ -637,19 +642,33 @@
 															</span>
 														{/if}
 													</div>
+												{:else if server.status === ServerStatus.DEEPSLEEP}
+													<span class="font-mono text-xs text-[#a56eff]">DEEP SLEEP</span>
+												{:else if server.status === ServerStatus.PAUSED}
+													<span class="font-mono text-xs text-[#78a9ff]">PAUSED</span>
 												{:else}
 													<span class="font-mono text-xs text-[#8d8d8d]">OFFLINE</span>
 												{/if}
 											</td>
 											<td class="px-4 py-3 text-right align-middle">
 												<div class="flex items-center justify-end gap-1">
-													{#if server.status === ServerStatus.STOPPED}
+													{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.DEEPSLEEP}
 														<button
 															type="button"
 															onclick={() => handleServerAction('start', server)}
 															class="flex h-7 w-7 cursor-pointer items-center justify-center text-[#24a148] transition-colors hover:bg-[#393939] hover:text-[#42be65]"
-															title="Start Server"
-															aria-label="Start Server"
+															title={server.status === ServerStatus.DEEPSLEEP ? "Wake Server" : "Start Server"}
+															aria-label={server.status === ServerStatus.DEEPSLEEP ? "Wake Server" : "Start Server"}
+														>
+															<PlayCircle class="h-4 w-4" />
+														</button>
+													{:else if server.status === ServerStatus.PAUSED}
+														<button
+															type="button"
+															onclick={() => handleServerAction('start', server)}
+															class="flex h-7 w-7 cursor-pointer items-center justify-center text-[#4589ff] transition-colors hover:bg-[#393939] hover:text-[#78a9ff]"
+															title="Resume Server"
+															aria-label="Resume Server"
 														>
 															<PlayCircle class="h-4 w-4" />
 														</button>
