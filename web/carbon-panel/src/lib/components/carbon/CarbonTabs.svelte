@@ -39,9 +39,8 @@
 	}
 
 	$effect(() => {
-		// Track tab identity/selection so the indicator re-measures on change.
+		// Re-run measurement when the tab list or selection changes.
 		const _deps = [tabs, selectedTab];
-		void _deps;
 		tick().then(() => requestAnimationFrame(measure));
 	});
 

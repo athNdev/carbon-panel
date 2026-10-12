@@ -17,7 +17,6 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
-	"github.com/docker/docker/client"
 )
 
 type ServerMetrics struct {
@@ -506,7 +505,7 @@ func (c *Collector) collectSLPData() {
 		}
 
 		// Get container IP
-		var cli client.CommonAPIClient
+		var cli proxy.DockerInspector
 		if dockerCli != nil {
 			cli = dockerCli.GetDockerClient()
 		}

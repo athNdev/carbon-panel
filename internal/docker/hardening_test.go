@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 )
 
 func TestContainerHardening_ApplyOverrides(t *testing.T) {

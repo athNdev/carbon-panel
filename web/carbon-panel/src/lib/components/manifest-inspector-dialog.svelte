@@ -48,7 +48,7 @@
 			inspection = inspectManifest(rawInput);
 			toast.success(`Parsed ${inspection.name} (${inspection.totalMods} mods)`);
 		} catch (e) {
-			error = (e instanceof Error ? e.message : '') || 'Failed to parse manifest.';
+			error = (e instanceof Error ? e.message : undefined) || 'Failed to parse manifest.';
 			inspection = null;
 		}
 	}
@@ -251,7 +251,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y">
-							{#each filteredMods as mod (mod.name)}
+							{#each filteredMods as mod (mod.path ?? mod.name)}
 								<tr class="hover:bg-muted/20">
 									<td class="max-w-[250px] truncate p-2 font-medium">
 										{mod.name}
@@ -283,7 +283,7 @@
 									</td>
 									<td class="p-2 text-right">
 										{#if mod.downloadUrl}
-											<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
+											<!-- eslint-disable svelte/no-navigation-without-resolve -- external download URL used directly; resolve() throws on non-absolute pathnames -->
 											<a
 												href={mod.downloadUrl}
 												target="_blank"

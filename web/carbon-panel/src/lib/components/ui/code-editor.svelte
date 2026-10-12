@@ -8,9 +8,13 @@
 	import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
 	// Configure the Monaco worker environment
-	const globals = self as unknown as Record<string, unknown>;
-	if (!globals.MonacoEnvironment) {
-		globals.MonacoEnvironment = {
+	interface MonacoGlobal {
+		MonacoEnvironment?: unknown;
+		__jsonTemplateLang?: boolean;
+	}
+	const monacoGlobal = self as unknown as MonacoGlobal;
+	if (!monacoGlobal.MonacoEnvironment) {
+		monacoGlobal.MonacoEnvironment = {
 			getWorker(_: unknown, label: string) {
 				if (label === 'json') return new jsonWorker();
 				if (label === 'css' || label === 'scss' || label === 'less') return new cssWorker();
@@ -23,8 +27,8 @@
 	}
 
 	// MONACO PSEUDO JSON-LIKE TEMPLATE AND LINTER, NEEDED FOR GO TEMPLATING
-	if (!globals.__jsonTemplateLang) {
-		globals.__jsonTemplateLang = true;
+	if (!monacoGlobal.__jsonTemplateLang) {
+		monacoGlobal.__jsonTemplateLang = true;
 		monaco.languages.register({ id: 'json-template' });
 		monaco.languages.setLanguageConfiguration('json-template', {
 			brackets: [

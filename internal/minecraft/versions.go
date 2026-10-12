@@ -10,13 +10,11 @@ import (
 	"time"
 )
 
-const (
-	// v2 API
-	versionManifestV2URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+// v2 API. var (not const) so tests can point it at an httptest server.
+var versionManifestV2URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
-	// Cache for 1 hour
-	cacheDuration = time.Hour
-)
+// Cache for 1 hour
+const cacheDuration = time.Hour
 
 type VersionManifestV2 struct {
 	Latest   LatestVersions `json:"latest"`
@@ -338,9 +336,8 @@ func FindMostRecentMinecraftVersion(versions []string) string {
 	return ""
 }
 
-const (
-	protocolVersionsURL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/common/protocolVersions.json"
-)
+// var (not const) so tests can point it at an httptest server.
+var protocolVersionsURL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/common/protocolVersions.json"
 
 type ProtocolVersionEntry struct {
 	MinecraftVersion string `json:"minecraftVersion"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os"
 
 	shellparse "github.com/arkady-emelyanov/go-shellparse"
@@ -11,10 +12,10 @@ import (
 	"github.com/athNdev/carbon-panel/internal/config"
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/files"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 // ModuleVolumeMount represents a volume mount from module configuration
@@ -57,8 +58,8 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 	c.log.Debug("Creating container for module %s with image %s", module.ID, imageName)
 
 	// Build exposed ports and port bindings from module.Ports
-	exposedPorts := nat.PortSet{}
-	portBindings := nat.PortMap{}
+	exposedPorts := network.PortSet{}
+	portBindings := network.PortMap{}
 
 	for _, port := range module.Ports {
 		if port == nil || port.ContainerPort == 0 {
@@ -70,13 +71,17 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 			dockerProto = "udp"
 		}
 
-		natPort := nat.Port(fmt.Sprintf("%d/%s", port.ContainerPort, dockerProto))
-		exposedPorts[natPort] = struct{}{}
+		modPort, err := network.ParsePort(fmt.Sprintf("%d/%s", port.ContainerPort, dockerProto))
+		if err != nil {
+			c.log.Warn("Invalid module port %d/%s, skipping: %v", port.ContainerPort, dockerProto, err)
+			continue
+		}
+		exposedPorts[modPort] = struct{}{}
 
 		// Bind host port when proxy is not enabled for this port
 		if port.HostPort > 0 && !port.ProxyEnabled {
-			portBindings[natPort] = []nat.PortBinding{
-				{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", port.HostPort)},
+			portBindings[modPort] = []network.PortBinding{
+				{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: fmt.Sprintf("%d", port.HostPort)},
 			}
 		}
 
@@ -359,22 +364,23 @@ func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount, safeRoots ..
 
 // GetModuleContainerIP gets the IP address of a module container on the Carbon Panel network
 func (c *Client) GetModuleContainerIP(ctx context.Context, containerID string) (string, error) {
-	inspect, err := c.docker.ContainerInspect(ctx, containerID)
+	inspectResult, err := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return "", err
 	}
+	inspect := inspectResult.Container
 
 	// Try to get IP from the configured network
 	if c.config.NetworkName != "" {
 		if endpoint, ok := inspect.NetworkSettings.Networks[c.config.NetworkName]; ok {
-			return endpoint.IPAddress, nil
+			return endpoint.IPAddress.String(), nil
 		}
 	}
 
 	// Fallback to any available network
 	for _, endpoint := range inspect.NetworkSettings.Networks {
-		if endpoint.IPAddress != "" {
-			return endpoint.IPAddress, nil
+		if endpoint.IPAddress.IsValid() {
+			return endpoint.IPAddress.String(), nil
 		}
 	}
 

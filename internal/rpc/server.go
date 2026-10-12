@@ -257,8 +257,9 @@ func (s *Server) setupHandler() {
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
 
-	// HTTP/2 cleartext is negotiated via http.Server.Protocols in main
-	// (security headers stamped inside, MINE-163)
+	// Default security headers on every response (MINE-163). Unencrypted
+	// HTTP/2 is negotiated by the caller's http.Server via Protocols, so no
+	// h2c wrapper is needed here (the deprecated h2c.NewHandler was removed).
 	s.handler = securityHeaders(mux)
 }
 

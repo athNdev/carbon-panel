@@ -36,6 +36,23 @@ export interface ManifestInspectionResult {
 	mods: InspectedMod[];
 	raw: unknown;
 }
+/**
+ * Untyped third-party manifest JSON (modrinth.index.json / manifest.json).
+ * Helpers below narrow it at each use site instead of spreading `any`.
+ */
+export type ManifestJson = Record<string, unknown>;
+
+function jsonStr(value: unknown, fallback = ''): string {
+	return typeof value === 'string' ? value : fallback;
+}
+
+function jsonRecord(value: unknown): ManifestJson {
+	return typeof value === 'object' && value !== null ? (value as ManifestJson) : {};
+}
+
+function jsonFileList(value: unknown): ManifestJson[] {
+	return Array.isArray(value) ? (value as ManifestJson[]) : [];
+}
 
 // Known client-only mod name patterns for CurseForge manifests
 const KNOWN_CLIENT_ONLY_PATTERNS = [
@@ -111,10 +128,8 @@ function isStrRec(v: unknown): v is Record<string, string> {
 /**
  * Detects format of manifest content
  */
-export function detectManifestFormat(input: unknown): ModpackFormat {
-	const data = asRec(input);
-	if (Object.keys(data).length === 0 && (input === null || typeof input !== 'object'))
-		return 'unknown';
+export function detectManifestFormat(data: ManifestJson): ModpackFormat {
+	if (!data || typeof data !== 'object') return 'unknown';
 	if (data.formatVersion !== undefined && (data.game === 'minecraft' || data.dependencies)) {
 		return 'modrinth';
 	}
@@ -122,8 +137,8 @@ export function detectManifestFormat(input: unknown): ModpackFormat {
 		return 'curseforge';
 	}
 	// Fallback detection
-	if (Array.isArray(data.files) && data.files.length > 0) {
-		const first = asRec(data.files[0]);
+	if (Array.isArray(data.files)) {
+		const first = (data.files[0] ?? {}) as ManifestJson;
 		if (first.projectID !== undefined || first.projectId !== undefined) {
 			return 'curseforge';
 		}
@@ -137,13 +152,12 @@ export function detectManifestFormat(input: unknown): ModpackFormat {
 /**
  * Parses and inspects a Modrinth modrinth.index.json
  */
-export function inspectModrinthManifest(input: unknown): ManifestInspectionResult {
-	const data = asRec(input);
-	const name = str(data.name, 'Unnamed Modrinth Modpack');
-	const version = str(data.versionId, '') || str(data.version, '1.0.0');
-	const summary = str(data.summary);
-	const deps = asRec(data.dependencies);
-	const gameVersion = str(deps.minecraft, 'Unknown');
+export function inspectModrinthManifest(data: ManifestJson): ManifestInspectionResult {
+	const name = jsonStr(data.name, 'Unnamed Modrinth Modpack');
+	const version = jsonStr(data.versionId || data.version, '1.0.0');
+	const summary = jsonStr(data.summary);
+	const deps = jsonRecord(data.dependencies);
+	const gameVersion = jsonStr(deps.minecraft, 'Unknown');
 
 	let modLoader = 'vanilla';
 	for (const [key, val] of Object.entries(deps)) {
@@ -158,7 +172,7 @@ export function inspectModrinthManifest(input: unknown): ManifestInspectionResul
 		}
 	}
 
-	const files: unknown[] = Array.isArray(data.files) ? data.files : [];
+	const files = jsonFileList(data.files);
 	const mods: InspectedMod[] = [];
 
 	let universalCount = 0;
@@ -166,13 +180,12 @@ export function inspectModrinthManifest(input: unknown): ManifestInspectionResul
 	let serverOnlyCount = 0;
 	const unknownCount = 0;
 
-	for (const rawFile of files) {
-		const file = asRec(rawFile);
-		const filePath = str(file.path);
+	for (const file of files) {
+		const filePath = jsonStr(file.path);
 		const fileName = filePath.split('/').pop() || filePath;
-		const env = asRec(file.env);
-		const clientEnv = str(env.client, 'required');
-		const serverEnv = str(env.server, 'required');
+		const env = jsonRecord(file.env);
+		const clientEnv = jsonStr(env.client, 'required');
+		const serverEnv = jsonStr(env.server, 'required');
 
 		let resolvedEnv: ModEnvironment = 'both';
 		if (serverEnv === 'unsupported') {
@@ -193,10 +206,10 @@ export function inspectModrinthManifest(input: unknown): ManifestInspectionResul
 			env: resolvedEnv,
 			required: clientEnv === 'required' || serverEnv === 'required',
 			downloadUrl:
-				Array.isArray(file.downloads) && typeof file.downloads[0] === 'string'
-					? file.downloads[0]
+				Array.isArray(file.downloads) && file.downloads.length > 0
+					? jsonStr(file.downloads[0])
 					: undefined,
-			hashes: isStrRec(file.hashes) ? file.hashes : undefined,
+			hashes: file.hashes as Record<string, string> | undefined,
 			fileSize: typeof file.fileSize === 'number' ? file.fileSize : undefined
 		});
 	}
@@ -221,21 +234,19 @@ export function inspectModrinthManifest(input: unknown): ManifestInspectionResul
 /**
  * Parses and inspects a CurseForge manifest.json
  */
-export function inspectCurseForgeManifest(input: unknown): ManifestInspectionResult {
-	const data = asRec(input);
-	const name = str(data.name, 'Unnamed CurseForge Modpack');
-	const version = str(data.version, '1.0.0');
-	const mc = asRec(data.minecraft);
-	const gameVersion = str(mc.version, 'Unknown');
+export function inspectCurseForgeManifest(data: ManifestJson): ManifestInspectionResult {
+	const name = jsonStr(data.name, 'Unnamed CurseForge Modpack');
+	const version = jsonStr(data.version, '1.0.0');
+	const mc = jsonRecord(data.minecraft);
+	const gameVersion = jsonStr(mc.version, 'Unknown');
 
 	let modLoader = 'vanilla';
-	const loaders = Array.isArray(mc.modLoaders) ? mc.modLoaders.map(asRec) : [];
-	if (loaders.length > 0) {
-		const primary = loaders.find((l) => l.primary === true) ?? loaders[0];
-		modLoader = str(primary?.id, 'custom');
+	if (Array.isArray(mc.modLoaders) && mc.modLoaders.length > 0) {
+		const primary = mc.modLoaders.find((l) => (l as ManifestJson).primary) || mc.modLoaders[0];
+		modLoader = jsonStr((primary as ManifestJson).id, 'custom');
 	}
 
-	const files: unknown[] = Array.isArray(data.files) ? data.files : [];
+	const files = jsonFileList(data.files);
 	const mods: InspectedMod[] = [];
 
 	let universalCount = 0;
@@ -243,17 +254,16 @@ export function inspectCurseForgeManifest(input: unknown): ManifestInspectionRes
 	let serverOnlyCount = 0;
 	const unknownCount = 0;
 
-	for (const rawFile of files) {
-		const file = asRec(rawFile);
-		const projId = strNum(file.projectID ?? file.projectId);
-		const fId = strNum(file.fileID ?? file.fileId);
+	for (const file of files) {
+		const projId = (file.projectID ?? file.projectId ?? '') as string | number;
+		const fId = (file.fileID ?? file.fileId ?? '') as string | number;
 		const req = file.required !== false;
 
 		// Fallback environment classification based on name/hints if available
 		let resolvedEnv: ModEnvironment = 'unknown';
 
 		// If filename or name exists in file object
-		const displayName = str(file.name) || `Mod #${String(projId)}`;
+		const displayName = jsonStr(file.name) || `Mod #${projId}`;
 		if (KNOWN_CLIENT_ONLY_PATTERNS.some((p) => p.test(displayName))) {
 			resolvedEnv = 'client';
 			clientOnlyCount++;
@@ -299,16 +309,18 @@ export function inspectManifest(input: string | object): ManifestInspectionResul
 		try {
 			data = JSON.parse(input);
 		} catch (err) {
-			const detail = err instanceof Error ? err.message : String(err);
-			throw new Error(`Failed to parse manifest JSON: ${detail}`);
+			throw new Error(
+				`Failed to parse manifest JSON: ${err instanceof Error ? err.message : String(err)}`
+			);
 		}
 	}
 
-	const format = detectManifestFormat(data);
+	const manifest = data as ManifestJson;
+	const format = detectManifestFormat(manifest);
 	if (format === 'modrinth') {
-		return inspectModrinthManifest(data);
+		return inspectModrinthManifest(manifest);
 	} else if (format === 'curseforge') {
-		return inspectCurseForgeManifest(data);
+		return inspectCurseForgeManifest(manifest);
 	}
 
 	throw new Error(
@@ -323,10 +335,9 @@ export function exportServerManifest(inspection: ManifestInspectionResult): stri
 	const serverMods = inspection.mods.filter((m) => m.env === 'server' || m.env === 'both');
 
 	if (inspection.format === 'modrinth') {
-		const rawCopy = asRec(JSON.parse(JSON.stringify(inspection.raw)));
-		const rawFiles: unknown[] = Array.isArray(rawCopy.files) ? rawCopy.files : [];
-		rawCopy.files = rawFiles.filter((f) => {
-			const env = asRec(asRec(f).env);
+		const rawCopy = JSON.parse(JSON.stringify(inspection.raw));
+		rawCopy.files = (rawCopy.files || []).filter((f: ManifestJson) => {
+			const env = jsonRecord(f.env);
 			return env.server !== 'unsupported';
 		});
 		return JSON.stringify(rawCopy, null, 2);
@@ -337,13 +348,10 @@ export function exportServerManifest(inspection: ManifestInspectionResult): stri
 		const clientOnlyIds = new Set(
 			inspection.mods.filter((m) => m.env === 'client').map((m) => `${m.projectId}:${m.fileId}`)
 		);
-		const rawFiles: unknown[] = Array.isArray(rawCopy.files) ? rawCopy.files : [];
-		rawCopy.files = rawFiles.filter((f) => {
-			const rec = asRec(f);
-			return !clientOnlyIds.has(
-				`${String(rec.projectID ?? rec.projectId)}:${String(rec.fileID ?? rec.fileId)}`
-			);
-		});
+		rawCopy.files = (rawCopy.files || []).filter(
+			(f: ManifestJson) =>
+				!clientOnlyIds.has(`${f.projectID ?? f.projectId}:${f.fileID ?? f.fileId}`)
+		);
 		return JSON.stringify(rawCopy, null, 2);
 	}
 
