@@ -67,12 +67,21 @@ func TestUnregisterThenSendDoesNotPanic(t *testing.T) {
 		// Real disconnect path.
 		h.unregister <- c
 
-		// Now hammer every send path. With done closed these must all drop
-		// promptly; with send closed the very first one panics.
+		// Control messages wait for buffer space rather than dropping like log
+		// lines (MINE-165), and sendControl does not observe done. So the
+		// invariant under test is bounded completion, not immediate return.
+		// Shrink the bound so the hammer stays fast.
+		prevTimeout := controlSendTimeout
+		controlSendTimeout = 20 * time.Millisecond
+		defer func() { controlSendTimeout = prevTimeout }()
+
+		// Now hammer every send path. None may panic, and all must finish
+		// within the bounded control-send budget; with send closed the very
+		// first one panics.
 		work := make(chan struct{})
 		go func() {
 			defer close(work)
-			for i := 0; i < 500; i++ {
+			for i := 0; i < 50; i++ {
 				c.sendLog("s1", &v1.LogEntry{Message: "after disconnect"})
 				c.sendMessage(&v1.WebSocketServerMessage{
 					Type:    v1.WSMessageType_WS_MESSAGE_TYPE_LOGS,
@@ -84,7 +93,7 @@ func TestUnregisterThenSendDoesNotPanic(t *testing.T) {
 
 		select {
 		case <-work:
-		case <-time.After(5 * time.Second):
+		case <-time.After(15 * time.Second):
 			t.Fatalf("attempt %d: send path blocked after unregister", attempt)
 		}
 

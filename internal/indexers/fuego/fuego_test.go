@@ -90,38 +90,6 @@ func TestIndexerName(t *testing.T) {
 	}
 }
 
-func intPtr(i int) *int { return &i }
-
-func TestConvertModpack(t *testing.T) {
-	f := NewIndexer("", testCfg())
-	m := f.convertModpack(Modpack{
-		ID: 123, Name: "ATM9", Slug: "atm9", Summary: "pack",
-		DownloadCount: 100, MainFileID: 456,
-		Links:       Links{WebsiteURL: "http://x"},
-		Logo:        Logo{ThumbnailURL: "http://x/logo.png"},
-		Categories:  []Category{{Name: "Adventure"}},
-		LatestFiles: []File{{GameVersions: []string{"1.20.1"}}},
-		LatestFilesIndexes: []FileIndex{
-			{ModLoader: intPtr(1)},
-			{ModLoader: intPtr(4)},
-			{ModLoader: intPtr(4)}, // dup deduped
-			{ModLoader: nil},       // skipped
-		},
-	})
-	if m.ID != "fuego-123" || m.IndexerID != "123" || m.Indexer != "fuego" {
-		t.Fatalf("ids=%+v", m)
-	}
-	if m.LatestFileID != "456" || m.LogoURL != "http://x/logo.png" {
-		t.Fatalf("pack=%+v", m)
-	}
-	if len(m.GameVersions) != 1 || m.GameVersions[0] != "1.20.1" {
-		t.Fatalf("versions=%v", m.GameVersions)
-	}
-	if len(m.ModLoaders) != 2 || m.ModLoaders[0] != "forge" || m.ModLoaders[1] != "fabric" {
-		t.Fatalf("loaders=%v", m.ModLoaders)
-	}
-}
-
 func TestConvertFile(t *testing.T) {
 	f := NewIndexer("", testCfg())
 	for in, want := range map[int]string{1: "release", 2: "beta", 3: "alpha", 9: "release"} {

@@ -64,6 +64,8 @@
 	let showFavorites = $state(false);
 	let showUploaded = $state(false);
 	let showManifestInspector = $state(false);
+	// Indexer health drives the "indexers offline" banner and the per-indexer
+	// counts below; loaders populate the filter dropdown.
 	let indexerStatus = $state<GetIndexerStatusResponse | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let uploading = $state(false);
@@ -82,7 +84,7 @@
 	let remoteModLoader = $state('');
 	let remoteAuthToken = $state('');
 
-	// Dynamic game versions and mod loaders from API
+	// Dynamic game versions from API
 	let gameVersions = $state<string[]>([]);
 	let modLoaders = $state<Array<{ value: string; label: string }>>([
 		{ value: '', label: 'All Loaders' }
@@ -499,7 +501,7 @@
 				kind="ghost"
 				size="sm"
 				class="h-7 rounded-none text-xs"
-				href="/settings?tab=api-keys"
+				href={resolve('/settings?tab=api-keys')}
 			>
 				<Settings class="mr-1 h-3.5 w-3.5" />
 				Custom API Key
@@ -739,7 +741,7 @@
 				<div class="mt-4 flex items-center justify-between gap-2 border-t border-[#393939] pt-3">
 					<div class="flex items-center gap-1">
 						{#if modpack.websiteUrl}
-							<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external modpack homepage URL used directly; resolve() throws on non-absolute pathnames -->
 							<a href={modpack.websiteUrl} target="_blank" rel="noopener noreferrer">
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 								<CarbonButton kind="ghost" size="sm" class="rounded-none">

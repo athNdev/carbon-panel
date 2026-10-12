@@ -234,10 +234,8 @@
 				mods = data.results || [];
 			}
 		} catch (err) {
-			if (!searchSequence.isCurrent(seq)) return;
 			console.error('Failed to search mods:', err);
-			const message = err instanceof Error ? err.message : '';
-			searchError = `Failed to search mods: ${message || 'Please verify server connection.'}`;
+			searchError = `Failed to search mods: ${(err instanceof Error ? err.message : undefined) || 'Please verify server connection.'}`;
 		} finally {
 			if (searchSequence.isCurrent(seq)) searching = false;
 		}
@@ -709,7 +707,7 @@
 								This mod specifies {selectedVersion.dependencies.length} upstream dependency/dependencies:
 							</p>
 							<div class="space-y-1.5 pt-1">
-								{#each selectedVersion.dependencies as dep (dep.project_id)}
+								{#each selectedVersion.dependencies as dep (dep.project_id ?? dep.title)}
 									<div class="flex items-center gap-2 text-xs">
 										<Badge variant="outline" class="font-mono text-xs">
 											{dep.dependency_type}

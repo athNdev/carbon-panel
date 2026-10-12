@@ -137,7 +137,7 @@
 		} catch (err) {
 			console.error('Failed to export modpack:', err);
 			toast.error(
-				`Export failed: ${(err instanceof Error ? err.message : '') || 'Unauthorized or server error'}`
+				`Export failed: ${(err instanceof Error ? err.message : undefined) || 'Unauthorized or server error'}`
 			);
 		} finally {
 			exportingPack = null;
@@ -184,10 +184,10 @@
 			const created = await res.json();
 			toast.success(`Created modpack project "${created.name}"`);
 			createDialogOpen = false;
-			goto(resolve('/modpacks/studio/[id]', { id: created.id }));
+			goto(resolve(`/modpacks/studio/${created.id}`));
 		} catch (err) {
 			console.error('Failed to create pack:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to create pack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to create pack');
 		} finally {
 			creating = false;
 		}
@@ -226,10 +226,10 @@
 			importFile = null;
 			importName = '';
 			await loadPacks();
-			goto(resolve('/modpacks/studio/[id]', { id: imported.id }));
+			goto(resolve(`/modpacks/studio/${imported.id}`));
 		} catch (err) {
 			console.error('Import failed:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to import modpack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to import modpack');
 		} finally {
 			importing = false;
 		}
@@ -246,10 +246,10 @@
 			const cloned = await res.json();
 			toast.success(`Duplicated "${pack.name}"`);
 			await loadPacks();
-			goto(resolve('/modpacks/studio/[id]', { id: cloned.id }));
+			goto(resolve(`/modpacks/studio/${cloned.id}`));
 		} catch (err) {
 			console.error('Clone failed:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to duplicate pack');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to duplicate pack');
 		}
 	}
 
@@ -271,9 +271,7 @@
 			packs = packs.filter((p) => p.id !== pack.id);
 		} catch (err) {
 			console.error('Failed to delete pack:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to delete modpack');
-		} finally {
-			pendingDelete = null;
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to delete modpack');
 		}
 	}
 
@@ -411,8 +409,8 @@
 							<div class="min-w-0 flex-1 space-y-1">
 								<h3 class="truncate text-lg font-semibold">
 									<a
-										href={resolve('/modpacks/studio/[id]', { id: pack.id })}
-										class="text-white transition-colors hover:text-accent-text"
+										href={resolve(`/modpacks/studio/${pack.id}`)}
+										class="text-white transition-colors hover:text-[#0f62fe]"
 									>
 										{pack.name}
 									</a>
@@ -501,7 +499,7 @@
 								kind="primary"
 								size="sm"
 								class="h-8 rounded-none text-xs"
-								onclick={() => goto(resolve('/modpacks/studio/[id]', { id: pack.id }))}
+								onclick={() => goto(resolve(`/modpacks/studio/${pack.id}`))}
 							>
 								Open Studio
 							</CarbonButton>

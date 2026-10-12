@@ -100,7 +100,7 @@
 			await loadChanges();
 		} catch (err) {
 			console.error('Failed to stage change:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to stage change');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Failed to stage change');
 		} finally {
 			staging = false;
 		}
@@ -120,7 +120,9 @@
 			await loadChanges();
 		} catch (err) {
 			console.error('Failed to apply staged change:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to apply staged change');
+			toast.error(
+				(err instanceof Error ? err.message : undefined) || 'Failed to apply staged change'
+			);
 		} finally {
 			applyingId = null;
 		}
@@ -146,9 +148,9 @@
 			await loadChanges();
 		} catch (err) {
 			console.error('Failed to discard staged change:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Failed to discard staged change');
-		} finally {
-			pendingDiscard = null;
+			toast.error(
+				(err instanceof Error ? err.message : undefined) || 'Failed to discard staged change'
+			);
 		}
 	}
 

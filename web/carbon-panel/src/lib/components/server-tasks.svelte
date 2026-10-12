@@ -541,7 +541,7 @@
 				const prev: Record<string, unknown> = JSON.parse(selectedTask.config || '{}');
 				if (prev.secret) cfg.secret = prev.secret;
 			} catch {
-				// Corrupt stored config: fall through without a secret.
+				// Previous config is not JSON — the secret simply stays unset.
 			}
 		}
 		return JSON.stringify(cfg);

@@ -97,7 +97,7 @@
 			}
 		} catch (err) {
 			console.error('Failed to deploy modpack:', err);
-			toast.error((err instanceof Error ? err.message : '') || 'Deployment failed');
+			toast.error((err instanceof Error ? err.message : undefined) || 'Deployment failed');
 		} finally {
 			deploying = false;
 		}

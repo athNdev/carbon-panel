@@ -229,8 +229,9 @@
 			}
 		} catch (err) {
 			console.error('Live migration failed:', err);
-			const message = err instanceof Error ? err.message : '';
-			toast.error(`Migration failed: ${message || 'Unknown error'}`);
+			toast.error(
+				`Migration failed: ${(err instanceof Error ? err.message : undefined) || 'Unknown error'}`
+			);
 		} finally {
 			migrating = false;
 			migrationStep = '';
