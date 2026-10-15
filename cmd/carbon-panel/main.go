@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -29,6 +28,8 @@ import (
 
 func main() {
 	var configPath = flag.String("config", "./config.yaml", "Path to configuration file")
+	printRecoveryKey := flag.Bool("print-recovery-key", false,
+		"Print the recovery key to stderr on startup (off by default: the key bypasses authentication)")
 	flag.Parse()
 
 	// Load configuration
@@ -267,15 +268,17 @@ func main() {
 	// Initialize RPC server with full configuration
 	rpcServer := rpc.NewServer(store, dockerClient, sender, cfg, proxyManager, taskScheduler, metricsCollector, moduleManager, eventBus, log, clientPool, placementEngine)
 
-	// Print recovery key
+	// Persist the recovery key and tell the operator where it is.
+	//
+	// The secret is deliberately NOT echoed by default: process output is
+	// routinely captured into container logs, journald or a log shipper, and
+	// the key bypasses authentication. See recovery.go.
 	if key := rpcServer.RecoveryKey(); key != "" {
-		fmt.Fprintf(os.Stderr, "\nâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n")
-		fmt.Fprintf(os.Stderr, "RECOVERY KEY (use to reset panel access if locked out)\n")
-		fmt.Fprintf(os.Stderr, "%s\n", key)
-		fmt.Fprintf(os.Stderr, "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n\n")
-		keyPath := filepath.Join(cfg.Storage.DataDir, "recovery.key")
-		if err := os.WriteFile(keyPath, []byte(key), 0600); err != nil {
+		keyPath, err := writeRecoveryKey(cfg.Storage.DataDir, key)
+		if err != nil {
 			log.Error("Failed to write recovery key file: %v", err)
+		} else {
+			announceRecoveryKey(os.Stderr, key, keyPath, recoveryKeyPrintAllowed(*printRecoveryKey, os.LookupEnv))
 		}
 	}
 
