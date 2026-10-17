@@ -58,6 +58,7 @@ type Server struct {
 	uploadManager    *upload.Manager
 	downloadManager  *download.Manager
 	wsHub            *ws.Hub
+	metricsHandler   *handlers.MetricsHandler
 
 	// startedAt is the server construction time, surfaced by /healthz and
 	// /readyz as an uptime.
@@ -251,8 +252,13 @@ func (s *Server) setupHandler() {
 	// Scheduled/staged config rollout for instances (staged diffs applied on restart or cron)
 	mux.Handle("/api/v1/staged-config/", handlers.NewStagedConfigHandler(s.store, s.log, s.authManager, s.enforcer))
 
-	// Prometheus OpenMetrics snapshots (MINE-144)
-	mux.Handle("/api/v2/metrics/", handlers.NewMetricsHandler(s.store, s.metricsCollector, s.authManager, s.enforcer, s.log))
+	// Prometheus OpenMetrics snapshots (MINE-144, PERF-5, SCH-6)
+	metricsHandler := handlers.NewMetricsHandler(s.store, s.metricsCollector, s.authManager, s.enforcer, s.log)
+	if s.clientPool != nil {
+		metricsHandler.SetDockerPool(s.clientPool)
+	}
+	s.metricsHandler = metricsHandler
+	mux.Handle("/api/v2/metrics/", metricsHandler)
 
 	// Serve frontend for non-RPC routes
 	s.setupFrontend(mux)
@@ -629,5 +635,12 @@ func (s *Server) MigrateServerLogSubscriptions(serverID, oldContainerID, newCont
 
 	if s.wsHub != nil {
 		s.wsHub.MigrateServerContainer(serverID, newContainerID)
+	}
+}
+
+// SetHibernationManager attaches the HibernationManager to expose hibernation metrics (SCH-6).
+func (s *Server) SetHibernationManager(m *docker.HibernationManager) {
+	if s.metricsHandler != nil {
+		s.metricsHandler.SetHibernationManager(m)
 	}
 }
