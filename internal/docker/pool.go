@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -23,6 +24,23 @@ type NodeStore interface {
 	UpdateNode(ctx context.Context, node *models.Node) error
 }
 
+// PoolStats tracks telemetry for Docker client pool access (PERF-5).
+type PoolStats struct {
+	TotalRequests uint64
+	CacheHits     uint64
+	CacheMisses   uint64
+	Fallbacks     uint64
+	CreateErrors  uint64
+}
+
+type poolStatsInternal struct {
+	totalRequests uint64
+	cacheHits     uint64
+	cacheMisses   uint64
+	fallbacks     uint64
+	createErrors  uint64
+}
+
 // ClientPool manages Docker client instances for multiple nodes concurrently.
 type ClientPool struct {
 	mu            sync.RWMutex
@@ -35,6 +53,7 @@ type ClientPool struct {
 	defaultNodeID string
 	stopChan      chan struct{}
 	checkerActive bool
+	stats         poolStatsInternal
 }
 
 // NewClientPool creates a new multi-node Docker ClientPool.
@@ -86,6 +105,17 @@ func (p *ClientPool) GetDefaultClient() *Client {
 	return p.clients[p.defaultNodeID]
 }
 
+// Stats returns a point-in-time snapshot of the ClientPool metrics.
+func (p *ClientPool) Stats() PoolStats {
+	return PoolStats{
+		TotalRequests: atomic.LoadUint64(&p.stats.totalRequests),
+		CacheHits:     atomic.LoadUint64(&p.stats.cacheHits),
+		CacheMisses:   atomic.LoadUint64(&p.stats.cacheMisses),
+		Fallbacks:     atomic.LoadUint64(&p.stats.fallbacks),
+		CreateErrors:  atomic.LoadUint64(&p.stats.createErrors),
+	}
+}
+
 // GetClient retrieves the Docker client for the given nodeID.
 // If the node cannot be found, the store is unavailable, or its client cannot be
 // created, it gracefully falls back to the default client (typically the local
@@ -100,9 +130,12 @@ func (p *ClientPool) GetDefaultClient() *Client {
 // truly acceptable (e.g. read-only status checks where local UI needs to
 // degrade gracefully) and other code may already depend on this behavior.
 func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
+	atomic.AddUint64(&p.stats.totalRequests, 1)
+
 	if nodeID == "" || nodeID == p.defaultNodeID {
 		def := p.GetDefaultClient()
 		if def != nil {
+			atomic.AddUint64(&p.stats.cacheHits, 1)
 			return def, nil
 		}
 	}
@@ -112,11 +145,15 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	cli, exists := p.clients[nodeID]
 	p.mu.RUnlock()
 	if exists && cli != nil {
+		atomic.AddUint64(&p.stats.cacheHits, 1)
 		return cli, nil
 	}
 
+	atomic.AddUint64(&p.stats.cacheMisses, 1)
+
 	if p.store == nil {
 		if p.defaultClient != nil {
+			atomic.AddUint64(&p.stats.fallbacks, 1)
 			p.log.Warn("NodeStore is nil; falling back to default Docker client for node: %s", nodeID)
 			return p.defaultClient, nil
 		}
@@ -126,6 +163,7 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	node, err := p.store.GetNode(context.Background(), nodeID)
 	if err != nil {
 		if p.defaultClient != nil {
+			atomic.AddUint64(&p.stats.fallbacks, 1)
 			p.log.Warn("Node %q not found in store (%v); falling back to default Docker client", nodeID, err)
 			return p.defaultClient, nil
 		}
@@ -137,7 +175,9 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	// would stall every other node's callers behind an unresponsive daemon.
 	newCli, err := p.createClientForNode(node)
 	if err != nil {
+		atomic.AddUint64(&p.stats.createErrors, 1)
 		if p.defaultClient != nil {
+			atomic.AddUint64(&p.stats.fallbacks, 1)
 			p.log.Warn("Failed to create client for node %q (%v); falling back to default Docker client", nodeID, err)
 			return p.defaultClient, nil
 		}
@@ -164,9 +204,12 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 // when the requested node is unavailable. See GetClient's doc comment for why the
 // fallback there is risky.
 func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
+	atomic.AddUint64(&p.stats.totalRequests, 1)
+
 	if nodeID == "" || nodeID == p.defaultNodeID {
 		def := p.GetDefaultClient()
 		if def != nil {
+			atomic.AddUint64(&p.stats.cacheHits, 1)
 			return def, nil
 		}
 	}
@@ -175,8 +218,11 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 	cli, exists := p.clients[nodeID]
 	p.mu.RUnlock()
 	if exists && cli != nil {
+		atomic.AddUint64(&p.stats.cacheHits, 1)
 		return cli, nil
 	}
+
+	atomic.AddUint64(&p.stats.cacheMisses, 1)
 
 	if p.store == nil {
 		return nil, fmt.Errorf("node store is nil and client not found for node: %s", nodeID)
@@ -191,6 +237,7 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 	// API-version ping cannot stall callers for other nodes.
 	newCli, err := p.createClientForNode(node)
 	if err != nil {
+		atomic.AddUint64(&p.stats.createErrors, 1)
 		return nil, fmt.Errorf("failed to create client for node %s: %w", nodeID, err)
 	}
 

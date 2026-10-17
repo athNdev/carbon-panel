@@ -42,6 +42,7 @@ func TestIsAliveContainerState(t *testing.T) {
 		container.StateRunning,
 		container.StateRestarting,
 		container.StatePaused,
+		container.StateCreated,
 	}
 	for _, s := range alive {
 		if !isAliveContainerState(s) {
@@ -50,7 +51,6 @@ func TestIsAliveContainerState(t *testing.T) {
 	}
 
 	stale := []container.ContainerState{
-		container.StateCreated,
 		container.StateExited,
 		container.StateDead,
 		container.StateRemoving,

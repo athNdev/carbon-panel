@@ -58,3 +58,20 @@ test('CarbonModal enforces dialog semantics, keyboard trap, and ARIA attributes'
 		'CarbonModal must listen for global keydown'
 	);
 });
+
+test('icon-only buttons in server-files, ModuleLogsDialog, ServerModules, and AliasHelper declare aria-label', () => {
+	const components = [
+		'components/files/server-files.svelte',
+		'components/server/ModuleLogsDialog.svelte',
+		'components/server/ServerModules.svelte',
+		'components/server-tasks.svelte',
+		'components/support-settings.svelte',
+		'components/ui/AliasHelper.svelte'
+	];
+	const srcDir = path.resolve(import.meta.dirname, '..');
+	for (const comp of components) {
+		const fullPath = path.join(srcDir, comp);
+		const content = fs.readFileSync(fullPath, 'utf-8');
+		assert.ok(content.includes('aria-label='), `${comp} must declare aria-label on icon buttons`);
+	}
+});
