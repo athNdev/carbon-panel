@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
@@ -304,34 +305,113 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("upload.max_upload_size", 0)              // unlimited
 }
 
+// Validate performs semantic and boundary validation of the configuration (CFG-1).
+func (c *Config) Validate() error {
+	return validateConfig(c)
+}
+
 func validateConfig(cfg *Config) error {
-	// Expand paths to absolute
+	if cfg == nil {
+		return fmt.Errorf("config cannot be nil")
+	}
+
+	// Validate server settings
+	if cfg.Server.Port != "" {
+		portNum, err := strconv.Atoi(cfg.Server.Port)
+		if err != nil || portNum < 1 || portNum > 65535 {
+			return fmt.Errorf("server port must be a valid port number between 1 and 65535, got %q", cfg.Server.Port)
+		}
+	}
+	if cfg.Server.ReadTimeout < 0 || cfg.Server.WriteTimeout < 0 || cfg.Server.IdleTimeout < 0 {
+		return fmt.Errorf("server timeouts cannot be negative")
+	}
+
+	// Validate database settings
+	if strings.TrimSpace(cfg.Database.Path) == "" {
+		return fmt.Errorf("database path cannot be empty")
+	}
 	var err error
 	cfg.Database.Path, err = filepath.Abs(cfg.Database.Path)
 	if err != nil {
 		return fmt.Errorf("invalid database path: %w", err)
 	}
 
+	// Validate storage directories
+	if strings.TrimSpace(cfg.Storage.DataDir) == "" {
+		return fmt.Errorf("storage data directory cannot be empty")
+	}
 	cfg.Storage.DataDir, err = filepath.Abs(cfg.Storage.DataDir)
 	if err != nil {
 		return fmt.Errorf("invalid data directory: %w", err)
 	}
 
+	if strings.TrimSpace(cfg.Storage.BackupDir) == "" {
+		return fmt.Errorf("storage backup directory cannot be empty")
+	}
 	cfg.Storage.BackupDir, err = filepath.Abs(cfg.Storage.BackupDir)
 	if err != nil {
 		return fmt.Errorf("invalid backup directory: %w", err)
 	}
 
+	if strings.TrimSpace(cfg.Storage.TempDir) == "" {
+		return fmt.Errorf("storage temp directory cannot be empty")
+	}
 	cfg.Storage.TempDir, err = filepath.Abs(cfg.Storage.TempDir)
 	if err != nil {
 		return fmt.Errorf("invalid temp directory: %w", err)
 	}
 
+	// Validate upload limits
+	if cfg.Upload.SessionTTL <= 0 {
+		return fmt.Errorf("upload session TTL must be positive, got: %d", cfg.Upload.SessionTTL)
+	}
+	if cfg.Upload.DefaultChunkSize <= 0 {
+		return fmt.Errorf("upload default chunk size must be positive, got: %d", cfg.Upload.DefaultChunkSize)
+	}
+	if cfg.Upload.MaxChunkSize < cfg.Upload.DefaultChunkSize {
+		return fmt.Errorf("upload max chunk size (%d) cannot be smaller than default chunk size (%d)", cfg.Upload.MaxChunkSize, cfg.Upload.DefaultChunkSize)
+	}
+
+	// Validate S3 storage settings if enabled
+	if cfg.Storage.S3.Enabled {
+		if strings.TrimSpace(cfg.Storage.S3.Bucket) == "" {
+			return fmt.Errorf("s3 bucket cannot be empty when s3 storage is enabled")
+		}
+	}
+
+	// Validate auth settings
+	if cfg.Auth.SessionTimeout <= 0 {
+		return fmt.Errorf("auth session timeout must be positive, got: %d", cfg.Auth.SessionTimeout)
+	}
+	if cfg.Auth.OIDC.Enabled {
+		if strings.TrimSpace(cfg.Auth.OIDC.IssuerURI) == "" {
+			return fmt.Errorf("oidc issuer URI cannot be empty when oidc is enabled")
+		}
+		if strings.TrimSpace(cfg.Auth.OIDC.ClientID) == "" {
+			return fmt.Errorf("oidc client ID cannot be empty when oidc is enabled")
+		}
+	}
+
 	// Validate port ranges
+	if cfg.Proxy.PortRangeMin < 1 || cfg.Proxy.PortRangeMin > 65535 {
+		return fmt.Errorf("proxy port range min must be between 1 and 65535, got: %d", cfg.Proxy.PortRangeMin)
+	}
+	if cfg.Proxy.PortRangeMax < 1 || cfg.Proxy.PortRangeMax > 65535 {
+		return fmt.Errorf("proxy port range max must be between 1 and 65535, got: %d", cfg.Proxy.PortRangeMax)
+	}
 	if cfg.Proxy.PortRangeMin >= cfg.Proxy.PortRangeMax {
 		return fmt.Errorf("proxy port range min must be less than max")
 	}
+	if cfg.Proxy.ListenPort < 1 || cfg.Proxy.ListenPort > 65535 {
+		return fmt.Errorf("proxy listen port must be between 1 and 65535, got: %d", cfg.Proxy.ListenPort)
+	}
 
+	if cfg.Module.PortRangeMin < 1 || cfg.Module.PortRangeMin > 65535 {
+		return fmt.Errorf("module port range min must be between 1 and 65535, got: %d", cfg.Module.PortRangeMin)
+	}
+	if cfg.Module.PortRangeMax < 1 || cfg.Module.PortRangeMax > 65535 {
+		return fmt.Errorf("module port range max must be between 1 and 65535, got: %d", cfg.Module.PortRangeMax)
+	}
 	if cfg.Module.PortRangeMin >= cfg.Module.PortRangeMax {
 		return fmt.Errorf("module port range min must be less than max")
 	}
