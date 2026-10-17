@@ -274,6 +274,9 @@ func (c *Client) buildModuleEnv(module *models.Module, server *models.Server, al
 		if err := json.Unmarshal([]byte(module.EnvOverrides), &envOverrides); err == nil {
 			for key, value := range envOverrides {
 				resolvedValue := alias.Substitute(value, aliasCtx)
+				if alias.HasUnresolvedVariables(resolvedValue) {
+					c.log.Warn("Module %s env override %q contains unresolved template variable: %s", module.ID, key, resolvedValue)
+				}
 				env = append(env, fmt.Sprintf("%s=%s", key, resolvedValue))
 			}
 		}
@@ -310,6 +313,12 @@ func (c *Client) parseModuleVolumes(volumeJSON string, aliasCtx *alias.Context) 
 	for i := range volumes {
 		volumes[i].Source = alias.Substitute(volumes[i].Source, aliasCtx)
 		volumes[i].Target = alias.Substitute(volumes[i].Target, aliasCtx)
+		if alias.HasUnresolvedVariables(volumes[i].Source) {
+			c.log.Warn("Module volume source path contains unresolved template variable: %s", volumes[i].Source)
+		}
+		if alias.HasUnresolvedVariables(volumes[i].Target) {
+			c.log.Warn("Module volume target path contains unresolved template variable: %s", volumes[i].Target)
+		}
 	}
 
 	var serverDataPath, backupDir string

@@ -80,8 +80,21 @@ func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
 		if cli, err := s.pool.GetClient(nodeID); err == nil && cli != nil {
 			return cli
 		}
+		if nodeID != "" && nodeID != "local" && nodeID != s.pool.GetDefaultNodeID() {
+			return nil
+		}
 	}
 	return s.docker
+}
+
+func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, error) {
+	if s.pool != nil {
+		return s.pool.GetClientStrict(nodeID)
+	}
+	if s.docker != nil {
+		return s.docker, nil
+	}
+	return nil, fmt.Errorf("no docker client available")
 }
 
 // SetClientPool sets the client pool on the service
@@ -476,9 +489,11 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 
 		if server.ContainerID != "" {
 			dockerCli := s.getDockerClient(server.NodeID)
-			status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
-			if err == nil && !preserveStoredStatus(server.Status, status) {
-				server.Status = status
+			if dockerCli != nil {
+				status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
+				if err == nil && !preserveStoredStatus(server.Status, status) {
+					server.Status = status
+				}
 			}
 
 			// Apply cached metrics from the background collector
@@ -535,11 +550,13 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 	// the HTTP write timeout (the stored status is the fallback).
 	if server.ContainerID != "" {
 		dockerCli := s.getDockerClient(server.NodeID)
-		statusCtx, cancelStatus := context.WithTimeout(ctx, statusRefreshTimeout)
-		status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
-		cancelStatus()
-		if err == nil && !preserveStoredStatus(server.Status, status) {
-			server.Status = status
+		if dockerCli != nil {
+			statusCtx, cancelStatus := context.WithTimeout(ctx, statusRefreshTimeout)
+			status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
+			cancelStatus()
+			if err == nil && !preserveStoredStatus(server.Status, status) {
+				server.Status = status
+			}
 		}
 	}
 
@@ -963,7 +980,15 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
 
 		s.prepareServerConfig(bgCtx, server, serverConfig)
-		dockerCli := s.getDockerClient(server.NodeID)
+		dockerCli, err := s.getDockerClientStrict(server.NodeID)
+		if err != nil {
+			s.log.Error("Failed to get docker client for node %q: %v", server.NodeID, err)
+			server.Status = storage.StatusError
+			if updateErr := s.store.UpdateServer(bgCtx, server); updateErr != nil {
+				s.log.Error("Failed to update server status to error: %v", updateErr)
+			}
+			return
+		}
 		containerID, err := dockerCli.CreateContainer(bgCtx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
@@ -1276,7 +1301,13 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		}
 
 		// Recreate container
-		dockerCli := s.getDockerClient(server.NodeID)
+		dockerCli, err := s.getDockerClientStrict(server.NodeID)
+		if err != nil {
+			s.log.Error("Docker node %q unavailable for recreation: %v", server.NodeID, err)
+			server.Status = storage.StatusError
+			_ = s.store.UpdateServer(ctx, server)
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q unavailable: %w", server.NodeID, err))
+		}
 		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to recreate container: %v", err)
@@ -1343,12 +1374,16 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 	// Stop and remove container
 	if server.ContainerID != "" {
-		dockerCli := s.getDockerClient(server.NodeID)
-		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
+		dockerCli, err := s.getDockerClientStrict(server.NodeID)
+		if err != nil {
+			s.log.Warn("Docker node %q unavailable during deletion of server %s (%v); skipping container removal", server.NodeID, server.ID, err)
+		} else if dockerCli != nil {
+			if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
 			s.log.Error("Failed to stop container: %v", err)
 		}
 		if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil {
 			s.log.Error("Failed to remove container: %v", err)
+		}
 		}
 	}
 
@@ -1373,7 +1408,12 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
-	dockerCli := s.getDockerClient(server.NodeID)
+	dockerCli, err := s.getDockerClientStrict(server.NodeID)
+	if err != nil {
+		server.Status = storage.StatusError
+		_ = s.store.UpdateServer(ctx, server)
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
 
 	// If server is paused, unpause container (MINE-172)
 	if server.Status == storage.StatusPaused && server.ContainerID != "" {
@@ -1533,7 +1573,10 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	}
 
 	// Stop container
-	dockerCli := s.getDockerClient(server.NodeID)
+	dockerCli, err := s.getDockerClientStrict(server.NodeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
 	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
 	if err != nil {
 		s.log.Error("Failed to stop container: %v", err)
@@ -1581,7 +1624,10 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
-	dockerCli := s.getDockerClient(server.NodeID)
+	dockerCli, err := s.getDockerClientStrict(server.NodeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
 
 	// If container doesn't exist, create it and start it
 	if server.ContainerID == "" {
@@ -1686,7 +1732,10 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	}
 
 	// Recreate container
-	dockerCli := s.getDockerClient(server.NodeID)
+	dockerCli, err := s.getDockerClientStrict(server.NodeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
 	result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 	if err != nil {
 		s.log.Error("Failed to recreate container: %v", err)
@@ -1758,7 +1807,10 @@ func (s *ServerService) SendCommand(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("server container not found"))
 	}
 
-	dockerCli := s.getDockerClient(server.NodeID)
+	dockerCli, err := s.getDockerClientStrict(server.NodeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
 	status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 	if err != nil || status != storage.StatusRunning {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("server is not running"))
@@ -2096,8 +2148,18 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 		}
 	}
 
-	sourceDockerCli := s.getDockerClient(sourceNodeID)
-	targetDockerCli := s.getDockerClient(targetNodeID)
+	var sourceDockerCli, targetDockerCli *docker.Client
+	if s.pool != nil || s.docker != nil {
+		var err error
+		sourceDockerCli, err = s.getDockerClientStrict(sourceNodeID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("source docker node %q is unavailable: %w", sourceNodeID, err))
+		}
+		targetDockerCli, err = s.getDockerClientStrict(targetNodeID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("target docker node %q is unavailable: %w", targetNodeID, err))
+		}
+	}
 
 	// Check if server is currently running
 	var isRunning bool
