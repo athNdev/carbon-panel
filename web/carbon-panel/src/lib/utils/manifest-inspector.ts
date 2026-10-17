@@ -106,25 +106,6 @@ const KNOWN_SERVER_ONLY_PATTERNS = [
 	/simple-backup/i
 ];
 
-type JsonRec = Record<string, unknown>;
-
-function asRec(v: unknown): JsonRec {
-	return typeof v === 'object' && v !== null ? (v as JsonRec) : {};
-}
-
-function str(v: unknown, fallback = ''): string {
-	return typeof v === 'string' ? v : fallback;
-}
-
-function strNum(v: unknown, fallback: string | number = ''): string | number {
-	return typeof v === 'string' || typeof v === 'number' ? v : fallback;
-}
-
-function isStrRec(v: unknown): v is Record<string, string> {
-	if (typeof v !== 'object' || v === null) return false;
-	return Object.values(v).every((x) => typeof x === 'string');
-}
-
 /**
  * Detects format of manifest content
  */
