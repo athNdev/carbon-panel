@@ -60,3 +60,13 @@ func TestUpload_MissingFile(t *testing.T) {
 		t.Error("missing file uploaded without error")
 	}
 }
+
+func TestDelete_EmptyKey(t *testing.T) {
+	u, err := NewUploader(appconfig.S3Config{Enabled: true, Bucket: "b"})
+	if err != nil {
+		t.Fatalf("config rejected: %v", err)
+	}
+	if err := u.Delete(context.Background(), ""); err != nil {
+		t.Errorf("empty key delete returned error: %v", err)
+	}
+}
