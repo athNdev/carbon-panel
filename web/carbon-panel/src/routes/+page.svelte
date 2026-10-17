@@ -668,8 +668,12 @@ one at https://mozilla.org/MPL/2.0/.
 															type="button"
 															onclick={() => handleServerAction('start', server)}
 															class="flex h-7 w-7 cursor-pointer items-center justify-center text-[#24a148] transition-colors hover:bg-[#393939] hover:text-[#42be65]"
-															title={server.status === ServerStatus.DEEPSLEEP ? "Wake Server" : "Start Server"}
-															aria-label={server.status === ServerStatus.DEEPSLEEP ? "Wake Server" : "Start Server"}
+															title={server.status === ServerStatus.DEEPSLEEP
+																? 'Wake Server'
+																: 'Start Server'}
+															aria-label={server.status === ServerStatus.DEEPSLEEP
+																? 'Wake Server'
+																: 'Start Server'}
 														>
 															<PlayCircle class="h-4 w-4" />
 														</button>
