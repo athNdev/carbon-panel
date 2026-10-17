@@ -13,12 +13,18 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/athNdev/carbon-panel/internal/config"
 	models "github.com/athNdev/carbon-panel/internal/db"
+)
+
+var (
+	templateVarRegex  = regexp.MustCompile(`\{\{\s*([^{}\s]+)\s*\}\}`)
+	validVarPathRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$`)
 )
 
 // Category groups aliases by their source type
@@ -358,11 +364,26 @@ func generateDescription(fieldName, prefix string) string {
 	return fmt.Sprintf("The %s's %s", prefix, desc)
 }
 
+// normalizeTemplateWhitespace trims leading and trailing whitespace inside {{ ... }}
+func normalizeTemplateWhitespace(input string) string {
+	if !strings.Contains(input, "{{") {
+		return input
+	}
+	return templateVarRegex.ReplaceAllStringFunc(input, func(m string) string {
+		sub := templateVarRegex.FindStringSubmatch(m)
+		if len(sub) > 1 {
+			return "{{" + strings.TrimSpace(sub[1]) + "}}"
+		}
+		return m
+	})
+}
+
 // Substitute replaces all alias placeholders in a string with reflected/resolved values
 func Substitute(input string, ctx *Context) string {
 	if !strings.Contains(input, "{{") {
 		return input
 	}
+	input = normalizeTemplateWhitespace(input)
 
 	if ctx == nil {
 		ctx = NewContext()
@@ -567,4 +588,150 @@ func getModuleFieldValue(module *models.Module, field string) string {
 	}
 
 	return ""
+}
+
+// ExtractTemplateVariables finds all {{ ... }} template variables and returns their paths.
+// Whitespace around the variable name is trimmed and duplicates are removed preserving order.
+func ExtractTemplateVariables(input string) []string {
+	matches := templateVarRegex.FindAllStringSubmatch(input, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]bool)
+	var vars []string
+	for _, m := range matches {
+		if len(m) > 1 {
+			v := strings.TrimSpace(m[1])
+			if v != "" && !seen[v] {
+				seen[v] = true
+				vars = append(vars, v)
+			}
+		}
+	}
+	return vars
+}
+
+// HasUnresolvedVariables returns true if input contains any unresolved template variables.
+func HasUnresolvedVariables(input string) bool {
+	return len(ExtractTemplateVariables(input)) > 0
+}
+
+// ValidateTemplate checks template string syntax, balanced delimiters, and variable prefixes.
+func ValidateTemplate(input string) ([]string, error) {
+	openCount := strings.Count(input, "{{")
+	closeCount := strings.Count(input, "}}")
+	if openCount != closeCount {
+		return nil, fmt.Errorf("unbalanced template delimiters: %d open vs %d close", openCount, closeCount)
+	}
+
+	idx := 0
+	for {
+		start := strings.Index(input[idx:], "{{")
+		if start == -1 {
+			break
+		}
+		start += idx
+		end := strings.Index(input[start:], "}}")
+		if end == -1 {
+			return nil, fmt.Errorf("unclosed template delimiter at index %d", start)
+		}
+		end += start
+
+		inner := input[start+2 : end]
+		if strings.Contains(inner, "{{") {
+			return nil, fmt.Errorf("nested template delimiter detected at index %d", start)
+		}
+
+		trimmed := strings.TrimSpace(inner)
+		if trimmed == "" {
+			return nil, fmt.Errorf("empty template variable at index %d", start)
+		}
+
+		idx = end + 2
+	}
+
+	afterIdx := 0
+	for {
+		closeIdx := strings.Index(input[afterIdx:], "}}")
+		if closeIdx == -1 {
+			break
+		}
+		closeIdx += afterIdx
+		lastOpen := strings.LastIndex(input[:closeIdx], "{{")
+		if lastOpen == -1 {
+			return nil, fmt.Errorf("stray closing template delimiter at index %d", closeIdx)
+		}
+		afterIdx = closeIdx + 2
+	}
+
+	vars := ExtractTemplateVariables(input)
+	for _, v := range vars {
+		if !validVarPathRegex.MatchString(v) {
+			return vars, fmt.Errorf("invalid template variable path %q", v)
+		}
+		parts := strings.Split(v, ".")
+		root := parts[0]
+		switch root {
+		case "host", "config", "server", "module", "modules":
+			// valid root
+		default:
+			return vars, fmt.Errorf("invalid template variable prefix %q in variable %q", root, v)
+		}
+	}
+
+	return vars, nil
+}
+
+// ValidateTemplateVariables validates template syntax and checks that all variables can be resolved with ctx.
+func ValidateTemplateVariables(input string, ctx *Context) ([]string, error) {
+	vars, err := ValidateTemplate(input)
+	if err != nil {
+		return vars, err
+	}
+
+	if ctx == nil {
+		ctx = NewContext()
+	}
+	ctx.populateComputed()
+
+	var unresolved []string
+	for _, v := range vars {
+		parts := strings.Split(v, ".")
+		root := parts[0]
+		switch root {
+		case "modules":
+			if len(parts) < 3 || ctx.Modules == nil || ctx.Modules[parts[1]] == nil {
+				unresolved = append(unresolved, v)
+			}
+		case "server":
+			if ctx.Server == nil {
+				unresolved = append(unresolved, v)
+			} else if len(parts) > 1 && parts[1] == "config" {
+				if ctx.ServerConfig == nil {
+					unresolved = append(unresolved, v)
+				}
+			}
+		case "module":
+			if ctx.Module == nil {
+				unresolved = append(unresolved, v)
+			}
+		case "config":
+			if ctx.Config == nil {
+				unresolved = append(unresolved, v)
+			}
+		case "host":
+			if ctx.Host == nil {
+				unresolved = append(unresolved, v)
+			}
+		default:
+			unresolved = append(unresolved, v)
+		}
+	}
+
+	if len(unresolved) > 0 {
+		return unresolved, fmt.Errorf("unresolved template variables: %s", strings.Join(unresolved, ", "))
+	}
+
+	return vars, nil
 }
