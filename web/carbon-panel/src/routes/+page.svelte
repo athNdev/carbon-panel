@@ -740,6 +740,9 @@
 								<div class="flex min-w-0 items-center gap-3">
 									<!-- Sharp status pip -->
 									<div
+										role="img"
+										aria-label={getStringForEnum(ServerStatus, activity.status)}
+										title={getStringForEnum(ServerStatus, activity.status)}
 										class="h-2 w-2 shrink-0 {activity.status === ServerStatus.RUNNING
 											? 'bg-[#24a148]'
 											: activity.status === ServerStatus.STOPPED
