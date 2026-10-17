@@ -14,12 +14,24 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/auth"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
-// MetricsHandler serves Prometheus OpenMetrics snapshots (MINE-144):
+// DockerPoolStatsProvider supplies Docker client pool metrics (PERF-5).
+type DockerPoolStatsProvider interface {
+	Stats() docker.PoolStats
+}
+
+// HibernationStatsProvider supplies server hibernation and wake counts (SCH-6).
+type HibernationStatsProvider interface {
+	TotalHibernated() uint64
+	TotalWoken() uint64
+}
+
+// MetricsHandler serves Prometheus OpenMetrics snapshots (MINE-144, PERF-5, SCH-6):
 // GET /api/v2/metrics/host and /api/v2/metrics/servers/{id}.
 type MetricsHandler struct {
 	store       *storage.Store
@@ -27,14 +39,34 @@ type MetricsHandler struct {
 	authManager *auth.Manager
 	enforcer    *rbac.Enforcer
 	log         *logger.Logger
+	pool        DockerPoolStatsProvider
+	hibernation HibernationStatsProvider
 }
 
-func NewMetricsHandler(store *storage.Store, collector *metrics.Collector, authManager *auth.Manager, enforcer *rbac.Enforcer, log *logger.Logger) http.Handler {
-	h := &MetricsHandler{store: store, collector: collector, authManager: authManager, enforcer: enforcer, log: log}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v2/metrics/host", h.serveHost)
-	mux.HandleFunc("/api/v2/metrics/servers/", h.serveServer)
-	return mux
+func NewMetricsHandler(store *storage.Store, collector *metrics.Collector, authManager *auth.Manager, enforcer *rbac.Enforcer, log *logger.Logger) *MetricsHandler {
+	return &MetricsHandler{store: store, collector: collector, authManager: authManager, enforcer: enforcer, log: log}
+}
+
+// SetDockerPool configures the Docker client pool stats provider.
+func (h *MetricsHandler) SetDockerPool(p DockerPoolStatsProvider) {
+	h.pool = p
+}
+
+// SetHibernationManager configures the server hibernation stats provider.
+func (h *MetricsHandler) SetHibernationManager(m HibernationStatsProvider) {
+	h.hibernation = m
+}
+
+func (h *MetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/v2/metrics/servers/") {
+		h.serveServer(w, r)
+		return
+	}
+	if r.URL.Path == "/api/v2/metrics/host" {
+		h.serveHost(w, r)
+		return
+	}
+	http.NotFound(w, r)
 }
 
 func (h *MetricsHandler) authorize(r *http.Request) bool {
@@ -74,7 +106,7 @@ func (h *MetricsHandler) snapshot() (map[string]*metrics.ServerMetrics, map[stri
 	return all, servers
 }
 
-func writeExposition(w http.ResponseWriter, all map[string]*metrics.ServerMetrics, servers map[string]storage.Server, only string) {
+func (h *MetricsHandler) writeExpositionWithHostStats(w http.ResponseWriter, all map[string]*metrics.ServerMetrics, servers map[string]storage.Server, only string) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	var b strings.Builder
 	b.WriteString("# HELP carbon_server_cpu_percent Server CPU usage percent.\n")
@@ -99,7 +131,46 @@ func writeExposition(w http.ResponseWriter, all map[string]*metrics.ServerMetric
 		fmt.Fprintf(&b, "carbon_server_players_online{%s} %d\n", labels, m.PlayersOnline)
 		fmt.Fprintf(&b, "carbon_server_tps{%s} %f\n", labels, m.TPS)
 	}
+
+	if only == "" {
+		if h != nil && h.pool != nil {
+			stats := h.pool.Stats()
+			b.WriteString("# HELP carbon_docker_pool_requests_total Total GetClient requests to the Docker client pool.\n")
+			b.WriteString("# TYPE carbon_docker_pool_requests_total counter\n")
+			fmt.Fprintf(&b, "carbon_docker_pool_requests_total %d\n", stats.TotalRequests)
+
+			b.WriteString("# HELP carbon_docker_pool_cache_hits_total Total cache hits in the Docker client pool.\n")
+			b.WriteString("# TYPE carbon_docker_pool_cache_hits_total counter\n")
+			fmt.Fprintf(&b, "carbon_docker_pool_cache_hits_total %d\n", stats.CacheHits)
+
+			b.WriteString("# HELP carbon_docker_pool_cache_misses_total Total cache misses in the Docker client pool.\n")
+			b.WriteString("# TYPE carbon_docker_pool_cache_misses_total counter\n")
+			fmt.Fprintf(&b, "carbon_docker_pool_cache_misses_total %d\n", stats.CacheMisses)
+
+			b.WriteString("# HELP carbon_docker_pool_fallbacks_total Total fallback calls to the default Docker client.\n")
+			b.WriteString("# TYPE carbon_docker_pool_fallbacks_total counter\n")
+			fmt.Fprintf(&b, "carbon_docker_pool_fallbacks_total %d\n", stats.Fallbacks)
+
+			b.WriteString("# HELP carbon_docker_pool_errors_total Total errors creating clients in the Docker client pool.\n")
+			b.WriteString("# TYPE carbon_docker_pool_errors_total counter\n")
+			fmt.Fprintf(&b, "carbon_docker_pool_errors_total %d\n", stats.CreateErrors)
+		}
+		if h != nil && h.hibernation != nil {
+			b.WriteString("# HELP carbon_servers_hibernated_total Total number of server hibernation events.\n")
+			b.WriteString("# TYPE carbon_servers_hibernated_total counter\n")
+			fmt.Fprintf(&b, "carbon_servers_hibernated_total %d\n", h.hibernation.TotalHibernated())
+
+			b.WriteString("# HELP carbon_servers_woken_total Total number of server wake events from hibernation.\n")
+			b.WriteString("# TYPE carbon_servers_woken_total counter\n")
+			fmt.Fprintf(&b, "carbon_servers_woken_total %d\n", h.hibernation.TotalWoken())
+		}
+	}
+
 	_, _ = w.Write([]byte(b.String()))
+}
+
+func writeExposition(w http.ResponseWriter, all map[string]*metrics.ServerMetrics, servers map[string]storage.Server, only string) {
+	(*MetricsHandler)(nil).writeExpositionWithHostStats(w, all, servers, only)
 }
 
 func (h *MetricsHandler) serveHost(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +183,7 @@ func (h *MetricsHandler) serveHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	all, servers := h.snapshot()
-	writeExposition(w, all, servers, "")
+	h.writeExpositionWithHostStats(w, all, servers, "")
 }
 
 func (h *MetricsHandler) serveServer(w http.ResponseWriter, r *http.Request) {
@@ -136,5 +207,5 @@ func (h *MetricsHandler) serveServer(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeExposition(w, all, servers, id)
+	h.writeExpositionWithHostStats(w, all, servers, id)
 }

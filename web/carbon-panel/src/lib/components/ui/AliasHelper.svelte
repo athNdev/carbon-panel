@@ -129,7 +129,7 @@ one at https://mozilla.org/MPL/2.0/.
 				Aliases
 			</Button>
 		{:else}
-			<Button variant="ghost" size="icon" class="h-7 w-7" title="Available Aliases">
+			<Button variant="ghost" size="icon" class="h-7 w-7" title="Available Aliases" aria-label="Available aliases">
 				<Braces class="h-4 w-4" />
 			</Button>
 		{/if}
