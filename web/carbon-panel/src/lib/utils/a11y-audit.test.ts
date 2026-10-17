@@ -97,3 +97,20 @@ test('Root layout mounts Toaster component with sonner wrapper for live announce
 		'Sonner component must forward props to preserve aria attributes'
 	);
 });
+
+test('icon-only buttons in server-files, ModuleLogsDialog, ServerModules, and AliasHelper declare aria-label', () => {
+	const components = [
+		'components/files/server-files.svelte',
+		'components/server/ModuleLogsDialog.svelte',
+		'components/server/ServerModules.svelte',
+		'components/server-tasks.svelte',
+		'components/support-settings.svelte',
+		'components/ui/AliasHelper.svelte'
+	];
+	const srcDir = path.resolve(import.meta.dirname, '..');
+	for (const comp of components) {
+		const fullPath = path.join(srcDir, comp);
+		const content = fs.readFileSync(fullPath, 'utf-8');
+		assert.ok(content.includes('aria-label='), `${comp} must declare aria-label on icon buttons`);
+	}
+});

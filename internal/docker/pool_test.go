@@ -286,3 +286,41 @@ func TestClientPool_HealthChecker(t *testing.T) {
 	// Calling StopHealthChecker again should be safe
 	pool.StopHealthChecker()
 }
+
+func TestClientPool_Stats(t *testing.T) {
+	log := logger.New()
+	mockClient := &Client{log: log}
+	store := newMockNodeStore(&models.Node{ID: "node-1", Host: "unix:///var/run/docker.sock"})
+
+	pool := NewClientPool(store, mockClient, log)
+	defer pool.Close()
+
+	// Initial stats
+	stats := pool.Stats()
+	if stats.TotalRequests != 0 || stats.CacheHits != 0 || stats.CacheMisses != 0 || stats.Fallbacks != 0 || stats.CreateErrors != 0 {
+		t.Fatalf("expected all stats zero, got %+v", stats)
+	}
+
+	// Request default
+	_, _ = pool.GetClient("")
+	stats = pool.Stats()
+	if stats.TotalRequests != 1 || stats.CacheHits != 1 {
+		t.Fatalf("expected 1 request, 1 hit, got %+v", stats)
+	}
+
+	// Request registered
+	pool.RegisterClient("node-custom", &Client{log: log})
+	_, _ = pool.GetClient("node-custom")
+	stats = pool.Stats()
+	if stats.TotalRequests != 2 || stats.CacheHits != 2 {
+		t.Fatalf("expected 2 requests, 2 hits, got %+v", stats)
+	}
+
+	// Request nonexistent (fallback)
+	pool.SetFallbackEnabled(true)
+	_, _ = pool.GetClient("nonexistent")
+	stats = pool.Stats()
+	if stats.TotalRequests != 3 || stats.CacheMisses != 1 || stats.Fallbacks != 1 {
+		t.Fatalf("expected 3 requests, 1 miss, 1 fallback, got %+v", stats)
+	}
+}

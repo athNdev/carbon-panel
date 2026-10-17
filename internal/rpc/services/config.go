@@ -101,7 +101,7 @@ func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Req
 	// Apply updates w/ reflection
 	if err := applyConfigUpdates(config, msg.Updates); err != nil {
 		s.log.Error("Failed to apply config updates: %v", err)
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("failed to apply configuration updates"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	// Save updated config
@@ -349,6 +349,14 @@ func applyConfigUpdates(config any, updates map[string]string) error {
 
 		if fieldIndex == -1 {
 			continue // Skip unknown fields
+		}
+
+		field := configType.Field(fieldIndex)
+		envTag := field.Tag.Get("env")
+		if (envTag == "JVM_OPTS" || envTag == "JVM_XX_OPTS" || envTag == "JVM_DD_OPTS" || key == "jvmOpts" || key == "jvmXxOpts" || key == "jvmDdOpts") && strValue != "" {
+			if err := docker.ValidateJVMOptions(strValue); err != nil {
+				return fmt.Errorf("invalid JVM options for %s: %w", key, err)
+			}
 		}
 
 		fieldValue := configValue.Field(fieldIndex)

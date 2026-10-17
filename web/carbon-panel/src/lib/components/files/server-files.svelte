@@ -899,6 +899,7 @@
 						class="h-5 w-5"
 						onclick={cancelCurrentUpload}
 						title="Cancel"
+						aria-label="Cancel upload"
 					>
 						<X class="h-3 w-3" />
 					</Button>
