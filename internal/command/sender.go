@@ -2,8 +2,10 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/moby/moby/client"
@@ -122,6 +124,11 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 	output, err := rcon.SendCommand(rconCtx, ip, rconPort, rconPassword, command)
 
 	if err != nil {
+		// Redact RCON password from error message to prevent secret leakage in logs (SEC-4)
+		errMsg := err.Error()
+		if rconPassword != "" && strings.Contains(errMsg, rconPassword) {
+			err = errors.New(strings.ReplaceAll(errMsg, rconPassword, "********"))
+		}
 		return dockerExec(fmt.Errorf("rcon command failed: %w", err))
 	}
 
