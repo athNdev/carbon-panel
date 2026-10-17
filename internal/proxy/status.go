@@ -11,8 +11,9 @@ import (
 // Deep-sleep MOTDs served from the proxy while the backend uses zero RAM.
 // The client never touches Docker on this path (MINE-121, mc-router parity).
 const (
-	asleepMOTD  = "Server is asleep - join to wake it up!"
-	loadingMOTD = "Server is waking up - join to connect!"
+	asleepMOTD    = "Server is asleep - join to wake it up!"
+	deepSleepMOTD = "Server is in deep sleep - join to wake it up!"
+	loadingMOTD   = "Server is waking up - join to connect!"
 )
 
 // statusVersion mirrors the version block of a Server List Ping response.
