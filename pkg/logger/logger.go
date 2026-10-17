@@ -5,11 +5,24 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+var (
+	rconURIPattern = regexp.MustCompile(`(?i)(rcon://(?:[^:@/]+:)?)([^@/]+)@`)
+	secretKVPattern = regexp.MustCompile(`(?i)(password|secret|jwt_secret|api_key|client_secret)(["']?\s*[:=]\s*["']?)([^"',\s\\]+)`)
+)
+
+// SanitizeLogMessage scrubs sensitive passwords and tokens from log messages (SEC-4)
+func SanitizeLogMessage(msg string) string {
+	msg = rconURIPattern.ReplaceAllString(msg, "${1}********@")
+	msg = secretKVPattern.ReplaceAllString(msg, "${1}${2}********")
+	return msg
+}
 
 type Logger struct {
 	*log.Logger
@@ -64,6 +77,7 @@ func NewWithConfig(cfg *Config) *Logger {
 func (l *Logger) log(level, format string, args ...any) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	message := fmt.Sprintf(format, args...)
+	message = SanitizeLogMessage(message)
 	logLine := fmt.Sprintf("[%s] %s: %s", timestamp, level, message)
 
 	// Store in buffer for support bundle generation
