@@ -190,6 +190,7 @@ one at https://mozilla.org/MPL/2.0/.
 						onclick={fetchLogs}
 						disabled={loading}
 						class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+						aria-label="Refresh logs"
 					>
 						{#if loading}
 							<Loader2 class="h-3 w-3 animate-spin" />
@@ -203,6 +204,7 @@ one at https://mozilla.org/MPL/2.0/.
 						onclick={downloadLogs}
 						disabled={logEntries.length === 0}
 						class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+						aria-label="Download logs"
 					>
 						<Download class="h-3 w-3" />
 					</Button>
@@ -212,6 +214,7 @@ one at https://mozilla.org/MPL/2.0/.
 						onclick={clearLogs}
 						disabled={logEntries.length === 0}
 						class="h-7 w-7 p-0 text-zinc-400 hover:text-white"
+						aria-label="Clear logs"
 					>
 						<Trash2 class="h-3 w-3" />
 					</Button>

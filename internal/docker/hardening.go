@@ -244,5 +244,79 @@ func ValidateDockerOverridesConfinement(overrides *v1.DockerOverrides, safeRoots
 	if err := ValidateDockerVolumeOverrides(overrides.GetVolumes(), safeRoots...); err != nil {
 		return err
 	}
+	for key, val := range overrides.GetEnvironment() {
+		k := strings.ToUpper(strings.TrimSpace(key))
+		if k == "JVM_OPTS" || k == "JVM_XX_OPTS" || k == "JVM_DD_OPTS" {
+			if err := ValidateJVMOptions(val); err != nil {
+				return fmt.Errorf("invalid %s in docker overrides: %w", k, err)
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateJVMOptions validates JVM arguments and flags for dangerous options
+// or invalid heap bounds (INF-3, SEC-6). It disallows command-execution hooks and native
+// library loaders that can breach container confinement or execute arbitrary
+// commands upon crash/OOM.
+func ValidateJVMOptions(opts string) error {
+	if strings.ContainsAny(opts, "\x00\r\n") {
+		return errors.New("jvm options must not contain control characters or newlines")
+	}
+
+	tokens := strings.Fields(opts)
+	for _, token := range tokens {
+		norm := strings.ToLower(token)
+
+		// 1. Command execution hooks
+		if strings.HasPrefix(norm, "-xx:onerror") {
+			return fmt.Errorf("dangerous JVM option %q: OnError command execution is forbidden", token)
+		}
+		if strings.HasPrefix(norm, "-xx:onoutofmemoryerror") {
+			return fmt.Errorf("dangerous JVM option %q: OnOutOfMemoryError command execution is forbidden", token)
+		}
+
+		// 2. Dynamic native agent / profiler / library loading
+		if strings.HasPrefix(norm, "-agentlib:") || strings.HasPrefix(norm, "-agentpath:") {
+			return fmt.Errorf("dangerous JVM option %q: native agent loading is forbidden", token)
+		}
+		if strings.HasPrefix(norm, "-xrun") {
+			return fmt.Errorf("dangerous JVM option %q: debug/profiling library loading is forbidden", token)
+		}
+		if strings.HasPrefix(norm, "-javaagent:") {
+			return fmt.Errorf("dangerous JVM option %q: arbitrary javaagent loading is forbidden", token)
+		}
+
+		// 3. Dangerous diagnostics / internal VM bypasses
+		if strings.HasPrefix(norm, "-xx:+unlockdiagnosticvmoptions") {
+			return fmt.Errorf("dangerous JVM option %q: UnlockDiagnosticVMOptions is forbidden", token)
+		}
+
+		// 4. Memory flag syntax checks (-Xmx, -Xms, -Xss)
+		for _, memPrefix := range []string{"-xmx", "-xms", "-xss"} {
+			if strings.HasPrefix(norm, memPrefix) {
+				val := norm[len(memPrefix):]
+				if val == "" {
+					return fmt.Errorf("invalid JVM memory flag %q: missing size value", token)
+				}
+				lastChar := val[len(val)-1]
+				numStr := val
+				if lastChar == 'k' || lastChar == 'm' || lastChar == 'g' || lastChar == 't' {
+					numStr = val[:len(val)-1]
+				}
+				if numStr == "" {
+					return fmt.Errorf("invalid JVM memory flag %q: missing numeric size", token)
+				}
+				for _, r := range numStr {
+					if r < '0' || r > '9' {
+						return fmt.Errorf("invalid JVM memory flag %q: non-numeric size %q", token, numStr)
+					}
+				}
+				if numStr == "0" {
+					return fmt.Errorf("invalid JVM memory flag %q: size cannot be zero", token)
+				}
+			}
+		}
+	}
 	return nil
 }

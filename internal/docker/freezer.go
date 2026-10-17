@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/db"
@@ -51,6 +52,9 @@ type HibernationManager struct {
 	// same server (e.g. a wake racing the idle loop's hibernate).
 	inflight   map[string]struct{}
 	inflightMu sync.Mutex
+
+	hibernatedTotal uint64
+	wokenTotal      uint64
 }
 
 // NewHibernationManager creates a new HibernationManager
@@ -109,6 +113,16 @@ func (m *HibernationManager) RegisterWakeCallback(cb func(serverID string)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.wakeCallbacks = append(m.wakeCallbacks, cb)
+}
+
+// TotalHibernated returns the cumulative number of server hibernations performed (SCH-6).
+func (m *HibernationManager) TotalHibernated() uint64 {
+	return atomic.LoadUint64(&m.hibernatedTotal)
+}
+
+// TotalWoken returns the cumulative number of server wakeups performed (SCH-6).
+func (m *HibernationManager) TotalWoken() uint64 {
+	return atomic.LoadUint64(&m.wokenTotal)
 }
 
 // Start begins the background idle-checker routine
@@ -249,6 +263,7 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 		m.logger.Info("Successfully hibernated server %s (%s)", srv.Name, serverID)
 	}
 
+	atomic.AddUint64(&m.hibernatedTotal, 1)
 	return nil
 }
 
@@ -293,6 +308,8 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 	if m.logger != nil {
 		m.logger.Info("Successfully woke server %s (%s) from hibernation in %v", srv.Name, serverID, time.Since(start))
 	}
+
+	atomic.AddUint64(&m.wokenTotal, 1)
 
 	m.mu.Lock()
 	callbacks := append([]func(string){}, m.wakeCallbacks...)

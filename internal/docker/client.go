@@ -1616,6 +1616,11 @@ func buildEnvFromConfig(config *models.ServerConfig) []string {
 				if envTag == "TYPE" {
 					str = normalizeTypeEnv(str)
 				}
+				if envTag == "JVM_OPTS" || envTag == "JVM_XX_OPTS" || envTag == "JVM_DD_OPTS" {
+					if err := ValidateJVMOptions(str); err != nil {
+						continue
+					}
+				}
 				env = append(env, fmt.Sprintf("%s=%s", envTag, str))
 			}
 		case reflect.Int, reflect.Int32, reflect.Int64:

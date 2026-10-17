@@ -139,10 +139,14 @@ func TestHibernationManager_HibernateAndWake(t *testing.T) {
 		wokenServer = serverID
 	})
 
+	assert.Equal(t, uint64(0), mgr.TotalHibernated())
+	assert.Equal(t, uint64(0), mgr.TotalWoken())
+
 	// Test HibernateServer
 	err := mgr.HibernateServer(ctx, "srv-1")
 	require.NoError(t, err)
 
+	assert.Equal(t, uint64(1), mgr.TotalHibernated())
 	assert.True(t, freezer.paused["cnt-1"])
 	assert.Contains(t, freezer.pauseCalls, "cnt-1")
 
@@ -154,6 +158,8 @@ func TestHibernationManager_HibernateAndWake(t *testing.T) {
 	// Test WakeServer
 	err = mgr.WakeServer(ctx, "srv-1")
 	require.NoError(t, err)
+
+	assert.Equal(t, uint64(1), mgr.TotalWoken())
 
 	assert.False(t, freezer.paused["cnt-1"])
 	assert.Contains(t, freezer.unpauseCalls, "cnt-1")
