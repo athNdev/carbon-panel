@@ -71,3 +71,29 @@ test('ServerBackups guards restore and delete with CarbonConfirm modals', () => 
 	assert.ok(content.includes('promptRestore(backup)'), 'Restore action button must trigger confirmation prompt');
 	assert.ok(content.includes('promptDelete(backup)'), 'Delete action button must trigger confirmation prompt');
 });
+
+test('Root layout mounts Toaster component with sonner wrapper for live announcements', () => {
+	const layoutPath = path.resolve(import.meta.dirname, '../../routes/+layout.svelte');
+	const layoutContent = fs.readFileSync(layoutPath, 'utf-8');
+
+	assert.ok(
+		layoutContent.includes("import { Toaster } from '$lib/components/ui/sonner'"),
+		'Root layout must import Toaster'
+	);
+	assert.ok(
+		layoutContent.includes('<Toaster'),
+		'Root layout must render <Toaster /> component'
+	);
+
+	const sonnerPath = path.resolve(import.meta.dirname, '../components/ui/sonner/sonner.svelte');
+	const sonnerContent = fs.readFileSync(sonnerPath, 'utf-8');
+
+	assert.ok(
+		sonnerContent.includes("from 'svelte-sonner'"),
+		'Sonner wrapper must import from svelte-sonner'
+	);
+	assert.ok(
+		sonnerContent.includes('{...restProps}'),
+		'Sonner component must forward props to preserve aria attributes'
+	);
+});

@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"strconv"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -646,31 +650,51 @@ func (h *PackwizHandler) handleExport(w http.ResponseWriter, r *http.Request, pa
 		return
 	}
 
+	var buf bytes.Buffer
+	var filename, contentType string
+
 	switch format {
 	case "packwiz":
-		filename := fmt.Sprintf("%s-%s.packwiz.zip", pack.Name, pack.Version)
-		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-		if err := h.manager.ExportPackwizZip(packID, w); err != nil {
+		filename = fmt.Sprintf("%s-%s.packwiz.zip", pack.Name, pack.Version)
+		contentType = "application/zip"
+		if err := h.manager.ExportPackwizZip(packID, &buf); err != nil {
 			h.log.Error("Failed to export packwiz zip: %v", err)
+			http.Error(w, "failed to export packwiz zip", http.StatusInternalServerError)
+			return
 		}
 	case "mrpack":
-		filename := fmt.Sprintf("%s-%s.mrpack", pack.Name, pack.Version)
-		w.Header().Set("Content-Type", "application/x-modrinth-modpack+zip")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-		if err := h.manager.ExportMrpack(packID, w); err != nil {
+		filename = fmt.Sprintf("%s-%s.mrpack", pack.Name, pack.Version)
+		contentType = "application/x-modrinth-modpack+zip"
+		if err := h.manager.ExportMrpack(packID, &buf); err != nil {
 			h.log.Error("Failed to export mrpack: %v", err)
+			http.Error(w, "failed to export mrpack", http.StatusInternalServerError)
+			return
 		}
 	case "curseforge", "zip":
-		filename := fmt.Sprintf("%s-%s.zip", pack.Name, pack.Version)
-		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-		if err := h.manager.ExportCurseForge(packID, w); err != nil {
+		filename = fmt.Sprintf("%s-%s.zip", pack.Name, pack.Version)
+		contentType = "application/zip"
+		if err := h.manager.ExportCurseForge(packID, &buf); err != nil {
 			h.log.Error("Failed to export curseforge pack: %v", err)
+			http.Error(w, "failed to export curseforge pack", http.StatusInternalServerError)
+			return
 		}
 	default:
 		http.Error(w, "unsupported export format", http.StatusBadRequest)
+		return
 	}
+
+	sum := sha256.Sum256(buf.Bytes())
+	sha256Hex := hex.EncodeToString(sum[:])
+	sha256B64 := base64.StdEncoding.EncodeToString(sum[:])
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
+	w.Header().Set("X-Checksum-SHA256", sha256Hex)
+	w.Header().Set("Digest", "SHA-256="+sha256B64)
+	w.Header().Set("ETag", fmt.Sprintf("\"%s\"", sha256Hex))
+
+	_, _ = w.Write(buf.Bytes())
 }
 
 func (h *PackwizHandler) handleDeploy(w http.ResponseWriter, r *http.Request, packID string) {

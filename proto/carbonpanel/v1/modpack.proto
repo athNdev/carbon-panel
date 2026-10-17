@@ -64,6 +64,7 @@ message IndexedModpack {
   string docker_image = 20;
   int32 recommended_ram = 21;
   bool is_favorited = 22;
+  string index_error = 23;
 }
 
 // Modpack version file
@@ -78,6 +79,7 @@ message ModpackFile {
   string download_url = 8;
   repeated string game_versions = 9;
   int32 sort_index = 10;
+  string sha256 = 11;
 }
 
 // Modpack search filters
@@ -170,6 +172,7 @@ message ImportRemoteModpackRequest {
 message ImportRemoteModpackResponse {
   IndexedModpack modpack = 1;
   string message = 2;
+  string sha256 = 3;
 }
 
 // Modpack to delete
@@ -239,6 +242,7 @@ message Version {
   google.protobuf.Timestamp file_date = 4;
   int32 sort_index = 5;
   string version_number = 6;
+  string sha256 = 7;
 }
 
 // Version filter parameters

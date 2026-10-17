@@ -2,6 +2,8 @@ package services
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
 	"context"
 	"encoding/json"
 	"errors"
@@ -141,6 +143,7 @@ func (s *ModpackService) SearchModpacks(ctx context.Context, req *connect.Reques
 			DockerImage:    modpack.DockerImage,
 			RecommendedRam: int32(modpack.RecommendedRAM),
 			IsFavorited:    isFavorited,
+			IndexError:     modpack.IndexError,
 		}
 	}
 
@@ -187,6 +190,7 @@ func (s *ModpackService) GetModpack(ctx context.Context, req *connect.Request[v1
 		DockerImage:    modpack.DockerImage,
 		RecommendedRam: int32(modpack.RecommendedRAM),
 		IsFavorited:    isFavorited,
+		IndexError:     modpack.IndexError,
 	}
 
 	return connect.NewResponse(&v1.GetModpackResponse{
@@ -230,6 +234,7 @@ func (s *ModpackService) GetModpackBySlug(ctx context.Context, req *connect.Requ
 		JavaVersion:    int32(javaVersionInt),
 		DockerImage:    modpack.DockerImage,
 		RecommendedRam: int32(modpack.RecommendedRAM),
+		IndexError:     modpack.IndexError,
 	}
 
 	return connect.NewResponse(&v1.GetModpackBySlugResponse{
@@ -272,6 +277,7 @@ func (s *ModpackService) GetModpackByURL(ctx context.Context, req *connect.Reque
 		JavaVersion:    int32(javaVersionInt),
 		DockerImage:    modpack.DockerImage,
 		RecommendedRam: int32(modpack.RecommendedRAM),
+		IndexError:     modpack.IndexError,
 	}
 
 	return connect.NewResponse(&v1.GetModpackByURLResponse{
@@ -341,6 +347,7 @@ func (s *ModpackService) GetModpackFiles(ctx context.Context, req *connect.Reque
 			DownloadUrl:  file.DownloadURL,
 			GameVersions: gameVersions,
 			SortIndex:    int32(i),
+			Sha256:       file.Sha256,
 		}
 	}
 
@@ -706,6 +713,7 @@ func (s *ModpackService) ImportUploadedModpack(ctx context.Context, req *connect
 		DockerImage:    dbModpack.DockerImage,
 		RecommendedRam: int32(dbModpack.RecommendedRAM),
 		IsFavorited:    false,
+		IndexError:     dbModpack.IndexError,
 	}
 
 	return connect.NewResponse(&v1.ImportUploadedModpackResponse{
@@ -772,12 +780,15 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 		os.Remove(tempPath)
 	}()
 
-	written, err := io.Copy(tempFile, resp.Body)
+	hasher := sha256.New()
+	written, err := io.Copy(io.MultiWriter(tempFile, hasher), resp.Body)
 	if err != nil {
 		s.log.Error("Failed to save remote modpack to temp file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save downloaded file: %w", err))
 	}
 	tempFile.Close()
+
+	sha256Hex := hex.EncodeToString(hasher.Sum(nil))
 
 	if written < 100 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("downloaded file is too small or invalid"))
@@ -952,6 +963,7 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 		DownloadURL:  destZipPath,
 		GameVersions: string(gameVersionsJSON),
 		ModLoader:    string(modLoader),
+		Sha256:       sha256Hex,
 	}
 
 	_ = s.store.UpsertIndexedModpackFile(ctx, dbFile)
@@ -982,11 +994,13 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 		DockerImage:    dbModpack.DockerImage,
 		RecommendedRam: int32(dbModpack.RecommendedRAM),
 		IsFavorited:    false,
+		IndexError:     dbModpack.IndexError,
 	}
 
 	return connect.NewResponse(&v1.ImportRemoteModpackResponse{
 		Modpack: protoModpack,
 		Message: fmt.Sprintf("Modpack '%s' imported successfully from %s", packName, parsedURL.Host),
+		Sha256:  sha256Hex,
 	}), nil
 }
 
@@ -1114,6 +1128,7 @@ func (s *ModpackService) ListFavorites(ctx context.Context, req *connect.Request
 			DockerImage:    modpack.DockerImage,
 			RecommendedRam: int32(modpack.RecommendedRAM),
 			IsFavorited:    true, // All returned modpacks are favorited
+			IndexError:     modpack.IndexError,
 		}
 	}
 
@@ -1174,7 +1189,14 @@ func (s *ModpackService) SyncModpackFiles(ctx context.Context, req *connect.Requ
 	files, err := indexerClient.GetModpackFiles(ctx, modpack.IndexerID)
 	if err != nil {
 		s.log.Error("Failed to get modpack files: %v", err)
+		modpack.IndexError = err.Error()
+		_ = s.store.UpsertIndexedModpack(ctx, modpack)
 		return nil, mapIndexerError(err, "failed to get modpack files")
+	}
+
+	if modpack.IndexError != "" {
+		modpack.IndexError = ""
+		_ = s.store.UpsertIndexedModpack(ctx, modpack)
 	}
 
 	// Store files in database
