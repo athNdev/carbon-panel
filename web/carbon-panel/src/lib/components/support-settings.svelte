@@ -589,7 +589,13 @@ one at https://mozilla.org/MPL/2.0/.
 									>
 										{referenceId}
 									</code>
-									<Button onclick={copyReferenceId} size="sm" variant="outline" class="shrink-0" aria-label="Copy reference ID">
+									<Button
+										onclick={copyReferenceId}
+										size="sm"
+										variant="outline"
+										class="shrink-0"
+										aria-label="Copy reference ID"
+									>
 										<Copy class="h-3 w-3" />
 									</Button>
 								</div>

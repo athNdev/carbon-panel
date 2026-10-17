@@ -70,12 +70,30 @@ test('ServerBackups guards restore and delete with CarbonConfirm modals', () => 
 	const content = fs.readFileSync(backupsPath, 'utf-8');
 
 	assert.ok(content.includes('CarbonConfirm'), 'ServerBackups must import and use CarbonConfirm');
-	assert.ok(content.includes('restoreConfirmOpen'), 'ServerBackups must track restore confirmation state');
-	assert.ok(content.includes('deleteConfirmOpen'), 'ServerBackups must track delete confirmation state');
-	assert.ok(content.includes('title="Restore backup?"'), 'ServerBackups must confirm before restoring');
-	assert.ok(content.includes('title="Delete backup?"'), 'ServerBackups must confirm before deleting');
-	assert.ok(content.includes('promptRestore(backup)'), 'Restore action button must trigger confirmation prompt');
-	assert.ok(content.includes('promptDelete(backup)'), 'Delete action button must trigger confirmation prompt');
+	assert.ok(
+		content.includes('restoreConfirmOpen'),
+		'ServerBackups must track restore confirmation state'
+	);
+	assert.ok(
+		content.includes('deleteConfirmOpen'),
+		'ServerBackups must track delete confirmation state'
+	);
+	assert.ok(
+		content.includes('title="Restore backup?"'),
+		'ServerBackups must confirm before restoring'
+	);
+	assert.ok(
+		content.includes('title="Delete backup?"'),
+		'ServerBackups must confirm before deleting'
+	);
+	assert.ok(
+		content.includes('promptRestore(backup)'),
+		'Restore action button must trigger confirmation prompt'
+	);
+	assert.ok(
+		content.includes('promptDelete(backup)'),
+		'Delete action button must trigger confirmation prompt'
+	);
 });
 
 test('Root layout mounts Toaster component with sonner wrapper for live announcements', () => {
@@ -86,10 +104,7 @@ test('Root layout mounts Toaster component with sonner wrapper for live announce
 		layoutContent.includes("import { Toaster } from '$lib/components/ui/sonner'"),
 		'Root layout must import Toaster'
 	);
-	assert.ok(
-		layoutContent.includes('<Toaster'),
-		'Root layout must render <Toaster /> component'
-	);
+	assert.ok(layoutContent.includes('<Toaster'), 'Root layout must render <Toaster /> component');
 
 	const sonnerPath = path.resolve(import.meta.dirname, '../components/ui/sonner/sonner.svelte');
 	const sonnerContent = fs.readFileSync(sonnerPath, 'utf-8');
