@@ -33,6 +33,7 @@ type ClientPool struct {
 	baseConfig    ClientConfig
 	defaultClient *Client
 	defaultNodeID string
+	allowFallback bool
 	stopChan      chan struct{}
 	checkerActive bool
 }
@@ -76,6 +77,30 @@ func (p *ClientPool) RegisterClient(nodeID string, cli *Client) {
 	}
 }
 
+// SetFallbackEnabled controls whether GetClient may fall back to the default client
+// when a specific requested node cannot be found or fails to connect.
+// By default, fallback is disabled for security and correctness so that operations
+// targeted to a specific remote node are never silently executed on the local daemon.
+func (p *ClientPool) SetFallbackEnabled(enabled bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.allowFallback = enabled
+}
+
+// IsFallbackEnabled reports whether silent fallback to the default client is enabled.
+func (p *ClientPool) IsFallbackEnabled() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.allowFallback
+}
+
+// GetDefaultNodeID returns the configured ID of the default node (e.g. "default").
+func (p *ClientPool) GetDefaultNodeID() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.defaultNodeID
+}
+
 // GetDefaultClient returns the default Docker client (typically local host).
 func (p *ClientPool) GetDefaultClient() *Client {
 	p.mu.RLock()
@@ -100,7 +125,7 @@ func (p *ClientPool) GetDefaultClient() *Client {
 // truly acceptable (e.g. read-only status checks where local UI needs to
 // degrade gracefully) and other code may already depend on this behavior.
 func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
-	if nodeID == "" || nodeID == p.defaultNodeID {
+	if nodeID == "" || nodeID == p.defaultNodeID || nodeID == "local" {
 		def := p.GetDefaultClient()
 		if def != nil {
 			return def, nil
@@ -110,13 +135,14 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	// Read lock check
 	p.mu.RLock()
 	cli, exists := p.clients[nodeID]
+	allowFallback := p.allowFallback
 	p.mu.RUnlock()
 	if exists && cli != nil {
 		return cli, nil
 	}
 
 	if p.store == nil {
-		if p.defaultClient != nil {
+		if allowFallback && p.defaultClient != nil {
 			p.log.Warn("NodeStore is nil; falling back to default Docker client for node: %s", nodeID)
 			return p.defaultClient, nil
 		}
@@ -125,11 +151,11 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 
 	node, err := p.store.GetNode(context.Background(), nodeID)
 	if err != nil {
-		if p.defaultClient != nil {
+		if allowFallback && p.defaultClient != nil {
 			p.log.Warn("Node %q not found in store (%v); falling back to default Docker client", nodeID, err)
 			return p.defaultClient, nil
 		}
-		return nil, fmt.Errorf("node %s not found: %w", nodeID, err)
+		return nil, fmt.Errorf("node %s not found in store: %w", nodeID, err)
 	}
 
 	// Build the client outside the pool lock: NewClientForNode performs a
@@ -137,7 +163,7 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	// would stall every other node's callers behind an unresponsive daemon.
 	newCli, err := p.createClientForNode(node)
 	if err != nil {
-		if p.defaultClient != nil {
+		if allowFallback && p.defaultClient != nil {
 			p.log.Warn("Failed to create client for node %q (%v); falling back to default Docker client", nodeID, err)
 			return p.defaultClient, nil
 		}
@@ -164,7 +190,7 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 // when the requested node is unavailable. See GetClient's doc comment for why the
 // fallback there is risky.
 func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
-	if nodeID == "" || nodeID == p.defaultNodeID {
+	if nodeID == "" || nodeID == p.defaultNodeID || nodeID == "local" {
 		def := p.GetDefaultClient()
 		if def != nil {
 			return def, nil

@@ -97,8 +97,21 @@ func (s *BackupService) dockerFor(nodeID string) *docker.Client {
 		if cli, err := s.pool.GetClient(nodeID); err == nil && cli != nil {
 			return cli
 		}
+		if nodeID != "" && nodeID != "local" && nodeID != s.pool.GetDefaultNodeID() {
+			return nil
+		}
 	}
 	return s.docker
+}
+
+func (s *BackupService) dockerForStrict(nodeID string) (*docker.Client, error) {
+	if s.pool != nil {
+		return s.pool.GetClientStrict(nodeID)
+	}
+	if s.docker != nil {
+		return s.docker, nil
+	}
+	return nil, fmt.Errorf("no docker client available")
 }
 
 func dbBackupToProto(b *storage.BackupRecord) *v1.BackupRecord {
@@ -217,6 +230,10 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	}
 
 	dockerCli := s.dockerFor(server.NodeID)
+	if server.NodeID != "" && server.NodeID != "local" && dockerCli == nil {
+		done("failed")
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable for restore", server.NodeID))
+	}
 	wasRunning := false
 	if server.ContainerID != "" && dockerCli != nil {
 		if status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID); err == nil && status == storage.StatusRunning {

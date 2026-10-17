@@ -95,16 +95,32 @@ func TestClientPool_Fallback(t *testing.T) {
 	pool := NewClientPool(store, mockClient, log)
 	defer pool.Close()
 
-	// Requesting an unknown node should gracefully fall back to default
+	// By default, fallback is disabled for security and correctness
+	if pool.IsFallbackEnabled() {
+		t.Fatalf("expected fallback to be disabled by default")
+	}
+
+	// Requesting an unknown node with fallback disabled should return an explicit error
+	_, err := pool.GetClient("nonexistent-node-123")
+	if err == nil {
+		t.Fatalf("expected error requesting unknown node with fallback disabled, got nil")
+	}
+
+	// Enabling fallback allows GetClient to gracefully fall back to default
+	pool.SetFallbackEnabled(true)
+	if !pool.IsFallbackEnabled() {
+		t.Fatalf("expected fallback to be enabled after SetFallbackEnabled(true)")
+	}
+
 	fallbackCli, err := pool.GetClient("nonexistent-node-123")
 	if err != nil {
-		t.Fatalf("expected graceful fallback, got error: %v", err)
+		t.Fatalf("expected graceful fallback when enabled, got error: %v", err)
 	}
 	if fallbackCli != mockClient {
 		t.Fatalf("expected default client on fallback, got %v", fallbackCli)
 	}
 
-	// Strict get should fail and NOT fall back
+	// Strict get should ALWAYS fail and NOT fall back, regardless of allowFallback setting
 	_, err = pool.GetClientStrict("nonexistent-node-123")
 	if err == nil {
 		t.Fatalf("expected error from GetClientStrict for missing node, got nil")
@@ -137,10 +153,17 @@ func TestClientPool_RegisterAndRemoveNode(t *testing.T) {
 		t.Fatalf("failed to remove custom node: %v", err)
 	}
 
-	// Subsequent GetClient for custom-node falls back to default
+	// Subsequent GetClient for custom-node returns an error with fallback disabled
+	_, err = pool.GetClient("custom-node")
+	if err == nil {
+		t.Fatalf("expected error requesting removed node with fallback disabled, got nil")
+	}
+
+	// With fallback enabled, it falls back to default
+	pool.SetFallbackEnabled(true)
 	afterRemove, err := pool.GetClient("custom-node")
 	if err != nil || afterRemove != defaultCli {
-		t.Fatalf("expected fallback to default after removal, got %v (err: %v)", afterRemove, err)
+		t.Fatalf("expected fallback to default after removal when enabled, got %v (err: %v)", afterRemove, err)
 	}
 }
 
