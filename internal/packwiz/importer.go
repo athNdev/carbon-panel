@@ -17,6 +17,9 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/files"
 )
 
+// maxExtractedOverrideFileSize guards against decompression bomb attacks and disk exhaustion (500MB per file).
+const maxExtractedOverrideFileSize = 500 * 1024 * 1024
+
 // ImportOptions defines settings for modpack import
 type ImportOptions struct {
 	Name          string `json:"name"`
@@ -134,12 +137,19 @@ func (m *Manager) ImportMrpack(r io.ReaderAt, size int64, opts ImportOptions) (*
 	}
 
 	pDir := m.packDir(packID)
+	var mrSuccess bool
+	defer func() {
+		if !mrSuccess {
+			_ = os.RemoveAll(pDir)
+		}
+	}()
+
 	modsDir := filepath.Join(pDir, "mods")
 	if err := os.MkdirAll(modsDir, 0755); err != nil {
 		return nil, err
 	}
 
-	// 1. Extract overrides into pack root
+	// 1. Extract overrides into pack root with decompression bomb limit
 	for _, f := range zr.File {
 		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
 			rel := strings.TrimPrefix(f.Name, "overrides/")
@@ -159,7 +169,7 @@ func (m *Manager) ImportMrpack(r io.ReaderAt, size int64, opts ImportOptions) (*
 				frc.Close()
 				continue
 			}
-			_, _ = io.Copy(out, frc)
+			_, _ = io.Copy(out, io.LimitReader(frc, maxExtractedOverrideFileSize))
 			frc.Close()
 			out.Close()
 		}
@@ -264,6 +274,7 @@ func (m *Manager) ImportMrpack(r io.ReaderAt, size int64, opts ImportOptions) (*
 		return nil, err
 	}
 
+	mrSuccess = true
 	return pack, nil
 }
 
@@ -370,12 +381,19 @@ func (m *Manager) ImportCurseForge(r io.ReaderAt, size int64, opts ImportOptions
 	}
 
 	pDir := m.packDir(packID)
+	var cfSuccess bool
+	defer func() {
+		if !cfSuccess {
+			_ = os.RemoveAll(pDir)
+		}
+	}()
+
 	modsDir := filepath.Join(pDir, "mods")
 	if err := os.MkdirAll(modsDir, 0755); err != nil {
 		return nil, err
 	}
 
-	// Extract overrides
+	// Extract overrides with decompression bomb limit
 	overridesDir := manifest.Overrides
 	if overridesDir == "" {
 		overridesDir = "overrides"
@@ -401,7 +419,7 @@ func (m *Manager) ImportCurseForge(r io.ReaderAt, size int64, opts ImportOptions
 				frc.Close()
 				continue
 			}
-			_, _ = io.Copy(out, frc)
+			_, _ = io.Copy(out, io.LimitReader(frc, maxExtractedOverrideFileSize))
 			frc.Close()
 			out.Close()
 		}
@@ -479,6 +497,7 @@ func (m *Manager) ImportCurseForge(r io.ReaderAt, size int64, opts ImportOptions
 		return nil, err
 	}
 
+	cfSuccess = true
 	return pack, nil
 }
 
