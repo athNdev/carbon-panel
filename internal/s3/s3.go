@@ -114,3 +114,17 @@ func (u *Uploader) Download(ctx context.Context, key, localPath string) error {
 	}
 	return nil
 }
+
+// Delete removes an object key from the configured S3 bucket.
+func (u *Uploader) Delete(ctx context.Context, key string) error {
+	if key == "" {
+		return nil
+	}
+	if _, err := u.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: &u.bucket,
+		Key:    &key,
+	}); err != nil {
+		return fmt.Errorf("s3 delete: %w", err)
+	}
+	return nil
+}

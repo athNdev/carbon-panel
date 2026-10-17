@@ -204,3 +204,51 @@ func TestAuthenticateFromHeader(t *testing.T) {
 		t.Fatal("junk bearer must fail")
 	}
 }
+
+func TestThrottle_PruneAndCount(t *testing.T) {
+	fakeNow := time.Now()
+	th := NewLoginThrottleWithLimits(2, 100*time.Millisecond, 200*time.Millisecond)
+	th.now = func() time.Time { return fakeNow }
+
+	// Add failures for key1 and key2
+	th.Failure("key1")
+	th.Failure("key2")
+	if th.Count() != 2 {
+		t.Fatalf("expected count 2, got %d", th.Count())
+	}
+
+	// Advance time past the window
+	fakeNow = fakeNow.Add(150 * time.Millisecond)
+
+	// Prune should evict both expired keys
+	evicted := th.Prune()
+	if evicted != 2 {
+		t.Fatalf("expected 2 evicted keys, got %d", evicted)
+	}
+	if th.Count() != 0 {
+		t.Fatalf("expected count 0 after prune, got %d", th.Count())
+	}
+}
+
+func TestThrottle_AllowInlinePruning(t *testing.T) {
+	fakeNow := time.Now()
+	th := NewLoginThrottleWithLimits(2, 50*time.Millisecond, 100*time.Millisecond)
+	th.now = func() time.Time { return fakeNow }
+
+	th.Failure("user1")
+	if th.Count() != 1 {
+		t.Fatalf("expected count 1, got %d", th.Count())
+	}
+
+	// Advance time beyond window
+	fakeNow = fakeNow.Add(60 * time.Millisecond)
+
+	// Allow check should succeed AND inline delete the expired record
+	allowed, _ := th.Allow("user1")
+	if !allowed {
+		t.Fatalf("expected allowed true")
+	}
+	if th.Count() != 0 {
+		t.Fatalf("expected inline delete to reduce count to 0, got %d", th.Count())
+	}
+}

@@ -144,6 +144,13 @@ func (s *BackupService) DeleteBackup(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete archive: %w", err))
 	}
 	_ = os.Remove(rec.Path + ".sha256")
+	if rec.RemoteKey != "" && s3uploader.Enabled(s.s3cfg) {
+		if up, err := s3uploader.NewUploader(s.s3cfg); err == nil {
+			if err := up.Delete(ctx, rec.RemoteKey); err != nil {
+				s.log.Warn("Failed to delete remote S3 backup %s: %v", rec.RemoteKey, err)
+			}
+		}
+	}
 	if err := s.store.DeleteBackupRecord(ctx, rec.ID); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete backup record"))
 	}
