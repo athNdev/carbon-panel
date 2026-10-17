@@ -56,6 +56,7 @@ type IndexedModpack struct {
 	DockerImage    string                 `protobuf:"bytes,20,opt,name=docker_image,json=dockerImage,proto3" json:"docker_image,omitempty"`
 	RecommendedRam int32                  `protobuf:"varint,21,opt,name=recommended_ram,json=recommendedRam,proto3" json:"recommended_ram,omitempty"`
 	IsFavorited    bool                   `protobuf:"varint,22,opt,name=is_favorited,json=isFavorited,proto3" json:"is_favorited,omitempty"`
+	IndexError     string                 `protobuf:"bytes,23,opt,name=index_error,json=indexError,proto3" json:"index_error,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -244,6 +245,13 @@ func (x *IndexedModpack) GetIsFavorited() bool {
 	return false
 }
 
+func (x *IndexedModpack) GetIndexError() string {
+	if x != nil {
+		return x.IndexError
+	}
+	return ""
+}
+
 // Modpack version file
 type ModpackFile struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -257,6 +265,7 @@ type ModpackFile struct {
 	DownloadUrl   string                 `protobuf:"bytes,8,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
 	GameVersions  []string               `protobuf:"bytes,9,rep,name=game_versions,json=gameVersions,proto3" json:"game_versions,omitempty"`
 	SortIndex     int32                  `protobuf:"varint,10,opt,name=sort_index,json=sortIndex,proto3" json:"sort_index,omitempty"`
+	Sha256        string                 `protobuf:"bytes,11,opt,name=sha256,proto3" json:"sha256,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -359,6 +368,13 @@ func (x *ModpackFile) GetSortIndex() int32 {
 		return x.SortIndex
 	}
 	return 0
+}
+
+func (x *ModpackFile) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
 }
 
 // Modpack search filters
@@ -1119,6 +1135,7 @@ type ImportRemoteModpackResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Modpack       *IndexedModpack        `protobuf:"bytes,1,opt,name=modpack,proto3" json:"modpack,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Sha256        string                 `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1163,6 +1180,13 @@ func (x *ImportRemoteModpackResponse) GetModpack() *IndexedModpack {
 func (x *ImportRemoteModpackResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
+	}
+	return ""
+}
+
+func (x *ImportRemoteModpackResponse) GetSha256() string {
+	if x != nil {
+		return x.Sha256
 	}
 	return ""
 }
@@ -1724,6 +1748,7 @@ type Version struct {
 	FileDate      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=file_date,json=fileDate,proto3" json:"file_date,omitempty"`
 	SortIndex     int32                  `protobuf:"varint,5,opt,name=sort_index,json=sortIndex,proto3" json:"sort_index,omitempty"`
 	VersionNumber string                 `protobuf:"bytes,6,opt,name=version_number,json=versionNumber,proto3" json:"version_number,omitempty"`
+	Sha256        string                 `protobuf:"bytes,7,opt,name=sha256,proto3" json:"sha256,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1796,6 +1821,13 @@ func (x *Version) GetSortIndex() int32 {
 func (x *Version) GetVersionNumber() string {
 	if x != nil {
 		return x.VersionNumber
+	}
+	return ""
+}
+
+func (x *Version) GetSha256() string {
+	if x != nil {
+		return x.Sha256
 	}
 	return ""
 }
@@ -2008,7 +2040,7 @@ var File_carbonpanel_v1_modpack_proto protoreflect.FileDescriptor
 
 const file_carbonpanel_v1_modpack_proto_rawDesc = "" +
 	"\n" +
-	"\x1ccarbonpanel/v1/modpack.proto\x12\x0ecarbonpanel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x06\n" +
+	"\x1ccarbonpanel/v1/modpack.proto\x12\x0ecarbonpanel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbf\x06\n" +
 	"\x0eIndexedModpack\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2038,7 +2070,9 @@ const file_carbonpanel_v1_modpack_proto_rawDesc = "" +
 	"\fjava_version\x18\x13 \x01(\x05R\vjavaVersion\x12!\n" +
 	"\fdocker_image\x18\x14 \x01(\tR\vdockerImage\x12'\n" +
 	"\x0frecommended_ram\x18\x15 \x01(\x05R\x0erecommendedRam\x12!\n" +
-	"\fis_favorited\x18\x16 \x01(\bR\visFavorited\"\xe0\x02\n" +
+	"\fis_favorited\x18\x16 \x01(\bR\visFavorited\x12\x1f\n" +
+	"\vindex_error\x18\x17 \x01(\tR\n" +
+	"indexError\"\xf8\x02\n" +
 	"\vModpackFile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2053,7 +2087,8 @@ const file_carbonpanel_v1_modpack_proto_rawDesc = "" +
 	"\rgame_versions\x18\t \x03(\tR\fgameVersions\x12\x1d\n" +
 	"\n" +
 	"sort_index\x18\n" +
-	" \x01(\x05R\tsortIndex\"\xba\x01\n" +
+	" \x01(\x05R\tsortIndex\x12\x16\n" +
+	"\x06sha256\x18\v \x01(\tR\x06sha256\"\xba\x01\n" +
 	"\x15SearchModpacksRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12!\n" +
 	"\fgame_version\x18\x02 \x01(\tR\vgameVersion\x12\x1d\n" +
@@ -2105,10 +2140,11 @@ const file_carbonpanel_v1_modpack_proto_rawDesc = "" +
 	"mod_loader\x18\x05 \x01(\tR\tmodLoader\x12\x1d\n" +
 	"\n" +
 	"auth_token\x18\x06 \x01(\tR\tauthToken\x122\n" +
-	"\x15allow_private_network\x18\a \x01(\bR\x13allowPrivateNetwork\"q\n" +
+	"\x15allow_private_network\x18\a \x01(\bR\x13allowPrivateNetwork\"\x89\x01\n" +
 	"\x1bImportRemoteModpackResponse\x128\n" +
 	"\amodpack\x18\x01 \x01(\v2\x1e.carbonpanel.v1.IndexedModpackR\amodpack\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"&\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x16\n" +
+	"\x06sha256\x18\x03 \x01(\tR\x06sha256\"&\n" +
 	"\x14DeleteModpackRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"1\n" +
 	"\x15DeleteModpackResponse\x12\x18\n" +
@@ -2142,7 +2178,7 @@ const file_carbonpanel_v1_modpack_proto_rawDesc = "" +
 	"\x16GetModpackFilesRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"L\n" +
 	"\x17GetModpackFilesResponse\x121\n" +
-	"\x05files\x18\x01 \x03(\v2\x1b.carbonpanel.v1.ModpackFileR\x05files\"\xde\x01\n" +
+	"\x05files\x18\x01 \x03(\v2\x1b.carbonpanel.v1.ModpackFileR\x05files\"\xf6\x01\n" +
 	"\aVersion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12!\n" +
@@ -2150,7 +2186,8 @@ const file_carbonpanel_v1_modpack_proto_rawDesc = "" +
 	"\tfile_date\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bfileDate\x12\x1d\n" +
 	"\n" +
 	"sort_index\x18\x05 \x01(\x05R\tsortIndex\x12%\n" +
-	"\x0eversion_number\x18\x06 \x01(\tR\rversionNumber\"m\n" +
+	"\x0eversion_number\x18\x06 \x01(\tR\rversionNumber\x12\x16\n" +
+	"\x06sha256\x18\a \x01(\tR\x06sha256\"m\n" +
 	"\x19GetModpackVersionsRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fgame_version\x18\x02 \x01(\tR\vgameVersion\x12\x1d\n" +

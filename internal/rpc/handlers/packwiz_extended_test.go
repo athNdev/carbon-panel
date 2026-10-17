@@ -123,6 +123,8 @@ func TestPackwizHandler_ExtendedFeatures(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Header().Get("Content-Disposition"), "attachment")
+	assert.NotEmpty(t, rr.Header().Get("X-Checksum-SHA256"))
+	assert.Contains(t, rr.Header().Get("Digest"), "SHA-256=")
 
 	// 8. Import Packwiz Multipart Upload
 	var buf bytes.Buffer
