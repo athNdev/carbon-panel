@@ -68,3 +68,25 @@ func TestPruneKeepsMinimum(t *testing.T) {
 		t.Fatalf("expected 2 kept, got %d", n)
 	}
 }
+
+func TestLog_ServerRestart(t *testing.T) {
+	db := testDB(t)
+	if err := Log(db, Entry{
+		ActorID:    "u1",
+		ActorName:  "admin",
+		IP:         "127.0.0.1",
+		Event:      EventServerRestart,
+		SubjectTyp: "server",
+		SubjectID:  "s1",
+	}); err != nil {
+		t.Fatalf("Log failed: %v", err)
+	}
+
+	got, err := List(db, "s1", "", time.Time{}, 10)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if len(got) != 1 || got[0].Event != EventServerRestart {
+		t.Fatalf("expected EventServerRestart, got %+v", got)
+	}
+}

@@ -19,7 +19,8 @@ type mockFreezer struct {
 	unpauseCalls []string
 	// pauseGate, when non-nil, blocks PauseContainer until closed —
 	// lets tests hold a transition open to prove single-flighting.
-	pauseGate chan struct{}
+	pauseGate  chan struct{}
+	unpauseErr error
 }
 
 func newMockFreezer() *mockFreezer {
@@ -46,8 +47,11 @@ func (m *mockFreezer) PauseContainer(ctx context.Context, containerID string) er
 func (m *mockFreezer) UnpauseContainer(ctx context.Context, containerID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.paused[containerID] = false
 	m.unpauseCalls = append(m.unpauseCalls, containerID)
+	if m.unpauseErr != nil {
+		return m.unpauseErr
+	}
+	m.paused[containerID] = false
 	return nil
 }
 
@@ -61,8 +65,9 @@ func (m *mockFreezer) GetContainerStatus(ctx context.Context, containerID string
 }
 
 type mockFreezerStore struct {
-	mu      sync.Mutex
-	servers map[string]*db.Server
+	mu              sync.Mutex
+	servers         map[string]*db.Server
+	updateStatusErr error
 }
 
 func newMockFreezerStore() *mockFreezerStore {
@@ -105,6 +110,9 @@ func (s *mockFreezerStore) UpdateServer(ctx context.Context, server *db.Server) 
 func (s *mockFreezerStore) UpdateServerStatus(ctx context.Context, id string, status db.ServerStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.updateStatusErr != nil {
+		return s.updateStatusErr
+	}
 	srv, ok := s.servers[id]
 	if !ok {
 		return fmt.Errorf("server not found")
@@ -305,4 +313,60 @@ func TestHibernationManager_SingleFlight(t *testing.T) {
 	freezer.mu.Lock()
 	defer freezer.mu.Unlock()
 	assert.Len(t, freezer.pauseCalls, 1, "container must be paused exactly once")
+}
+
+
+func TestHibernationManager_WakeUnpauseFailure_MarksError(t *testing.T) {
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	store := newMockFreezerStore()
+
+	store.servers["srv-1"] = &db.Server{
+		ID:          "srv-1",
+		Name:        "Test Server",
+		ContainerID: "cnt-1",
+		Status:      db.StatusPaused,
+	}
+	freezer.paused["cnt-1"] = true
+
+	mgr := NewHibernationManager(freezer, store, nil)
+
+	freezer.mu.Lock()
+	freezer.unpauseErr = fmt.Errorf("cgroup unfreeze device busy")
+	freezer.mu.Unlock()
+
+	err := mgr.WakeServer(ctx, "srv-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cgroup unfreeze failed")
+
+	srv, err := store.GetServer(ctx, "srv-1")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusError, srv.Status, "server status must be marked error when unfreeze fails")
+}
+
+func TestHibernationManager_HibernateUpdateStatusFails_RollsBackUnpause(t *testing.T) {
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	store := newMockFreezerStore()
+
+	store.servers["srv-1"] = &db.Server{
+		ID:          "srv-1",
+		Name:        "Test Server",
+		ContainerID: "cnt-1",
+		Status:      db.StatusRunning,
+	}
+
+	mgr := NewHibernationManager(freezer, store, nil)
+
+	store.mu.Lock()
+	store.updateStatusErr = fmt.Errorf("database transaction error")
+	store.mu.Unlock()
+
+	err := mgr.HibernateServer(ctx, "srv-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to update server status to paused")
+
+	freezer.mu.Lock()
+	defer freezer.mu.Unlock()
+	assert.Contains(t, freezer.unpauseCalls, "cnt-1", "must roll back and unpause container if status update fails")
 }

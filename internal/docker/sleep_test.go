@@ -18,6 +18,8 @@ type mockSleepController struct {
 	starts    []string
 	stops     []string
 	startGate chan struct{}
+	startErr  error
+	startHook func(containerID string)
 }
 
 func newMockSleepController() *mockSleepController {
@@ -34,6 +36,14 @@ func (m *mockSleepController) StartContainer(ctx context.Context, containerID st
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.startErr != nil {
+		return m.startErr
+	}
+	if m.startHook != nil {
+		m.startHook(containerID)
+		m.starts = append(m.starts, containerID)
+		return nil
+	}
 	m.status[containerID] = db.StatusRunning
 	m.starts = append(m.starts, containerID)
 	return nil
@@ -225,4 +235,64 @@ func TestDeepSleepManager_SleepRejectsNonRunning(t *testing.T) {
 	err := mgr.SleepServer(ctx, "srv-sleep")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "in status stopped")
+}
+
+
+func TestDeepSleepManager_WakeContainerStartFailure_RollsBackToError(t *testing.T) {
+	ctx := context.Background()
+	controller, commander, store := newDeepSleepHarness()
+
+	var refreshed []string
+	refresher := func(serverID string) {
+		refreshed = append(refreshed, serverID)
+	}
+
+	mgr := NewDeepSleepManager(controller, store, commander, refresher, nil)
+	require.NoError(t, mgr.SleepServer(ctx, "srv-sleep"))
+
+	controller.mu.Lock()
+	controller.startErr = fmt.Errorf("port already in use")
+	controller.mu.Unlock()
+
+	err := mgr.WakeServer(ctx, "srv-sleep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "container start failed")
+
+	srv, err := store.GetServer(ctx, "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusError, srv.Status, "server status must be rolled back to error")
+	assert.Contains(t, refreshed, "srv-sleep", "proxy route refresher must be invoked on wake failure")
+}
+
+func TestDeepSleepManager_WakeContainerPrematureExit_AbortsFast(t *testing.T) {
+	ctx := context.Background()
+	controller, commander, store := newDeepSleepHarness()
+
+	var refreshed []string
+	refresher := func(serverID string) {
+		refreshed = append(refreshed, serverID)
+	}
+
+	mgr := NewDeepSleepManager(controller, store, commander, refresher, nil)
+	require.NoError(t, mgr.SleepServer(ctx, "srv-sleep"))
+
+	controller.mu.Lock()
+	controller.startHook = func(containerID string) {
+		// Simulate immediate crash after start (e.g. JVM exit / out-of-memory / bad config)
+		controller.status[containerID] = db.StatusStopped
+	}
+	controller.mu.Unlock()
+
+	start := time.Now()
+	err := mgr.WakeServer(ctx, "srv-sleep")
+	duration := time.Since(start)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exited unexpectedly")
+	assert.Less(t, duration, 2*time.Second, "must abort immediately rather than waiting for 120s timeout")
+
+	srv, err := store.GetServer(ctx, "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusError, srv.Status, "server status must be marked as error")
+	assert.Contains(t, refreshed, "srv-sleep", "proxy route refresher must be invoked")
 }
