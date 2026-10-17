@@ -37,10 +37,10 @@ func TestOpenAPIHandler_Responds(t *testing.T) {
 
 	res := rec.Result()
 	defer res.Body.Close()
-	// The spec may be absent outside a built frontend (then 500); either
+	// The spec may be absent outside a built frontend (then 404 or 500); either
 	// way the handler must answer instead of hanging, and a served spec
 	// must be YAML.
-	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusInternalServerError {
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound && res.StatusCode != http.StatusInternalServerError {
 		t.Errorf("status = %d", res.StatusCode)
 	}
 }
