@@ -76,3 +76,45 @@ func TestBackupService_ListDeleteLock(t *testing.T) {
 		t.Fatalf("expected 1 remaining, got %+v err=%v", list, err)
 	}
 }
+
+func TestBackupService_DeleteBackup_RemoteKeyHandled(t *testing.T) {
+	store := setupTestStore(t)
+	defer func() { _ = store.Close() }()
+	ctx := context.Background()
+	log := logger.New()
+
+	s3cfg := appconfig.S3Config{
+		Enabled:   true,
+		Bucket:    "test-bucket",
+		AccessKey: "test-ak",
+		SecretKey: "test-sk",
+	}
+
+	svc := NewBackupService(store, nil, nil, s3cfg, log)
+	enforcer, err := rbac.NewEnforcer(store.DB())
+	if err != nil {
+		t.Fatalf("NewEnforcer: %v", err)
+	}
+	_ = enforcer.SeedDefaultPolicies(false)
+	svc.SetEnforcer(enforcer)
+	ctx = auth.WithUser(ctx, &auth.AuthenticatedUser{ID: "u-admin", Username: "admin", Roles: []string{"admin"}})
+
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "remote_backup.zip")
+	_ = os.WriteFile(archive, []byte("data"), 0644)
+
+	rec := newBackupRecord("b-remote", "srv-1", archive)
+	rec.RemoteKey = "srv-1/remote_backup.zip"
+	if err := store.CreateBackupRecord(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+
+	// Deletion succeeds locally even if remote S3 service is mocked/offline (fails soft with warning)
+	resp, err := svc.DeleteBackup(ctx, connect.NewRequest(&v1.DeleteBackupRequest{Id: "b-remote"}))
+	if err != nil || !resp.Msg.Success {
+		t.Fatalf("expected delete to succeed, got %v", err)
+	}
+	if _, err := store.GetBackupRecord(ctx, "b-remote"); err == nil {
+		t.Fatalf("record should be deleted from store")
+	}
+}
