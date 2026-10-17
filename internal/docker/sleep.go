@@ -241,6 +241,17 @@ func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID string) {
 	}
 }
 
+func (m *DeepSleepManager) rollbackWake(ctx context.Context, serverID string) {
+	failCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := m.store.UpdateServerStatus(failCtx, serverID, db.StatusError); err != nil && m.logger != nil {
+		m.logger.Error("Wake: failed to update status to error for server %s: %v", serverID, err)
+	}
+	if m.refresher != nil {
+		m.refresher(serverID)
+	}
+}
+
 // SleepServer gracefully stops a server container and marks it deeply asleep.
 // The status is pre-set to StatusDeepSleep and proxy route updated before stopping
 // the container, so the reconciler never misclassifies the container exit as an
@@ -366,6 +377,7 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 
 	start := time.Now()
 	if err := m.controller.StartContainer(ctx, srv.ContainerID); err != nil {
+		m.rollbackWake(ctx, serverID)
 		return fmt.Errorf("container start failed for server %s: %w", serverID, err)
 	}
 
@@ -378,11 +390,19 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		if err == nil && status == db.StatusRunning {
 			break
 		}
+		// If the container stopped or failed immediately on start (e.g. JVM crash,
+		// bad flags, missing jar), abort immediately instead of stalling for 120s.
+		if err == nil && (status == db.StatusStopped || status == db.StatusError) {
+			m.rollbackWake(ctx, serverID)
+			return fmt.Errorf("container for server %s exited unexpectedly (%s) during wake", serverID, status)
+		}
 		if time.Now().After(deadline) {
+			m.rollbackWake(ctx, serverID)
 			return fmt.Errorf("container for server %s did not reach running in time", serverID)
 		}
 		select {
 		case <-ctx.Done():
+			m.rollbackWake(ctx, serverID)
 			return ctx.Err()
 		case <-time.After(1 * time.Second):
 		}
