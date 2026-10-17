@@ -58,3 +58,16 @@ test('CarbonModal enforces dialog semantics, keyboard trap, and ARIA attributes'
 		'CarbonModal must listen for global keydown'
 	);
 });
+
+test('ServerBackups guards restore and delete with CarbonConfirm modals', () => {
+	const backupsPath = path.resolve(import.meta.dirname, '../components/server-backups.svelte');
+	const content = fs.readFileSync(backupsPath, 'utf-8');
+
+	assert.ok(content.includes('CarbonConfirm'), 'ServerBackups must import and use CarbonConfirm');
+	assert.ok(content.includes('restoreConfirmOpen'), 'ServerBackups must track restore confirmation state');
+	assert.ok(content.includes('deleteConfirmOpen'), 'ServerBackups must track delete confirmation state');
+	assert.ok(content.includes('title="Restore backup?"'), 'ServerBackups must confirm before restoring');
+	assert.ok(content.includes('title="Delete backup?"'), 'ServerBackups must confirm before deleting');
+	assert.ok(content.includes('promptRestore(backup)'), 'Restore action button must trigger confirmation prompt');
+	assert.ok(content.includes('promptDelete(backup)'), 'Delete action button must trigger confirmation prompt');
+});

@@ -30,6 +30,10 @@ type throttleEntry struct {
 	blockedUntil time.Time
 }
 
+// pruneThreshold triggers opportunistic cleanup of expired entries during
+// failures to keep memory strictly bounded under wide scanning.
+const pruneThreshold = 1000
+
 // maxThrottleEntries bounds memory: a flood of unique keys must not grow the
 // map without limit. When exceeded the table is cleared, which can only make
 // the limiter more permissive, never less.
@@ -75,8 +79,12 @@ func (t *LoginThrottle) Allow(key string) (bool, time.Duration) {
 		return true, 0
 	}
 	now := t.now()
-	if now.Before(e.blockedUntil) {
+	if !e.blockedUntil.IsZero() && now.Before(e.blockedUntil) {
 		return false, e.blockedUntil.Sub(now)
+	}
+	// Clean up expired entry inline if both window and block have elapsed
+	if now.Sub(e.windowStart) > t.window && (e.blockedUntil.IsZero() || now.After(e.blockedUntil)) {
+		delete(t.entries, key)
 	}
 	return true, 0
 }
@@ -87,7 +95,7 @@ func (t *LoginThrottle) Failure(key string) time.Duration {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if len(t.entries) >= maxThrottleEntries {
+	if len(t.entries) >= pruneThreshold {
 		t.clearExpiredLocked(t.now())
 		if len(t.entries) >= maxThrottleEntries {
 			t.entries = make(map[string]*throttleEntry)
@@ -118,9 +126,25 @@ func (t *LoginThrottle) Reset(key string) {
 	delete(t.entries, key)
 }
 
+// Prune sweeps and removes all expired entries, returning the number of evicted keys.
+func (t *LoginThrottle) Prune() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	before := len(t.entries)
+	t.clearExpiredLocked(t.now())
+	return before - len(t.entries)
+}
+
+// Count returns the current number of tracked keys.
+func (t *LoginThrottle) Count() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.entries)
+}
+
 func (t *LoginThrottle) clearExpiredLocked(now time.Time) {
 	for k, e := range t.entries {
-		if now.After(e.blockedUntil) && now.Sub(e.windowStart) > t.window {
+		if (e.blockedUntil.IsZero() || now.After(e.blockedUntil)) && now.Sub(e.windowStart) > t.window {
 			delete(t.entries, k)
 		}
 	}

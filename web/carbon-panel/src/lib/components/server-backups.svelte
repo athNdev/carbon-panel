@@ -10,12 +10,19 @@
 		type BackupRecord
 	} from '$lib/proto/carbonpanel/v1/backup_pb';
 	import { toast } from 'svelte-sonner';
+	import { CarbonConfirm } from '$lib/components/carbon';
 
 	let { server, active = false }: { server: Server; active?: boolean } = $props();
 
 	let backups = $state<BackupRecord[]>([]);
 	let loading = $state(false);
 	let acting = $state<string | null>(null);
+
+	let pendingDelete = $state<BackupRecord | null>(null);
+	let deleteConfirmOpen = $state(false);
+
+	let pendingRestore = $state<BackupRecord | null>(null);
+	let restoreConfirmOpen = $state(false);
 
 	async function loadBackups() {
 		loading = true;
@@ -32,6 +39,18 @@
 		}
 	}
 
+	function promptDelete(backup: BackupRecord) {
+		pendingDelete = backup;
+		deleteConfirmOpen = true;
+	}
+
+	async function confirmDelete() {
+		if (!pendingDelete) return;
+		const id = pendingDelete.id;
+		pendingDelete = null;
+		await deleteBackup(id);
+	}
+
 	async function deleteBackup(id: string) {
 		acting = `delete:${id}`;
 		try {
@@ -45,6 +64,18 @@
 		} finally {
 			acting = null;
 		}
+	}
+
+	function promptRestore(backup: BackupRecord) {
+		pendingRestore = backup;
+		restoreConfirmOpen = true;
+	}
+
+	async function confirmRestore() {
+		if (!pendingRestore) return;
+		const id = pendingRestore.id;
+		pendingRestore = null;
+		await restoreBackup(id);
 	}
 
 	async function restoreBackup(id: string) {
@@ -158,7 +189,7 @@
 									type="button"
 									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null}
-									onclick={() => restoreBackup(backup.id)}
+									onclick={() => promptRestore(backup)}
 								>
 									{acting === `restore:${backup.id}` ? '…' : 'Restore'}
 								</button>
@@ -174,7 +205,7 @@
 									type="button"
 									class="h-7 rounded-none bg-[#393939] px-3 text-white transition-colors hover:bg-[#4c4c4c] disabled:opacity-50"
 									disabled={acting !== null || backup.locked}
-									onclick={() => deleteBackup(backup.id)}
+									onclick={() => promptDelete(backup)}
 								>
 									{acting === `delete:${backup.id}` ? '…' : 'Delete'}
 								</button>
@@ -186,3 +217,31 @@
 		{/if}
 	</div>
 </div>
+
+<CarbonConfirm
+	bind:open={restoreConfirmOpen}
+	title="Restore backup?"
+	message="Restoring overwrites server data with this archive. The server container will be stopped and restarted if it was running."
+	confirmLabel="Restore Backup"
+	danger
+	onconfirm={confirmRestore}
+	onclose={() => (pendingRestore = null)}
+>
+	{#snippet details()}
+		{#if pendingRestore}{pendingRestore.name}{/if}
+	{/snippet}
+</CarbonConfirm>
+
+<CarbonConfirm
+	bind:open={deleteConfirmOpen}
+	title="Delete backup?"
+	message="The backup archive will be permanently deleted. This cannot be undone."
+	confirmLabel="Delete Backup"
+	danger
+	onconfirm={confirmDelete}
+	onclose={() => (pendingDelete = null)}
+>
+	{#snippet details()}
+		{#if pendingDelete}{pendingDelete.name}{/if}
+	{/snippet}
+</CarbonConfirm>
