@@ -118,7 +118,13 @@
 				Aliases
 			</Button>
 		{:else}
-			<Button variant="ghost" size="icon" class="h-7 w-7" title="Available Aliases" aria-label="Available aliases">
+			<Button
+				variant="ghost"
+				size="icon"
+				class="h-7 w-7"
+				title="Available Aliases"
+				aria-label="Available aliases"
+			>
 				<Braces class="h-4 w-4" />
 			</Button>
 		{/if}

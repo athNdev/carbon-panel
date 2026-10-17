@@ -1097,7 +1097,13 @@
 							<h2 class="text-2xl font-semibold tracking-tight">{currentSection.title}</h2>
 							<p class="mt-1 text-muted-foreground">{currentSection.description}</p>
 						</div>
-						<Button variant="ghost" size="icon" onclick={closeDialog} class="h-10 w-10" aria-label="Close dialog">
+						<Button
+							variant="ghost"
+							size="icon"
+							onclick={closeDialog}
+							class="h-10 w-10"
+							aria-label="Close dialog"
+						>
 							<X class="h-5 w-5" />
 						</Button>
 					</div>
