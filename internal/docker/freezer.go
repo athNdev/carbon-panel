@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 // ContainerFreezer defines the container pause/unpause and status capabilities
@@ -30,6 +32,7 @@ type HibernationManager struct {
 	freezer       ContainerFreezer
 	store         FreezerStore
 	logger        *logger.Logger
+	bus           *events.Bus
 	idleTracker   map[string]time.Time
 	trackerMu     sync.RWMutex
 	wakeCallbacks []func(serverID string)
@@ -56,6 +59,13 @@ func NewHibernationManager(freezer ContainerFreezer, store FreezerStore, log *lo
 		idleTracker: make(map[string]time.Time),
 		inflight:    make(map[string]struct{}),
 	}
+}
+
+// SetEventBus configures the event bus for broadcasting hibernation lifecycle events.
+func (m *HibernationManager) SetEventBus(bus *events.Bus) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.bus = bus
 }
 
 // SetPlayerCountProvider configures the online-player source of truth used
@@ -98,14 +108,7 @@ func (m *HibernationManager) endTransition(serverID string) {
 	delete(m.inflight, serverID)
 }
 
-// RegisterWakeCallback registers a callback fired when a server is woken
-func (m *HibernationManager) RegisterWakeCallback(cb func(serverID string)) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.wakeCallbacks = append(m.wakeCallbacks, cb)
-}
-
-// Start begins the background idle-checker routine
+// Start starts the background idle checker loop
 func (m *HibernationManager) Start(ctx context.Context, checkInterval time.Duration) {
 	m.mu.Lock()
 	m.ctx, m.cancel = context.WithCancel(ctx)
@@ -122,78 +125,97 @@ func (m *HibernationManager) Start(ctx context.Context, checkInterval time.Durat
 			case <-ticker.C:
 				if err := m.CheckIdleServers(m.ctx); err != nil {
 					if m.logger != nil {
-						m.logger.Warn("Error checking idle servers for hibernation: %v", err)
+						m.logger.Error("Error checking idle servers: %v", err)
 					}
 				}
 			}
 		}
 	}()
+
+	if m.logger != nil {
+		m.logger.Info("Hibernation manager started with check interval %v", checkInterval)
+	}
 }
 
-// Stop terminates the background idle-checker routine
+// Stop stops the background idle checker loop
 func (m *HibernationManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.cancel != nil {
 		m.cancel()
+		m.cancel = nil
+	}
+	if m.logger != nil {
+		m.logger.Info("Hibernation manager stopped")
 	}
 }
 
-// RecordActivity marks a server as recently active, resetting its idle countdown
+// RegisterWakeCallback registers a callback to be called when a server wakes from hibernation
+func (m *HibernationManager) RegisterWakeCallback(cb func(serverID string)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.wakeCallbacks = append(m.wakeCallbacks, cb)
+}
+
+// RecordActivity records activity for a server, resetting its idle timer
 func (m *HibernationManager) RecordActivity(serverID string) {
 	m.trackerMu.Lock()
 	defer m.trackerMu.Unlock()
-	delete(m.idleTracker, serverID)
+	m.idleTracker[serverID] = time.Now()
 }
 
-// CheckIdleServers evaluates all active servers and hibernates idle ones
+// CheckIdleServers checks all servers and hibernates any that have been idle longer than their threshold
 func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
-	if m.store == nil || m.freezer == nil {
-		return nil
-	}
-
 	servers, err := m.store.ListServers(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list servers: %w", err)
 	}
 
 	now := time.Now()
-
 	for _, srv := range servers {
-		if !srv.AutoHibernate || srv.Status != db.StatusRunning || srv.ContainerID == "" {
+		if !srv.AutoHibernate {
+			// Clean up tracker if auto-hibernate is disabled
 			m.trackerMu.Lock()
 			delete(m.idleTracker, srv.ID)
 			m.trackerMu.Unlock()
 			continue
 		}
 
-		// Only hibernate if no players are online (authoritative count,
-		// not the never-persisted row field — see SetPlayerCountProvider).
+		// Only running servers can be hibernated
+		if srv.Status != db.StatusRunning {
+			m.trackerMu.Lock()
+			delete(m.idleTracker, srv.ID)
+			m.trackerMu.Unlock()
+			continue
+		}
+
+		timeoutMin := srv.IdleTimeoutMinutes
+		if timeoutMin <= 0 {
+			timeoutMin = 10 // default 10 minutes
+		}
+		idleThreshold := time.Duration(timeoutMin) * time.Minute
+
+		// If server has online players (from provider, fallback to row), reset idle timer
 		if m.onlinePlayers(srv) > 0 {
 			m.trackerMu.Lock()
-			delete(m.idleTracker, srv.ID)
+			m.idleTracker[srv.ID] = now
 			m.trackerMu.Unlock()
 			continue
 		}
-
-		timeoutMinutes := srv.IdleTimeoutMinutes
-		if timeoutMinutes <= 0 {
-			timeoutMinutes = 10
-		}
-		idleDuration := time.Duration(timeoutMinutes) * time.Minute
 
 		m.trackerMu.Lock()
 		idleSince, tracked := m.idleTracker[srv.ID]
 		if !tracked {
+			// First time seeing 0 players, start tracking
 			m.idleTracker[srv.ID] = now
 			m.trackerMu.Unlock()
 			continue
 		}
 		m.trackerMu.Unlock()
 
-		if now.Sub(idleSince) >= idleDuration {
+		if now.Sub(idleSince) >= idleThreshold {
 			if m.logger != nil {
-				m.logger.Info("Server %s (%s) idle for %v, hibernating container %s via cgroup freezer...",
+				m.logger.Info("Server %s (%s) has been idle for %v, hibernating container %s...",
 					srv.Name, srv.ID, now.Sub(idleSince), srv.ContainerID)
 			}
 			if err := m.HibernateServer(ctx, srv.ID); err != nil {
@@ -207,7 +229,7 @@ func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
 	return nil
 }
 
-// HibernateServer freezes a server container using cgroup freezer and updates status
+// HibernateServer pauses a server container using cgroup freezer and marks it as paused
 func (m *HibernationManager) HibernateServer(ctx context.Context, serverID string) error {
 	if !m.tryBeginTransition(serverID, "hibernate") {
 		return fmt.Errorf("hibernate already in flight for server %s", serverID)
@@ -224,7 +246,7 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 	}
 
 	if srv.Status != db.StatusRunning {
-		return fmt.Errorf("cannot hibernate server %s in status %s", serverID, srv.Status)
+		return fmt.Errorf("cannot hibernate server %s with status %s (must be running)", serverID, srv.Status)
 	}
 
 	if err := m.freezer.PauseContainer(ctx, srv.ContainerID); err != nil {
@@ -232,12 +254,26 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 	}
 
 	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusPaused); err != nil {
+		// Try to unpause if DB update fails to avoid inconsistent state
+		_ = m.freezer.UnpauseContainer(ctx, srv.ContainerID)
 		return fmt.Errorf("failed to update server status to paused: %w", err)
 	}
 
 	m.trackerMu.Lock()
 	delete(m.idleTracker, serverID)
 	m.trackerMu.Unlock()
+
+	// Emit lifecycle event
+	m.mu.Lock()
+	bus := m.bus
+	m.mu.Unlock()
+	if bus != nil {
+		bus.Emit(ctx, events.Event{
+			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_STOP,
+			ServerID: serverID,
+			Data:     map[string]any{"status": string(db.StatusPaused)},
+		})
+	}
 
 	if m.logger != nil {
 		m.logger.Info("Successfully hibernated server %s (%s)", srv.Name, serverID)
@@ -283,6 +319,18 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 	m.trackerMu.Lock()
 	delete(m.idleTracker, serverID)
 	m.trackerMu.Unlock()
+
+	// Emit lifecycle event
+	m.mu.Lock()
+	bus := m.bus
+	m.mu.Unlock()
+	if bus != nil {
+		bus.Emit(ctx, events.Event{
+			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
+			ServerID: serverID,
+			Data:     map[string]any{"status": string(db.StatusRunning)},
+		})
+	}
 
 	if m.logger != nil {
 		m.logger.Info("Successfully woke server %s (%s) from hibernation in %v", srv.Name, serverID, time.Since(start))

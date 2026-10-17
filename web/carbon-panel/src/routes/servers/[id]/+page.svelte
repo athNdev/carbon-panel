@@ -211,7 +211,7 @@
 
 	function getStatusTagType(
 		status: ServerStatus
-	): 'green' | 'gray' | 'blue' | 'red' | 'warm-gray' | 'purple' {
+	): 'green' | 'gray' | 'blue' | 'red' | 'warm-gray' | 'purple' | 'teal' {
 		switch (status) {
 			case ServerStatus.RUNNING:
 				return 'green';
@@ -224,6 +224,10 @@
 				return 'purple';
 			case ServerStatus.STOPPING:
 				return 'warm-gray';
+			case ServerStatus.PAUSED:
+				return 'warm-gray';
+			case ServerStatus.DEEPSLEEP:
+				return 'teal';
 			case ServerStatus.ERROR:
 			case ServerStatus.UNHEALTHY:
 				return 'red';
@@ -250,6 +254,10 @@
 				return 'RESTARTING';
 			case ServerStatus.UNHEALTHY:
 				return 'UNHEALTHY';
+			case ServerStatus.PAUSED:
+				return 'PAUSED';
+			case ServerStatus.DEEPSLEEP:
+				return 'DEEP SLEEP';
 			default:
 				return 'UNKNOWN';
 		}
@@ -349,6 +357,33 @@
 							<Play class="h-4 w-4 fill-current" />
 						{/if}
 						<span>Start Server</span>
+					</button>
+				{:else if server.status === ServerStatus.DEEPSLEEP || server.status === ServerStatus.PAUSED}
+					<button
+						type="button"
+						onclick={() => handleServerAction('start')}
+						disabled={actionLoading}
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-4 font-sans text-sm text-white transition-colors hover:bg-[#0353e9] disabled:opacity-50"
+					>
+						{#if actionLoading}
+							<Loader2 class="h-4 w-4 animate-spin" />
+						{:else}
+							<Play class="h-4 w-4 fill-current" />
+						{/if}
+						<span>Wake Server</span>
+					</button>
+					<button
+						type="button"
+						onclick={() => handleServerAction('stop')}
+						disabled={actionLoading}
+						class="flex h-10 cursor-pointer items-center gap-2 rounded-none bg-[#da1e28] px-4 font-sans text-sm text-white transition-colors hover:bg-[#ba1b23] disabled:opacity-50"
+					>
+						{#if actionLoading}
+							<Loader2 class="h-4 w-4 animate-spin" />
+						{:else}
+							<Square class="h-4 w-4 fill-current" />
+						{/if}
+						<span>Stop</span>
 					</button>
 				{:else if server.status === ServerStatus.ERROR}
 					<button

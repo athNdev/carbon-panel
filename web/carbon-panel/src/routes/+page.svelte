@@ -150,7 +150,7 @@
 		return () => clearInterval(interval);
 	});
 
-	function getStatusTagType(status: ServerStatus): 'green' | 'red' | 'purple' | 'gray' {
+	function getStatusTagType(status: ServerStatus): 'green' | 'red' | 'purple' | 'gray' | 'warm-gray' | 'teal' {
 		switch (status) {
 			case ServerStatus.RUNNING:
 				return 'green';
@@ -159,6 +159,10 @@
 			case ServerStatus.CREATING:
 			case ServerStatus.RESTARTING:
 				return 'purple';
+			case ServerStatus.PAUSED:
+				return 'warm-gray';
+			case ServerStatus.DEEPSLEEP:
+				return 'teal';
 			case ServerStatus.ERROR:
 			case ServerStatus.UNHEALTHY:
 				return 'red';
@@ -613,7 +617,9 @@
 													type={getStatusTagType(server.status)}
 													size="sm"
 													pulse={server.status !== ServerStatus.RUNNING &&
-														server.status !== ServerStatus.STOPPED}
+														server.status !== ServerStatus.STOPPED &&
+														server.status !== ServerStatus.PAUSED &&
+														server.status !== ServerStatus.DEEPSLEEP}
 												>
 													{getStringForEnum(ServerStatus, server.status)}
 												</CarbonTag>

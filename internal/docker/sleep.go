@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 // SleeperStore defines storage operations needed by DeepSleepManager.
@@ -50,6 +52,8 @@ type DeepSleepManager struct {
 	commander   SleepCommander
 	store       SleeperStore
 	refresher   RouteRefresher
+	preWake     func(serverID string)
+	bus         *events.Bus
 	logger      *logger.Logger
 	idleTracker map[string]time.Time
 	trackerMu   sync.RWMutex
@@ -73,6 +77,21 @@ func NewDeepSleepManager(controller SleepController, store SleeperStore, command
 		idleTracker: make(map[string]time.Time),
 		inflight:    make(map[string]struct{}),
 	}
+}
+
+// SetEventBus configures the event bus for broadcasting sleep/wake lifecycle events.
+func (m *DeepSleepManager) SetEventBus(bus *events.Bus) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.bus = bus
+}
+
+// SetPreWakeHook configures a hook invoked immediately before StartContainer
+// (e.g. to release direct-port knock listeners).
+func (m *DeepSleepManager) SetPreWakeHook(hook func(serverID string)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.preWake = hook
 }
 
 // SetPlayerCountProvider configures the online-player source of truth (same
@@ -129,63 +148,76 @@ func (m *DeepSleepManager) Start(ctx context.Context, checkInterval time.Duratio
 			case <-ticker.C:
 				if err := m.CheckIdleServers(m.ctx); err != nil {
 					if m.logger != nil {
-						m.logger.Warn("Error checking idle servers for deep sleep: %v", err)
+						m.logger.Error("Deep sleep: error checking idle servers: %v", err)
 					}
 				}
 			}
 		}
 	}()
+
+	if m.logger != nil {
+		m.logger.Info("Deep sleep manager started (check interval: %v)", checkInterval)
+	}
 }
 
-// Stop terminates the background idle-checker routine.
+// Stop terminates the background idle checker.
 func (m *DeepSleepManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.cancel != nil {
 		m.cancel()
+		m.cancel = nil
+	}
+	if m.logger != nil {
+		m.logger.Info("Deep sleep manager stopped")
 	}
 }
 
-// RecordActivity marks a server as recently active, resetting its idle countdown.
+// RecordActivity resets the idle timer for the given server (called on proxy
+// connect or interactive operations).
 func (m *DeepSleepManager) RecordActivity(serverID string) {
 	m.trackerMu.Lock()
 	defer m.trackerMu.Unlock()
-	delete(m.idleTracker, serverID)
+	m.idleTracker[serverID] = time.Now()
 }
 
-// CheckIdleServers evaluates all running deep-sleep-enabled servers and stops idle ones.
+// CheckIdleServers iterates all servers and stops any whose idle duration
+// exceeds DeepSleepTimeoutMinutes.
 func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
-	if m.store == nil || m.controller == nil {
-		return nil
-	}
-
 	servers, err := m.store.ListServers(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list servers: %w", err)
 	}
 
 	now := time.Now()
-
 	for _, srv := range servers {
-		if !srv.AutoDeepSleep || srv.Status != db.StatusRunning || srv.ContainerID == "" {
+		if !srv.AutoDeepSleep {
 			m.trackerMu.Lock()
 			delete(m.idleTracker, srv.ID)
 			m.trackerMu.Unlock()
 			continue
 		}
 
+		if srv.Status != db.StatusRunning {
+			m.trackerMu.Lock()
+			delete(m.idleTracker, srv.ID)
+			m.trackerMu.Unlock()
+			continue
+		}
+
+		timeoutMin := srv.DeepSleepTimeoutMinutes
+		if timeoutMin <= 0 {
+			timeoutMin = 30 // default 30m
+		}
+		idleThreshold := time.Duration(timeoutMin) * time.Minute
+
+		// Authoritative player count from metrics collector (or srv.PlayersOnline).
 		if m.onlinePlayers(srv) > 0 {
 			m.trackerMu.Lock()
-			delete(m.idleTracker, srv.ID)
+			m.idleTracker[srv.ID] = now
 			m.trackerMu.Unlock()
 			continue
 		}
-
-		timeoutMinutes := srv.DeepSleepTimeoutMinutes
-		if timeoutMinutes <= 0 {
-			timeoutMinutes = 30
-		}
-		idleDuration := time.Duration(timeoutMinutes) * time.Minute
 
 		m.trackerMu.Lock()
 		idleSince, tracked := m.idleTracker[srv.ID]
@@ -196,7 +228,7 @@ func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
 		}
 		m.trackerMu.Unlock()
 
-		if now.Sub(idleSince) >= idleDuration {
+		if now.Sub(idleSince) >= idleThreshold {
 			if m.logger != nil {
 				m.logger.Info("Server %s (%s) idle for %v, deep-sleeping container %s (full stop)...",
 					srv.Name, srv.ID, now.Sub(idleSince), srv.ContainerID)
@@ -213,8 +245,9 @@ func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
 }
 
 // SleepServer gracefully stops a server container and marks it deeply asleep.
-// The container must exit (releasing session.lock) before the status flips,
-// so the reconciler never observes a running container under a sleep status.
+// The status flips to deepsleep *before* container shutdown so the level-triggered
+// reconciler's decide() immediately treats the exit as expected (desired == deepsleep)
+// and never clobbers the status to stopped (MINE-121).
 func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) error {
 	if !m.tryBeginTransition(serverID, "sleep") {
 		return fmt.Errorf("sleep already in flight for server %s", serverID)
@@ -234,7 +267,12 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		return fmt.Errorf("cannot deep-sleep server %s in status %s", serverID, srv.Status)
 	}
 
-	// 1. Flush world and ask the JVM to exit cleanly via RCON. Best effort:
+	// 1. Mark status as deepsleep first: protects against reconciler races during container stop.
+	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusDeepSleep); err != nil {
+		return fmt.Errorf("failed to update server status to deepsleep: %w", err)
+	}
+
+	// 2. Flush world and ask the JVM to exit cleanly via RCON. Best effort:
 	// without RCON the docker stop backstop below still applies.
 	if m.commander != nil {
 		if _, err := m.commander.SendCommand(ctx, serverID, "save-all"); err != nil {
@@ -249,7 +287,7 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		}
 	}
 
-	// 2. Wait for natural exit (session.lock released by the JVM itself).
+	// 3. Wait for natural exit (session.lock released by the JVM itself).
 	deadline := time.Now().Add(deepSleepStopTimeout)
 	for {
 		status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID)
@@ -261,31 +299,43 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		}
 		select {
 		case <-ctx.Done():
+			_ = m.store.UpdateServerStatus(ctx, serverID, db.StatusRunning)
 			return ctx.Err()
 		case <-time.After(deepSleepStopPollInterval):
 		}
 	}
 
-	// 3. Backstop: force the container down if it is still alive.
+	// 4. Backstop: force the container down if it is still alive.
 	if status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID); err == nil && status == db.StatusRunning {
 		if m.logger != nil {
 			m.logger.Warn("Deep sleep: server %s did not exit on RCON stop, forcing container stop", srv.Name)
 		}
 		if _, err := m.controller.StopContainer(ctx, srv.ContainerID); err != nil {
+			// Roll back status if container stop failed completely
+			_ = m.store.UpdateServerStatus(ctx, serverID, db.StatusRunning)
 			return fmt.Errorf("container stop failed for server %s: %w", serverID, err)
 		}
-	}
-
-	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusDeepSleep); err != nil {
-		return fmt.Errorf("failed to update server status to deepsleep: %w", err)
 	}
 
 	m.trackerMu.Lock()
 	delete(m.idleTracker, serverID)
 	m.trackerMu.Unlock()
 
+	// Notify proxy and direct knock listeners
 	if m.refresher != nil {
 		m.refresher(serverID)
+	}
+
+	// Emit lifecycle event to bus so web UI and consumers are notified
+	m.mu.Lock()
+	bus := m.bus
+	m.mu.Unlock()
+	if bus != nil {
+		bus.Emit(ctx, events.Event{
+			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_STOP,
+			ServerID: serverID,
+			Data:     map[string]any{"status": string(db.StatusDeepSleep)},
+		})
 	}
 
 	if m.logger != nil {
@@ -320,6 +370,14 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		return nil // boot already in flight; shared by concurrent joiners
 	}
 	defer m.endTransition(serverID)
+
+	// Release any direct-port knock listener before starting container so Docker can bind the port
+	m.mu.Lock()
+	preWake := m.preWake
+	m.mu.Unlock()
+	if preWake != nil {
+		preWake(serverID)
+	}
 
 	start := time.Now()
 	if err := m.controller.StartContainer(ctx, srv.ContainerID); err != nil {
@@ -357,14 +415,26 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		m.refresher(serverID)
 	}
 
+	// Emit wake event
+	m.mu.Lock()
+	bus := m.bus
+	m.mu.Unlock()
+	if bus != nil {
+		bus.Emit(ctx, events.Event{
+			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
+			ServerID: serverID,
+			Data:     map[string]any{"status": string(db.StatusRunning)},
+		})
+	}
+
 	if m.logger != nil {
-		m.logger.Info("Server %s (%s) woke from deep sleep in %v", srv.Name, serverID, time.Since(start))
+		m.logger.Info("Server %s (%s) woken from deep sleep in %v", srv.Name, serverID, time.Since(start))
 	}
 
 	return nil
 }
 
-// IsAsleep returns whether the server is currently deeply asleep.
+// IsAsleep returns whether the server is currently in deep sleep
 func (m *DeepSleepManager) IsAsleep(ctx context.Context, serverID string) bool {
 	srv, err := m.store.GetServer(ctx, serverID)
 	if err != nil || srv == nil {

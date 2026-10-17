@@ -142,7 +142,7 @@
 
 	function getStatusTagType(
 		status: ServerStatus
-	): 'green' | 'gray' | 'blue' | 'red' | 'warm-gray' | 'purple' {
+	): 'green' | 'gray' | 'blue' | 'red' | 'warm-gray' | 'purple' | 'teal' {
 		switch (status) {
 			case ServerStatus.RUNNING:
 				return 'green';
@@ -155,6 +155,10 @@
 				return 'purple';
 			case ServerStatus.STOPPING:
 				return 'warm-gray';
+			case ServerStatus.PAUSED:
+				return 'warm-gray';
+			case ServerStatus.DEEPSLEEP:
+				return 'teal';
 			case ServerStatus.ERROR:
 			case ServerStatus.UNHEALTHY:
 				return 'red';
@@ -181,6 +185,10 @@
 				return 'RESTARTING';
 			case ServerStatus.UNHEALTHY:
 				return 'UNHEALTHY';
+			case ServerStatus.PAUSED:
+				return 'PAUSED';
+			case ServerStatus.DEEPSLEEP:
+				return 'DEEP SLEEP';
 			default:
 				return 'UNKNOWN';
 		}
@@ -511,7 +519,7 @@
 								onclick={(e) => e.stopPropagation()}
 							>
 								<div class="inline-flex items-center border border-[#393939] bg-[#161616]">
-									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
+									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR || server.status === ServerStatus.PAUSED || server.status === ServerStatus.DEEPSLEEP}
 										<button
 											title="Start"
 											aria-label={`Start server ${server.name}`}
@@ -523,7 +531,7 @@
 										</button>
 									{/if}
 
-									{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING}
+									{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING || server.status === ServerStatus.PAUSED || server.status === ServerStatus.DEEPSLEEP}
 										<button
 											title="Stop"
 											aria-label={`Stop server ${server.name}`}
@@ -614,7 +622,7 @@
 
 							<!-- Action Buttons Bar -->
 							<div class="flex shrink-0 border border-[#393939] bg-[#161616]">
-								{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR}
+								{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR || server.status === ServerStatus.PAUSED || server.status === ServerStatus.DEEPSLEEP}
 									<button
 										title="Start"
 										aria-label={`Start server ${server.name}`}
@@ -625,7 +633,7 @@
 										<Play class="h-3 w-3 fill-current" />
 									</button>
 								{/if}
-								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING}
+								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY || server.status === ServerStatus.STARTING || server.status === ServerStatus.PAUSED || server.status === ServerStatus.DEEPSLEEP}
 									<button
 										title="Stop"
 										aria-label={`Stop server ${server.name}`}

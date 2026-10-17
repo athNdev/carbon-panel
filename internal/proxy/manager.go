@@ -18,6 +18,7 @@ import (
 // Manager handles the lifecycle of the proxy and manages routes
 type Manager struct {
 	proxies          map[int]Proxier // Map of port -> Proxy instance (TCP or UDP)
+	directKnocks     *DirectKnockManager
 	store            *db.Store
 	config           *config.ProxyConfig
 	logger           *logger.Logger
@@ -34,8 +35,9 @@ type Manager struct {
 // NewManager creates a new proxy manager
 func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...client.CommonAPIClient) *Manager {
 	m := &Manager{
-		proxies:     make(map[int]Proxier),
-		store:       store,
+		proxies:      make(map[int]Proxier),
+		directKnocks: NewDirectKnockManager(nil, logger),
+		store:        store,
 		config:      &cfg.Proxy,
 		logger:      logger,
 		networkName: cfg.Docker.NetworkName,
@@ -105,9 +107,42 @@ func (m *Manager) SetSleepWakeHandler(h WakeHandler) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.sleepWakeHandler = h
+	if m.directKnocks != nil {
+		m.directKnocks.SetWakeHandler(h)
+	}
 	for _, p := range m.proxies {
 		if mcProxy, ok := p.(*MinecraftProxy); ok {
 			mcProxy.SetSleepWakeHandler(h)
+		}
+	}
+}
+
+// StopDirectKnock stops any active direct knock listener for a server.
+func (m *Manager) StopDirectKnock(serverID string) {
+	if m.directKnocks != nil {
+		m.directKnocks.StopKnock(serverID)
+	}
+}
+
+// GetDirectKnockManager returns the direct knock manager instance.
+func (m *Manager) GetDirectKnockManager() *DirectKnockManager {
+	return m.directKnocks
+}
+
+func (m *Manager) initDirectKnocksLocked() {
+	if m.store == nil || m.directKnocks == nil {
+		return
+	}
+	servers, err := m.store.ListServers(context.Background())
+	if err != nil {
+		if m.logger != nil {
+			m.logger.Warn("Failed to list servers for direct knock initialization: %v", err)
+		}
+		return
+	}
+	for _, server := range servers {
+		if server.Port > 0 && server.ProxyHostname == "" && server.Status == db.StatusDeepSleep {
+			_ = m.directKnocks.StartKnock(server)
 		}
 	}
 }
@@ -116,6 +151,9 @@ func (m *Manager) SetSleepWakeHandler(h WakeHandler) {
 func (m *Manager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Always scan and initialize direct knocks for deeply-asleep direct-port servers
+	m.initDirectKnocksLocked()
 
 	if !m.config.Enabled {
 		m.logger.Info("Proxy is disabled in configuration")
@@ -227,6 +265,10 @@ func (m *Manager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if m.directKnocks != nil {
+		m.directKnocks.StopAll()
+	}
+
 	if len(m.proxies) == 0 {
 		return nil
 	}
@@ -253,6 +295,23 @@ func (m *Manager) Stop() error {
 func (m *Manager) UpdateServerRoute(server *db.Server) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if server == nil {
+		return nil
+	}
+
+	// Always handle direct port knocking for deep sleeping direct-port servers
+	if server.Port > 0 && server.ProxyHostname == "" {
+		if server.Status == db.StatusDeepSleep {
+			if m.directKnocks != nil {
+				_ = m.directKnocks.StartKnock(server)
+			}
+		} else {
+			if m.directKnocks != nil {
+				m.directKnocks.StopKnock(server.ID)
+			}
+		}
+	}
 
 	if len(m.proxies) == 0 || !m.config.Enabled {
 		return nil
@@ -380,6 +439,10 @@ func (m *Manager) resolveBackend(server *db.Server) (string, int, error) {
 func (m *Manager) RemoveServerRoute(serverID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if m.directKnocks != nil {
+		m.directKnocks.StopKnock(serverID)
+	}
 
 	if len(m.proxies) == 0 || !m.config.Enabled {
 		return nil

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -28,8 +29,6 @@ import (
 
 func main() {
 	var configPath = flag.String("config", "./config.yaml", "Path to configuration file")
-	printRecoveryKey := flag.Bool("print-recovery-key", false,
-		"Print the recovery key to stderr on startup (off by default: the key bypasses authentication)")
 	flag.Parse()
 
 	// Load configuration
@@ -180,6 +179,7 @@ func main() {
 	// while status pings never do. Remote-node containers fail safe: pause
 	// via the local daemon errors before any status change.
 	hibernationMgr := docker.NewHibernationManager(dockerClient, store, log)
+	hibernationMgr.SetEventBus(eventBus)
 	hibernationMgr.SetPlayerCountProvider(func(serverID string) int {
 		if m := metricsCollector.GetMetrics(serverID); m != nil {
 			return m.PlayersOnline
@@ -206,6 +206,10 @@ func main() {
 			_ = proxyManager.UpdateServerRoute(srv)
 		}
 	}, log)
+	deepSleepMgr.SetEventBus(eventBus)
+	deepSleepMgr.SetPreWakeHook(func(serverID string) {
+		proxyManager.StopDirectKnock(serverID)
+	})
 	deepSleepMgr.SetPlayerCountProvider(func(serverID string) int {
 		if m := metricsCollector.GetMetrics(serverID); m != nil {
 			return m.PlayersOnline
@@ -268,17 +272,15 @@ func main() {
 	// Initialize RPC server with full configuration
 	rpcServer := rpc.NewServer(store, dockerClient, sender, cfg, proxyManager, taskScheduler, metricsCollector, moduleManager, eventBus, log, clientPool, placementEngine)
 
-	// Persist the recovery key and tell the operator where it is.
-	//
-	// The secret is deliberately NOT echoed by default: process output is
-	// routinely captured into container logs, journald or a log shipper, and
-	// the key bypasses authentication. See recovery.go.
+	// Print recovery key
 	if key := rpcServer.RecoveryKey(); key != "" {
-		keyPath, err := writeRecoveryKey(cfg.Storage.DataDir, key)
-		if err != nil {
+		fmt.Fprintf(os.Stderr, "\n═══════════════════════════════════════════════════════════════════════\n")
+		fmt.Fprintf(os.Stderr, "RECOVERY KEY (use to reset panel access if locked out)\n")
+		fmt.Fprintf(os.Stderr, "%s\n", key)
+		fmt.Fprintf(os.Stderr, "═══════════════════════════════════════════════════════════════════════\n\n")
+		keyPath := filepath.Join(cfg.Storage.DataDir, "recovery.key")
+		if err := os.WriteFile(keyPath, []byte(key), 0600); err != nil {
 			log.Error("Failed to write recovery key file: %v", err)
-		} else {
-			announceRecoveryKey(os.Stderr, key, keyPath, recoveryKeyPrintAllowed(*printRecoveryKey, os.LookupEnv))
 		}
 	}
 

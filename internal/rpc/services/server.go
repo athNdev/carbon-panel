@@ -398,6 +398,10 @@ func dbStatusToProto(status storage.ServerStatus) v1.ServerStatus {
 		return v1.ServerStatus_SERVER_STATUS_STOPPING
 	case storage.StatusStopped:
 		return v1.ServerStatus_SERVER_STATUS_STOPPED
+	case storage.StatusPaused:
+		return v1.ServerStatus_SERVER_STATUS_PAUSED
+	case storage.StatusDeepSleep:
+		return v1.ServerStatus_SERVER_STATUS_DEEPSLEEP
 	case storage.StatusError:
 		return v1.ServerStatus_SERVER_STATUS_ERROR
 	case storage.StatusUnhealthy:
@@ -445,7 +449,13 @@ func (s *ServerService) ListServers(ctx context.Context, req *connect.Request[v1
 			dockerCli := s.getDockerClient(server.NodeID)
 			status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
 			if err == nil {
-				server.Status = status
+				if server.Status == storage.StatusDeepSleep {
+					if status == storage.StatusRunning {
+						server.Status = status
+					}
+				} else {
+					server.Status = status
+				}
 			}
 
 			// Apply cached metrics from the background collector
@@ -506,7 +516,13 @@ func (s *ServerService) GetServer(ctx context.Context, req *connect.Request[v1.G
 		status, err := dockerCli.GetContainerStatus(statusCtx, server.ContainerID)
 		cancelStatus()
 		if err == nil {
-			server.Status = status
+			if server.Status == storage.StatusDeepSleep {
+				if status == storage.StatusRunning {
+					server.Status = status
+				}
+			} else {
+				server.Status = status
+			}
 		}
 	}
 
@@ -1362,8 +1378,20 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		}
 	}
 
-	// Start container
-	if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
+	// If the server is hibernated (paused), unpause it rather than attempting to start
+	if server.Status == storage.StatusPaused {
+		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
+			s.log.Error("Failed to unpause container %s: %v", server.ContainerID, err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to unpause container: %w", err))
+		}
+	} else {
+		// Stop any direct knock listener before starting container so Docker can bind the port
+		if s.proxy != nil {
+			s.proxy.StopDirectKnock(server.ID)
+		}
+
+		// Start container
+		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 		s.log.Error("Failed to start container, attempting to recreate: %v", err)
 
 		// Get server config for container creation
@@ -1409,6 +1437,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			s.log.Error("Failed to update server after container recreation: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server after container recreation"))
 		}
+	}
 	}
 
 	// Update server status
@@ -1467,7 +1496,18 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	}
 
 	// Stop container
+	// Stop any direct knock listener
+	if s.proxy != nil {
+		s.proxy.StopDirectKnock(server.ID)
+	}
+
 	dockerCli := s.getDockerClient(server.NodeID)
+
+	// If container is paused, unpause it first so Docker can cleanly stop it
+	if server.Status == storage.StatusPaused {
+		_ = dockerCli.UnpauseContainer(ctx, server.ContainerID)
+	}
+
 	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
 	if err != nil {
 		s.log.Error("Failed to stop container: %v", err)
