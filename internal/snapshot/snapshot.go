@@ -308,22 +308,25 @@ func (e *Engine) pauseWorldSaves(ctx context.Context, server *storage.Server) fu
 		return func() {}
 	}
 
-	if _, err := e.sender.SendCommand(ctx, server.ID, "save-off"); err != nil {
+	pauseCtx, pauseCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer pauseCancel()
+
+	if _, err := e.sender.SendCommand(pauseCtx, server.ID, "save-off"); err != nil {
 		e.log.Warn("Snapshot: failed to disable world saves on server %s: %v", server.Name, err)
 		return func() {}
 	}
 
-	if _, err := e.sender.SendCommand(ctx, server.ID, "save-all flush"); err != nil {
+	if _, err := e.sender.SendCommand(pauseCtx, server.ID, "save-all flush"); err != nil {
 		e.log.Warn("Snapshot: failed to flush world saves on server %s: %v", server.Name, err)
 	} else {
 		select {
-		case <-ctx.Done():
+		case <-pauseCtx.Done():
 		case <-time.After(1 * time.Second):
 		}
 	}
 
 	return func() {
-		resumeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		resumeCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if _, err := e.sender.SendCommand(resumeCtx, server.ID, "save-on"); err != nil {
 			e.log.Error("Snapshot: failed to re-enable world saves on server %s: %v", server.Name, err)

@@ -192,17 +192,20 @@ func (s *Scheduler) pauseWorldSaves(ctx context.Context, server *storage.Server)
 		return func() {}
 	}
 
-	if _, err := s.sender.SendCommand(ctx, server.ID, "save-off"); err != nil {
+	pauseCtx, pauseCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer pauseCancel()
+
+	if _, err := s.sender.SendCommand(pauseCtx, server.ID, "save-off"); err != nil {
 		s.log.Warn("Backup: failed to disable world saves on server %s (continuing anyway): %v", server.Name, err)
 		return func() {}
 	}
 
-	if _, err := s.sender.SendCommand(ctx, server.ID, "save-all flush"); err != nil {
+	if _, err := s.sender.SendCommand(pauseCtx, server.ID, "save-all flush"); err != nil {
 		s.log.Warn("Backup: failed to flush world saves on server %s: %v", server.Name, err)
 	} else {
 		// Give the server a moment to finish writing chunks to disk
 		select {
-		case <-ctx.Done():
+		case <-pauseCtx.Done():
 		case <-time.After(3 * time.Second):
 		}
 	}

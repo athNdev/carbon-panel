@@ -748,7 +748,12 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		maps.Copy(config.Labels, c.config.Labels)
 	}
 
-	// Apply docker overrides
+	// Apply docker overrides with confinement re-validation (SEC-1)
+	if server.DockerOverrides != nil {
+		if err := ValidateDockerOverridesConfinement(server.DockerOverrides, ServerOverrideSafeRoots(server.DataPath)...); err != nil {
+			return "", fmt.Errorf("invalid docker overrides for container creation: %w", err)
+		}
+	}
 	ApplyOverrides(server.DockerOverrides, config, hostConfig)
 
 	// Network configuration

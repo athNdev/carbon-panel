@@ -233,3 +233,66 @@ func TestJsonStringToMapHook(t *testing.T) {
 		t.Fatalf("passthrough=%v", out)
 	}
 }
+
+func TestConfigValidateMethod(t *testing.T) {
+	cfg, err := Load(t.TempDir())
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("default config should validate cleanly, got: %v", err)
+	}
+
+	// Invalid server port
+	cfgBadPort := *cfg
+	cfgBadPort.Server.Port = "99999"
+	if err := cfgBadPort.Validate(); err == nil {
+		t.Fatal("expected error for port > 65535")
+	}
+
+	// Non-numeric port
+	cfgNonNumPort := *cfg
+	cfgNonNumPort.Server.Port = "not-a-port"
+	if err := cfgNonNumPort.Validate(); err == nil {
+		t.Fatal("expected error for non-numeric port")
+	}
+
+	// Negative server timeout
+	cfgNegTimeout := *cfg
+	cfgNegTimeout.Server.ReadTimeout = -1
+	if err := cfgNegTimeout.Validate(); err == nil {
+		t.Fatal("expected error for negative server read timeout")
+	}
+
+	// Empty database path
+	cfgEmptyDB := *cfg
+	cfgEmptyDB.Database.Path = ""
+	if err := cfgEmptyDB.Validate(); err == nil {
+		t.Fatal("expected error for empty database path")
+	}
+
+	// Bad upload max chunk size
+	cfgBadUpload := *cfg
+	cfgBadUpload.Upload.DefaultChunkSize = 10 * 1024 * 1024
+	cfgBadUpload.Upload.MaxChunkSize = 5 * 1024 * 1024
+	if err := cfgBadUpload.Validate(); err == nil {
+		t.Fatal("expected error when max chunk size is less than default chunk size")
+	}
+
+	// S3 enabled without bucket
+	cfgBadS3 := *cfg
+	cfgBadS3.Storage.S3.Enabled = true
+	cfgBadS3.Storage.S3.Bucket = ""
+	if err := cfgBadS3.Validate(); err == nil {
+		t.Fatal("expected error when S3 is enabled but bucket is empty")
+	}
+
+	// OIDC enabled without issuer URI
+	cfgBadOIDC := *cfg
+	cfgBadOIDC.Auth.OIDC.Enabled = true
+	cfgBadOIDC.Auth.OIDC.IssuerURI = ""
+	if err := cfgBadOIDC.Validate(); err == nil {
+		t.Fatal("expected error when OIDC is enabled but issuer URI is empty")
+	}
+}
