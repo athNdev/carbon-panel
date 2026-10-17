@@ -357,6 +357,7 @@ type IndexedModpack struct {
 	JavaVersion    string `json:"java_version" gorm:"column:java_version"`       // Required Java version
 	DockerImage    string `json:"docker_image" gorm:"column:docker_image"`       // Recommended Docker image
 	RecommendedRAM int    `json:"recommended_ram" gorm:"column:recommended_ram"` // Recommended RAM in MB
+	IndexError     string `json:"index_error" gorm:"column:index_error"`         // Last indexer/sync error (MOD-2)
 }
 
 type IndexedModpackFile struct {
@@ -371,6 +372,7 @@ type IndexedModpackFile struct {
 	GameVersions     string          `json:"game_versions"` // JSON array stored as string
 	ModLoader        string          `json:"mod_loader" gorm:"column:mod_loader"`
 	ServerPackFileID *string         `json:"server_pack_file_id" gorm:"column:server_pack_file_id"`
+	Sha256           string          `json:"sha256" gorm:"column:sha256"`                         // SHA256 checksum (MOD-4)
 	Modpack          *IndexedModpack `json:"-" gorm:"foreignKey:ModpackID;constraint:OnDelete:CASCADE"`
 }
 
