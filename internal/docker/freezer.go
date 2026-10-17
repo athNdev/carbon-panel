@@ -252,6 +252,9 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 	}
 
 	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusPaused); err != nil {
+		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		_ = m.freezer.UnpauseContainer(rollbackCtx, srv.ContainerID)
 		return fmt.Errorf("failed to update server status to paused: %w", err)
 	}
 
@@ -294,6 +297,13 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 
 	start := time.Now()
 	if err := m.freezer.UnpauseContainer(ctx, srv.ContainerID); err != nil {
+		failCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if st, stErr := m.freezer.GetContainerStatus(failCtx, srv.ContainerID); stErr == nil && st != db.StatusPaused {
+			_ = m.store.UpdateServerStatus(failCtx, serverID, st)
+		} else {
+			_ = m.store.UpdateServerStatus(failCtx, serverID, db.StatusError)
+		}
 		return fmt.Errorf("cgroup unfreeze failed for server %s: %w", serverID, err)
 	}
 

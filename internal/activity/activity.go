@@ -20,7 +20,8 @@ const (
 	EventAuthLogin    = "auth.login"
 	EventAuthLogout   = "auth.logout"
 	EventServerStart  = "server.start"
-	EventServerStop   = "server.stop"
+	EventServerStop    = "server.stop"
+	EventServerRestart = "server.restart"
 	EventServerCreate = "server.create"
 	EventServerDelete = "server.delete"
 )

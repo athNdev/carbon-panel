@@ -39,6 +39,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/module"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/rbac"
+	"github.com/athNdev/carbon-panel/internal/scheduler"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -923,21 +924,35 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 				sourcePath := modpackFile[0].DownloadURL
 				destPath := filepath.Join(server.DataPath, "modpack.zip")
 
-				// Copy the modpack file
-				if sourceFile, err := os.Open(sourcePath); err == nil {
-					defer sourceFile.Close()
-					if destFile, err := os.Create(destPath); err == nil {
-						defer destFile.Close()
-						io.Copy(destFile, sourceFile)
-
-						// Set CF_MODPACK_ZIP for manual modpack
-						cfModpackZip := "/data/modpack.zip"
-						serverConfig.CFModpackZip = &cfModpackZip
-
-						// Set a dummy slug
-						cfSlug := "manual-" + modpack.ID
-						serverConfig.CFSlug = &cfSlug
+				// Copy the modpack file safely
+				copyErr := func() error {
+					sourceFile, err := os.Open(sourcePath)
+					if err != nil {
+						return err
 					}
+					defer sourceFile.Close()
+
+					destFile, err := os.Create(destPath)
+					if err != nil {
+						return err
+					}
+					defer destFile.Close()
+
+					if _, err := io.Copy(destFile, sourceFile); err != nil {
+						return err
+					}
+					return nil
+				}()
+				if copyErr == nil {
+					// Set CF_MODPACK_ZIP for manual modpack
+					cfModpackZip := "/data/modpack.zip"
+					serverConfig.CFModpackZip = &cfModpackZip
+
+					// Set a dummy slug
+					cfSlug := "manual-" + modpack.ID
+					serverConfig.CFSlug = &cfSlug
+				} else {
+					s.log.Error("Failed to copy manual modpack file %s: %v", sourcePath, copyErr)
 				}
 			}
 		} else if modpackURL != "" && server.ModLoader == storage.ModLoaderAutoCurseForge {
@@ -1415,6 +1430,16 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
 
+	// Apply staged configs on restart/start (STAGED-CONFIG)
+	if n, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID); err == nil && n > 0 {
+		s.log.Info("Applied %d staged config change(s) on start for server %s", n, server.ID)
+	}
+
+	// If server was in deep sleep, release direct knock listener before starting
+	if server.Status == storage.StatusDeepSleep && s.proxy != nil {
+		s.proxy.StopDirectKnock(server.ID)
+	}
+
 	// If server is paused, unpause container (MINE-172)
 	if server.Status == storage.StatusPaused && server.ContainerID != "" {
 		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
@@ -1577,6 +1602,12 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
+
+	// If server is paused, unpause it first so Docker daemon doesn't reject stop (Docker requires unpaused before stop)
+	if server.Status == storage.StatusPaused && server.ContainerID != "" {
+		_ = dockerCli.UnpauseContainer(ctx, server.ContainerID)
+	}
+
 	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
 	if err != nil {
 		s.log.Error("Failed to stop container: %v", err)
@@ -1594,10 +1625,14 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 		s.log.Error("Failed to update server status: %v", err)
 	}
 
-	// Remove proxy route if enabled
-	if s.proxy != nil && server.ProxyHostname != "" {
-		if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
-			s.log.Error("Failed to remove proxy route: %v", err)
+	// Remove proxy route or direct knock listener
+	if s.proxy != nil {
+		if server.ProxyHostname != "" {
+			if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
+				s.log.Error("Failed to remove proxy route: %v", err)
+			}
+		} else {
+			s.proxy.StopDirectKnock(server.ID)
 		}
 	}
 
@@ -1627,6 +1662,52 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	dockerCli, err := s.getDockerClientStrict(server.NodeID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
+
+	// If server is paused, unpause it first so Docker can restart it
+	if server.Status == storage.StatusPaused && server.ContainerID != "" {
+		_ = dockerCli.UnpauseContainer(ctx, server.ContainerID)
+	}
+
+	// If server is in deep sleep, release direct knock listener before starting
+	if server.Status == storage.StatusDeepSleep && s.proxy != nil {
+		s.proxy.StopDirectKnock(server.ID)
+	}
+
+	// Apply any staged config changes marked for restart
+	stagedApplied, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID)
+	if err != nil {
+		s.log.Warn("Failed to apply staged config changes on restart for server %s: %v", server.ID, err)
+	}
+
+	// If staged config changes were applied and container exists, recreate it with new config
+	if stagedApplied > 0 && server.ContainerID != "" {
+		serverConfig, cfgErr := s.store.GetServerConfig(ctx, server.ID)
+		if cfgErr == nil {
+			s.prepareServerConfig(ctx, server, serverConfig)
+			if recreateResult, recErr := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig); recErr == nil && recreateResult != nil {
+				server.ContainerID = recreateResult.NewContainerID
+				_ = s.store.UpdateServer(ctx, server)
+				if !recreateResult.WasRunning {
+					_ = dockerCli.StartContainer(ctx, recreateResult.NewContainerID)
+				}
+				now := time.Now()
+				server.Status = storage.StatusStarting
+				server.LastStarted = &now
+				_ = s.store.UpdateServer(ctx, server)
+				_ = s.store.ClearEphemeralConfigFields(ctx, server.ID)
+				if s.bus != nil {
+					s.bus.Emit(ctx, events.Event{
+						Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_RESTART,
+						ServerID: server.ID,
+					})
+				}
+				s.auditPower(ctx, req.Peer().Addr, activity.EventServerRestart, server.ID)
+				return connect.NewResponse(&v1.RestartServerResponse{
+					Status: "starting",
+				}), nil
+			}
+		}
 	}
 
 	// If container doesn't exist, create it and start it
@@ -1711,6 +1792,8 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			ServerID: server.ID,
 		})
 	}
+
+	s.auditPower(ctx, req.Peer().Addr, activity.EventServerRestart, server.ID)
 
 	return connect.NewResponse(&v1.RestartServerResponse{
 		Status: "restarting",

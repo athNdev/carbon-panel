@@ -1102,6 +1102,17 @@ func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, e
 			c.log.Debug("Container %s not found, treating as already stopped", containerID)
 			return false, nil
 		}
+
+		// In Docker, a paused container cannot be stopped or killed directly (error: "container is paused").
+		// If the container is paused, unpause it first so stopping or killing succeeds.
+		if inspectResult, inspErr := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{}); inspErr == nil && inspectResult.Container.State != nil && inspectResult.Container.State.Paused {
+			c.log.Info("Container %s is paused; unpausing before stop/kill", containerID)
+			_ = c.UnpauseContainer(ctx, containerID)
+			if _, retryErr := c.docker.ContainerStop(ctx, containerID, client.ContainerStopOptions{Timeout: &timeout}); retryErr == nil {
+				return true, nil
+			}
+		}
+
 		// If graceful stop fails, force kill the container. Use a dedicated
 		// timeout context: the caller's context may already be cancelled or
 		// nearly expired, and a kill that inherits it would never be sent.
