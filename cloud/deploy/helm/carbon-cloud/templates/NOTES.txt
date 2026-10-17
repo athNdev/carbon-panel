@@ -1,0 +1,11 @@
+Carbon Cloud on Kubernetes.
+
+Deployments read credentials only from the Secret named by
+`global.existingSecret` (default `carbon-cloud-secrets`); nothing secret
+lives in values. For local/dev clusters you can render fakes with
+`--set secrets.create=true`, never for production.
+
+Quick render check (no cluster needed):
+
+    helm lint ./cloud/deploy/helm/carbon-cloud
+    helm template dev ./cloud/deploy/helm/carbon-cloud

@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// ScheduleActionType defines the operation to perform on schedule trigger.
+enum ScheduleActionType {
+  SCHEDULE_ACTION_TYPE_UNSPECIFIED = 0;
+  SCHEDULE_ACTION_TYPE_COMMAND = 1;
+  SCHEDULE_ACTION_TYPE_RESTART = 2;
+  SCHEDULE_ACTION_TYPE_START = 3;
+  SCHEDULE_ACTION_TYPE_STOP = 4;
+  SCHEDULE_ACTION_TYPE_BACKUP = 5;
+}
+
+// ScheduleExecutionStatus indicates the outcome of a scheduled run.
+enum ScheduleExecutionStatus {
+  SCHEDULE_EXECUTION_STATUS_UNSPECIFIED = 0;
+  SCHEDULE_EXECUTION_STATUS_RUNNING = 1;
+  SCHEDULE_EXECUTION_STATUS_SUCCESS = 2;
+  SCHEDULE_EXECUTION_STATUS_FAILED = 3;
+}
+
+// WorkloadSchedule represents a recurring task configured for a workload.
+message WorkloadSchedule {
+  string id = 1;
+  string org_id = 2;
+  string workload_id = 3;
+  string name = 4;
+  string cron_expression = 5;
+  ScheduleActionType action_type = 6;
+  string payload = 7;
+  bool enabled = 8;
+  int64 last_run_at_unix = 9;
+  int64 next_run_at_unix = 10;
+  int64 created_at_unix = 11;
+  int64 updated_at_unix = 12;
+}
+
+// ScheduleExecution records a single execution run of a workload schedule.
+message ScheduleExecution {
+  string id = 1;
+  string schedule_id = 2;
+  string workload_id = 3;
+  string triggered_by = 4; // "cron", "manual"
+  ScheduleExecutionStatus status = 5;
+  string output = 6;
+  string error = 7;
+  int64 duration_ms = 8;
+  int64 started_at_unix = 9;
+  int64 finished_at_unix = 10;
+}
+
+// CreateScheduleRequest creates a new schedule for a workload.
+message CreateScheduleRequest {
+  string workload_id = 1;
+  string name = 2;
+  string cron_expression = 3;
+  ScheduleActionType action_type = 4;
+  string payload = 5;
+  bool enabled = 6;
+}
+
+// CreateScheduleResponse returns the newly created schedule.
+message CreateScheduleResponse {
+  WorkloadSchedule schedule = 1;
+}
+
+// ListSchedulesRequest queries all schedules for a specific workload.
+message ListSchedulesRequest {
+  string workload_id = 1;
+}
+
+// ListSchedulesResponse returns the list of schedules.
+message ListSchedulesResponse {
+  repeated WorkloadSchedule schedules = 1;
+}
+
+// GetScheduleRequest retrieves a single schedule by ID.
+message GetScheduleRequest {
+  string schedule_id = 1;
+}
+
+// GetScheduleResponse returns the retrieved schedule.
+message GetScheduleResponse {
+  WorkloadSchedule schedule = 1;
+}
+
+// UpdateScheduleRequest modifies an existing schedule.
+message UpdateScheduleRequest {
+  string schedule_id = 1;
+  string name = 2;
+  string cron_expression = 3;
+  ScheduleActionType action_type = 4;
+  string payload = 5;
+  bool enabled = 6;
+}
+
+// UpdateScheduleResponse returns the updated schedule.
+message UpdateScheduleResponse {
+  WorkloadSchedule schedule = 1;
+}
+
+// DeleteScheduleRequest deletes a schedule by ID.
+message DeleteScheduleRequest {
+  string schedule_id = 1;
+}
+
+// DeleteScheduleResponse indicates whether schedule deletion succeeded.
+message DeleteScheduleResponse {
+  bool success = 1;
+}
+
+// RunScheduleRequest immediately executes a schedule out-of-band.
+message RunScheduleRequest {
+  string schedule_id = 1;
+}
+
+// RunScheduleResponse returns the execution details from the triggered schedule.
+message RunScheduleResponse {
+  ScheduleExecution execution = 1;
+}
+
+// ListScheduleExecutionsRequest retrieves execution logs for a schedule.
+message ListScheduleExecutionsRequest {
+  string schedule_id = 1;
+  int32 limit = 2;
+}
+
+// ListScheduleExecutionsResponse returns execution records.
+message ListScheduleExecutionsResponse {
+  repeated ScheduleExecution executions = 1;
+}
+
+// ScheduleService manages recurring automated operations on cloud workloads.
+service ScheduleService {
+  // CreateSchedule registers a new workload schedule.
+  rpc CreateSchedule(CreateScheduleRequest) returns (CreateScheduleResponse);
+  // ListSchedules lists schedules associated with a workload.
+  rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse);
+  // GetSchedule retrieves an individual schedule by ID.
+  rpc GetSchedule(GetScheduleRequest) returns (GetScheduleResponse);
+  // UpdateSchedule modifies an existing schedule.
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (UpdateScheduleResponse);
+  // DeleteSchedule deletes an existing schedule.
+  rpc DeleteSchedule(DeleteScheduleRequest) returns (DeleteScheduleResponse);
+  // RunSchedule triggers immediate execution of a schedule.
+  rpc RunSchedule(RunScheduleRequest) returns (RunScheduleResponse);
+  // ListScheduleExecutions returns past executions for a schedule.
+  rpc ListScheduleExecutions(ListScheduleExecutionsRequest) returns (ListScheduleExecutionsResponse);
+}

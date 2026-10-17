@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// AuditEvent is an immutable record of a mutating action. Every state-changing
+// call writes exactly one event, whether it succeeded, was denied or failed.
+message AuditEvent {
+  // Event id.
+  string id = 1;
+  // Org the action occurred in.
+  string org_id = 2;
+  // Acting user id, empty for system actions.
+  string actor_user_id = 3;
+  // Acting API key id, when the request used one.
+  string actor_api_key_id = 4;
+  // Dotted action name, e.g. "node.delete".
+  string action = 5;
+  // Resource type, e.g. "node".
+  string resource_type = 6;
+  // Resource id.
+  string resource_id = 7;
+  // Outcome: "success", "denied" or "error".
+  string result = 8;
+  // JSON detail with secrets redacted.
+  string detail_json = 9;
+  // Client IP address.
+  string ip = 10;
+  // Client user agent.
+  string user_agent = 11;
+  // When the action occurred.
+  google.protobuf.Timestamp created_at = 12;
+}
+
+// AuditService exposes the org audit log.
+service AuditService {
+  // ListAuditEvents lists audit events for the active org, newest first.
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+  // GetAuditEvent returns one event.
+  rpc GetAuditEvent(GetAuditEventRequest) returns (GetAuditEventResponse);
+}
+
+// ListAuditEventsRequest filters the audit log.
+message ListAuditEventsRequest {
+  // Optional action prefix filter, e.g. "node.".
+  string action_prefix = 1;
+  // Optional resource type filter.
+  string resource_type = 2;
+  // Optional resource id filter.
+  string resource_id = 3;
+  // Optional actor user id filter.
+  string actor_user_id = 4;
+  // Optional lower bound on created_at, RFC 3339.
+  string since = 5;
+  // Optional upper bound on created_at, RFC 3339.
+  string until = 6;
+  // Optional pagination.
+  PageRequest page = 7;
+}
+
+// ListAuditEventsResponse lists audit events.
+message ListAuditEventsResponse {
+  // Matching events.
+  repeated AuditEvent events = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// GetAuditEventRequest fetches one event.
+message GetAuditEventRequest {
+  // Event id.
+  string id = 1;
+}
+
+// GetAuditEventResponse returns one event.
+message GetAuditEventResponse {
+  // The requested event.
+  AuditEvent event = 1;
+}

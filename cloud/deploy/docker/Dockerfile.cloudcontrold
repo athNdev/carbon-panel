@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+# Carbon Cloud control-plane image (cloudcontrold).
+#
+# NOTE (w2-deploy lane): cloud/cmd/cloudcontrold does not exist yet — wave 3
+# (w3-apiserver) builds it. This Dockerfile is correct-by-construction against
+# the future main package at cloud/cmd/cloudcontrold in module
+# github.com/athNdev/carbon-panel, and is NOT expected to build until then.
+#
+# Multi-stage, distroless/static final image, non-root user, no secrets baked
+# in (credentials arrive only via env/file at runtime, ADR 0006).
+
+ARG GO_VERSION=1.25
+ARG VERSION=dev
+ARG COMMIT=unknown
+
+FROM golang:${GO_VERSION}-alpine AS builder
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ARG VERSION
+ARG COMMIT
+RUN CGO_ENABLED=0 go build -trimpath \
+    -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT}" \
+    -o /out/cloudcontrold ./cloud/cmd/cloudcontrold
+
+FROM gcr.io/distroless/static:nonroot
+USER 65532:65532
+COPY --from=builder /out/cloudcontrold /cloudcontrold
+EXPOSE 8080
+ENTRYPOINT ["/cloudcontrold"]

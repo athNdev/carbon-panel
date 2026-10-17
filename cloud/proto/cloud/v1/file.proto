@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// FileInfo describes a file or directory on a workload filesystem.
+message FileInfo {
+  // Base name of the file or directory.
+  string name = 1;
+  // Path relative to workload root (/data).
+  string path = 2;
+  // Whether the entry is a directory.
+  bool is_dir = 3;
+  // Size in bytes.
+  int64 size = 4;
+  // Last modification timestamp in unix seconds.
+  int64 modified_at_unix = 5;
+  // Unix file mode bits.
+  uint32 mode = 6;
+}
+
+// ListFilesRequest requests directory contents of a workload.
+message ListFilesRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Path relative to workload root (e.g. "", "plugins", "config").
+  string path = 2;
+}
+
+// ListFilesResponse returns the directory listing.
+message ListFilesResponse {
+  // Files and directories in the requested path.
+  repeated FileInfo files = 1;
+}
+
+// StatFileRequest queries metadata for a single file or directory.
+message StatFileRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Path relative to workload root.
+  string path = 2;
+}
+
+// StatFileResponse returns metadata for the queried path.
+message StatFileResponse {
+  // File or directory metadata.
+  FileInfo info = 1;
+}
+
+// ReadFileRequest requests streaming chunks of a file.
+message ReadFileRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Path relative to workload root.
+  string path = 2;
+}
+
+// ReadFileResponse is one bounded chunk (max 64KB) of a file.
+message ReadFileResponse {
+  // File data chunk.
+  bytes chunk = 1;
+  // Whether this is the final chunk of the file.
+  bool is_last = 2;
+  // Total size of the file in bytes.
+  int64 total_size = 3;
+}
+
+// WriteFileRequest writes content to a file. Supports streaming chunks.
+message WriteFileRequest {
+  // Workload id (must match across chunks).
+  string workload_id = 1;
+  // Path relative to workload root.
+  string path = 2;
+  // Chunk payload (max 64KB per chunk).
+  bytes chunk = 3;
+  // Whether this is the final chunk.
+  bool is_last = 4;
+  // Optional unix file mode (e.g. 0644).
+  uint32 mode = 5;
+}
+
+// WriteFileResponse acknowledges file write completion.
+message WriteFileResponse {
+  // Total bytes written.
+  int64 bytes_written = 1;
+  // Path relative to workload root.
+  string path = 2;
+}
+
+// DeleteFileRequest deletes a file or directory.
+message DeleteFileRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Path relative to workload root.
+  string path = 2;
+  // Whether to recursively delete if directory.
+  bool recursive = 3;
+}
+
+// DeleteFileResponse acknowledges file deletion.
+message DeleteFileResponse {}
+
+// CreateDirectoryRequest creates a new directory.
+message CreateDirectoryRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Path relative to workload root.
+  string path = 2;
+}
+
+// CreateDirectoryResponse acknowledges directory creation.
+message CreateDirectoryResponse {}
+
+// RenameFileRequest renames or moves a file or directory.
+message RenameFileRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Current path relative to workload root.
+  string old_path = 2;
+  // New path relative to workload root.
+  string new_path = 3;
+}
+
+// RenameFileResponse acknowledges file rename.
+message RenameFileResponse {}
+
+// FileService provides remote file management for workloads.
+service FileService {
+  // ListFiles lists directory contents for a workload.
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  // StatFile returns metadata for a file or directory.
+  rpc StatFile(StatFileRequest) returns (StatFileResponse);
+  // ReadFile streams file chunks (bounded to 64KB) from a workload.
+  rpc ReadFile(ReadFileRequest) returns (stream ReadFileResponse);
+  // WriteFile writes or streams file chunks (bounded to 64KB) to a workload.
+  rpc WriteFile(stream WriteFileRequest) returns (WriteFileResponse);
+  // DeleteFile removes a file or directory from a workload.
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+  // CreateDirectory creates a directory (and parents) in a workload.
+  rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
+  // RenameFile renames or moves a file or directory in a workload.
+  rpc RenameFile(RenameFileRequest) returns (RenameFileResponse);
+}

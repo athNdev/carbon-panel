@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// AddonType classifies whether an addon is a server plugin or a mod.
+enum AddonType {
+  ADDON_TYPE_UNSPECIFIED = 0;
+  ADDON_TYPE_PLUGIN = 1;
+  ADDON_TYPE_MOD = 2;
+}
+
+// InstalledAddon represents an installed plugin or mod on a workload.
+message InstalledAddon {
+  // Filename on disk, e.g. "ViaVersion-5.0.jar" or "jei-1.21.jar.disabled".
+  string filename = 1;
+  // Normalized base name without .jar or .disabled extensions.
+  string name = 2;
+  // Type of addon (plugin or mod).
+  AddonType addon_type = 3;
+  // Whether the addon is currently active/enabled (true if .jar, false if .jar.disabled).
+  bool enabled = 4;
+  // File size in bytes.
+  int64 size_bytes = 5;
+  // Last modified timestamp in unix seconds.
+  int64 modified_at_unix = 6;
+  // Optional version string if parsed or recorded.
+  string version = 7;
+  // Optional description or summary.
+  string description = 8;
+}
+
+// ListWorkloadAddonsRequest requests installed addons on a workload.
+message ListWorkloadAddonsRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Optional filter for plugin vs mod. If UNSPECIFIED, returns both.
+  AddonType addon_type = 2;
+}
+
+// ListWorkloadAddonsResponse lists installed addons.
+message ListWorkloadAddonsResponse {
+  repeated InstalledAddon addons = 1;
+}
+
+// ToggleAddonRequest enables or disables an addon.
+message ToggleAddonRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Addon type (plugin or mod).
+  AddonType addon_type = 2;
+  // Filename of the addon (e.g. "ViaVersion.jar" or "ViaVersion.jar.disabled").
+  string filename = 3;
+  // True to enable (.jar), false to disable (.jar.disabled).
+  bool enable = 4;
+}
+
+// ToggleAddonResponse returns the updated addon status.
+message ToggleAddonResponse {
+  InstalledAddon addon = 1;
+}
+
+// UninstallAddonRequest removes an addon from disk.
+message UninstallAddonRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Addon type (plugin or mod).
+  AddonType addon_type = 2;
+  // Filename of the addon to delete.
+  string filename = 3;
+}
+
+// UninstallAddonResponse acknowledges addon deletion.
+message UninstallAddonResponse {}
+
+// InstallAddonRequest installs an addon to a workload.
+message InstallAddonRequest {
+  // Workload id.
+  string workload_id = 1;
+  // Addon type (plugin or mod).
+  AddonType addon_type = 2;
+  // Direct HTTP/HTTPS download URL (optional if using Modrinth).
+  string download_url = 3;
+  // Filename to save as on disk (e.g. "ViaVersion-5.0.jar").
+  string filename = 4;
+  // Modrinth project slug or ID (optional if using direct download_url).
+  string modrinth_project_id = 5;
+  // Modrinth specific version ID (optional; if omitted, latest compatible is selected).
+  string modrinth_version_id = 6;
+}
+
+// InstallAddonResponse returns the newly installed addon.
+message InstallAddonResponse {
+  InstalledAddon addon = 1;
+}
+
+// SearchAddonsRequest queries the addon marketplace (Modrinth).
+message SearchAddonsRequest {
+  // Search query (e.g. "viaversion", "worldedit", "sodium").
+  string query = 1;
+  // Filter by addon type (plugin or mod).
+  AddonType addon_type = 2;
+  // Filter by modloader / server software (e.g. "paper", "fabric", "forge", "velocity").
+  string loader = 3;
+  // Filter by Minecraft version (e.g. "1.21.4").
+  string game_version = 4;
+  // Maximum results to return (default 20, max 100).
+  int32 limit = 5;
+  // Pagination offset.
+  int32 offset = 6;
+}
+
+// AddonSearchResult represents a project in the marketplace.
+message AddonSearchResult {
+  string project_id = 1;
+  string slug = 2;
+  string title = 3;
+  string description = 4;
+  repeated string categories = 5;
+  string client_side = 6;
+  string server_side = 7;
+  string icon_url = 8;
+  int64 downloads = 9;
+  int64 follows = 10;
+  repeated string loaders = 11;
+  repeated string game_versions = 12;
+  string latest_version = 13;
+  AddonType addon_type = 14;
+  string author = 15;
+}
+
+// SearchAddonsResponse returns search results from marketplace.
+message SearchAddonsResponse {
+  repeated AddonSearchResult hits = 1;
+  int32 total_hits = 2;
+  int32 offset = 3;
+  int32 limit = 4;
+}
+
+// GetAddonDetailsRequest fetches full project details and version list.
+message GetAddonDetailsRequest {
+  // Project ID or slug.
+  string project_id_or_slug = 1;
+  // Optional filter for version compatibility.
+  string loader = 2;
+  string game_version = 3;
+}
+
+// AddonVersionFile represents a downloadable JAR file within a version.
+message AddonVersionFile {
+  string url = 1;
+  string filename = 2;
+  bool primary = 3;
+  int64 size = 4;
+  string sha512 = 5;
+}
+
+// AddonVersion represents a released version of an addon.
+message AddonVersion {
+  string id = 1;
+  string version_number = 2;
+  string name = 3;
+  repeated string game_versions = 4;
+  repeated string loaders = 5;
+  repeated AddonVersionFile files = 6;
+  string date_published = 7;
+}
+
+// GetAddonDetailsResponse returns project details and available versions.
+message GetAddonDetailsResponse {
+  AddonSearchResult details = 1;
+  repeated AddonVersion versions = 2;
+}
+
+// AddonService manages plugin and mod discovery, installation, and lifecycle.
+service AddonService {
+  // ListWorkloadAddons lists all plugins/mods installed in a workload.
+  rpc ListWorkloadAddons(ListWorkloadAddonsRequest) returns (ListWorkloadAddonsResponse);
+  // InstallAddon installs an addon from URL or Modrinth into the workload.
+  rpc InstallAddon(InstallAddonRequest) returns (InstallAddonResponse);
+  // ToggleAddon enables (.jar) or disables (.jar.disabled) an installed addon.
+  rpc ToggleAddon(ToggleAddonRequest) returns (ToggleAddonResponse);
+  // UninstallAddon removes an addon file from the workload.
+  rpc UninstallAddon(UninstallAddonRequest) returns (UninstallAddonResponse);
+  // SearchAddons searches the public marketplace (Modrinth) for plugins/mods.
+  rpc SearchAddons(SearchAddonsRequest) returns (SearchAddonsResponse);
+  // GetAddonDetails fetches detailed addon information and compatible versions.
+  rpc GetAddonDetails(GetAddonDetailsRequest) returns (GetAddonDetailsResponse);
+}

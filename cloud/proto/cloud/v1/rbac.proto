@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// Permission describes one grantable action and its default role coverage.
+message Permission {
+  // Permission string, always "resource.action" (e.g. "node.provision").
+  string id = 1;
+  // Short human description of what the permission allows.
+  string description = 2;
+  // Roles that include this permission by default.
+  repeated Role default_roles = 3;
+  // True when the action mutates state and is therefore audited.
+  bool mutating = 4;
+}
+
+// RoleDefinition describes a system role in the canonical role catalog.
+message RoleDefinition {
+  // Role value.
+  Role role = 1;
+  // Display name.
+  string name = 2;
+  // What the role is for.
+  string description = 3;
+  // Every permission the role grants.
+  repeated string permissions = 4;
+}
+
+// RoleBinding is an extra grant layered on top of a member's role, optionally
+// narrow to a single resource such as one node.
+message RoleBinding {
+  // Binding id.
+  string id = 1;
+  // Org the binding applies in.
+  string org_id = 2;
+  // Subject kind: "member" or "api_key".
+  string subject_type = 3;
+  // User id or api key id.
+  string subject_id = 4;
+  // Resource type the binding is scoped to, e.g. "node"; empty means org-wide.
+  string resource_type = 5;
+  // Resource id when resource_type is set.
+  string resource_id = 6;
+  // Permissions granted.
+  repeated string permissions = 7;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// RoleService exposes the role catalog and resource-scoped bindings.
+service RoleService {
+  // ListRoles returns the system role catalog with their permissions.
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  // ListPermissions returns every permission the system understands.
+  rpc ListPermissions(ListPermissionsRequest) returns (ListPermissionsResponse);
+  // ListRoleBindings lists scoped bindings in the active org.
+  rpc ListRoleBindings(ListRoleBindingsRequest) returns (ListRoleBindingsResponse);
+  // CreateRoleBinding grants extra permissions to a subject.
+  rpc CreateRoleBinding(CreateRoleBindingRequest) returns (CreateRoleBindingResponse);
+  // DeleteRoleBinding removes a binding.
+  rpc DeleteRoleBinding(DeleteRoleBindingRequest) returns (DeleteRoleBindingResponse);
+}
+
+// ListRolesRequest is the role catalog request.
+message ListRolesRequest {}
+
+// ListRolesResponse lists roles.
+message ListRolesResponse {
+  // System roles.
+  repeated RoleDefinition roles = 1;
+}
+
+// ListPermissionsRequest is the permission catalog request.
+message ListPermissionsRequest {}
+
+// ListPermissionsResponse lists permissions.
+message ListPermissionsResponse {
+  // Every known permission.
+  repeated Permission permissions = 1;
+}
+
+// ListRoleBindingsRequest lists bindings.
+message ListRoleBindingsRequest {
+  // Optional subject filter.
+  string subject_type = 1;
+  // Optional subject id filter.
+  string subject_id = 2;
+  // Optional pagination.
+  PageRequest page = 3;
+}
+
+// ListRoleBindingsResponse lists bindings.
+message ListRoleBindingsResponse {
+  // Bindings in the active org.
+  repeated RoleBinding bindings = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// CreateRoleBindingRequest creates a binding.
+message CreateRoleBindingRequest {
+  // Subject kind: "member" or "api_key".
+  string subject_type = 1;
+  // User id or api key id.
+  string subject_id = 2;
+  // Optional resource type to scope the grant to.
+  string resource_type = 3;
+  // Optional resource id to scope the grant to.
+  string resource_id = 4;
+  // Permissions to grant; must be a subset of the caller's permissions.
+  repeated string permissions = 5;
+}
+
+// CreateRoleBindingResponse returns the created binding.
+message CreateRoleBindingResponse {
+  // Created binding.
+  RoleBinding binding = 1;
+}
+
+// DeleteRoleBindingRequest deletes a binding.
+message DeleteRoleBindingRequest {
+  // Binding id.
+  string id = 1;
+}
+
+// DeleteRoleBindingResponse acknowledges deletion.
+message DeleteRoleBindingResponse {}

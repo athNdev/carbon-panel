@@ -1,0 +1,168 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// Role is the org-scoped role granted to a member. Clerk's org_role maps onto
+// ROLE_OWNER, ROLE_ADMIN and ROLE_MEMBER; the finer roles below are ours.
+enum Role {
+  // Unset role.
+  ROLE_UNSPECIFIED = 0;
+  // Full control of the org, including deletion and billing.
+  ROLE_OWNER = 1;
+  // Manage members, nodes, workloads and settings, but not org deletion.
+  ROLE_ADMIN = 2;
+  // Deploy and operate workloads and nodes, but not members or RBAC.
+  ROLE_OPERATOR = 3;
+  // Read-only access to org resources.
+  ROLE_VIEWER = 4;
+  // Billing and cost visibility only.
+  ROLE_BILLING = 5;
+}
+
+// NodeOrigin records how a node joined the cluster.
+enum NodeOrigin {
+  // Unset origin.
+  NODE_ORIGIN_UNSPECIFIED = 0;
+  // Tenant brought their own machine and ran the join command.
+  NODE_ORIGIN_BYO = 1;
+  // Carbon Cloud provisioned the machine with Terraform.
+  NODE_ORIGIN_MANAGED = 2;
+}
+
+// NodeStatus is the last known liveness of a node agent.
+enum NodeStatus {
+  // Unset status.
+  NODE_STATUS_UNSPECIFIED = 0;
+  // Agent has never connected since registration.
+  NODE_STATUS_PENDING = 1;
+  // Agent heartbeat is current.
+  NODE_STATUS_ONLINE = 2;
+  // Agent has missed its heartbeat window.
+  NODE_STATUS_OFFLINE = 3;
+  // Node is draining: no new workloads are placed on it.
+  NODE_STATUS_DRAINING = 4;
+  // Agent reported a fatal local condition (e.g. Docker unreachable).
+  NODE_STATUS_ERROR = 5;
+}
+
+// ProvisionStatus is the lifecycle of a Terraform provisioning run.
+enum ProvisionStatus {
+  // Unset status.
+  PROVISION_STATUS_UNSPECIFIED = 0;
+  // Workspace rendered, plan not yet produced.
+  PROVISION_STATUS_PENDING = 1;
+  // Plan produced and awaiting approval.
+  PROVISION_STATUS_PLANNED = 2;
+  // Apply running.
+  PROVISION_STATUS_APPLYING = 3;
+  // Apply succeeded; outputs recorded.
+  PROVISION_STATUS_APPLIED = 4;
+  // Plan or apply failed.
+  PROVISION_STATUS_FAILED = 5;
+  // Destroy completed.
+  PROVISION_STATUS_DESTROYED = 6;
+}
+
+// WorkloadStatus is the lifecycle of a scheduled Minecraft server.
+enum WorkloadStatus {
+  // Unset status.
+  WORKLOAD_STATUS_UNSPECIFIED = 0;
+  // Accepted, waiting for a node to accept it.
+  WORKLOAD_STATUS_PENDING = 1;
+  // Node agent reported the container running.
+  WORKLOAD_STATUS_RUNNING = 2;
+  // Stopped by the user or by policy.
+  WORKLOAD_STATUS_STOPPED = 3;
+  // Node agent reported a failure.
+  WORKLOAD_STATUS_ERROR = 4;
+  // Workload is hibernated (cgroup frozen / sleeping on idle).
+  WORKLOAD_STATUS_HIBERNATED = 5;
+}
+
+// ProviderId identifies the infrastructure backend used for managed nodes.
+enum ProviderId {
+  // Unset provider.
+  PROVIDER_ID_UNSPECIFIED = 0;
+  // Any SSH-reachable host (on-prem, unlisted clouds).
+  PROVIDER_ID_GENERIC = 1;
+  // Hetzner Cloud.
+  PROVIDER_ID_HETZNER = 2;
+  // Amazon Web Services EC2.
+  PROVIDER_ID_AWS = 3;
+  // Google Cloud Compute Engine.
+  PROVIDER_ID_GCP = 4;
+  // DigitalOcean Droplets.
+  PROVIDER_ID_DIGITALOCEAN = 5;
+  // Proxmox VE.
+  PROVIDER_ID_PROXMOX = 6;
+}
+
+// PageRequest is the shared pagination input.
+message PageRequest {
+  // Maximum number of items to return; the server clamps this.
+  int32 page_size = 1;
+  // Opaque cursor returned by a previous call.
+  string page_token = 2;
+}
+
+// PageResponse is the shared pagination output.
+message PageResponse {
+  // Cursor to pass to the next call; empty when there are no more pages.
+  string next_page_token = 1;
+  // Total matching items when the server can compute it cheaply.
+  int64 total = 2;
+}
+
+// Org is a tenant: the unit of isolation, billing and membership.
+message Org {
+  // Stable server-side identifier (also used as org_id on every resource).
+  string id = 1;
+  // Human-readable display name.
+  string name = 2;
+  // URL-safe unique slug within the deployment.
+  string slug = 3;
+  // Clerk organization id, when the org is Clerk-managed.
+  string clerk_org_id = 4;
+  // Plan identifier, e.g. "free", "team".
+  string plan = 5;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 6;
+  // Last modification time.
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Member is a user's membership in an org.
+message Member {
+  // Clerk user id.
+  string user_id = 1;
+  // Owning org id.
+  string org_id = 2;
+  // Email address as known to Clerk.
+  string email = 3;
+  // Display name as known to Clerk.
+  string display_name = 4;
+  // Effective role in the org.
+  Role role = 5;
+  // Pending invitations are listed with status PENDING.
+  string status = 6;
+  // When the membership was created.
+  google.protobuf.Timestamp created_at = 7;
+}
+
+// Principal is the authenticated caller for a request.
+message Principal {
+  // Clerk user id, or the API key's owning user.
+  string user_id = 1;
+  // Active org for this request.
+  string org_id = 2;
+  // Effective role for this request.
+  Role role = 3;
+  // Email, when known.
+  string email = 4;
+  // API key id when the request authenticated with an API key.
+  string api_key_id = 5;
+}

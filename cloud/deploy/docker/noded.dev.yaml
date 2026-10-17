@@ -1,0 +1,46 @@
+# Local dev config for noded (node agent side). Same schema as controld; the
+# node only needs its local store, the control-plane URL, and telemetry.
+server:
+  addr: ":8090"
+  public_url: http://localhost:8080
+  read_timeout: 15s
+  write_timeout: 15s
+  shutdown_timeout: 30s
+  cors_origins: ["http://localhost:5173"]
+database:
+  driver: sqlite
+  url: ./data/noded.db
+  max_open_conns: 10
+  max_idle_conns: 2
+  conn_max_lifetime: 5m
+  auto_migrate: true
+clerk:
+  issuer: ""
+  jwks_url: ""
+  audience: ""
+  authorized_parties: []
+  webhook_tolerance: 5m
+  jwks_cache_ttl: 10m
+secrets:
+  provider: env
+  file: ""
+  prefix: CARBONCLOUD_
+providers:
+  enabled: ["generic"]
+  default_region: ""
+  tenant_credentials: false
+provisioner:
+  terraform_path: tofu
+  work_dir: ./data/terraform
+  state_backend: local
+  state_local_dir: ./data/tfstate
+  plan_timeout: 10m
+  apply_timeout: 30m
+  max_concurrent: 1
+telemetry:
+  log_level: debug
+  log_format: text
+  metrics_addr: ""
+console:
+  base_url: http://localhost:5173
+  allowed_origins: ["http://localhost:5173"]

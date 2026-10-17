@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// BlueprintService provides server presets and blueprints for fast workload provisioning (MINE-162).
+service BlueprintService {
+  // List all blueprints available to the organization (builtins + custom).
+  rpc ListBlueprints(ListBlueprintsRequest) returns (ListBlueprintsResponse);
+  // Get detailed blueprint specification by ID.
+  rpc GetBlueprint(GetBlueprintRequest) returns (GetBlueprintResponse);
+  // Create a custom blueprint for the organization.
+  rpc CreateBlueprint(CreateBlueprintRequest) returns (CreateBlueprintResponse);
+  // Update an organization's custom blueprint.
+  rpc UpdateBlueprint(UpdateBlueprintRequest) returns (UpdateBlueprintResponse);
+  // Delete an organization's custom blueprint.
+  rpc DeleteBlueprint(DeleteBlueprintRequest) returns (DeleteBlueprintResponse);
+}
+
+// Blueprint represents a reusable server preset.
+message Blueprint {
+  // Unique blueprint ID.
+  string id = 1;
+  // Human-readable display name.
+  string name = 2;
+  // Description of this server flavor/purpose.
+  string description = 3;
+  // Loader name (e.g. paper, fabric, vanilla).
+  string loader = 4;
+  // Minecraft target version.
+  string minecraft_version = 5;
+  // Docker container image to run.
+  string docker_image = 6;
+  // Default memory allocation in MiB.
+  int64 default_memory_mb = 7;
+  // Default CPU allocation in millicores.
+  int64 default_cpu_millicores = 8;
+  // Default environment variables.
+  map<string, string> default_env = 9;
+  // Default JVM flags.
+  repeated string default_jvm_flags = 10;
+  // True if this is a global builtin template.
+  bool builtin = 11;
+  // Tenant organization ID (empty for builtins).
+  string org_id = 12;
+  // Creation timestamp.
+  google.protobuf.Timestamp created_at = 13;
+  // Last update timestamp.
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// ListBlueprintsRequest requests blueprints matching optional filters.
+message ListBlueprintsRequest {
+  // Optional filter by loader (e.g. paper, fabric).
+  string loader = 1;
+}
+
+// ListBlueprintsResponse returns the list of available blueprints.
+message ListBlueprintsResponse {
+  // Matching blueprints.
+  repeated Blueprint blueprints = 1;
+}
+
+// GetBlueprintRequest requests blueprint details by ID.
+message GetBlueprintRequest {
+  // Blueprint ID.
+  string id = 1;
+}
+
+// GetBlueprintResponse returns the requested blueprint.
+message GetBlueprintResponse {
+  // Blueprint details.
+  Blueprint blueprint = 1;
+}
+
+// CreateBlueprintRequest defines a new custom blueprint for the caller's organization.
+message CreateBlueprintRequest {
+  // Human-readable display name.
+  string name = 1;
+  // Description of this preset.
+  string description = 2;
+  // Loader name (e.g. paper, fabric, vanilla).
+  string loader = 3;
+  // Target Minecraft version.
+  string minecraft_version = 4;
+  // Optional custom Docker container image.
+  string docker_image = 5;
+  // Default memory allocation in MiB.
+  int64 default_memory_mb = 6;
+  // Default CPU allocation in millicores.
+  int64 default_cpu_millicores = 7;
+  // Default environment variables.
+  map<string, string> default_env = 8;
+  // Default JVM flags.
+  repeated string default_jvm_flags = 9;
+}
+
+// CreateBlueprintResponse returns the newly created blueprint.
+message CreateBlueprintResponse {
+  // Created blueprint.
+  Blueprint blueprint = 1;
+}
+
+// UpdateBlueprintRequest modifies an existing custom blueprint.
+message UpdateBlueprintRequest {
+  // Blueprint ID to update.
+  string id = 1;
+  // Updated display name.
+  optional string name = 2;
+  // Updated description.
+  optional string description = 3;
+  // Updated loader name.
+  optional string loader = 4;
+  // Updated Minecraft version.
+  optional string minecraft_version = 5;
+  // Updated Docker image.
+  optional string docker_image = 6;
+  // Updated default memory in MiB.
+  optional int64 default_memory_mb = 7;
+  // Updated default CPU in millicores.
+  optional int64 default_cpu_millicores = 8;
+  // Updated environment variables.
+  map<string, string> default_env = 9;
+  // Updated JVM flags.
+  repeated string default_jvm_flags = 10;
+}
+
+// UpdateBlueprintResponse returns the updated blueprint.
+message UpdateBlueprintResponse {
+  // Updated blueprint.
+  Blueprint blueprint = 1;
+}
+
+// DeleteBlueprintRequest removes a custom blueprint.
+message DeleteBlueprintRequest {
+  // Blueprint ID to delete.
+  string id = 1;
+}
+
+// DeleteBlueprintResponse confirms blueprint deletion.
+message DeleteBlueprintResponse {
+}

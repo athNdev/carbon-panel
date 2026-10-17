@@ -1,0 +1,23 @@
+version: v2
+inputs:
+  - directory: cloud/proto
+plugins:
+  # Generate Go code with protoc-gen-go
+  - remote: buf.build/protocolbuffers/go
+    out: pkg/proto
+    opt:
+      - paths=source_relative
+
+  # Generate Connect-Go
+  - remote: buf.build/connectrpc/go
+    out: pkg/proto
+    opt:
+      - paths=source_relative
+
+  # Generate TypeScript for the cloud console
+  - remote: buf.build/bufbuild/es
+    out: cloud/web/cloud-console/src/lib/proto
+    opt:
+      - target=ts
+      - import_extension=none
+    include_imports: true

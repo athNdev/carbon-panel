@@ -1,0 +1,12 @@
+# Node modules for the cloud console
+web/cloud-console/node_modules/
+web/cloud-console/.svelte-kit/
+web/cloud-console/build/
+# Local terraform state and plans
+terraform/**/.terraform/
+terraform/**/terraform.tfstate*
+terraform/**/*.tfplan
+# Local env files (never commit secrets)
+*.env
+.env
+!.env.example

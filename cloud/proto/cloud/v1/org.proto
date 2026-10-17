@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// Invitation is a pending request for a person to join an org.
+message Invitation {
+  // Invitation id.
+  string id = 1;
+  // Org the invitation is for.
+  string org_id = 2;
+  // Invited email address.
+  string email = 3;
+  // Role the invitee will receive on acceptance.
+  Role role = 4;
+  // Clerk invitation id, when Clerk issued it.
+  string clerk_invitation_id = 5;
+  // Creation time.
+  string created_at = 6;
+}
+
+// OrgService manages tenants: creation, settings, membership and invitations.
+service OrgService {
+  // GetOrg returns the active org.
+  rpc GetOrg(GetOrgRequest) returns (GetOrgResponse);
+  // CreateOrg creates a new tenant owned by the caller.
+  rpc CreateOrg(CreateOrgRequest) returns (CreateOrgResponse);
+  // UpdateOrg updates org display fields.
+  rpc UpdateOrg(UpdateOrgRequest) returns (UpdateOrgResponse);
+  // DeleteOrg deletes the org and everything it owns.
+  rpc DeleteOrg(DeleteOrgRequest) returns (DeleteOrgResponse);
+  // ListMembers lists members of the active org.
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  // UpdateMemberRole changes a member's role.
+  rpc UpdateMemberRole(UpdateMemberRoleRequest) returns (UpdateMemberRoleResponse);
+  // RemoveMember removes a member from the active org.
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  // InviteMember invites an email address to the active org.
+  rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);
+  // ListInvitations lists pending invitations for the active org.
+  rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse);
+  // RevokeInvitation cancels a pending invitation.
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse);
+}
+
+// GetOrgRequest is the org read request.
+message GetOrgRequest {}
+
+// GetOrgResponse returns the active org.
+message GetOrgResponse {
+  // The active org.
+  Org org = 1;
+}
+
+// CreateOrgRequest describes a new tenant.
+message CreateOrgRequest {
+  // Display name.
+  string name = 1;
+  // Desired URL-safe slug; the server may normalize or reject it.
+  string slug = 2;
+}
+
+// CreateOrgResponse returns the created org.
+message CreateOrgResponse {
+  // The created org.
+  Org org = 1;
+}
+
+// UpdateOrgRequest patches org fields.
+message UpdateOrgRequest {
+  // New display name; unchanged when omitted.
+  optional string name = 1;
+  // New slug; unchanged when omitted.
+  optional string slug = 2;
+  // New plan identifier; unchanged when omitted.
+  optional string plan = 3;
+}
+
+// UpdateOrgResponse returns the updated org.
+message UpdateOrgResponse {
+  // The updated org.
+  Org org = 1;
+}
+
+// DeleteOrgRequest is the org deletion request.
+message DeleteOrgRequest {
+  // Must equal the active org id; guards against accidental cross-org deletion.
+  string confirm_org_id = 1;
+}
+
+// DeleteOrgResponse acknowledges deletion.
+message DeleteOrgResponse {}
+
+// ListMembersRequest is the member listing request.
+message ListMembersRequest {
+  // Optional pagination.
+  PageRequest page = 1;
+}
+
+// ListMembersResponse lists members.
+message ListMembersResponse {
+  // Members of the active org.
+  repeated Member members = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// UpdateMemberRoleRequest changes a member's role.
+message UpdateMemberRoleRequest {
+  // Member's user id.
+  string user_id = 1;
+  // New role.
+  Role role = 2;
+}
+
+// UpdateMemberRoleResponse returns the updated member.
+message UpdateMemberRoleResponse {
+  // Updated member.
+  Member member = 1;
+}
+
+// RemoveMemberRequest removes a member.
+message RemoveMemberRequest {
+  // Member's user id.
+  string user_id = 1;
+}
+
+// RemoveMemberResponse acknowledges removal.
+message RemoveMemberResponse {}
+
+// InviteMemberRequest invites someone to the org.
+message InviteMemberRequest {
+  // Email address to invite.
+  string email = 1;
+  // Role the invitee will receive.
+  Role role = 2;
+}
+
+// InviteMemberResponse returns the created invitation.
+message InviteMemberResponse {
+  // Created invitation.
+  Invitation invitation = 1;
+}
+
+// ListInvitationsRequest lists pending invitations.
+message ListInvitationsRequest {
+  // Optional pagination.
+  PageRequest page = 1;
+}
+
+// ListInvitationsResponse lists invitations.
+message ListInvitationsResponse {
+  // Pending invitations.
+  repeated Invitation invitations = 1;
+  // Pagination cursor.
+  PageResponse page = 2;
+}
+
+// RevokeInvitationRequest cancels an invitation.
+message RevokeInvitationRequest {
+  // Invitation id.
+  string id = 1;
+}
+
+// RevokeInvitationResponse acknowledges revocation.
+message RevokeInvitationResponse {}

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "carbon-cloud.fullname" . }}-noded
+  labels:
+    {{- include "carbon-cloud.labels" . | nindent 4 }}
+    app.kubernetes.io/component: noded
+spec:
+  replicas: {{ .Values.noded.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+      app.kubernetes.io/component: noded
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        app.kubernetes.io/component: noded
+    spec:
+      serviceAccountName: {{ include "carbon-cloud.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: noded
+          image: "{{ .Values.noded.image.repository }}:{{ .Values.noded.image.tag }}"
+          imagePullPolicy: {{ .Values.noded.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8090
+          env:
+            - name: CLOUD_CONTROL_PLANE_URL
+              value: {{ .Values.noded.controlPlaneURL | quote }}
+            - name: CLOUD_JOIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.existingSecret }}
+                  key: join-token
+                  optional: true
+            {{- with .Values.noded.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.noded.resources | nindent 12 }}

@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package cloud.v1;
+
+import "cloud/v1/common.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1;cloudv1";
+
+// ProviderInstanceType maps one node type onto a concrete machine type on one
+// cloud provider. This is the only place provider-specific sizing lives.
+message ProviderInstanceType {
+  // Cloud provider.
+  ProviderId provider = 1;
+  // Provider machine type id, e.g. "cpx21" or "t3.medium".
+  string instance_type = 2;
+  // Regions where that machine type is offered.
+  repeated string regions = 3;
+  // Hourly list price in USD, informational.
+  double hourly_price_usd = 4;
+}
+
+// NodeType is a purchasable resource class for a managed node.
+message NodeType {
+  // Stable id, e.g. "small".
+  string id = 1;
+  // Display name.
+  string name = 2;
+  // Virtual CPU count guaranteed to workloads.
+  int32 vcpu = 3;
+  // RAM in MiB guaranteed to workloads.
+  int64 ram_mb = 4;
+  // Disk in GiB for server data.
+  int32 disk_gb = 5;
+  // Monthly price in USD, informational.
+  double monthly_price_usd = 6;
+  // One-line description shown in the provisioning wizard.
+  string description = 7;
+  // Sort key for display.
+  int32 sort_order = 8;
+  // Whether the type is offered by default in new deployments.
+  bool enabled = 9;
+  // Per-provider machine type mappings.
+  repeated ProviderInstanceType instance_types = 10;
+}
+
+// Provider is an infrastructure backend the deployment can provision onto.
+message Provider {
+  // Provider id.
+  ProviderId provider = 1;
+  // Display name.
+  string name = 2;
+  // Whether credentials are configured; false means plan/apply will be refused.
+  bool configured = 3;
+  // Regions the provider offers for the enabled node types.
+  repeated string regions = 4;
+  // Secret keys this provider needs (never their values).
+  repeated string required_keys = 5;
+  // Secret keys that are currently missing.
+  repeated string missing_keys = 6;
+}
+
+// NodeTypeService exposes the node type and provider catalogs.
+service NodeTypeService {
+  // ListNodeTypes lists purchasable resource classes.
+  rpc ListNodeTypes(ListNodeTypesRequest) returns (ListNodeTypesResponse);
+  // GetNodeType returns one type with its provider mappings.
+  rpc GetNodeType(GetNodeTypeRequest) returns (GetNodeTypeResponse);
+  // ListProviders lists infrastructure backends and their configuration state.
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse);
+}
+
+// ListNodeTypesRequest is the node type listing request.
+message ListNodeTypesRequest {
+  // When true, disabled types are included.
+  bool include_disabled = 1;
+}
+
+// ListNodeTypesResponse lists node types.
+message ListNodeTypesResponse {
+  // Node types in display order.
+  repeated NodeType node_types = 1;
+}
+
+// GetNodeTypeRequest fetches one node type.
+message GetNodeTypeRequest {
+  // Node type id.
+  string id = 1;
+}
+
+// GetNodeTypeResponse returns one node type.
+message GetNodeTypeResponse {
+  // The requested node type.
+  NodeType node_type = 1;
+}
+
+// ListProvidersRequest is the provider listing request.
+message ListProvidersRequest {}
+
+// ListProvidersResponse lists providers.
+message ListProvidersResponse {
+  // Configured and unconfigured providers.
+  repeated Provider providers = 1;
+}
