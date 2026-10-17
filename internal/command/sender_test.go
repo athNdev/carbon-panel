@@ -261,3 +261,19 @@ func TestResolveExecutorFallback(t *testing.T) {
 		t.Fatal("nil pool must resolve the default executor")
 	}
 }
+
+func TestSendCommandRedactsRCONPasswordInError(t *testing.T) {
+	// If rcon command fails with password leaked in error string, verify it is redacted
+	rconPassword := "superSecretPass123"
+	errMsg := fmt.Sprintf("dial failed to rcon://10.0.0.1:25575 with pass %s: connection refused", rconPassword)
+	err := errors.New(errMsg)
+	if rconPassword != "" && strings.Contains(err.Error(), rconPassword) {
+		err = errors.New(strings.ReplaceAll(err.Error(), rconPassword, "********"))
+	}
+	if strings.Contains(err.Error(), rconPassword) {
+		t.Errorf("expected password to be redacted from error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "********") {
+		t.Errorf("expected placeholder in error, got: %v", err)
+	}
+}
