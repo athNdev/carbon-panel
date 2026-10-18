@@ -71,3 +71,23 @@ func applyStagedByMode(ctx context.Context, store stagedConfigStore, serverID st
 func ApplyOnRestartStagedConfigs(ctx context.Context, store stagedConfigStore, serverID string) (int, error) {
 	return applyStagedByMode(ctx, store, serverID, storage.StagedApplyOnRestart)
 }
+
+// HasPendingRestartStagedConfigRecreate reports whether restart-only staged
+// changes were committed after the server's last successful start. It closes
+// the crash/retry window between applying DB changes and recreating the Docker
+// container.
+func HasPendingRestartStagedConfigRecreate(ctx context.Context, store stagedConfigStore, serverID string, lastStarted *time.Time) (bool, error) {
+	changes, err := store.ListStagedConfigChanges(ctx, serverID, storage.StagedStatusApplied)
+	if err != nil {
+		return false, err
+	}
+	for _, c := range changes {
+		if c.ApplyMode != storage.StagedApplyOnRestart || c.AppliedAt == nil {
+			continue
+		}
+		if lastStarted == nil || c.AppliedAt.After(*lastStarted) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
