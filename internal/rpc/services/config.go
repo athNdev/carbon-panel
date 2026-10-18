@@ -343,10 +343,10 @@ func recreateServerContainerWithClient(ctx context.Context, store *storage.Store
 		server.Status = storage.StatusStarting
 		now := time.Now()
 		server.LastStarted = &now
-	} else if server.Status != storage.StatusDeepSleep {
-		// Recreating a paused container unpauses its replacement; record the
-		// actual stopped state instead of retaining a stale paused status.
-		server.Status = storage.StatusStopped
+	} else {
+		// Recreating a paused container unpauses its replacement; status helper
+		// records it as stopped while preserving an intentional deep-sleep state.
+		server.Status = statusAfterContainerRecreation(server.Status, false)
 	}
 	if err := store.UpdateServer(ctx, server); err != nil {
 		return fmt.Errorf("container recreated but server state could not be saved: %w", err)
