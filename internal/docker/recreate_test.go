@@ -34,9 +34,9 @@ func TestRecreateContainerRetainsOriginalIDWhenStopFails(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	sdk, err := client.NewClientWithOpts(client.WithHost(fakeDockerHost(t, srv)), client.WithVersion("1.45"))
+	sdk, err := NewAPIClient(client.WithHost(fakeDockerHost(t, srv)), client.WithVersion("1.45"))
 	if err != nil {
-		t.Fatalf("NewClientWithOpts: %v", err)
+		t.Fatalf("NewAPIClient: %v", err)
 	}
 	defer func() { _ = sdk.Close() }()
 
