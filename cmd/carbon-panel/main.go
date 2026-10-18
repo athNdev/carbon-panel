@@ -256,7 +256,7 @@ func main() {
 	if err := proxyManager.Start(); err != nil {
 		log.Error("Failed to start proxy manager: %v", err)
 	}
-	defer proxyManager.Stop()
+	defer func() { _ = proxyManager.Stop() }()
 
 	deepSleepCtx, deepSleepCancel := context.WithCancel(ctx)
 	defer deepSleepCancel()
