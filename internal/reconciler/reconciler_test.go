@@ -8,9 +8,9 @@ package reconciler
 
 import (
 	"context"
-	"net/netip"
 	"errors"
 	"fmt"
+	"net/netip"
 	"sync"
 	"testing"
 	"time"
@@ -107,13 +107,14 @@ func (f *fakeStore) UpdateServerContainerID(_ context.Context, id string, contai
 }
 
 type fakeClient struct {
-	resolveErr  error
-	summary     *container.Summary
-	state       *docker.ContainerState
-	observeErr  error
-	started     []string
-	recreations int
-	recreateErr error
+	resolveErr     error
+	summary        *container.Summary
+	state          *docker.ContainerState
+	observeErr     error
+	started        []string
+	recreations    int
+	recreateErr    error
+	recreateResult *docker.RecreateContainerResult
 }
 
 func (c *fakeClient) ResolveContainer(_ context.Context, _ string) (*container.Summary, error) {
@@ -137,6 +138,9 @@ func (c *fakeClient) StartContainer(_ context.Context, containerID string) error
 
 func (c *fakeClient) RecreateContainer(_ context.Context, _ string, _ *db.Server, _ *db.ServerConfig) (*docker.RecreateContainerResult, error) {
 	c.recreations++
+	if c.recreateResult != nil {
+		return c.recreateResult, c.recreateErr
+	}
 	if c.recreateErr != nil {
 		return nil, c.recreateErr
 	}
@@ -382,6 +386,30 @@ func TestReconcileSelfHealsMissingContainer(t *testing.T) {
 	}
 	if proxy.count() == 0 {
 		t.Fatalf("proxy route was not refreshed after self-heal")
+	}
+}
+
+func TestReconcileSelfHealPersistsReplacementIDOnPartialFailure(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "gone", Status: db.StatusRunning}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		resolveErr:     fmt.Errorf("%w: s1", docker.ErrContainerNotResolved),
+		recreateResult: &docker.RecreateContainerResult{NewContainerID: "replacement-id", WasRunning: true},
+		recreateErr:    fmt.Errorf("replacement failed to start"),
+	}
+	r := newTestReconciler(t, store, cli, &fakeProxy{}, &fakeBus{})
+
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("ReconcileServer: %v", err)
+	}
+	if len(store.containers) != 1 || store.containers[0].containerID != "replacement-id" {
+		t.Fatalf("container updates = %+v, want persisted partial replacement id", store.containers)
+	}
+	if len(store.statuses) != 1 || store.statuses[0].status != db.StatusError {
+		t.Fatalf("status updates = %+v, want one error status", store.statuses)
+	}
+	if len(cli.started) != 0 {
+		t.Fatalf("started containers = %v, want none after recreate failure", cli.started)
 	}
 }
 
