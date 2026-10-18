@@ -365,7 +365,7 @@ func (c *Client) HostMemoryMB(ctx context.Context) (int64, error) {
 		return 0, fmt.Errorf("failed to inspect Docker host memory: %w", err)
 	}
 	if result.Info.MemTotal <= 0 {
-		return 0, fmt.Errorf("Docker host reported no available memory capacity")
+		return 0, fmt.Errorf("docker host reported no available memory capacity")
 	}
 	return result.Info.MemTotal / (1024 * 1024), nil
 }
