@@ -630,7 +630,7 @@ func (r *Reconciler) selfHealRecreate(ctx context.Context, cli Client, server *d
 
 // updateRoute re-points the proxy at the server's current backend.
 func (r *Reconciler) updateRoute(ctx context.Context, server *db.Server) {
-	if r.proxy == nil || server.ProxyHostname == "" {
+	if r.proxy == nil || (server.ProxyHostname == "" && server.Status != db.StatusDeepSleep) {
 		return
 	}
 	if err := r.proxy.UpdateServerRoute(server); err != nil && r.log != nil {
@@ -726,8 +726,10 @@ func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool)
 	if desired == db.StatusDeepSleep {
 		// Deeply-asleep servers are owned by the DeepSleepManager: an exited
 		// or missing container IS the expected state, and a running container
-		// is a boot in flight. Never heal, recreate, or reflap (MINE-121).
-		return decision{}
+		// is a boot in flight. Never heal, recreate, or reflap (MINE-121),
+		// but always keep the down-route armed so knock-to-wake survives route
+		// loss or panel restarts.
+		return decision{reconcileRoute: true}
 	}
 	if !obs.Exists {
 		if desired == db.StatusRunning {

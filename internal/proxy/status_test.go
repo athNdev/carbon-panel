@@ -7,6 +7,7 @@
 package proxy
 
 import (
+	"strings"
 	"context"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,7 +168,7 @@ func TestDownRoute_StatusPingDuringBootGetsLoadingMOTD(t *testing.T) {
 	assert.Equal(t, loadingMOTD, payload.Description.Text)
 }
 
-func TestDownRoute_LoginWithoutHandlerHangsUp(t *testing.T) {
+func TestDownRoute_LoginWithoutHandlerRefusesLoudly(t *testing.T) {
 	proxy := NewMinecraftProxy(&Config{ListenAddr: "127.0.0.1:0"})
 	require.NoError(t, proxy.Start())
 	t.Cleanup(func() { _ = proxy.Stop() })
@@ -194,12 +196,9 @@ func TestDownRoute_LoginWithoutHandlerHangsUp(t *testing.T) {
 	conn := dialDownRoute(t, proxy, 2)
 	defer func() { _ = conn.Close() }()
 
-	// Proxy must hang up: the login handshake gets no backend and the
-	// connection closes (read times out or EOFs).
-	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	one := make([]byte, 1)
-	_, err = conn.Read(one)
-	assert.Error(t, err, "Connection must hang up when no sleep wake handler is set")
+	// A missing wake handler is a misconfiguration: the client must get an
+	// explicit login disconnect instead of a silent EOF.
+	assert.Contains(t, readLoginDisconnect(t, conn), "could not wake up")
 
 	time.Sleep(200 * time.Millisecond)
 	assert.False(t, backendDialed.Load(), "Down backend must NOT be dialed without a wake handler")
@@ -356,7 +355,13 @@ func TestDownRoute_LoginHoldTimeoutSendsDisconnect(t *testing.T) {
 }
 
 func TestDownRoute_LoginWakeFailureSendsDisconnect(t *testing.T) {
-	// Boot fails outright: the client must get a wake-failed message.
+	// Boot fails in the background; the route stays down, so the client wait
+	// ends at the hold budget with the retry message rather than claiming a
+	// terminal failure the client cannot distinguish from a slow start.
+	oldBudget := downRouteBudget
+	downRouteBudget = 400 * time.Millisecond
+	t.Cleanup(func() { downRouteBudget = oldBudget })
+
 	proxy := startDownRouteWithHandler(t, func(ctx context.Context, serverID string) error {
 		return errWakeFailedTest
 	})
@@ -364,5 +369,82 @@ func TestDownRoute_LoginWakeFailureSendsDisconnect(t *testing.T) {
 	conn := dialDownRoute(t, proxy, 2)
 	defer func() { _ = conn.Close() }()
 
-	assert.Contains(t, readLoginDisconnect(t, conn), "could not wake up")
+	assert.Contains(t, readLoginDisconnect(t, conn), "still waking up")
+}
+
+// TestDownRoute_LoginSlowBootGetsHoldTimeoutNotWakeFailed is the regression
+// guard for MINE-172: when a container takes longer than downRouteBudget (25s)
+// to boot, the wake must NOT be cancelled at the client-hold deadline and the
+// client must receive the retry ("still waking up") message rather than
+// "could not wake up", while the background wake finishes cleanly.
+func TestDownRoute_LoginSlowBootGetsHoldTimeoutNotWakeFailed(t *testing.T) {
+	oldHold := downRouteBudget
+	oldWake := wakeBootBudget
+	downRouteBudget = 200 * time.Millisecond
+	wakeBootBudget = 5 * time.Second
+	t.Cleanup(func() {
+		downRouteBudget = oldHold
+		wakeBootBudget = oldWake
+	})
+
+	wakeFinished := make(chan error, 1)
+	proxy := startDownRouteWithHandler(t, func(ctx context.Context, serverID string) error {
+		select {
+		case <-time.After(600 * time.Millisecond):
+			wakeFinished <- nil
+			return nil
+		case <-ctx.Done():
+			wakeFinished <- ctx.Err()
+			return ctx.Err()
+		}
+	})
+
+	conn := dialDownRoute(t, proxy, 2)
+	defer func() { _ = conn.Close() }()
+
+	msg := readLoginDisconnect(t, conn)
+	assert.Contains(t, msg, "still waking up",
+		"slow boot must send holdTimeoutMessage, not wakeFailedMessage")
+	assert.NotContains(t, msg, "could not wake up")
+
+	select {
+	case err := <-wakeFinished:
+		assert.NoError(t, err, "background wake must not be cancelled when client hold expires")
+	case <-time.After(3 * time.Second):
+		t.Fatal("background wake did not complete")
+	}
+}
+
+// TestDownRoute_LoginWakeErrorLoggedNotSent verifies that a real wake error is
+// logged for the operator while the client only sees the hold-timeout retry
+// message once the hold expires.
+func TestDownRoute_LoginWakeErrorLoggedNotSent(t *testing.T) {
+	oldHold := downRouteBudget
+	downRouteBudget = 200 * time.Millisecond
+	t.Cleanup(func() { downRouteBudget = oldHold })
+
+	log := logger.New()
+
+	proxy := NewMinecraftProxy(&Config{
+		ListenAddr: "127.0.0.1:0",
+		Logger:     log,
+		SleepWakeHandler: func(ctx context.Context, serverID string) error {
+			return errWakeFailedTest
+		},
+	})
+	require.NoError(t, proxy.Start())
+	t.Cleanup(func() { _ = proxy.Stop() })
+	time.Sleep(50 * time.Millisecond)
+
+	proxy.AddRoute("srv-down", "down.test.local", "127.0.0.1", 1)
+	proxy.SetRouteDown("down.test.local", true)
+
+	conn := dialDownRoute(t, proxy, 2)
+	defer func() { _ = conn.Close() }()
+
+	msg := readLoginDisconnect(t, conn)
+	assert.Contains(t, msg, "still waking up")
+	assert.NotContains(t, msg, errWakeFailedTest.Error())
+	assert.Contains(t, strings.Join(log.GetRecentLogs(), "\n"), errWakeFailedTest.Error(),
+		"operator log must record the wake error")
 }
