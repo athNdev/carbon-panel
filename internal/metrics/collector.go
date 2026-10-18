@@ -475,6 +475,13 @@ func (c *Collector) collectSLPDataLoop(stop <-chan struct{}) {
 	}
 }
 
+func slpPort(server *storage.Server) int {
+	if server == nil || server.Port == 0 {
+		return docker.DefaultMinecraftPort
+	}
+	return server.Port
+}
+
 func (c *Collector) collectSLPData() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -520,12 +527,14 @@ func (c *Collector) collectSLPData() {
 
 		// SLP ping w/ server version for protocol
 		slpCtx, slpCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
-		port := server.Port
-		if server.ProxyHostname != "" || port == 0 {
-			port = docker.DefaultMinecraftPort // Proxy listens on default port (inside container)
-		}
+		port := slpPort(server)
 		result, err := slpClient.Ping(slpCtx, containerIP, port, server.MCVersion)
 		slpCancel()
+		if err != nil && port != docker.DefaultMinecraftPort {
+			fallbackCtx, fallbackCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
+			result, err = slpClient.Ping(fallbackCtx, containerIP, docker.DefaultMinecraftPort, server.MCVersion)
+			fallbackCancel()
+		}
 
 		if err != nil {
 			c.log.Debug("Metrics collector SLP: failed to ping %s (%s:%d): %v", server.ID, containerIP, port, err)
