@@ -36,7 +36,12 @@ func TestAPIKeyRejections(t *testing.T) {
 
 	require.False(t, VerifyAPIKey(pepper, "cc_wrongsecret", stored), "wrong secret")
 	require.False(t, VerifyAPIKey([]byte("other-pepper"), secret, stored), "wrong pepper")
-	require.False(t, VerifyAPIKey(pepper, secret, stored[:len(stored)-2]+"ff"), "tampered hash")
+	tamperedHashLastChar := byte('0')
+	if stored[len(stored)-1] == tamperedHashLastChar {
+		tamperedHashLastChar = '1'
+	}
+	tamperedHash := stored[:len(stored)-1] + string(tamperedHashLastChar)
+	require.False(t, VerifyAPIKey(pepper, secret, tamperedHash), "tampered hash")
 	require.False(t, VerifyAPIKey(pepper, secret, "short"), "length mismatch")
 	require.False(t, VerifyAPIKey(pepper, "", stored), "empty secret")
 	require.False(t, VerifyAPIKey(pepper, secret, ""), "empty hash")
