@@ -142,7 +142,7 @@ func TestDeepSleep_StatusReadFailureDoesNotClaimAsleep(t *testing.T) {
 
 	srv, getErr := store.GetServer(ctx, "srv-status-error")
 	require.NoError(t, getErr)
-	assert.Equal(t, db.StatusRunning, srv.Status, "unknown Docker state must not be persisted as deep sleep")
+	assert.Equal(t, db.StatusError, srv.Status, "unknown Docker state must not be represented as running or deep sleep")
 	assert.True(t, refreshed, "proxy route should be restored after the failed sleep attempt")
 }
 
@@ -359,7 +359,7 @@ func TestScenario12_RollbackSleep_IsSafeOnCancelledContext(t *testing.T) {
 
 	deadCtx, cancel := context.WithCancel(context.Background())
 	cancel()
-	mgr.rollbackSleep(deadCtx, "srv-sleep")
+	require.NoError(t, mgr.rollbackSleep(deadCtx, "srv-sleep", "cnt-sleep"))
 
 	srv, err := store.GetServer(context.Background(), "srv-sleep")
 	require.NoError(t, err)
