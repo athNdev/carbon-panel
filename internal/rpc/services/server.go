@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -63,6 +64,8 @@ const statusRefreshTimeout = 5 * time.Second
 type ServerService struct {
 	store            *storage.Store
 	docker           *docker.Client
+	hostMemoryMB     func(context.Context, string) (int64, error)
+	capacityMu       sync.Mutex
 	pool             *docker.ClientPool
 	placementEngine  *docker.PlacementEngine
 	sender           *command.Sender
@@ -96,6 +99,89 @@ func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, er
 		return s.docker, nil
 	}
 	return nil, fmt.Errorf("no docker client available")
+}
+
+func (s *ServerService) getHostMemoryMB(ctx context.Context, nodeID string) (int64, error) {
+	if s.hostMemoryMB != nil {
+		return s.hostMemoryMB(ctx, nodeID)
+	}
+	cli, err := s.getDockerClientStrict(nodeID)
+	if err != nil {
+		return 0, err
+	}
+	return cli.HostMemoryMB(ctx)
+}
+
+// checkNodeMemoryCapacity prevents operations that would exceed either the
+// operator-configured node cap or the capacity reported by its Docker daemon.
+// additionalMemoryMB is the new reservation for creation; starts pass zero
+// because their server memory is already included in the node allocation.
+func (s *ServerService) checkNodeMemoryCapacity(ctx context.Context, nodeID string, additionalMemoryMB int64) error {
+	node, err := s.store.GetNode(ctx, nodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to load target node capacity: %w", err))
+	}
+	hostMemoryMB, err := s.getHostMemoryMB(ctx, nodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot verify memory capacity on node %s: %w", node.Name, err))
+	}
+	allocatedMemoryMB, _, _, err := s.store.GetNodeStats(ctx, nodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot verify allocated memory on node %s: %w", node.Name, err))
+	}
+
+	capacityMB := hostMemoryMB
+	if node.MaxMemoryMB > 0 && node.MaxMemoryMB < capacityMB {
+		capacityMB = node.MaxMemoryMB
+	}
+	if allocatedMemoryMB+additionalMemoryMB > capacityMB {
+		return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("node %s lacks memory capacity (allocated %d MB + requested %d MB > limit %d MB)", node.Name, allocatedMemoryMB, additionalMemoryMB, capacityMB))
+	}
+	return nil
+}
+
+func (s *ServerService) selectNodeWithHostCapacity(ctx context.Context, strategy docker.PlacementStrategy, requestedMemoryMB int64) (*storage.Node, error) {
+	nodes, err := s.store.ListNodesWithStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query Docker nodes: %w", err)
+	}
+
+	// Probe hosts concurrently with a short per-node budget. A stale "online"
+	// record with an unreachable Docker daemon must not be treated as unlimited.
+	var wg sync.WaitGroup
+	for _, node := range nodes {
+		if !node.Enabled || node.Status != storage.NodeStatusOnline {
+			continue
+		}
+		wg.Add(1)
+		go func(node *storage.Node) {
+			defer wg.Done()
+			probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			hostMemoryMB, err := s.getHostMemoryMB(probeCtx, node.ID)
+			if err != nil {
+				node.Status = storage.NodeStatusOffline
+				return
+			}
+			if node.MaxMemoryMB == 0 || hostMemoryMB < node.MaxMemoryMB {
+				node.MaxMemoryMB = hostMemoryMB
+			}
+		}(node)
+	}
+	wg.Wait()
+
+	eligible := docker.FilterEligibleNodes(nodes, requestedMemoryMB)
+	if len(eligible) == 0 {
+		return nil, fmt.Errorf("no reachable Docker node has capacity for %d MB", requestedMemoryMB)
+	}
+	switch strategy {
+	case docker.StrategyLeastServers:
+		return docker.SelectLeastServers(eligible), nil
+	case docker.StrategyRoundRobin:
+		return s.placementEngine.SelectRoundRobin(eligible), nil
+	default:
+		return docker.SelectLeastMemory(eligible), nil
+	}
 }
 
 // SetClientPool sets the client pool on the service
@@ -844,7 +930,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		if msg.PlacementStrategy != "" {
 			strategy = docker.PlacementStrategy(strings.ToLower(msg.PlacementStrategy))
 		}
-		selectedNode, err := s.placementEngine.SelectNode(ctx, strategy, int64(server.Memory))
+		selectedNode, err := s.selectNodeWithHostCapacity(ctx, strategy, int64(server.Memory))
 		if err != nil {
 			s.log.Error("Failed to select node using strategy %s: %v", strategy, err)
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("placement failed: %w", err))
@@ -879,17 +965,28 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
+	// Serialize capacity check and DB reservation so concurrent create
+	// requests cannot both observe the same free memory and overcommit a node.
+	s.capacityMu.Lock()
+	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, int64(server.Memory)); err != nil {
+		s.capacityMu.Unlock()
+		return nil, err
+	}
+
 	// Create data directory
 	if err := os.MkdirAll(server.DataPath, 0755); err != nil {
+		s.capacityMu.Unlock()
 		s.log.Error("Failed to create data directory: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server directory"))
 	}
 
 	// Save to database
 	if err := s.store.CreateServer(ctx, server); err != nil {
+		s.capacityMu.Unlock()
 		s.log.Error("Failed to create server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server"))
 	}
+	s.capacityMu.Unlock()
 
 	// Get the server config
 	serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
@@ -1068,6 +1165,12 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	originalModLoader := server.ModLoader
 	originalMCVersion := server.MCVersion
 	originalDockerImage := server.DockerImage
+	capacityLockHeld := false
+	defer func() {
+		if capacityLockHeld {
+			s.capacityMu.Unlock()
+		}
+	}()
 
 	// Update fields
 	if msg.Name != "" {
@@ -1119,6 +1222,13 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		needsRecreation = true
 	}
 	if msg.Memory > 0 && int(msg.Memory) != originalMemory {
+		if int(msg.Memory) > originalMemory {
+			s.capacityMu.Lock()
+			capacityLockHeld = true
+			if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, int64(msg.Memory)-int64(originalMemory)); err != nil {
+				return nil, err
+			}
+		}
 		server.Memory = int(msg.Memory)
 		needsRecreation = true
 		if err := s.store.UpdateServerConfigMemory(ctx, server.ID, int(msg.Memory)); err != nil {
@@ -1281,6 +1391,10 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		s.log.Error("Failed to update server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
 	}
+	if capacityLockHeld {
+		s.capacityMu.Unlock()
+		capacityLockHeld = false
+	}
 
 	// If container needs recreation
 	if needsRecreation {
@@ -1414,6 +1528,9 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		server.Status = storage.StatusError
 		_ = s.store.UpdateServer(ctx, server)
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
+	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, 0); err != nil {
+		return nil, err
 	}
 
 	// Apply staged configs on restart/start (STAGED-CONFIG)
@@ -1713,6 +1830,9 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
+	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, 0); err != nil {
+		return nil, err
+	}
 
 	// Apply any staged config changes marked for restart
 	stagedApplied, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID)
@@ -1908,6 +2028,9 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	dockerCli, err := s.getDockerClientStrict(server.NodeID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
+	}
+	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, 0); err != nil {
+		return nil, err
 	}
 	result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 	if err != nil {
