@@ -63,6 +63,173 @@ func TestWithinBounds(t *testing.T) {
 	}
 }
 
+// TestWithinRealBounds verifies that WithinReal enforces containment even
+// across symlinks (e.g. symlinks pointing outside root are rejected, while
+// internal symlinks and legitimate non-existent child paths are allowed).
+func TestWithinRealBounds(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "srv")
+	outside := filepath.Join(base, "outside")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	outsideFile := filepath.Join(outside, "secret.txt")
+	if err := os.WriteFile(outsideFile, []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	insideFile := filepath.Join(root, "regular.txt")
+	if err := os.WriteFile(insideFile, []byte("regular"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Symlink to outside file
+	linkOutsideFile := filepath.Join(root, "link_to_outside_file")
+	if err := os.Symlink(outsideFile, linkOutsideFile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Symlink to outside directory
+	linkOutsideDir := filepath.Join(root, "link_to_outside_dir")
+	if err := os.Symlink(outside, linkOutsideDir); err != nil {
+		t.Fatal(err)
+	}
+
+	// Symlink to inside file
+	linkInsideFile := filepath.Join(root, "link_to_inside_file")
+	if err := os.Symlink(insideFile, linkInsideFile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Broken symlink to non-existent outside file
+	brokenLinkOutside := filepath.Join(root, "broken_link_outside")
+	if err := os.Symlink(filepath.Join(outside, "ghost.txt"), brokenLinkOutside); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name   string
+		target string
+		want   bool
+	}{
+		{"root itself", root, true},
+		{"regular inside file", insideFile, true},
+		{"non-existent inside file", filepath.Join(root, "nonexistent.txt"), true},
+		{"nested non-existent inside path", filepath.Join(root, "a", "b", "nonexistent.txt"), true},
+		{"link to inside file", linkInsideFile, true},
+		{"link to outside file", linkOutsideFile, false},
+		{"link to outside directory", linkOutsideDir, false},
+		{"path through outside directory symlink", filepath.Join(linkOutsideDir, "secret.txt"), false},
+		{"non-existent path through outside directory symlink", filepath.Join(linkOutsideDir, "new.txt"), false},
+		{"broken symlink pointing outside", brokenLinkOutside, false},
+		{"sibling directory", filepath.Join(base, "srv-evil"), false},
+		{"unrelated absolute", outsideFile, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := WithinReal(root, tc.target); got != tc.want {
+				t.Errorf("WithinReal(%q, %q) = %v, want %v", root, tc.target, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestExtractArchiveOverwritingExistingSymlink verifies that extracting an archive
+// over an existing symlink never writes through to the target file.
+func TestExtractArchiveOverwritingExistingSymlink(t *testing.T) {
+	t.Run("outside symlink rejected", func(t *testing.T) {
+		base := t.TempDir()
+		dest := filepath.Join(base, "dest")
+		outside := filepath.Join(base, "outside")
+		if err := os.MkdirAll(dest, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(outside, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		outsideTarget := filepath.Join(outside, "victim.txt")
+		if err := os.WriteFile(outsideTarget, []byte("original content"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create symlink inside dest pointing to outside victim
+		symlinkPath := filepath.Join(dest, "target.txt")
+		if err := os.Symlink(outsideTarget, symlinkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		archive := filepath.Join(base, "overwrite.tar.gz")
+		buildArchive(t, archive, []string{"target.txt"})
+
+		// Extraction must be rejected due to destination resolving outside
+		_, err := ExtractArchive(context.Background(), archive, dest, nil)
+		if err == nil {
+			t.Fatalf("expected ExtractArchive to fail for outside symlink target, got nil")
+		}
+
+		// Verify outside file was NOT overwritten
+		content, err := os.ReadFile(outsideTarget)
+		if err != nil {
+			t.Fatalf("read outside target: %v", err)
+		}
+		if string(content) != "original content" {
+			t.Fatalf("outside file was overwritten through symlink! content = %q", string(content))
+		}
+	})
+
+	t.Run("inside symlink replaced", func(t *testing.T) {
+		base := t.TempDir()
+		dest := filepath.Join(base, "dest")
+		if err := os.MkdirAll(dest, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		insideTarget := filepath.Join(dest, "legit.txt")
+		if err := os.WriteFile(insideTarget, []byte("original inside"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create symlink pointing to inside file
+		symlinkPath := filepath.Join(dest, "target.txt")
+		if err := os.Symlink(insideTarget, symlinkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		archive := filepath.Join(base, "overwrite_inside.tar.gz")
+		buildArchive(t, archive, []string{"target.txt"})
+
+		// Extraction should succeed by removing symlink and creating regular file
+		_, err := ExtractArchive(context.Background(), archive, dest, nil)
+		if err != nil {
+			t.Fatalf("ExtractArchive failed: %v", err)
+		}
+
+		// The target pointed to should NOT have been overwritten
+		content, err := os.ReadFile(insideTarget)
+		if err != nil {
+			t.Fatalf("read inside target: %v", err)
+		}
+		if string(content) != "original inside" {
+			t.Fatalf("inside target file was overwritten through symlink! content = %q", string(content))
+		}
+
+		// And target.txt should now be a regular file, not a symlink
+		fi, err := os.Lstat(symlinkPath)
+		if err != nil {
+			t.Fatalf("lstat symlink path: %v", err)
+		}
+		if fi.Mode()&os.ModeSymlink != 0 {
+			t.Fatalf("target.txt is still a symlink")
+		}
+	})
+}
+
 // TestExtractArchiveRejectsTraversal is the security regression test: a crafted
 // archive must not be able to write outside the destination, including to a
 // sibling directory that shares the destination's string prefix.

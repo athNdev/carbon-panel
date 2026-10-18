@@ -166,10 +166,11 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 		// Build path
 		targetPath := filepath.Join(destPath, f.NameInArchive)
 
-		// No sneaky traversals. A filepath.Rel-based containment check is
+		// No sneaky traversals. A symlink-evaluating containment check is
 		// required: a string HasPrefix would accept a sibling directory whose
-		// name merely starts with destPath (e.g. ../dest-evil).
-		if !Within(destPath, targetPath) {
+		// name merely starts with destPath (e.g. ../dest-evil), and lexical
+		// checks alone would permit writing through pre-existing symlinks.
+		if !WithinReal(destPath, targetPath) {
 			return fmt.Errorf("illegal file path in archive: %s", f.NameInArchive)
 		}
 
@@ -207,13 +208,21 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 // file descriptors on large or crafted archives.
 func extractArchiveEntry(destPath string, f archives.FileInfo) error {
 	targetPath := filepath.Join(destPath, f.NameInArchive)
-	if !Within(destPath, targetPath) {
+	if !WithinReal(destPath, targetPath) {
 		return fmt.Errorf("illegal file path in archive: %s", f.NameInArchive)
 	}
 
 	// Make parent(s)
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+	parentDir := filepath.Dir(targetPath)
+	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
+	}
+
+	// If a symlink already exists at targetPath, remove it so we don't write through it
+	if fi, err := os.Lstat(targetPath); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+		if err := os.Remove(targetPath); err != nil {
+			return fmt.Errorf("failed to remove existing symlink %s: %w", targetPath, err)
+		}
 	}
 
 	// Create file
@@ -342,6 +351,10 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 				if err != nil {
 					return err
 				}
+				if !WithinReal(basePath, path) {
+					// Skip symlinks or entries that escape basePath
+					return nil
+				}
 				rel, _ := filepath.Rel(basePath, path)
 				if d.IsDir() {
 					// Add directory entry with trailing slash
@@ -383,6 +396,9 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 				return count, fmt.Errorf("failed to add directory %s to zip: %w", p, err)
 			}
 		} else {
+			if !WithinReal(basePath, fullPath) {
+				return count, fmt.Errorf("invalid path: %s", p)
+			}
 			header, err := zip.FileInfoHeader(info)
 			if err != nil {
 				return count, fmt.Errorf("failed to create header for %s: %w", p, err)
@@ -438,8 +454,14 @@ func CopyDir(src, dst string) error {
 		if err != nil {
 			return err
 		}
+		if !WithinReal(src, path) {
+			return nil
+		}
 		rel, _ := filepath.Rel(src, path)
 		target := filepath.Join(dst, rel)
+		if !WithinReal(dst, target) {
+			return fmt.Errorf("destination target escapes destination root: %s", target)
+		}
 
 		if d.IsDir() {
 			return os.MkdirAll(target, 0755)
@@ -503,4 +525,101 @@ func Within(root, target string) bool {
 		return false
 	}
 	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// WithinReal reports whether target (when existing, or its closest existing ancestor
+// if target does not yet exist) resolves strictly to root itself or within root
+// after evaluating all symbolic links.
+//
+// It first performs a lexical boundary check via Within. Then it canonicalizes
+// root and target (or target's closest existing parent) via filepath.EvalSymlinks
+// to ensure no symlink points outside root.
+func WithinReal(root, target string) bool {
+	if !Within(root, target) {
+		return false
+	}
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		realRoot, err = filepath.Abs(root)
+		if err != nil {
+			return false
+		}
+	}
+
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	targetAbs, err := filepath.Abs(target)
+	if err != nil {
+		return false
+	}
+
+	rel, err := filepath.Rel(rootAbs, targetAbs)
+	if err != nil {
+		return false
+	}
+	if rel == "." {
+		return true
+	}
+
+	components := strings.Split(filepath.Clean(rel), string(filepath.Separator))
+	current := realRoot
+
+	for _, comp := range components {
+		if comp == "" || comp == "." {
+			continue
+		}
+		if comp == ".." {
+			return false
+		}
+
+		next := filepath.Join(current, comp)
+		fi, err := os.Lstat(next)
+		if os.IsNotExist(err) {
+			// Once a path component does not exist, any subsequent components
+			// are non-existent children within current. Since current is already
+			// verified to be within realRoot, the non-existent leaf cannot escape.
+			return true
+		}
+		if err != nil {
+			return false
+		}
+
+		if fi.Mode()&os.ModeSymlink != 0 {
+			linkDest, err := os.Readlink(next)
+			if err != nil {
+				return false
+			}
+			var resolvedDest string
+			if filepath.IsAbs(linkDest) {
+				resolvedDest = filepath.Clean(linkDest)
+			} else {
+				resolvedDest = filepath.Clean(filepath.Join(current, linkDest))
+			}
+
+			evalDest, err := filepath.EvalSymlinks(resolvedDest)
+			if err == nil {
+				if !Within(realRoot, evalDest) {
+					return false
+				}
+				current = evalDest
+			} else if os.IsNotExist(err) {
+				// Broken symlink. Ensure its target destination is within realRoot.
+				if !Within(realRoot, resolvedDest) {
+					return false
+				}
+				current = resolvedDest
+			} else {
+				return false
+			}
+		} else {
+			current = next
+			if !Within(realRoot, current) {
+				return false
+			}
+		}
+	}
+
+	return Within(realRoot, current)
 }
