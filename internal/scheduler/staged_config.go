@@ -11,6 +11,7 @@ import (
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 )
 
 // applyDueStagedConfigs applies staged config changes whose cron schedule has
@@ -27,7 +28,11 @@ func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
 		return
 	}
 	for _, staged := range due {
+		if !docker.TryBeginServerTransition(staged.ServerID) {
+			continue
+		}
 		applied, err := s.store.ApplyStagedConfigChange(ctx, staged.ID)
+		docker.EndServerTransition(staged.ServerID)
 		if err != nil {
 			s.log.Error("Failed to apply staged config change %s for server %s: %v", staged.ID, staged.ServerID, err)
 			continue
