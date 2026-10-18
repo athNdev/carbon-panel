@@ -91,6 +91,7 @@ func TestUpdateServer_HostileVolumes_RejectedEvenWithElevatedPermission(t *testi
 	if err != nil {
 		t.Fatalf("failed to create server fixture: %v", err)
 	}
+	waitForServerTransition(t, created.Msg.Server.Id)
 
 	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id:              created.Msg.Server.Id,
@@ -122,6 +123,7 @@ func TestUpdateServer_BindInsideDataPath_Allowed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create server fixture: %v", err)
 	}
+	waitForServerTransition(t, created.Msg.Server.Id)
 
 	// The server's own data directory remains a legitimate bind source.
 	inside := filepath.Join(created.Msg.Server.DataPath, "mods")

@@ -79,6 +79,15 @@ func (f *failingStopController) StopContainer(ctx context.Context, containerID s
 	return false, errors.New("simulated docker stop error")
 }
 
+type statusErrorSleepController struct {
+	mockSleepController
+	err error
+}
+
+func (c *statusErrorSleepController) GetContainerStatus(context.Context, string) (db.ServerStatus, error) {
+	return "", c.err
+}
+
 // TestScenario3_StopFailure_RollsBackStatus verifies that if stopping container fails,
 // DB status rolls back to StatusRunning and routes are refreshed.
 func TestScenario3_StopFailure_RollsBackStatus(t *testing.T) {
@@ -119,6 +128,28 @@ func TestScenario3_StopFailure_RollsBackStatus(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, db.StatusRunning, srv.Status, "Status must roll back to StatusRunning on stop failure")
 	assert.Equal(t, "srv-err", refreshedID, "Route refresher must be called on rollback")
+}
+
+func TestDeepSleep_StatusReadFailureDoesNotClaimAsleep(t *testing.T) {
+	ctx := context.Background()
+	store := newMockFreezerStore()
+	store.servers["srv-status-error"] = &db.Server{
+		ID: "srv-status-error", ContainerID: "cnt-status-error", Status: db.StatusRunning,
+	}
+	controller := &statusErrorSleepController{
+		mockSleepController: mockSleepController{status: map[string]db.ServerStatus{"cnt-status-error": db.StatusRunning}},
+		err:                 errors.New("temporary Docker inspect failure"),
+	}
+	refreshed := false
+	mgr := NewDeepSleepManager(controller, store, nil, func(string) { refreshed = true }, nil)
+
+	err := mgr.SleepServer(ctx, "srv-status-error")
+	assert.Error(t, err, "SleepServer must report an unknown container state")
+
+	srv, getErr := store.GetServer(ctx, "srv-status-error")
+	require.NoError(t, getErr)
+	assert.Equal(t, db.StatusRunning, srv.Status, "unknown Docker state must not be persisted as deep sleep")
+	assert.True(t, refreshed, "proxy route should be restored after the failed sleep attempt")
 }
 
 // TestScenario4_IsTransitioning_StateFlag verifies that IsTransitioning correctly reports

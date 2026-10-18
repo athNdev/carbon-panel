@@ -349,6 +349,31 @@ func TestReconcileNoWriteWhenAlreadyConverged(t *testing.T) {
 	}
 }
 
+func TestReconcileSkipsServerWithLifecycleTransitionInFlight(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Creating", NodeID: "default", Status: db.StatusCreating}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		summary: &container.Summary{ID: "c1"},
+		state:   &docker.ContainerState{ContainerID: "c1", Status: db.StatusStopped, HasExited: true, ExitCode: 0},
+	}
+	r := newTestReconciler(t, store, cli, &fakeProxy{}, &fakeBus{})
+
+	if !docker.TryBeginServerTransition(server.ID) {
+		t.Fatal("failed to claim lifecycle transition")
+	}
+	defer docker.EndServerTransition(server.ID)
+
+	if err := r.ReconcileServer(context.Background(), server.ID); err != nil {
+		t.Fatalf("ReconcileServer: %v", err)
+	}
+	if len(store.statuses) != 0 {
+		t.Fatalf("status writes = %+v, want none while creation owns transition", store.statuses)
+	}
+	if len(store.containers) != 0 {
+		t.Fatalf("container writes = %+v, want none while creation owns transition", store.containers)
+	}
+}
+
 func TestReconcileSelfHealsMissingContainer(t *testing.T) {
 	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "gone", Status: db.StatusRunning, ProxyHostname: "mc.example.com"}
 	store := newFakeStore(server)
