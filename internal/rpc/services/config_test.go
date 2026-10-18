@@ -18,6 +18,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
@@ -41,6 +42,74 @@ func setupConfigTestService(t *testing.T) (*ConfigService, *storage.Store) {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 	return NewConfigService(store, &config.Config{}, nil, nil, logger.New()), store
+}
+
+type configRecreatorFake struct {
+	result *docker.RecreateContainerResult
+	err    error
+}
+
+func (f configRecreatorFake) RecreateContainer(context.Context, string, *storage.Server, *storage.ServerConfig) (*docker.RecreateContainerResult, error) {
+	return f.result, f.err
+}
+
+func TestConfigRecreatePersistsPartialReplacementOnStartFailure(t *testing.T) {
+	ctx := context.Background()
+	_, store := setupConfigTestService(t)
+	server := &storage.Server{
+		ID: "config-recreate-test", Name: "Config Recreate", NodeID: "node-1",
+		Port: 25565, Memory: 2048, ContainerID: "old-container", Status: storage.StatusRunning,
+	}
+	require.NoError(t, store.CreateServer(ctx, server))
+	dockerErr := fmt.Errorf("replacement failed to start")
+	recreator := configRecreatorFake{
+		result: &docker.RecreateContainerResult{NewContainerID: "replacement-container", WasRunning: true},
+		err:    dockerErr,
+	}
+
+	err := recreateServerContainerWithClient(ctx, store, recreator, logger.New(), server, &storage.ServerConfig{ServerID: server.ID})
+	require.ErrorIs(t, err, dockerErr)
+	updated, getErr := store.GetServer(ctx, server.ID)
+	require.NoError(t, getErr)
+	assert.Equal(t, "replacement-container", updated.ContainerID)
+	assert.Equal(t, storage.StatusError, updated.Status)
+}
+
+func TestConfigRecreateClearsStaleContainerIDWhenReplacementIsAbsent(t *testing.T) {
+	ctx := context.Background()
+	_, store := setupConfigTestService(t)
+	server := &storage.Server{
+		ID: "config-recreate-empty", Name: "Config Recreate Empty", NodeID: "node-1",
+		Port: 25566, Memory: 2048, ContainerID: "old-container", Status: storage.StatusRunning,
+	}
+	require.NoError(t, store.CreateServer(ctx, server))
+
+	err := recreateServerContainerWithClient(ctx, store, configRecreatorFake{err: fmt.Errorf("create failed")}, logger.New(), server, &storage.ServerConfig{ServerID: server.ID})
+	require.Error(t, err)
+	updated, getErr := store.GetServer(ctx, server.ID)
+	require.NoError(t, getErr)
+	assert.Empty(t, updated.ContainerID)
+	assert.Equal(t, storage.StatusError, updated.Status)
+}
+
+func TestConfigRecreateRetainsOriginalContainerIDWhenStopFails(t *testing.T) {
+	ctx := context.Background()
+	_, store := setupConfigTestService(t)
+	server := &storage.Server{
+		ID: "config-recreate-stop-failure", Name: "Config Recreate Stop Failure", NodeID: "node-1",
+		Port: 25567, Memory: 2048, ContainerID: "old-container", Status: storage.StatusRunning,
+	}
+	require.NoError(t, store.CreateServer(ctx, server))
+
+	err := recreateServerContainerWithClient(ctx, store, configRecreatorFake{
+		result: &docker.RecreateContainerResult{NewContainerID: "old-container", WasRunning: true},
+		err:    fmt.Errorf("docker stop failed"),
+	}, logger.New(), server, &storage.ServerConfig{ServerID: server.ID})
+	require.Error(t, err)
+	updated, getErr := store.GetServer(ctx, server.ID)
+	require.NoError(t, getErr)
+	assert.Equal(t, "old-container", updated.ContainerID)
+	assert.Equal(t, storage.StatusError, updated.Status)
 }
 
 func TestConfigService_GetGlobalSettings(t *testing.T) {

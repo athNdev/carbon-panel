@@ -37,6 +37,10 @@ type ConfigService struct {
 	log    *logger.Logger
 }
 
+type configContainerRecreator interface {
+	RecreateContainer(context.Context, string, *storage.Server, *storage.ServerConfig) (*docker.RecreateContainerResult, error)
+}
+
 // Creates new config service
 func NewConfigService(store *storage.Store, cfg *config.Config, dockerCli *docker.Client, pool *docker.ClientPool, log *logger.Logger) *ConfigService {
 	if pool == nil && dockerCli != nil {
@@ -295,22 +299,7 @@ func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.S
 	if err != nil {
 		return fmt.Errorf("failed to resolve docker client for node %s: %w", server.NodeID, err)
 	}
-
-	oldContainerID := server.ContainerID
-	wasRunning := false
-	if server.Status == storage.StatusRunning {
-		wasRunning = true
-		if _, err := dockerCli.StopContainer(ctx, oldContainerID); err != nil {
-			return err
-		}
-		time.Sleep(2 * time.Second)
-	}
-
-	if err := dockerCli.RemoveContainer(ctx, oldContainerID); err != nil {
-		return err
-	}
-
-	// Inherit global settings if server-specific keys are unset
+	// Inherit global settings if server-specific keys are unset.
 	if config.CFAPIKey == nil || *config.CFAPIKey == "" {
 		if globalSettings, _, err := s.store.GetGlobalSettings(ctx); err == nil && globalSettings != nil && globalSettings.CFAPIKey != nil && *globalSettings.CFAPIKey != "" {
 			config.CFAPIKey = globalSettings.CFAPIKey
@@ -321,27 +310,50 @@ func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.S
 			config.ModrinthToken = globalSettings.ModrinthToken
 		}
 	}
+	return recreateServerContainerWithClient(ctx, s.store, dockerCli, s.log, server, config)
+}
 
-	newContainerID, err := dockerCli.CreateContainer(ctx, server, config)
-	if err != nil {
-		return err
-	}
-
-	server.ContainerID = newContainerID
-	if err := s.store.UpdateServer(ctx, server); err != nil {
-		return err
-	}
-
-	if wasRunning {
-		if err := dockerCli.StartContainer(ctx, newContainerID); err != nil {
-			return err
+func recreateServerContainerWithClient(ctx context.Context, store *storage.Store, dockerCli configContainerRecreator, log *logger.Logger, server *storage.Server, config *storage.ServerConfig) error {
+	result, recreateErr := dockerCli.RecreateContainer(ctx, server.ContainerID, server, config)
+	if recreateErr != nil || result == nil || result.NewContainerID == "" {
+		if result != nil {
+			server.ContainerID = result.NewContainerID
+		} else {
+			server.ContainerID = ""
 		}
+		server.Status = storage.StatusError
+		persistErr := store.UpdateServer(ctx, server)
+		if persistErr != nil && log != nil {
+			log.Error("Failed to persist server state after config container recreation failed: %v", persistErr)
+		}
+		if recreateErr != nil {
+			if persistErr != nil {
+				return fmt.Errorf("failed to recreate container with updated configuration: %w (also failed to persist recovery state: %v)", recreateErr, persistErr)
+			}
+			return fmt.Errorf("failed to recreate container with updated configuration: %w", recreateErr)
+		}
+		if persistErr != nil {
+			return fmt.Errorf("container recreation returned no container ID and failed to persist recovery state: %w", persistErr)
+		}
+		return fmt.Errorf("container recreation returned no container ID")
+	}
+
+	server.ContainerID = result.NewContainerID
+	if result.WasRunning {
 		server.Status = storage.StatusStarting
 		now := time.Now()
 		server.LastStarted = &now
-		s.store.UpdateServer(ctx, server)
+	} else if server.Status != storage.StatusDeepSleep {
+		// Recreating a paused container unpauses its replacement; record the
+		// actual stopped state instead of retaining a stale paused status.
+		server.Status = storage.StatusStopped
 	}
-	s.log.Info("Container recreated with updated configuration")
+	if err := store.UpdateServer(ctx, server); err != nil {
+		return fmt.Errorf("container recreated but server state could not be saved: %w", err)
+	}
+	if log != nil {
+		log.Info("Container recreated with updated configuration")
+	}
 	return nil
 }
 
