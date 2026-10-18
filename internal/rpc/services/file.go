@@ -182,7 +182,7 @@ func (s *FileService) ListFiles(ctx context.Context, req *connect.Request[v1.Lis
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, path)
-	if !files.Within(server.DataPath, fullPath) {
+	if !files.WithinReal(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -216,7 +216,7 @@ func (s *FileService) GetFile(ctx context.Context, req *connect.Request[v1.GetFi
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.Within(server.DataPath, fullPath) {
+	if !files.WithinReal(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -291,8 +291,13 @@ func (s *FileService) SaveUploadedFile(ctx context.Context, req *connect.Request
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, targetPath)
-	if !files.Within(server.DataPath, fullPath) {
+	if !files.WithinReal(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
+	}
+
+	// Refuse writing directly through a symlink
+	if fi, err := os.Lstat(fullPath); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot write through symbolic link"))
 	}
 
 	// Create directories if needed
@@ -332,8 +337,13 @@ func (s *FileService) UpdateFile(ctx context.Context, req *connect.Request[v1.Up
 
 	// Clean and validate path
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.Within(server.DataPath, fullPath) {
+	if !files.WithinReal(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
+	}
+
+	// Refuse writing directly through a symlink
+	if fi, err := os.Lstat(fullPath); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot write through symbolic link"))
 	}
 
 	// Create directories if needed
@@ -376,14 +386,14 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 
 	for _, p := range paths {
 		fullPath := filepath.Join(server.DataPath, p)
-		if !files.Within(server.DataPath, fullPath) {
+		if !files.WithinReal(server.DataPath, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 		if fullPath == server.DataPath {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot delete server root directory"))
 		}
 
-		info, err := os.Stat(fullPath)
+		info, err := os.Lstat(fullPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue // Skip already-deleted files in bulk
@@ -427,7 +437,7 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 
 	// Clean and validate old path
 	oldFullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.Within(server.DataPath, oldFullPath) {
+	if !files.WithinReal(server.DataPath, oldFullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -437,7 +447,7 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 	newFullPath := filepath.Join(server.DataPath, newPath)
 
 	// Validate new path
-	if !files.Within(server.DataPath, newFullPath) {
+	if !files.WithinReal(server.DataPath, newFullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new path"))
 	}
 
@@ -478,7 +488,7 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 
 	// Clean and validate archive path
 	fullArchivePath := filepath.Join(server.DataPath, msg.Path)
-	if !files.Within(server.DataPath, fullArchivePath) {
+	if !files.WithinReal(server.DataPath, fullArchivePath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid archive path"))
 	}
 
@@ -508,6 +518,9 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 	}
 
 	destPath := filepath.Join(archiveDir, folderName)
+	if !files.WithinReal(server.DataPath, destPath) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
+	}
 
 	// Start async extraction
 	opID := uuid.New().String()
@@ -581,7 +594,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 
 	// Resolve destination path inside server root
 	destPath := filepath.Join(server.DataPath, msg.DestinationPath)
-	if !files.Within(server.DataPath, destPath) {
+	if !files.WithinReal(server.DataPath, destPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 	if err := os.MkdirAll(destPath, 0755); err != nil {
@@ -792,7 +805,7 @@ func (s *FileService) CreateFolder(ctx context.Context, req *connect.Request[v1.
 	}
 
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.Within(server.DataPath, fullPath) {
+	if !files.WithinReal(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -818,7 +831,7 @@ func (s *FileService) MoveFile(ctx context.Context, req *connect.Request[v1.Move
 	srcFull := filepath.Join(server.DataPath, msg.SourcePath)
 	dstFull := filepath.Join(server.DataPath, msg.DestinationPath)
 
-	if !files.Within(server.DataPath, srcFull) || !files.Within(server.DataPath, dstFull) {
+	if !files.WithinReal(server.DataPath, srcFull) || !files.WithinReal(server.DataPath, dstFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -871,7 +884,7 @@ func (s *FileService) CopyFile(ctx context.Context, req *connect.Request[v1.Copy
 	srcFull := filepath.Join(server.DataPath, msg.SourcePath)
 	dstFull := filepath.Join(server.DataPath, msg.DestinationPath)
 
-	if !files.Within(server.DataPath, srcFull) || !files.Within(server.DataPath, dstFull) {
+	if !files.WithinReal(server.DataPath, srcFull) || !files.WithinReal(server.DataPath, dstFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -925,7 +938,7 @@ func (s *FileService) CreateArchive(ctx context.Context, req *connect.Request[v1
 	// Validate all paths
 	for _, p := range msg.Paths {
 		fullPath := filepath.Join(server.DataPath, p)
-		if !files.Within(server.DataPath, fullPath) {
+		if !files.WithinReal(server.DataPath, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 	}
@@ -944,7 +957,7 @@ func (s *FileService) CreateArchive(ctx context.Context, req *connect.Request[v1
 		destDir = "."
 	}
 	destFull := filepath.Join(server.DataPath, destDir, archiveName)
-	if !files.Within(server.DataPath, destFull) {
+	if !files.WithinReal(server.DataPath, destFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 
@@ -978,7 +991,7 @@ func (s *FileService) DownloadArchive(ctx context.Context, req *connect.Request[
 
 	for _, p := range msg.Paths {
 		fullPath := filepath.Join(server.DataPath, p)
-		if !files.Within(server.DataPath, fullPath) {
+		if !files.WithinReal(server.DataPath, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 	}
@@ -1033,7 +1046,7 @@ func (s *FileService) InitFileDownload(ctx context.Context, req *connect.Request
 	}
 
 	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.Within(server.DataPath, fullPath) {
+	if !files.WithinReal(server.DataPath, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -1101,16 +1114,22 @@ func (s *FileService) listDirectory(path, basePath string) ([]*v1.FileInfo, erro
 			continue
 		}
 
-		relPath, _ := filepath.Rel(basePath, filepath.Join(path, entry.Name()))
 		fullPath := filepath.Join(path, entry.Name())
+		if !files.WithinReal(basePath, fullPath) {
+			continue
+		}
+
+		relPath, _ := filepath.Rel(basePath, fullPath)
+		isSymlink := entry.Type()&os.ModeSymlink != 0
+		isDir := entry.IsDir() && !isSymlink
 
 		fileInfo := &v1.FileInfo{
 			Name:       entry.Name(),
 			Path:       relPath,
-			IsDir:      entry.IsDir(),
+			IsDir:      isDir,
 			Size:       info.Size(),
 			Modified:   info.ModTime().Unix(),
-			IsEditable: !entry.IsDir() && files.IsTextFile(fullPath),
+			IsEditable: !isDir && !isSymlink && files.IsTextFile(fullPath),
 		}
 
 		lsFiles = append(lsFiles, fileInfo)
@@ -1136,20 +1155,26 @@ func (s *FileService) listDirectoryTree(path, basePath string, depth, maxDepth i
 			continue
 		}
 
-		relPath, _ := filepath.Rel(basePath, filepath.Join(path, entry.Name()))
 		fullPath := filepath.Join(path, entry.Name())
+		if !files.WithinReal(basePath, fullPath) {
+			continue
+		}
+
+		relPath, _ := filepath.Rel(basePath, fullPath)
+		isSymlink := entry.Type()&os.ModeSymlink != 0
+		isDir := entry.IsDir() && !isSymlink
 
 		fileInfo := &v1.FileInfo{
 			Name:       entry.Name(),
 			Path:       relPath,
-			IsDir:      entry.IsDir(),
+			IsDir:      isDir,
 			Size:       info.Size(),
 			Modified:   info.ModTime().Unix(),
-			IsEditable: !entry.IsDir() && files.IsTextFile(fullPath),
+			IsEditable: !isDir && !isSymlink && files.IsTextFile(fullPath),
 		}
 
 		// If it's a directory and we haven't reached max depth, get children
-		if entry.IsDir() && depth < maxDepth {
+		if isDir && depth < maxDepth {
 			childPath := filepath.Join(path, entry.Name())
 			children, err := s.listDirectoryTree(childPath, basePath, depth+1, maxDepth)
 			if err == nil {
