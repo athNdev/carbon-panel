@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/stretchr/testify/assert"
@@ -75,4 +76,25 @@ func TestApplyOnRestartStagedConfigs_StopsOnError(t *testing.T) {
 	n, err := ApplyOnRestartStagedConfigs(ctx, store, "srv-1")
 	assert.Error(t, err)
 	assert.Equal(t, 0, n)
+}
+
+func TestHasPendingRestartStagedConfigRecreate(t *testing.T) {
+	ctx := context.Background()
+	lastStarted := time.Date(2026, 10, 18, 7, 0, 0, 0, time.UTC)
+	appliedAfterStart := lastStarted.Add(time.Second)
+	store := &fakeStagedStore{changes: []*storage.StagedConfigChange{
+		{ID: "pending", ServerID: "srv-1", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusApplied, AppliedAt: &appliedAfterStart},
+		{ID: "scheduled", ServerID: "srv-1", ApplyMode: storage.StagedApplyScheduled, Status: storage.StagedStatusApplied, AppliedAt: &appliedAfterStart},
+		{ID: "old", ServerID: "srv-1", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusApplied, AppliedAt: &lastStarted},
+	}}
+	pending, err := HasPendingRestartStagedConfigRecreate(ctx, store, "srv-1", &lastStarted)
+	require.NoError(t, err)
+	assert.True(t, pending)
+	pending, err = HasPendingRestartStagedConfigRecreate(ctx, store, "srv-1", nil)
+	require.NoError(t, err)
+	assert.True(t, pending)
+	store.changes = store.changes[1:]
+	pending, err = HasPendingRestartStagedConfigRecreate(ctx, store, "srv-1", &lastStarted)
+	require.NoError(t, err)
+	assert.False(t, pending)
 }
