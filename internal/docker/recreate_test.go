@@ -15,6 +15,10 @@ import (
 func TestRecreateContainerRetainsOriginalIDWhenStopFails(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/_ping":
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
 		case strings.HasSuffix(r.URL.Path, "/containers/original/json"):
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"Id":"original","State":{"Status":"running","Running":true}}`))
@@ -28,7 +32,7 @@ func TestRecreateContainerRetainsOriginalIDWhenStopFails(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	sdk, err := NewAPIClient(client.WithHost(fakeDockerHost(t, srv)), client.WithVersion("1.45"))
+	sdk, err := NewAPIClient(client.WithHost(fakeDockerHost(t, srv)))
 	if err != nil {
 		t.Fatalf("NewAPIClient: %v", err)
 	}
