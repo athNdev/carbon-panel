@@ -92,6 +92,37 @@ func TestNewAPIClientNegotiatesVersionEagerly(t *testing.T) {
 	}
 }
 
+func TestHostMemoryMBReadsDockerInfoWithBoundedCall(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/_ping":
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
+		case strings.HasSuffix(r.URL.Path, "/info"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"MemTotal":8589934592}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	sdk, err := NewAPIClient(client.WithHost(fakeDockerHost(t, srv)))
+	if err != nil {
+		t.Fatalf("NewAPIClient: %v", err)
+	}
+	defer func() { _ = sdk.Close() }()
+
+	got, err := (&Client{docker: sdk}).HostMemoryMB(context.Background())
+	if err != nil {
+		t.Fatalf("HostMemoryMB: %v", err)
+	}
+	if got != 8192 {
+		t.Fatalf("HostMemoryMB() = %d, want 8192", got)
+	}
+}
+
 // TestConcurrentCallersUseTheirOwnBudgets is the regression test for the
 // "socket hang up" failure mode: the SDK's lazy negotiation pings while holding
 // a non-cancellable mutex, so one unresponsive daemon used to block every other
