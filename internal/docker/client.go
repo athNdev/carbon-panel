@@ -1219,8 +1219,11 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 		if err != nil {
 			// Container may not exist, that's ok - continue with creation
 			c.log.Debug("Container %s not found during recreation: %v", oldContainerID, err)
-		} else if status == models.StatusRunning || status == models.StatusUnhealthy {
-			result.WasRunning = true
+		} else if status == models.StatusRunning || status == models.StatusUnhealthy || status == models.StatusPaused {
+			// A paused container cannot be removed reliably until StopContainer
+			// unpauses it. Preserve paused intent as not-running: its replacement
+			// should remain stopped rather than unexpectedly start.
+			result.WasRunning = status == models.StatusRunning || status == models.StatusUnhealthy
 			if _, err := c.StopContainer(ctx, oldContainerID); err != nil {
 				// The original container remains the only known identity when stop
 				// fails before removal. Return it so callers do not drop a still-live
