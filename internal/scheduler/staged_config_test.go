@@ -145,7 +145,7 @@ func TestRecreateForPendingStagedConfigPersistsPartialContainerID(t *testing.T) 
 	}
 	server := &storage.Server{ID: "srv-1", ContainerID: "old-id", Status: storage.StatusRunning}
 
-	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server)
+	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server, true, true)
 	require.True(t, handled)
 	require.Error(t, err)
 	require.NotNil(t, store.server)
@@ -153,4 +153,24 @@ func TestRecreateForPendingStagedConfigPersistsPartialContainerID(t *testing.T) 
 	assert.Equal(t, storage.StatusError, store.server.Status)
 	assert.Empty(t, client.starts)
 	assert.Nil(t, server.LastStarted, "failed recreate must leave staged recovery pending")
+}
+
+func TestPrepareDeepSleepWakeRecreatesWithoutStartingOrAdvancingLastStarted(t *testing.T) {
+	ctx := context.Background()
+	store := &fakeLifecycleStore{
+		fakeStagedStore: &fakeStagedStore{changes: []*storage.StagedConfigChange{{
+			ID: "restart-config", ServerID: "srv-1", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusStaged,
+		}}},
+		serverConfig: &storage.ServerConfig{},
+	}
+	client := &fakeLifecycleDocker{result: &docker.RecreateContainerResult{NewContainerID: "replacement-id"}}
+	server := &storage.Server{ID: "srv-1", ContainerID: "old-id", Status: storage.StatusDeepSleep}
+
+	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server, false, false)
+	require.NoError(t, err)
+	require.True(t, handled)
+	assert.Equal(t, "replacement-id", server.ContainerID)
+	assert.Equal(t, "replacement-id", store.server.ContainerID)
+	assert.Empty(t, client.starts, "DeepSleepManager owns the actual start")
+	assert.Nil(t, server.LastStarted, "wake preparation must not mark a start before Docker is ready")
 }

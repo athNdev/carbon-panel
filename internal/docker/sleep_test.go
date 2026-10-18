@@ -164,6 +164,30 @@ func TestDeepSleepManager_SleepAndWake(t *testing.T) {
 	require.NoError(t, mgr.WakeServer(ctx, "srv-sleep"))
 }
 
+func TestDeepSleepManager_PreparesReplacementBeforeWakeAndRecordsStart(t *testing.T) {
+	ctx := context.Background()
+	controller, commander, store := newDeepSleepHarness()
+	store.servers["srv-sleep"].Status = db.StatusDeepSleep
+
+	mgr := NewDeepSleepManager(controller, store, commander, nil, nil)
+	mgr.SetWakePreparer(func(ctx context.Context, server *db.Server) error {
+		server.ContainerID = "replacement-container"
+		return store.UpdateServer(ctx, server)
+	})
+
+	require.NoError(t, mgr.WakeServer(ctx, "srv-sleep"))
+	controller.mu.Lock()
+	starts := append([]string(nil), controller.starts...)
+	controller.mu.Unlock()
+	assert.Equal(t, []string{"replacement-container"}, starts)
+
+	server, err := store.GetServer(ctx, "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, "replacement-container", server.ContainerID)
+	assert.Equal(t, db.StatusRunning, server.Status)
+	assert.NotNil(t, server.LastStarted)
+}
+
 func TestDeepSleepManager_PlayersBlockSleep(t *testing.T) {
 	// Authoritative player count wins over the always-zero store row.
 	ctx := context.Background()
@@ -236,7 +260,6 @@ func TestDeepSleepManager_SleepRejectsNonRunning(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "in status stopped")
 }
-
 
 func TestDeepSleepManager_WakeContainerStartFailure_RollsBackToError(t *testing.T) {
 	ctx := context.Background()
