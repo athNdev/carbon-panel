@@ -119,16 +119,21 @@ func TestUpdateServer_BindInsideDataPath_Allowed(t *testing.T) {
 
 	// The server's own data directory remains a legitimate bind source.
 	inside := filepath.Join(created.Msg.Server.DataPath, "mods")
-	resp, err := svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
+	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id: created.Msg.Server.Id,
 		DockerOverrides: &v1.DockerOverrides{
 			Volumes: []*v1.VolumeMount{{Source: inside, Target: "/data/mods"}},
 		},
 	}))
-	if err != nil {
-		t.Fatalf("expected bind mount inside the server data path to be allowed, got %v", err)
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeInternal {
+		t.Fatalf("expected only Docker recreation to fail after accepting an in-data-path bind, got %v", err)
 	}
-	if resp.Msg.Server == nil {
-		t.Fatal("expected updated server in response")
+	updated, getErr := svc.store.GetServer(t.Context(), created.Msg.Server.Id)
+	if getErr != nil {
+		t.Fatalf("failed to reload server after Docker recreation failure: %v", getErr)
+	}
+	if updated.DockerOverrides == nil || len(updated.DockerOverrides.Volumes) != 1 || updated.DockerOverrides.Volumes[0].Source != inside {
+		t.Fatalf("accepted in-data-path bind was not persisted: %+v", updated.DockerOverrides)
 	}
 }
