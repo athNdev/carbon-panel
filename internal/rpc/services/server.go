@@ -1084,8 +1084,12 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Create Docker container asynchronously
-	go func() {
+	// The create task can outlive this RPC. Give it a private snapshot and use
+	// targeted writes for its lifecycle fields so a later UpdateServer cannot
+	// be overwritten by a stale full-row Save from this goroutine.
+	createServer := *server
+	startImmediately := msg.StartImmediately
+	go func(server *storage.Server, startImmediately bool) {
 		bgCtx := context.Background()
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
 
@@ -1093,8 +1097,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		dockerCli, err := s.getDockerClientStrict(server.NodeID)
 		if err != nil {
 			s.log.Error("Failed to get docker client for node %q: %v", server.NodeID, err)
-			server.Status = storage.StatusError
-			if updateErr := s.store.UpdateServer(bgCtx, server); updateErr != nil {
+			if updateErr := s.store.UpdateServerStatus(bgCtx, server.ID, storage.StatusError); updateErr != nil {
 				s.log.Error("Failed to update server status to error: %v", updateErr)
 			}
 			return
@@ -1102,8 +1105,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		containerID, err := dockerCli.CreateContainer(bgCtx, server, serverConfig)
 		if err != nil {
 			s.log.Error("Failed to create container: %v", err)
-			server.Status = storage.StatusError
-			if updateErr := s.store.UpdateServer(bgCtx, server); updateErr != nil {
+			if updateErr := s.store.UpdateServerStatus(bgCtx, server.ID, storage.StatusError); updateErr != nil {
 				s.log.Error("Failed to update server status to error: %v", updateErr)
 			}
 			return
@@ -1113,16 +1115,19 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		s.log.Info("Container created successfully for server %s: %s", server.ID, containerID)
 
 		// Update server with container ID
-		if err := s.store.UpdateServer(bgCtx, server); err != nil {
+		if err := s.store.UpdateServerContainerID(bgCtx, server.ID, containerID); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
 			return
 		}
 
 		// Start the container immediately if requested
-		if msg.StartImmediately {
+		if startImmediately {
 			if err := dockerCli.StartContainer(bgCtx, containerID); err != nil {
 				s.log.Error("Failed to start container: %v", err)
 				server.Status = storage.StatusError
+				if updateErr := s.store.UpdateServerStatus(bgCtx, server.ID, storage.StatusError); updateErr != nil {
+					s.log.Error("Failed to update server status to error: %v", updateErr)
+				}
 			} else {
 				server.Status = storage.StatusStarting
 				// Update last started time
@@ -1133,8 +1138,13 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 					s.log.Error("Failed to clear ephemeral config fields: %v", err)
 				}
 			}
-			// Update status in database
-			if err := s.store.UpdateServer(bgCtx, server); err != nil {
+			// Update only lifecycle fields; settings may have changed since this
+			// asynchronous operation began.
+			fields := map[string]interface{}{"status": server.Status}
+			if server.LastStarted != nil {
+				fields["last_started"] = server.LastStarted
+			}
+			if err := s.store.UpdateServerFields(bgCtx, server.ID, fields); err != nil {
 				s.log.Error("Failed to update server status: %v", err)
 			}
 			// Update proxy route if enabled
@@ -1146,12 +1156,12 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		} else {
 			// Update status to stopped once container is ready
 			server.Status = storage.StatusStopped
-			if err := s.store.UpdateServer(bgCtx, server); err != nil {
+			if err := s.store.UpdateServerStatus(bgCtx, server.ID, server.Status); err != nil {
 				s.log.Error("Failed to update server status: %v", err)
 			}
 			s.log.Info("Server %s created but not started immediately", server.ID)
 		}
-	}()
+	}(&createServer, startImmediately)
 
 	// Return immediately with the server in "creating" state
 	return connect.NewResponse(&v1.CreateServerResponse{
