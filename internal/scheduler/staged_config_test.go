@@ -3,11 +3,15 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -173,4 +177,51 @@ func TestPrepareDeepSleepWakeRecreatesWithoutStartingOrAdvancingLastStarted(t *t
 	assert.Equal(t, "replacement-id", store.server.ContainerID)
 	assert.Empty(t, client.starts, "DeepSleepManager owns the actual start")
 	assert.Nil(t, server.LastStarted, "wake preparation must not mark a start before Docker is ready")
+}
+
+func TestSchedulerWakePathsRejectOvercommittedNode(t *testing.T) {
+	ctx := context.Background()
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+	if err := store.CreateNode(ctx, &storage.Node{
+		ID: "small-node", Name: "Small Node", Host: "tcp://127.0.0.1:2375",
+		Enabled: true, Status: storage.NodeStatusOnline,
+	}); err != nil {
+		t.Fatalf("CreateNode: %v", err)
+	}
+	server := &storage.Server{
+		ID: "oversized-wake", Name: "Oversized Wake", NodeID: "small-node",
+		Port: 25565, Memory: 6144, ContainerID: "container-id", Status: storage.StatusDeepSleep,
+	}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+
+	dockerAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/_ping":
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
+		case strings.HasSuffix(r.URL.Path, "/info"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"MemTotal":4294967296}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer dockerAPI.Close()
+	dockerClient, err := docker.NewClient("tcp://"+strings.TrimPrefix(dockerAPI.URL, "http://"), logger.New())
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer func() { _ = dockerClient.Close() }()
+	s := NewScheduler(store, dockerClient, nil, nil, nil, logger.New())
+
+	if err := s.PrepareDeepSleepWake(ctx, server); err == nil || !strings.Contains(err.Error(), "lacks memory capacity") {
+		t.Fatalf("PrepareDeepSleepWake error = %v, want memory capacity rejection", err)
+	}
+	if err := s.StartServerForBoot(ctx, server); err == nil || !strings.Contains(err.Error(), "lacks memory capacity") {
+		t.Fatalf("StartServerForBoot error = %v, want memory capacity rejection", err)
+	}
 }
