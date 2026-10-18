@@ -26,6 +26,8 @@ type mockFreezer struct {
 	// pauseGate, when non-nil, blocks PauseContainer until closed —
 	// lets tests hold a transition open to prove single-flighting.
 	pauseGate  chan struct{}
+	pauseErr   error
+	pauseNoop  bool
 	unpauseErr error
 }
 
@@ -45,7 +47,12 @@ func (m *mockFreezer) PauseContainer(ctx context.Context, containerID string) er
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.paused[containerID] = true
+	if m.pauseErr != nil {
+		return m.pauseErr
+	}
+	if !m.pauseNoop {
+		m.paused[containerID] = true
+	}
 	m.pauseCalls = append(m.pauseCalls, containerID)
 	return nil
 }
@@ -321,7 +328,6 @@ func TestHibernationManager_SingleFlight(t *testing.T) {
 	assert.Len(t, freezer.pauseCalls, 1, "container must be paused exactly once")
 }
 
-
 func TestHibernationManager_WakeUnpauseFailure_MarksError(t *testing.T) {
 	ctx := context.Background()
 	freezer := newMockFreezer()
@@ -375,4 +381,80 @@ func TestHibernationManager_HibernateUpdateStatusFails_RollsBackUnpause(t *testi
 	freezer.mu.Lock()
 	defer freezer.mu.Unlock()
 	assert.Contains(t, freezer.unpauseCalls, "cnt-1", "must roll back and unpause container if status update fails")
+}
+
+func TestHibernationManager_HibernateUpdateStatusAndRollbackFail_ReturnsBothErrors(t *testing.T) {
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	store := newMockFreezerStore()
+	store.servers["srv-1"] = &db.Server{ID: "srv-1", ContainerID: "cnt-1", Status: db.StatusRunning}
+	store.updateStatusErr = fmt.Errorf("database transaction error")
+	freezer.unpauseErr = fmt.Errorf("cgroup unfreeze device busy")
+
+	mgr := NewHibernationManager(freezer, store, nil)
+	err := mgr.HibernateServer(ctx, "srv-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "database transaction error")
+	assert.Contains(t, err.Error(), "cgroup unfreeze device busy", "rollback failure must not be discarded")
+
+	freezer.mu.Lock()
+	assert.True(t, freezer.paused["cnt-1"], "failed compensation leaves the container frozen and must be reported")
+	freezer.mu.Unlock()
+}
+
+func TestHibernationManager_DoesNotPersistPausedWhenContainerDidNotFreeze(t *testing.T) {
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	freezer.pauseNoop = true
+	store := newMockFreezerStore()
+	store.servers["srv-1"] = &db.Server{ID: "srv-1", ContainerID: "cnt-1", Status: db.StatusRunning}
+
+	mgr := NewHibernationManager(freezer, store, nil)
+	err := mgr.HibernateServer(ctx, "srv-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "did not enter paused state")
+
+	srv, err := store.GetServer(ctx, "srv-1")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusRunning, srv.Status, "must not claim hibernation without observed cgroup freeze")
+	freezer.mu.Lock()
+	assert.Contains(t, freezer.unpauseCalls, "cnt-1", "compensating unpause should establish a known running state")
+	freezer.mu.Unlock()
+}
+
+func TestHibernationManager_WakeStatusUpdateFails_RepausesContainer(t *testing.T) {
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	freezer.paused["cnt-1"] = true
+	store := newMockFreezerStore()
+	store.servers["srv-1"] = &db.Server{ID: "srv-1", ContainerID: "cnt-1", Status: db.StatusPaused}
+	store.updateStatusErr = fmt.Errorf("database transaction error")
+
+	mgr := NewHibernationManager(freezer, store, nil)
+	err := mgr.WakeServer(ctx, "srv-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "database transaction error")
+
+	freezer.mu.Lock()
+	assert.True(t, freezer.paused["cnt-1"], "container must be re-paused when the DB cannot persist the running state")
+	freezer.mu.Unlock()
+	srv, err := store.GetServer(ctx, "srv-1")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusPaused, srv.Status, "DB and cgroup state must remain aligned after compensation")
+}
+
+func TestHibernationManager_WakeUnpauseAndStatusPersistenceFail_ReportsBothErrors(t *testing.T) {
+	ctx := context.Background()
+	freezer := newMockFreezer()
+	freezer.paused["cnt-1"] = true
+	freezer.unpauseErr = fmt.Errorf("cgroup unfreeze device busy")
+	store := newMockFreezerStore()
+	store.servers["srv-1"] = &db.Server{ID: "srv-1", ContainerID: "cnt-1", Status: db.StatusPaused}
+	store.updateStatusErr = fmt.Errorf("database transaction error")
+
+	mgr := NewHibernationManager(freezer, store, nil)
+	err := mgr.WakeServer(ctx, "srv-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cgroup unfreeze device busy")
+	assert.Contains(t, err.Error(), "database transaction error", "status persistence failure must not be discarded")
 }
