@@ -51,7 +51,7 @@ prod: build-frontend
 # Build frontend for production
 build-frontend:
 	@echo "Building frontend..."
-	cd $(FRONTEND_DIR) && bun run build
+	@bash scripts/web-build.sh
 
 # Build backend with embedded frontend
 build: build-frontend

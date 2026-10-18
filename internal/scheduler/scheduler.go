@@ -70,6 +70,9 @@ type Scheduler struct {
 
 	// Snapshot engine for pre-update snapshots and rollback (MINE-23)
 	snapshotEngine *snapshot.Engine
+
+	// Multi-node Docker client pool (optional; falls back to s.docker)
+	clientPool *docker.ClientPool
 }
 
 // Config holds scheduler configuration
@@ -119,6 +122,28 @@ func (s *Scheduler) SetSnapshotEngine(e *snapshot.Engine) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.snapshotEngine = e
+}
+
+// SetClientPool configures the multi-node Docker client pool so scheduled and
+// deep-sleep wake tasks operate on the server's assigned node daemon.
+func (s *Scheduler) SetClientPool(pool *docker.ClientPool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clientPool = pool
+}
+
+func (s *Scheduler) dockerForNode(nodeID string) *docker.Client {
+	s.mu.RLock()
+	pool := s.clientPool
+	defaultCli := s.docker
+	s.mu.RUnlock()
+
+	if pool != nil {
+		if cli, err := pool.GetClient(nodeID); err == nil && cli != nil {
+			return cli
+		}
+	}
+	return defaultCli
 }
 
 // Start begins the scheduler loop
@@ -636,7 +661,8 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
+	dockerCli := s.dockerForNode(server.NodeID)
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
 		if err != nil {
 			return "", err
 		}
@@ -644,7 +670,7 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 	}
 
 	// Stop container
-	found, err := s.docker.StopContainer(ctx, server.ContainerID)
+	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
 	if err != nil {
 		return "", fmt.Errorf("failed to stop: %w", err)
 	}
@@ -663,7 +689,7 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 	}
 
 	// Start container
-	if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
+	if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 		return "", fmt.Errorf("failed to start: %w", err)
 	}
 
@@ -685,14 +711,15 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
+	dockerCli := s.dockerForNode(server.NodeID)
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
 		if err != nil {
 			return "", err
 		}
 		return "server started with staged configuration", nil
 	}
 
-	if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
+	if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 		return "", fmt.Errorf("failed to start: %w", err)
 	}
 
@@ -721,21 +748,22 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID); err != nil {
 		return err
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
+	dockerCli := s.dockerForNode(server.NodeID)
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
 		return err
 	}
 
-	status, err := s.docker.GetContainerStatus(ctx, server.ContainerID)
+	status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 	if err != nil {
 		return fmt.Errorf("failed to inspect server container: %w", err)
 	}
 	if status == storage.StatusPaused {
-		if err := s.docker.UnpauseContainer(ctx, server.ContainerID); err != nil {
+		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
 			return fmt.Errorf("failed to unpause server container: %w", err)
 		}
 		status = storage.StatusRunning
 	} else if status != storage.StatusRunning && status != storage.StatusUnhealthy {
-		if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
+		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 			server.Status = storage.StatusError
 			_ = s.store.UpdateServer(ctx, server)
 			return fmt.Errorf("failed to start server container: %w", err)
@@ -755,14 +783,15 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 // wake) with the same persisted reservation and live Docker host limits as RPC
 // lifecycle operations.
 func (s *Scheduler) checkNodeMemoryCapacity(ctx context.Context, nodeID string) error {
-	if s.store == nil || s.docker == nil {
+	dockerCli := s.dockerForNode(nodeID)
+	if s.store == nil || dockerCli == nil {
 		return fmt.Errorf("cannot verify node memory capacity without a store and Docker client")
 	}
 	node, err := s.store.GetNode(ctx, nodeID)
 	if err != nil {
 		return fmt.Errorf("failed to load node capacity: %w", err)
 	}
-	hostMemoryMB, err := s.docker.HostMemoryMB(ctx)
+	hostMemoryMB, err := dockerCli.HostMemoryMB(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot verify memory capacity on node %s: %w", node.Name, err)
 	}
@@ -894,8 +923,41 @@ func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Se
 	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID); err != nil {
 		return err
 	}
-	_, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, false, false)
-	return err
+	dockerCli := s.dockerForNode(server.NodeID)
+	handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, false, false)
+	if err != nil {
+		return err
+	}
+	if !handled && dockerCli != nil {
+		needsCreate := server.ContainerID == ""
+		if !needsCreate {
+			if _, statusErr := dockerCli.GetContainerStatus(ctx, server.ContainerID); statusErr != nil {
+				needsCreate = true
+			}
+		}
+		if needsCreate {
+			if resolved, resolveErr := dockerCli.ResolveContainer(ctx, server.ID); resolveErr == nil && resolved != nil && resolved.ID != "" {
+				server.ContainerID = resolved.ID
+				if err := s.store.UpdateServer(ctx, server); err != nil {
+					return fmt.Errorf("resolved container for deep-sleep wake but ID could not be saved: %w", err)
+				}
+			} else {
+				serverConfig, cfgErr := s.store.GetServerConfig(ctx, server.ID)
+				if cfgErr != nil || serverConfig == nil {
+					return fmt.Errorf("failed to get server configuration for deep-sleep wake container creation: %w", cfgErr)
+				}
+				containerID, createErr := dockerCli.CreateContainer(ctx, server, serverConfig)
+				if createErr != nil {
+					return fmt.Errorf("failed to create missing container during deep-sleep wake: %w", createErr)
+				}
+				server.ContainerID = containerID
+				if err := s.store.UpdateServer(ctx, server); err != nil {
+					return fmt.Errorf("created container for deep-sleep wake but ID could not be saved: %w", err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
@@ -903,7 +965,8 @@ func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server,
 		return "", fmt.Errorf("server has no container")
 	}
 
-	found, err := s.docker.StopContainer(ctx, server.ContainerID)
+	dockerCli := s.dockerForNode(server.NodeID)
+	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
 	if err != nil {
 		return "", fmt.Errorf("failed to stop: %w", err)
 	}
@@ -940,7 +1003,7 @@ func (s *Scheduler) executeScriptTask(ctx context.Context, server *storage.Serve
 	}
 
 	execCmd := []string{config.ScriptPath}
-	return s.docker.Exec(ctx, server.ContainerID, append(execCmd, config.Args...))
+	return s.dockerForNode(server.NodeID).Exec(ctx, server.ContainerID, append(execCmd, config.Args...))
 }
 
 // CalculateNextRun calculates the next run time for a task based on its schedule

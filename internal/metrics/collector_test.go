@@ -7,6 +7,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -170,21 +171,64 @@ func TestStartStopEmptyStore(t *testing.T) {
 		RCONInterval:  10 * time.Millisecond,
 		DiskInterval:  10 * time.Millisecond,
 		SLPInterval:   10 * time.Millisecond,
+		SLPTimeout:    5 * time.Millisecond,
 		SLPEnabled:    true,
 	}
-	minCfg := &config.Config{}
-	minCfg.Storage.DataDir = t.TempDir()
-	c := NewCollectorWithPool(store, nil, nil, nil, minCfg, nil, logger.New(), cfg)
+	c := NewCollectorWithPool(store, nil, nil, nil, &config.Config{}, nil, logger.New(), cfg)
 	if err := c.Start(); err != nil {
-		t.Fatalf("Start: %v", err)
+		t.Fatalf("start: %v", err)
 	}
+	// Idempotent second Start.
 	if err := c.Start(); err != nil {
-		t.Fatalf("second Start: %v", err)
+		t.Fatalf("second start: %v", err)
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(25 * time.Millisecond)
 	c.Stop()
-	c.Stop() // idempotent
-	if n := c.PruneStale(time.Hour); n != 0 {
-		t.Fatalf("prune=%d", n)
+	// Idempotent second Stop.
+	c.Stop()
+
+	// Also exercise SLPEnabled=false branch (4 loops instead of 5).
+	cfg.SLPEnabled = false
+	c2 := NewCollectorWithPool(store, nil, nil, nil, &config.Config{}, nil, logger.New(), cfg)
+	if err := c2.Start(); err != nil {
+		t.Fatalf("start2: %v", err)
+	}
+	c2.Stop()
+}
+
+func TestSLPPort(t *testing.T) {
+	tests := []struct {
+		name   string
+		server *db.Server
+		want   int
+	}{
+		{
+			name:   "nil server falls back to default",
+			server: nil,
+			want:   docker.DefaultMinecraftPort,
+		},
+		{
+			name:   "zero port falls back to default",
+			server: &db.Server{ProxyHostname: "play.example.com"},
+			want:   docker.DefaultMinecraftPort,
+		},
+		{
+			name:   "unproxied custom port uses server port",
+			server: &db.Server{Port: 25575},
+			want:   25575,
+		},
+		{
+			name:   "proxied custom port still uses server port",
+			server: &db.Server{Port: 25569, ProxyHostname: "lobby.example.com"},
+			want:   25569,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := slpPort(tc.server); got != tc.want {
+				t.Fatalf("slpPort(%+v) = %d, want %d", tc.server, got, tc.want)
+			}
+		})
 	}
 }

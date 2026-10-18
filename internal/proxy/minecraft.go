@@ -393,10 +393,16 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 	wg.Wait()
 }
 
-// downRouteBudget bounds the whole login-to-boot hold so a held client never
-// stares at a dead connection past the ~30s Java client timeout (MINE-121).
-// A var (not const) so tests can shrink the hold without waiting it out.
+// downRouteBudget bounds the client hold so a held client never stares at a
+// dead connection past the ~30s Java client timeout (MINE-121). A var (not
+// const) so tests can shrink the hold without waiting it out.
 var downRouteBudget = 25 * time.Second
+
+// wakeBootBudget bounds the background container boot triggered by a login on a
+// down route. It must outlive downRouteBudget: cold/first-boot starts routinely
+// take longer than the 25s client hold, and cancelling the wake when the client
+// hold expires aborts an otherwise healthy boot (MINE-172).
+var wakeBootBudget = 5 * time.Minute
 
 // loadingMOTDWindow is how long after a boot attempt pings serve the loading
 // MOTD before falling back to the asleep one.
@@ -422,28 +428,37 @@ func (p *MinecraftProxy) handleDownRoute(clientConn net.Conn, handshake *Handsha
 		return false
 	}
 
-	if p.sleepWakeHandler == nil {
-		p.logger.Debug("Login for down route %s with no sleep wake handler; hanging up", hostname)
+	p.routesMutex.RLock()
+	handler := p.sleepWakeHandler
+	p.routesMutex.RUnlock()
+
+	if handler == nil {
+		p.logger.Error("Login for down route %s (server %s) refused: no sleep wake handler wired", hostname, route.ServerID)
+		_ = sendLoginDisconnect(clientConn, wakeFailedMessage)
 		return false
 	}
 
 	deadline := time.Now().Add(downRouteBudget)
-	wakeCtx, wakeCancel := context.WithTimeout(p.ctx, downRouteBudget)
-	defer wakeCancel()
 
 	p.routesMutex.Lock()
 	p.waking[hostname] = time.Now()
 	p.routesMutex.Unlock()
 
 	p.logger.Info("Login intent for deeply-asleep server %s (host %s), booting...", route.ServerID, hostname)
-	if err := p.sleepWakeHandler(wakeCtx, route.ServerID); err != nil {
-		p.logger.Error("Failed to boot deeply-asleep server %s: %v", route.ServerID, err)
-		p.routesMutex.Lock()
-		delete(p.waking, hostname)
-		p.routesMutex.Unlock()
-		_ = sendLoginDisconnect(clientConn, wakeFailedMessage)
-		return false
-	}
+	// Run the boot on its own budget so a slow cold start continues in the
+	// background after the 25s client hold expires. WakeServer is idempotent,
+	// so a second login while the boot is still running joins the same wake.
+	serverID := route.ServerID
+	go func() {
+		wakeCtx, wakeCancel := context.WithTimeout(p.ctx, wakeBootBudget)
+		defer wakeCancel()
+		if err := handler(wakeCtx, serverID); err != nil {
+			p.logger.Error("Failed to boot deeply-asleep server %s: %v", serverID, err)
+			p.routesMutex.Lock()
+			delete(p.waking, hostname)
+			p.routesMutex.Unlock()
+		}
+	}()
 
 	// Hold the client until the refreshed backend answers SLP (JVM-level
 	// readiness, not just TCP-open). Concurrent joiners share the single

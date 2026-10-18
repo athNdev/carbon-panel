@@ -6,7 +6,7 @@ Carbon-panel is a Go backend + SvelteKit web UI for Minecraft server orchestrati
 ## Build / test (what CI runs)
 
 - Backend: `make test` (== `go test ./...`), plus `go vet ./...`.
-- Frontend: `cd web/carbon-panel && bun install --frozen-lockfile && bun run check && bun run test && bun run build`
+- Frontend: `cd web/carbon-panel && bun install --frozen-lockfile && bun run check && bun run test && bash ../../scripts/web-build.sh`
 - Proto: `make proto-lint` (runs `buf lint` via Docker); `make check` type-checks the frontend.
 - See `Makefile` targets (`test`, `fmt`, `lint`, `check`) and `README.md` for dev flow.
 
