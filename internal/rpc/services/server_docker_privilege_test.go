@@ -230,14 +230,19 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 		t.Fatalf("failed to create server fixture: %v", err)
 	}
 
-	resp, err := svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
+	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id:              created.Msg.Server.Id,
 		DockerOverrides: dangerousOverrides(),
 	}))
-	if err != nil {
-		t.Fatalf("expected UpdateServer to succeed for a caller with elevated permission, got %v", err)
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeInternal {
+		t.Fatalf("expected privileged override to pass authorization and fail only at Docker recreation, got %v", err)
 	}
-	if resp.Msg.Server == nil || resp.Msg.Server.DockerOverrides == nil || !resp.Msg.Server.DockerOverrides.Privileged {
-		t.Errorf("expected updated server to retain Privileged:true override")
+	updated, getErr := svc.store.GetServer(context.Background(), created.Msg.Server.Id)
+	if getErr != nil {
+		t.Fatalf("failed to reload server after Docker recreation failure: %v", getErr)
+	}
+	if updated.DockerOverrides == nil || !updated.DockerOverrides.Privileged {
+		t.Errorf("expected authorized Privileged:true override to be persisted")
 	}
 }
