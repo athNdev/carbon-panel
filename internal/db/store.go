@@ -2,9 +2,10 @@ package db
 
 import (
 	"context"
-	"strings"
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/config"
@@ -180,13 +181,16 @@ func (s *Store) GetServerByPort(ctx context.Context, port int) (*Server, error) 
 	return &server, nil
 }
 
+// ErrServerConfigNotFound indicates that a server has no persisted config row.
+var ErrServerConfigNotFound = errors.New("server config not found")
+
 // Server config operations
 func (s *Store) GetServerConfig(ctx context.Context, serverID string) (*ServerConfig, error) {
 	var config ServerConfig
 	err := s.db.WithContext(ctx).Where("server_id = ?", serverID).First(&config).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("server config not found")
+			return nil, ErrServerConfigNotFound
 		}
 		return nil, err
 	}

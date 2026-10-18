@@ -167,3 +167,34 @@ func TestListDueScheduledStagedChanges(t *testing.T) {
 		assert.Equal(t, StagedApplyScheduled, d.ApplyMode)
 	}
 }
+
+func TestStageConfigChange_RejectsUnknownAndIdentityFields(t *testing.T) {
+	ctx := context.Background()
+	store := newStagedTestStore(t, "srv-staged-invalid-fields")
+
+	_, err := store.StageConfigChange(ctx, "srv-staged-invalid-fields", map[string]any{"doesNotExist": "x"}, StagedApplyOnRestart, "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown server config field")
+
+	_, err = store.StageConfigChange(ctx, "srv-staged-invalid-fields", map[string]any{"serverId": "other"}, StagedApplyOnRestart, "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "identity field")
+}
+
+func TestApplyStagedConfigChange_InvalidPayloadRollsBack(t *testing.T) {
+	ctx := context.Background()
+	store := newStagedTestStore(t, "srv-staged-corrupt")
+	staged, err := store.StageConfigChange(ctx, "srv-staged-corrupt", map[string]any{"motd": "changed"}, StagedApplyOnRestart, "")
+	require.NoError(t, err)
+	require.NoError(t, store.DB().Model(&StagedConfigChange{}).Where("id = ?", staged.ID).Update("payload", "{"+string([]byte{34})+"unknownField"+string([]byte{34})+":true}").Error)
+
+	_, err = store.ApplyStagedConfigChange(ctx, staged.ID)
+	require.Error(t, err)
+	got, err := store.GetStagedConfigChange(ctx, staged.ID)
+	require.NoError(t, err)
+	assert.Equal(t, StagedStatusStaged, got.Status, "failed apply must roll back its claim")
+	live, err := store.GetServerConfig(ctx, "srv-staged-corrupt")
+	require.NoError(t, err)
+	require.NotNil(t, live.MOTD)
+	assert.Equal(t, "original", *live.MOTD, "invalid payload must not modify live config")
+}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 )
 
 // applyDueStagedConfigs applies staged config changes whose cron schedule has
@@ -21,7 +22,11 @@ func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
 		return
 	}
 	for _, staged := range due {
+		if !docker.TryBeginServerTransition(staged.ServerID) {
+			continue
+		}
 		applied, err := s.store.ApplyStagedConfigChange(ctx, staged.ID)
+		docker.EndServerTransition(staged.ServerID)
 		if err != nil {
 			s.log.Error("Failed to apply staged config change %s for server %s: %v", staged.ID, staged.ServerID, err)
 			continue
@@ -65,4 +70,24 @@ func applyStagedByMode(ctx context.Context, store stagedConfigStore, serverID st
 // as ConfigService.UpdateServerConfig -> recreateContainer).
 func ApplyOnRestartStagedConfigs(ctx context.Context, store stagedConfigStore, serverID string) (int, error) {
 	return applyStagedByMode(ctx, store, serverID, storage.StagedApplyOnRestart)
+}
+
+// HasPendingRestartStagedConfigRecreate reports whether restart-only staged
+// changes were committed after the server's last successful start. It closes
+// the crash/retry window between applying DB changes and recreating the Docker
+// container.
+func HasPendingRestartStagedConfigRecreate(ctx context.Context, store stagedConfigStore, serverID string, lastStarted *time.Time) (bool, error) {
+	changes, err := store.ListStagedConfigChanges(ctx, serverID, storage.StagedStatusApplied)
+	if err != nil {
+		return false, err
+	}
+	for _, c := range changes {
+		if c.ApplyMode != storage.StagedApplyOnRestart || c.AppliedAt == nil {
+			continue
+		}
+		if lastStarted == nil || c.AppliedAt.After(*lastStarted) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
