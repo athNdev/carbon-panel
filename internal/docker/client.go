@@ -352,6 +352,24 @@ func (c *Client) Ping(ctx context.Context) (client.PingResult, error) {
 	return c.docker.Ping(ctx, client.PingOptions{})
 }
 
+// HostMemoryMB returns the memory visible to the Docker daemon. Callers use
+// this as a hard upper bound when a node has no operator-configured capacity.
+func (c *Client) HostMemoryMB(ctx context.Context) (int64, error) {
+	if c == nil || c.docker == nil {
+		return 0, fmt.Errorf("docker client is nil")
+	}
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+	result, err := c.docker.Info(ctx, client.InfoOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("failed to inspect Docker host memory: %w", err)
+	}
+	if result.Info.MemTotal <= 0 {
+		return 0, fmt.Errorf("Docker host reported no available memory capacity")
+	}
+	return result.Info.MemTotal / (1024 * 1024), nil
+}
+
 // ApplyOverrides applies DockerOverrides to container and host configs
 func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hostConfig *container.HostConfig) {
 	if overrides == nil {
