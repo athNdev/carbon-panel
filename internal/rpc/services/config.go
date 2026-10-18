@@ -88,6 +88,11 @@ func (s *ConfigService) GetServerConfig(ctx context.Context, req *connect.Reques
 
 // Updates server config
 func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Request[v1.UpdateServerConfigRequest]) (*connect.Response[v1.UpdateServerConfigResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.ServerId) {
+		return nil, connect.NewError(connect.CodeAborted, errors.New("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.ServerId)
+
 	msg := req.Msg
 
 	// Get server info
@@ -123,6 +128,7 @@ func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Req
 	if server.ContainerID != "" {
 		if err := s.recreateContainer(ctx, server, config); err != nil {
 			s.log.Error("Config saved but container recreation failed: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("configuration saved but container recreation failed: %w", err))
 		}
 	}
 
