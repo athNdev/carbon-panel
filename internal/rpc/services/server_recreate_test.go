@@ -74,6 +74,161 @@ func TestUpdateServerReturnsErrorAndPersistsRecoveryStateWhenRecreationFails(t *
 	}
 }
 
+func TestStartServer_PausedContainerIsRefrozenWhenStatusPersistenceFails(t *testing.T) {
+	var mu sync.Mutex
+	paused := true
+	var unpauseCalls, pauseCalls int
+	dockerAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/_ping"):
+			w.Header().Set("API-Version", "1.41")
+			_, _ = w.Write([]byte("OK"))
+		case strings.HasSuffix(r.URL.Path, "/containers/paused/unpause"):
+			mu.Lock()
+			paused = false
+			unpauseCalls++
+			mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+		case strings.HasSuffix(r.URL.Path, "/containers/paused/pause"):
+			mu.Lock()
+			paused = true
+			pauseCalls++
+			mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+		case strings.HasSuffix(r.URL.Path, "/containers/paused/json"):
+			mu.Lock()
+			isPaused := paused
+			mu.Unlock()
+			state := "running"
+			if isPaused {
+				state = "paused"
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"Id":    "paused",
+				"State": map[string]any{"Status": state, "Running": true, "Paused": isPaused},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer dockerAPI.Close()
+
+	svc, _ := newDockerPrivilegeTestService(t)
+	if err := svc.docker.Close(); err != nil {
+		t.Fatalf("close default Docker client: %v", err)
+	}
+	t.Setenv("DOCKER_HOST", "")
+	dockerClient, err := docker.NewClient(strings.Replace(dockerAPI.URL, "http://", "tcp://", 1), svc.log)
+	if err != nil {
+		t.Fatalf("create Docker client: %v", err)
+	}
+	t.Cleanup(func() { _ = dockerClient.Close() })
+	svc.docker = dockerClient
+	svc.pool = nil
+
+	server := &storage.Server{
+		ID: "resume-persistence-failure", Name: "Resume Persistence Failure", NodeID: "test-node",
+		Port: 25671, Memory: 2048, ContainerID: "paused", Status: storage.StatusPaused,
+	}
+	if err := svc.store.CreateServer(context.Background(), server); err != nil {
+		t.Fatalf("create server fixture: %v", err)
+	}
+	if err := svc.store.SaveServerConfig(context.Background(), svc.store.CreateDefaultServerConfig(server.ID)); err != nil {
+		t.Fatalf("save server config fixture: %v", err)
+	}
+	if err := svc.store.DB().Exec(`CREATE TRIGGER fail_running_status BEFORE UPDATE OF status ON servers
+		WHEN NEW.status = 'running' BEGIN SELECT RAISE(ABORT, 'injected persistence failure'); END`).Error; err != nil {
+		t.Fatalf("create persistence failure trigger: %v", err)
+	}
+
+	_, err = svc.StartServer(ctxWithRole("operator"), connect.NewRequest(&v1.StartServerRequest{Id: server.ID}))
+	if err == nil {
+		t.Fatal("StartServer() error = nil, want the injected status persistence failure")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if unpauseCalls != 1 {
+		t.Fatalf("unpause calls = %d, want 1", unpauseCalls)
+	}
+	if !paused || pauseCalls != 1 {
+		t.Fatalf("container paused=%v after status persistence failure, pause calls=%d; want confirmed refreeze", paused, pauseCalls)
+	}
+	stored, err := svc.store.GetServer(context.Background(), server.ID)
+	if err != nil {
+		t.Fatalf("reload server: %v", err)
+	}
+	if stored.Status != storage.StatusPaused {
+		t.Fatalf("stored status = %q, want paused after successful refreeze", stored.Status)
+	}
+}
+
+func TestStartServer_PausedContainerStaysFrozenWhenStagedConfigReadFails(t *testing.T) {
+	var mu sync.Mutex
+	paused := true
+	unpauseCalls := 0
+	dockerAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/_ping"):
+			w.Header().Set("API-Version", "1.41")
+			_, _ = w.Write([]byte("OK"))
+		case strings.HasSuffix(r.URL.Path, "/containers/paused/unpause"):
+			mu.Lock()
+			paused = false
+			unpauseCalls++
+			mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer dockerAPI.Close()
+
+	svc, _ := newDockerPrivilegeTestService(t)
+	if err := svc.docker.Close(); err != nil {
+		t.Fatalf("close default Docker client: %v", err)
+	}
+	t.Setenv("DOCKER_HOST", "")
+	dockerClient, err := docker.NewClient(strings.Replace(dockerAPI.URL, "http://", "tcp://", 1), svc.log)
+	if err != nil {
+		t.Fatalf("create Docker client: %v", err)
+	}
+	t.Cleanup(func() { _ = dockerClient.Close() })
+	svc.docker = dockerClient
+	svc.pool = nil
+
+	lastStarted := time.Now().Add(-time.Minute)
+	server := &storage.Server{
+		ID: "staged-config-read-failure", Name: "Staged Config Read Failure", NodeID: "test-node",
+		Port: 25672, Memory: 2048, ContainerID: "paused", Status: storage.StatusPaused, LastStarted: &lastStarted,
+	}
+	if err := svc.store.CreateServer(context.Background(), server); err != nil {
+		t.Fatalf("create server fixture: %v", err)
+	}
+	if err := svc.store.SaveServerConfig(context.Background(), svc.store.CreateDefaultServerConfig(server.ID)); err != nil {
+		t.Fatalf("save server config fixture: %v", err)
+	}
+	staged, err := svc.store.StageConfigChange(context.Background(), server.ID, map[string]any{"motd": "next boot"}, storage.StagedApplyOnRestart, "")
+	if err != nil {
+		t.Fatalf("stage config change: %v", err)
+	}
+	if _, err := svc.store.ApplyStagedConfigChange(context.Background(), staged.ID); err != nil {
+		t.Fatalf("apply staged change: %v", err)
+	}
+	if err := svc.store.DB().Exec("DROP TABLE server_configs").Error; err != nil {
+		t.Fatalf("inject staged config read failure: %v", err)
+	}
+
+	_, err = svc.StartServer(ctxWithRole("operator"), connect.NewRequest(&v1.StartServerRequest{Id: server.ID}))
+	if err == nil {
+		t.Fatal("StartServer() error = nil, want staged config read failure")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !paused || unpauseCalls != 0 {
+		t.Fatalf("container paused=%v after config read failure, unpause calls=%d; want no premature unpause", paused, unpauseCalls)
+	}
+}
+
 func TestCreateServer_HoldsTransitionUntilAsyncContainerCreationCompletes(t *testing.T) {
 	createEntered := make(chan struct{})
 	releaseCreate := make(chan struct{})
@@ -143,6 +298,71 @@ func TestCreateServer_HoldsTransitionUntilAsyncContainerCreationCompletes(t *tes
 	}
 	if server.ContainerID != "created-container" {
 		t.Fatalf("ContainerID = %q, want created-container", server.ContainerID)
+	}
+}
+
+func TestCreateServer_RemovesUntrackedContainerWhenIdentityPersistenceFails(t *testing.T) {
+	var mu sync.Mutex
+	removed := 0
+	dockerAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/images/") && strings.HasSuffix(r.URL.Path, "/json"):
+			_ = json.NewEncoder(w).Encode(map[string]any{"Id": "sha256:test-image"})
+		case strings.Contains(r.URL.Path, "/containers/json"):
+			_, _ = w.Write([]byte("[]"))
+		case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/containers/created-container"):
+			mu.Lock()
+			removed++
+			mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/create"):
+			_ = json.NewEncoder(w).Encode(map[string]any{"Id": "created-container"})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer dockerAPI.Close()
+
+	svc, _ := newDockerPrivilegeTestService(t)
+	if err := svc.docker.Close(); err != nil {
+		t.Fatalf("close default Docker client: %v", err)
+	}
+	dockerClient, err := docker.NewClient(strings.Replace(dockerAPI.URL, "http://", "tcp://", 1), svc.log)
+	if err != nil {
+		t.Fatalf("create Docker client: %v", err)
+	}
+	t.Cleanup(func() { _ = dockerClient.Close() })
+	svc.pool = nil
+	svc.docker = dockerClient
+	if err := svc.store.DB().Exec(`CREATE TRIGGER fail_container_id BEFORE UPDATE OF container_id ON servers
+		WHEN NEW.container_id = 'created-container' BEGIN SELECT RAISE(ABORT, 'injected container identity persistence failure'); END`).Error; err != nil {
+		t.Fatalf("create persistence failure trigger: %v", err)
+	}
+
+	resp, err := svc.CreateServer(ctxWithRole("operator"), connect.NewRequest(&v1.CreateServerRequest{
+		Name: "cleanup-on-persist-failure", McVersion: "1.20.1", DockerImage: "java21",
+		NodeId: "test-node", Port: 25673, Memory: 2048,
+	}))
+	if err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+	waitForServerTransition(t, resp.Msg.Server.Id)
+
+	mu.Lock()
+	gotRemoved := removed
+	mu.Unlock()
+	if gotRemoved != 1 {
+		t.Fatalf("container removal calls = %d, want 1 after identity persistence failure", gotRemoved)
+	}
+	stored, err := svc.store.GetServer(context.Background(), resp.Msg.Server.Id)
+	if err != nil {
+		t.Fatalf("reload server: %v", err)
+	}
+	if stored.ContainerID != "" {
+		t.Fatalf("stored container ID = %q, want empty after cleanup", stored.ContainerID)
+	}
+	if stored.Status != storage.StatusError {
+		t.Fatalf("stored status = %q, want error after async creation cleanup", stored.Status)
 	}
 }
 

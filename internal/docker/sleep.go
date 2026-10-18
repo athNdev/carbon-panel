@@ -8,6 +8,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -249,19 +250,40 @@ func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
 	return nil
 }
 
-// rollbackSleep undoes the pre-set DeepSleep status after a sleep attempt that
-// aborted while the container was still running. It uses a detached context so
-// the write still lands when the caller's context has already been cancelled,
-// and refreshes proxy routes so the backend comes back into the routing table.
-func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID string) {
+// rollbackSleep restores a status that matches the observed container after a
+// sleep attempt aborts. Unknown state or a failed restoration is recorded as
+// ERROR so the reconciler and proxy do not trust stale DeepSleep intent.
+func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID, containerID string) error {
 	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	if err := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusRunning); err != nil && m.logger != nil {
-		m.logger.Error("Deep sleep: failed to roll back status to running for server %s: %v", serverID, err)
+
+	target := db.StatusError
+	var observeErr error
+	status, err := m.controller.GetContainerStatus(rollbackCtx, containerID)
+	if err != nil {
+		observeErr = fmt.Errorf("failed to observe container during deep-sleep rollback: %w", err)
+	} else {
+		switch status {
+		case db.StatusRunning, db.StatusStarting, db.StatusUnhealthy:
+			target = status
+		case db.StatusStopped:
+			target = db.StatusDeepSleep
+		default:
+			observeErr = fmt.Errorf("container reported unexpected status %s during deep-sleep rollback", status)
+		}
+	}
+
+	stateErr := m.store.UpdateServerStatus(rollbackCtx, serverID, target)
+	if stateErr != nil && target != db.StatusError {
+		stateErr = errors.Join(stateErr, m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError))
+	}
+	if stateErr != nil && m.logger != nil {
+		m.logger.Error("Deep sleep: failed to persist rollback state for server %s: %v", serverID, stateErr)
 	}
 	if m.refresher != nil {
 		m.refresher(serverID)
 	}
+	return errors.Join(observeErr, stateErr)
 }
 
 func (m *DeepSleepManager) rollbackWake(ctx context.Context, serverID string) {
@@ -273,6 +295,41 @@ func (m *DeepSleepManager) rollbackWake(ctx context.Context, serverID string) {
 	if m.refresher != nil {
 		m.refresher(serverID)
 	}
+}
+
+// rollbackWakePersistenceFailure restores the stopped state that backs the
+// persisted deep-sleep intent when Docker started successfully but the RUNNING
+// write failed. If Docker cannot be confirmed stopped, persist ERROR instead.
+func (m *DeepSleepManager) rollbackWakePersistenceFailure(ctx context.Context, serverID, containerID string) error {
+	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+
+	found, stopErr := m.controller.StopContainer(rollbackCtx, containerID)
+	if stopErr == nil && found {
+		status, statusErr := m.controller.GetContainerStatus(rollbackCtx, containerID)
+		if statusErr == nil && status == db.StatusStopped {
+			if m.refresher != nil {
+				m.refresher(serverID)
+			}
+			return nil
+		}
+		if statusErr != nil {
+			stopErr = fmt.Errorf("failed to verify stopped container: %w", statusErr)
+		} else {
+			stopErr = fmt.Errorf("container reported %s after stop", status)
+		}
+	} else if stopErr == nil {
+		stopErr = fmt.Errorf("container disappeared before stopped state could be confirmed")
+	}
+
+	stateErr := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError)
+	if stateErr != nil && m.logger != nil {
+		m.logger.Error("Wake: failed to persist error state after start rollback failed for server %s: %v", serverID, stateErr)
+	}
+	if m.refresher != nil {
+		m.refresher(serverID)
+	}
+	return errors.Join(fmt.Errorf("failed to stop container after wake status persistence failure: %w", stopErr), stateErr)
 }
 
 // SleepServer gracefully stops a server container and marks it deeply asleep.
@@ -329,15 +386,15 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 	for {
 		status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID)
 		if err != nil {
-			m.rollbackSleep(ctx, serverID)
-			return fmt.Errorf("failed to verify container state while deep-sleeping server %s: %w", serverID, err)
+			rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+			return errors.Join(fmt.Errorf("failed to verify container state while deep-sleeping server %s: %w", serverID, err), rollbackErr)
 		}
 		if status == db.StatusStopped {
 			break
 		}
 		if status != db.StatusRunning {
-			m.rollbackSleep(ctx, serverID)
-			return fmt.Errorf("cannot deep-sleep server %s while container is in status %s", serverID, status)
+			rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+			return errors.Join(fmt.Errorf("cannot deep-sleep server %s while container is in status %s", serverID, status), rollbackErr)
 		}
 		if time.Now().After(deadline) {
 			break
@@ -348,32 +405,32 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 			// now a lie. Undo it or the server is wedged: reconciler refuses to
 			// heal a DeepSleep server and the proxy route stays down, so nothing
 			// can bring it back without a manual edit (MINE-172).
-			m.rollbackSleep(ctx, serverID)
-			return ctx.Err()
+			rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+			return errors.Join(ctx.Err(), rollbackErr)
 		case <-time.After(deepSleepStopPollInterval):
 		}
 	}
 
 	// 4. Backstop: force the container down if it is still alive.
 	if status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID); err != nil {
-		m.rollbackSleep(ctx, serverID)
-		return fmt.Errorf("failed to verify container state before deep-sleep stop for server %s: %w", serverID, err)
+		rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+		return errors.Join(fmt.Errorf("failed to verify container state before deep-sleep stop for server %s: %w", serverID, err), rollbackErr)
 	} else if status == db.StatusRunning {
 		if m.logger != nil {
 			m.logger.Warn("Deep sleep: server %s did not exit on RCON stop, forcing container stop", srv.Name)
 		}
 		found, err := m.controller.StopContainer(ctx, srv.ContainerID)
 		if err != nil {
-			m.rollbackSleep(ctx, serverID)
-			return fmt.Errorf("container stop failed for server %s: %w", serverID, err)
+			rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+			return errors.Join(fmt.Errorf("container stop failed for server %s: %w", serverID, err), rollbackErr)
 		}
 		if !found {
-			m.rollbackSleep(ctx, serverID)
-			return fmt.Errorf("container for server %s disappeared before deep-sleep stop completed", serverID)
+			rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+			return errors.Join(fmt.Errorf("container for server %s disappeared before deep-sleep stop completed", serverID), rollbackErr)
 		}
 	} else if status != db.StatusStopped {
-		m.rollbackSleep(ctx, serverID)
-		return fmt.Errorf("cannot confirm deep sleep for server %s in container status %s", serverID, status)
+		rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+		return errors.Join(fmt.Errorf("cannot confirm deep sleep for server %s in container status %s", serverID, status), rollbackErr)
 	}
 
 	m.trackerMu.Lock()
@@ -464,7 +521,9 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 	now := time.Now()
 	srv.LastStarted = &now
 	if err := m.store.UpdateServer(ctx, srv); err != nil {
-		return fmt.Errorf("failed to update server status to running: %w", err)
+		persistErr := fmt.Errorf("failed to update server status to running: %w", err)
+		rollbackErr := m.rollbackWakePersistenceFailure(ctx, serverID, srv.ContainerID)
+		return errors.Join(persistErr, rollbackErr)
 	}
 
 	m.trackerMu.Lock()
