@@ -166,6 +166,52 @@ func TestCreateServer_SerializesMemoryReservationAgainstConcurrentRequests(t *te
 	}
 }
 
+func TestCreateServer_AutoPlacementSkipsNodeWithoutPhysicalMemoryCapacity(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	testNode, err := svc.store.GetNode(context.Background(), "test-node")
+	if err != nil {
+		t.Fatalf("failed to load helper node: %v", err)
+	}
+	testNode.MaxMemoryMB = 1
+	if err := svc.store.UpdateNode(context.Background(), testNode); err != nil {
+		t.Fatalf("failed to cap helper node: %v", err)
+	}
+	for _, node := range []*db.Node{
+		{ID: "a-small-node", Name: "Small Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline},
+		{ID: "z-large-node", Name: "Large Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline},
+	} {
+		if err := svc.store.CreateNode(context.Background(), node); err != nil {
+			t.Fatalf("failed to seed node %s: %v", node.ID, err)
+		}
+	}
+	if err := svc.store.CreateServer(context.Background(), &db.Server{
+		ID: "large-node-reservation", Name: "large-node-reservation", NodeID: "z-large-node",
+		Port: 25607, Memory: 1024, Status: db.StatusStopped,
+	}); err != nil {
+		t.Fatalf("failed to seed existing reservation: %v", err)
+	}
+	svc.hostMemoryMB = func(_ context.Context, nodeID string) (int64, error) {
+		if nodeID == "a-small-node" {
+			return 4096, nil
+		}
+		return 16 * 1024, nil
+	}
+
+	resp, err := svc.CreateServer(ctxWithRole("operator"), connect.NewRequest(&v1.CreateServerRequest{
+		Name:        "large-modpack",
+		McVersion:   "1.20.1",
+		DockerImage: "java21",
+		Port:        25608,
+		Memory:      6144,
+	}))
+	if err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+	if resp.Msg.Server.NodeId != "z-large-node" {
+		t.Fatalf("server placed on %q, want z-large-node with sufficient physical capacity", resp.Msg.Server.NodeId)
+	}
+}
+
 func TestStartServer_RejectsServerWhenNodeMemoryIsOvercommitted(t *testing.T) {
 	svc, _ := newDockerPrivilegeTestService(t)
 	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }

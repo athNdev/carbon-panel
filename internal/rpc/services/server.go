@@ -131,6 +131,50 @@ func (s *ServerService) checkNodeMemoryCapacity(ctx context.Context, nodeID stri
 	return nil
 }
 
+func (s *ServerService) selectNodeWithHostCapacity(ctx context.Context, strategy docker.PlacementStrategy, requestedMemoryMB int64) (*storage.Node, error) {
+	nodes, err := s.store.ListNodesWithStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query Docker nodes: %w", err)
+	}
+
+	// Probe hosts concurrently with a short per-node budget. A stale "online"
+	// record with an unreachable Docker daemon must not be treated as unlimited.
+	var wg sync.WaitGroup
+	for _, node := range nodes {
+		if !node.Enabled || node.Status != storage.NodeStatusOnline {
+			continue
+		}
+		wg.Add(1)
+		go func(node *storage.Node) {
+			defer wg.Done()
+			probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			hostMemoryMB, err := s.getHostMemoryMB(probeCtx, node.ID)
+			if err != nil {
+				node.Status = storage.NodeStatusOffline
+				return
+			}
+			if node.MaxMemoryMB == 0 || hostMemoryMB < node.MaxMemoryMB {
+				node.MaxMemoryMB = hostMemoryMB
+			}
+		}(node)
+	}
+	wg.Wait()
+
+	eligible := docker.FilterEligibleNodes(nodes, requestedMemoryMB)
+	if len(eligible) == 0 {
+		return nil, fmt.Errorf("no reachable Docker node has capacity for %d MB", requestedMemoryMB)
+	}
+	switch strategy {
+	case docker.StrategyLeastServers:
+		return docker.SelectLeastServers(eligible), nil
+	case docker.StrategyRoundRobin:
+		return s.placementEngine.SelectRoundRobin(eligible), nil
+	default:
+		return docker.SelectLeastMemory(eligible), nil
+	}
+}
+
 // SetClientPool sets the client pool on the service
 func (s *ServerService) SetClientPool(pool *docker.ClientPool) {
 	s.pool = pool
@@ -877,7 +921,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		if msg.PlacementStrategy != "" {
 			strategy = docker.PlacementStrategy(strings.ToLower(msg.PlacementStrategy))
 		}
-		selectedNode, err := s.placementEngine.SelectNode(ctx, strategy, int64(server.Memory))
+		selectedNode, err := s.selectNodeWithHostCapacity(ctx, strategy, int64(server.Memory))
 		if err != nil {
 			s.log.Error("Failed to select node using strategy %s: %v", strategy, err)
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("placement failed: %w", err))
