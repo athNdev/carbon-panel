@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -24,6 +25,37 @@ type FreezerStore interface {
 	ListServers(ctx context.Context) ([]*db.Server, error)
 	UpdateServer(ctx context.Context, server *db.Server) error
 	UpdateServerStatus(ctx context.Context, id string, status db.ServerStatus) error
+}
+
+func wrapStatusPersistError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("failed to persist error status after rollback failure: %w", err)
+}
+
+func (m *HibernationManager) restoreRunningContainer(ctx context.Context, serverID, containerID string) error {
+	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+
+	rollbackErr := m.freezer.UnpauseContainer(rollbackCtx, containerID)
+	if rollbackErr == nil {
+		status, statusErr := m.freezer.GetContainerStatus(rollbackCtx, containerID)
+		if statusErr != nil {
+			rollbackErr = fmt.Errorf("could not verify container after unpause: %w", statusErr)
+		} else if status != db.StatusRunning {
+			rollbackErr = fmt.Errorf("container remained in status %s after unpause", status)
+		}
+	}
+	if rollbackErr == nil {
+		return nil
+	}
+
+	statusErr := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError)
+	return errors.Join(
+		fmt.Errorf("failed to restore running container after hibernation failure: %w", rollbackErr),
+		wrapStatusPersistError(statusErr),
+	)
 }
 
 // HibernationManager manages cgroup freezer sleep/wake lifecycle for idle Minecraft servers
@@ -253,12 +285,25 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 	if err := m.freezer.PauseContainer(ctx, srv.ContainerID); err != nil {
 		return fmt.Errorf("cgroup freeze failed for server %s: %w", serverID, err)
 	}
+	status, statusErr := m.freezer.GetContainerStatus(ctx, srv.ContainerID)
+	if statusErr != nil {
+		return errors.Join(
+			fmt.Errorf("failed to verify frozen container for server %s: %w", serverID, statusErr),
+			m.restoreRunningContainer(ctx, serverID, srv.ContainerID),
+		)
+	}
+	if status != db.StatusPaused {
+		return errors.Join(
+			fmt.Errorf("container for server %s did not enter paused state (status %s)", serverID, status),
+			m.restoreRunningContainer(ctx, serverID, srv.ContainerID),
+		)
+	}
 
 	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusPaused); err != nil {
-		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		_ = m.freezer.UnpauseContainer(rollbackCtx, srv.ContainerID)
-		return fmt.Errorf("failed to update server status to paused: %w", err)
+		return errors.Join(
+			fmt.Errorf("failed to update server status to paused: %w", err),
+			m.restoreRunningContainer(ctx, serverID, srv.ContainerID),
+		)
 	}
 
 	m.trackerMu.Lock()
@@ -302,15 +347,39 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 	if err := m.freezer.UnpauseContainer(ctx, srv.ContainerID); err != nil {
 		failCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		if st, stErr := m.freezer.GetContainerStatus(failCtx, srv.ContainerID); stErr == nil && st != db.StatusPaused {
-			_ = m.store.UpdateServerStatus(failCtx, serverID, st)
-		} else {
-			_ = m.store.UpdateServerStatus(failCtx, serverID, db.StatusError)
+		st, statusErr := m.freezer.GetContainerStatus(failCtx, srv.ContainerID)
+		persistStatus := db.StatusError
+		if statusErr == nil && st != db.StatusPaused {
+			persistStatus = st
 		}
-		return fmt.Errorf("cgroup unfreeze failed for server %s: %w", serverID, err)
+		persistErr := m.store.UpdateServerStatus(failCtx, serverID, persistStatus)
+		return errors.Join(
+			fmt.Errorf("cgroup unfreeze failed for server %s: %w", serverID, err),
+			statusErr,
+			wrapStatusPersistError(persistErr),
+		)
 	}
 
 	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusRunning); err != nil {
+		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		rollbackErr := m.freezer.PauseContainer(rollbackCtx, srv.ContainerID)
+		if rollbackErr == nil {
+			status, statusErr := m.freezer.GetContainerStatus(rollbackCtx, srv.ContainerID)
+			if statusErr != nil {
+				rollbackErr = fmt.Errorf("could not verify container after re-pause: %w", statusErr)
+			} else if status != db.StatusPaused {
+				rollbackErr = fmt.Errorf("container remained in status %s after re-pause", status)
+			}
+		}
+		if rollbackErr != nil {
+			statusErr := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError)
+			return errors.Join(
+				fmt.Errorf("failed to update server status to running: %w", err),
+				fmt.Errorf("failed to restore paused container after status update failure: %w", rollbackErr),
+				wrapStatusPersistError(statusErr),
+			)
+		}
 		return fmt.Errorf("failed to update server status to running: %w", err)
 	}
 
