@@ -3,12 +3,14 @@ package db
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
+	"gorm.io/gorm"
 )
 
 // standardCronParser accepts classic 5-field cron expressions ("0 3 * * *").
@@ -74,6 +76,22 @@ func ServerConfigToMap(cfg *ServerConfig) (map[string]any, error) {
 	return out, nil
 }
 
+func validateStagedConfigFields(config *ServerConfig, changes map[string]any) error {
+	allowed, err := ServerConfigToMap(config)
+	if err != nil {
+		return fmt.Errorf("could not inspect server config fields: %w", err)
+	}
+	for key := range changes {
+		if key == "id" || key == "serverId" {
+			return fmt.Errorf("server config identity field %q cannot be staged", key)
+		}
+		if _, ok := allowed[key]; !ok {
+			return fmt.Errorf("unknown server config field %q", key)
+		}
+	}
+	return nil
+}
+
 // StageConfigChange records changes as a diff vs the live config. It works
 // regardless of the instance's operational state — nothing is applied here.
 func (s *Store) StageConfigChange(ctx context.Context, serverID string, changes map[string]any, mode StagedApplyMode, cronExpr string) (*StagedConfigChange, error) {
@@ -96,11 +114,19 @@ func (s *Store) StageConfigChange(ctx context.Context, serverID string, changes 
 		return nil, fmt.Errorf("server not found")
 	}
 
-	current := map[string]any{}
-	if live, err := s.GetServerConfig(ctx, serverID); err == nil && live != nil {
-		if m, merr := ServerConfigToMap(live); merr == nil {
-			current = m
+	live, err := s.GetServerConfig(ctx, serverID)
+	if err != nil {
+		if !errors.Is(err, ErrServerConfigNotFound) {
+			return nil, fmt.Errorf("failed to read current server config: %w", err)
 		}
+		live = s.CreateDefaultServerConfig(serverID)
+	}
+	current, err := ServerConfigToMap(live)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read current server config: %w", err)
+	}
+	if err := validateStagedConfigFields(live, changes); err != nil {
+		return nil, err
 	}
 
 	diff := DiffMaps(current, changes)
@@ -166,50 +192,74 @@ func (s *Store) DiscardStagedConfigChange(ctx context.Context, id string) error 
 // flips the record to applied. Callers decide when to invoke it (restart hook
 // or cron tick); container recreation stays the caller's responsibility.
 func (s *Store) ApplyStagedConfigChange(ctx context.Context, id string) (*StagedConfigChange, error) {
-	staged, err := s.GetStagedConfigChange(ctx, id)
+	var applied *StagedConfigChange
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		claim := tx.Model(&StagedConfigChange{}).
+			Where("id = ? AND status = ?", id, string(StagedStatusStaged)).
+			UpdateColumn("status", "applying")
+		if claim.Error != nil {
+			return claim.Error
+		}
+		if claim.RowsAffected != 1 {
+			return fmt.Errorf("only staged changes can be applied")
+		}
+
+		var staged StagedConfigChange
+		if err := tx.Where("id = ?", id).First(&staged).Error; err != nil {
+			return fmt.Errorf("staged config change not found: %w", err)
+		}
+
+		var diff map[string]any
+		if err := json.Unmarshal([]byte(staged.Payload), &diff); err != nil {
+			return fmt.Errorf("staged payload is corrupt: %w", err)
+		}
+		if diff == nil {
+			return fmt.Errorf("staged payload must be a JSON object")
+		}
+
+		live := &ServerConfig{}
+		err := tx.Where("server_id = ?", staged.ServerID).First(live).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			live = s.CreateDefaultServerConfig(staged.ServerID)
+		} else if err != nil {
+			return fmt.Errorf("failed to read live server config: %w", err)
+		}
+		if err := validateStagedConfigFields(live, diff); err != nil {
+			return err
+		}
+
+		base, err := ServerConfigToMap(live)
+		if err != nil {
+			return err
+		}
+		merged, err := json.Marshal(MergeMaps(base, diff))
+		if err != nil {
+			return err
+		}
+		next := &ServerConfig{}
+		if err := json.Unmarshal(merged, next); err != nil {
+			return fmt.Errorf("merged config is invalid: %w", err)
+		}
+		// Preserve identity fields regardless of what the payload contained.
+		next.ID = live.ID
+		next.ServerID = live.ServerID
+		if err := tx.Save(next).Error; err != nil {
+			return fmt.Errorf("failed to save merged server config: %w", err)
+		}
+
+		now := time.Now()
+		staged.Status = StagedStatusApplied
+		staged.AppliedAt = &now
+		if err := tx.Save(&staged).Error; err != nil {
+			return fmt.Errorf("failed to mark staged config as applied: %w", err)
+		}
+		applied = &staged
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if staged.Status != StagedStatusStaged {
-		return nil, fmt.Errorf("only staged changes can be applied")
-	}
-
-	var diff map[string]any
-	if err := json.Unmarshal([]byte(staged.Payload), &diff); err != nil {
-		return nil, fmt.Errorf("staged payload is corrupt: %w", err)
-	}
-
-	live, err := s.GetServerConfig(ctx, staged.ServerID)
-	if err != nil {
-		live = s.CreateDefaultServerConfig(staged.ServerID)
-	}
-	base, err := ServerConfigToMap(live)
-	if err != nil {
-		return nil, err
-	}
-	merged, err := json.Marshal(MergeMaps(base, diff))
-	if err != nil {
-		return nil, err
-	}
-	next := &ServerConfig{}
-	if err := json.Unmarshal(merged, next); err != nil {
-		return nil, fmt.Errorf("merged config is invalid: %w", err)
-	}
-	// Preserve identity fields regardless of what the payload contained.
-	next.ID = live.ID
-	next.ServerID = live.ServerID
-
-	if err := s.SaveServerConfig(ctx, next); err != nil {
-		return nil, err
-	}
-
-	now := time.Now()
-	staged.Status = StagedStatusApplied
-	staged.AppliedAt = &now
-	if err := s.db.WithContext(ctx).Save(staged).Error; err != nil {
-		return nil, err
-	}
-	return staged, nil
+	return applied, nil
 }
 
 // ListDueScheduledStagedChanges returns staged + scheduled records whose cron

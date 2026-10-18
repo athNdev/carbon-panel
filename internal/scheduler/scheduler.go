@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -627,8 +628,19 @@ func (s *Scheduler) executeCommandTask(ctx context.Context, server *storage.Serv
 }
 
 func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
+	if !docker.TryBeginServerTransition(server.ID) {
+		return "", fmt.Errorf("server lifecycle transition already in progress")
+	}
+	defer docker.EndServerTransition(server.ID)
+
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
+	}
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server); handled {
+		if err != nil {
+			return "", err
+		}
+		return "server restarted with staged configuration", nil
 	}
 
 	// Stop container
@@ -665,8 +677,19 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 }
 
 func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
+	if !docker.TryBeginServerTransition(server.ID) {
+		return "", fmt.Errorf("server lifecycle transition already in progress")
+	}
+	defer docker.EndServerTransition(server.ID)
+
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
+	}
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server); handled {
+		if err != nil {
+			return "", err
+		}
+		return "server started with staged configuration", nil
 	}
 
 	if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
@@ -679,6 +702,107 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 	s.store.UpdateServer(ctx, server)
 
 	return "server started successfully", nil
+}
+
+// recreateForPendingStagedConfig ensures scheduled lifecycle operations cannot
+// start an old container and advance LastStarted past an applied on-restart
+// change. A replacement ID is persisted even when Docker reports a partial
+// recreate failure, allowing the next attempt to recover from the right object.
+type stagedLifecycleStore interface {
+	stagedConfigStore
+	GetServerConfig(ctx context.Context, serverID string) (*storage.ServerConfig, error)
+	GetGlobalSettings(ctx context.Context) (*storage.ServerConfig, bool, error)
+	UpdateServer(ctx context.Context, server *storage.Server) error
+	ClearEphemeralConfigFields(ctx context.Context, serverID string) error
+}
+
+type stagedLifecycleDocker interface {
+	RecreateContainer(ctx context.Context, oldContainerID string, server *storage.Server, serverConfig *storage.ServerConfig) (*docker.RecreateContainerResult, error)
+	StartContainer(ctx context.Context, containerID string) error
+}
+
+// recreateForPendingStagedConfig ensures scheduled lifecycle operations cannot
+// start an old container and advance LastStarted past an applied on-restart
+// change. A replacement ID is persisted even when Docker reports a partial
+// recreate failure, allowing the next attempt to recover from the right object.
+func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server) (bool, error) {
+	applied, err := ApplyOnRestartStagedConfigs(ctx, store, server.ID)
+	if err != nil {
+		return true, fmt.Errorf("failed to apply staged server configuration: %w", err)
+	}
+	pending, err := HasPendingRestartStagedConfigRecreate(ctx, store, server.ID, server.LastStarted)
+	if err != nil {
+		return true, fmt.Errorf("failed to check staged configuration recovery: %w", err)
+	}
+	if applied == 0 && !pending {
+		return false, nil
+	}
+
+	serverConfig, err := store.GetServerConfig(ctx, server.ID)
+	if err != nil {
+		return true, fmt.Errorf("failed to get server configuration: %w", err)
+	}
+	if serverConfig == nil {
+		return true, fmt.Errorf("server configuration is empty")
+	}
+	if serverConfig.CFAPIKey == nil || *serverConfig.CFAPIKey == "" || serverConfig.ModrinthToken == nil || *serverConfig.ModrinthToken == "" {
+		if global, _, globalErr := store.GetGlobalSettings(ctx); globalErr == nil && global != nil {
+			if (serverConfig.CFAPIKey == nil || *serverConfig.CFAPIKey == "") && global.CFAPIKey != nil && *global.CFAPIKey != "" {
+				serverConfig.CFAPIKey = global.CFAPIKey
+			}
+			if (serverConfig.ModrinthToken == nil || *serverConfig.ModrinthToken == "") && global.ModrinthToken != nil && *global.ModrinthToken != "" {
+				serverConfig.ModrinthToken = global.ModrinthToken
+			}
+		}
+	}
+	if server.ModLoader == storage.ModLoaderAutoCurseForge && (serverConfig.CFSlug == nil || *serverConfig.CFSlug == "") && (serverConfig.CFPageURL == nil || *serverConfig.CFPageURL == "") && server.Name != "" {
+		slug := regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(strings.ToLower(strings.TrimSpace(server.Name)), "-")
+		slug = strings.Trim(slug, "-")
+		if slug != "" {
+			serverConfig.CFSlug = &slug
+		}
+	}
+
+	result, recreateErr := dockerClient.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+	if recreateErr != nil {
+		if result != nil && result.NewContainerID != "" {
+			server.ContainerID = result.NewContainerID
+		} else {
+			server.ContainerID = ""
+		}
+		server.Status = storage.StatusError
+		if persistErr := store.UpdateServer(ctx, server); persistErr != nil && log != nil {
+			log.Error("Failed to persist server state after scheduled staged recreation error for server %s: %v", server.ID, persistErr)
+		}
+		return true, fmt.Errorf("failed to recreate server with staged configuration: %w", recreateErr)
+	}
+	if result == nil || result.NewContainerID == "" {
+		server.ContainerID = ""
+		server.Status = storage.StatusError
+		_ = store.UpdateServer(ctx, server)
+		return true, fmt.Errorf("container recreation returned no container ID")
+	}
+	server.ContainerID = result.NewContainerID
+	if err := store.UpdateServer(ctx, server); err != nil {
+		return true, fmt.Errorf("replacement container created but ID could not be saved: %w", err)
+	}
+	if !result.WasRunning {
+		if err := dockerClient.StartContainer(ctx, result.NewContainerID); err != nil {
+			server.Status = storage.StatusError
+			_ = store.UpdateServer(ctx, server)
+			return true, fmt.Errorf("failed to start recreated server: %w", err)
+		}
+	}
+	if err := store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
+		return true, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err)
+	}
+	server.Status = storage.StatusStarting
+	now := time.Now()
+	server.LastStarted = &now
+	if err := store.UpdateServer(ctx, server); err != nil {
+		return true, fmt.Errorf("server restarted but status could not be saved: %w", err)
+	}
+	return true, nil
 }
 
 func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
