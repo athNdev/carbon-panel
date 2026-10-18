@@ -1192,6 +1192,10 @@ func (c *Client) RestartContainer(ctx context.Context, containerID string, delay
 
 // Result of a container recreation operation
 type RecreateContainerResult struct {
+	// NewContainerID is the canonical container identity after the operation.
+	// On a failure before removal, it remains the original ID; after confirmed
+	// removal with no replacement, it is empty; after a partial create/start,
+	// it identifies the replacement that callers must continue tracking.
 	NewContainerID string
 	WasRunning     bool
 }
@@ -1209,14 +1213,23 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 		} else if status == models.StatusRunning || status == models.StatusUnhealthy {
 			result.WasRunning = true
 			if _, err := c.StopContainer(ctx, oldContainerID); err != nil {
-				return nil, fmt.Errorf("failed to stop container: %w", err)
+				// The original container remains the only known identity when stop
+				// fails before removal. Return it so callers do not drop a still-live
+				// container reference while recording the operation error.
+				result.NewContainerID = oldContainerID
+				return result, fmt.Errorf("failed to stop container: %w", err)
 			}
 		}
 
 		// Remove old container directly from Docker to preserve log subscribers for migration
 		if _, err := c.docker.ContainerRemove(ctx, oldContainerID, client.ContainerRemoveOptions{Force: true}); err != nil {
-			// Log but continue - container may already be removed
-			c.log.Debug("Could not remove old container (may not exist): %v", err)
+			if !errdefs.IsNotFound(err) {
+				// Do not attempt to create a second identity when removal has an
+				// ambiguous or transient failure. Retain the old ID for recovery.
+				result.NewContainerID = oldContainerID
+				return result, fmt.Errorf("failed to remove old container: %w", err)
+			}
+			c.log.Debug("Old container already absent during recreation: %v", err)
 		}
 	}
 

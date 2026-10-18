@@ -580,6 +580,17 @@ func (r *Reconciler) selfHealRecreate(ctx context.Context, cli Client, server *d
 
 	res, err := cli.RecreateContainer(ctx, server.ContainerID, server, cfg)
 	if err != nil {
+		// RecreateContainer can create a replacement and then fail while
+		// starting it. Persist the partial identity (or clear the stale missing
+		// ID when no replacement exists) before reporting the failure.
+		partialID := ""
+		if res != nil {
+			partialID = res.NewContainerID
+		}
+		if persistErr := r.store.UpdateServerContainerID(ctx, server.ID, partialID); persistErr != nil {
+			return fmt.Errorf("recreate failed: %w (also failed to persist replacement container id %q: %v)", err, partialID, persistErr)
+		}
+		server.ContainerID = partialID
 		return err
 	}
 	if res == nil || res.NewContainerID == "" {
