@@ -80,7 +80,7 @@
 		create(CreateServerRequestSchema, {
 			name: '',
 			description: '',
-			modLoader: ModLoader.UNSPECIFIED,
+			modLoader: ModLoader.VANILLA,
 			mcVersion: '',
 			port: 25565,
 			maxPlayers: 20,
@@ -229,7 +229,7 @@
 			const cfg = await rpcClient.modpack.getModpackConfig({ id: modpack.id });
 			formData.name = modpack.name || '';
 			formData.description = modpack.summary || '';
-			formData.modLoader = _.get(cfg, 'mod_loader', 0);
+			formData.modLoader = _.get(cfg, 'mod_loader', ModLoader.VANILLA);
 			formData.mcVersion = modpack.mcVersion || '';
 			formData.memory = _.get(cfg, 'memory', modpack.recommendedRam || 2048);
 			formData.dockerImage = modpack.dockerImage || '';
@@ -245,7 +245,7 @@
 		selectedModpack = null;
 		modpackVersions = [];
 		selectedVersionId = '';
-		formData.modLoader = 0;
+		formData.modLoader = ModLoader.VANILLA;
 		formData.mcVersion = latestVersion || '';
 		formData.dockerImage = '';
 		formData.memory = 2048;
