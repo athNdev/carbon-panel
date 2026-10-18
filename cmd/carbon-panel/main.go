@@ -177,14 +177,9 @@ func main() {
 			cfg.Proxy.Enabled, cfg.Proxy.BaseURL, len(cfg.Proxy.ListenPorts))
 	}
 
-	// Initialize proxy manager
+	// Initialize proxy manager (started after wake/activity handlers are wired
+	// so every listener and direct-knock route is born with a valid wake handler).
 	proxyManager := proxy.NewManager(store, cfg, log, dockerClient.GetDockerClient())
-
-	// Start proxy if enabled
-	if err := proxyManager.Start(); err != nil {
-		log.Error("Failed to start proxy manager: %v", err)
-	}
-	defer proxyManager.Stop()
 
 	// Initialize Docker client pool for multi-node support (created early so
 	// downstream components like the command sender, metrics collector, and
@@ -231,6 +226,7 @@ func main() {
 	taskScheduler := scheduler.NewScheduler(store, dockerClient, sender, cfg, metricsCollector, log, scheduler.Config{
 		CheckInterval: time.Duration(cfg.Docker.SyncInterval) * time.Second, // Use same interval as container status monitor
 	})
+	taskScheduler.SetClientPool(clientPool)
 
 	// MINE-121: deep sleep — full container stop on idle (zero RAM/CPU),
 	// boot on login intent via the proxy. Only acts on servers with
@@ -242,6 +238,14 @@ func main() {
 			_ = proxyManager.UpdateServerRoute(srv)
 		}
 	}, log)
+	deepSleepMgr.SetControllerResolver(func(nodeID string) docker.SleepController {
+		if nodeID != "" {
+			if cli, err := clientPool.GetClient(nodeID); err == nil && cli != nil {
+				return cli
+			}
+		}
+		return dockerClient
+	})
 	deepSleepMgr.SetWakePreparer(taskScheduler.PrepareDeepSleepWake)
 	deepSleepMgr.SetPlayerCountProvider(func(serverID string) int {
 		if m := metricsCollector.GetMetrics(serverID); m != nil {
@@ -256,6 +260,13 @@ func main() {
 		hibernationMgr.RecordActivity(serverID)
 		deepSleepMgr.RecordActivity(serverID)
 	})
+
+	// Start proxy now that wake and activity handlers are installed
+	if err := proxyManager.Start(); err != nil {
+		log.Error("Failed to start proxy manager: %v", err)
+	}
+	defer func() { _ = proxyManager.Stop() }()
+
 	deepSleepCtx, deepSleepCancel := context.WithCancel(ctx)
 	defer deepSleepCancel()
 	deepSleepMgr.Start(deepSleepCtx, 60*time.Second)

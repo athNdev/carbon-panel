@@ -288,6 +288,7 @@ type ContainerLogStreamer interface {
 type Client struct {
 	docker      *client.Client
 	config      ClientConfig
+	host        string
 	logStreamer ContainerLogStreamer
 	log         *logger.Logger
 	firewall    *FirewallManager
@@ -317,7 +318,7 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
 
-	c := &Client{docker: docker, log: log}
+	c := &Client{docker: docker, host: host, log: log}
 	if len(config) > 0 {
 		c.config = config[0]
 	} else {
@@ -811,6 +812,23 @@ func isConflictError(err error) bool {
 	return errdefs.IsConflict(err)
 }
 
+func isMissingNetworkError(err error, networkName string) bool {
+	if err == nil {
+		return false
+	}
+	if !errdefs.IsNotFound(err) {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	if !strings.Contains(msg, "network") {
+		return false
+	}
+	if networkName == "" {
+		return true
+	}
+	return strings.Contains(msg, strings.ToLower(networkName))
+}
+
 // preflightResolveForCreate checks, before attempting Docker container creation, whether a
 // container already exists for the given identity (server or module ID) via resolve.
 //
@@ -886,6 +904,20 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	})
 	if err == nil {
 		return resp.ID, nil
+	}
+	if isMissingNetworkError(err, c.config.NetworkName) {
+		c.log.Warn("Docker network %q missing during container create (%v); ensuring network and retrying", c.config.NetworkName, err)
+		if netErr := c.EnsureNetwork(); netErr == nil {
+			resp, err = c.docker.ContainerCreate(ctx, client.ContainerCreateOptions{
+				Config:           config,
+				HostConfig:       hostConfig,
+				NetworkingConfig: networkConfig,
+				Name:             containerName,
+			})
+			if err == nil {
+				return resp.ID, nil
+			}
+		}
 	}
 	if !isConflictError(err) {
 		return "", err
@@ -1060,7 +1092,18 @@ func inspectToSummary(inspect container.InspectResponse) *container.Summary {
 
 func (c *Client) StartContainer(ctx context.Context, containerID string) error {
 	if _, err := c.docker.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); err != nil {
-		return err
+		if isMissingNetworkError(err, c.config.NetworkName) {
+			if netErr := c.EnsureNetwork(); netErr == nil {
+				if _, retryErr := c.docker.ContainerStart(ctx, containerID, client.ContainerStartOptions{}); retryErr == nil {
+					err = nil
+				} else {
+					err = retryErr
+				}
+			}
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	// Start log streaming if configured
@@ -1545,6 +1588,9 @@ func (c *Client) EnsureNetwork() error {
 // Connects Carbon Panel to its own bridge network if running as container
 // NOTE: Only really needed for bridge mode though
 func (c *Client) attachSelfToNetwork(ctx context.Context) {
+	if c.host != "" && c.host != "unix:///var/run/docker.sock" {
+		return
+	}
 	if _, err := os.Stat("/.dockerenv"); err != nil {
 		return
 	}

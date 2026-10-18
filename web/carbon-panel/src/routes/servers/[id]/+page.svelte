@@ -684,11 +684,13 @@ one at https://mozilla.org/MPL/2.0/.
 				>
 					<span class="text-[#8d8d8d]">TPS:</span>
 					<span
-						class="{server.tps && server.tps >= 18
-							? 'text-[#6fdc8c]'
-							: 'text-[#f1c21b]'} font-semibold"
+						class="{server.status === ServerStatus.RUNNING && server.tps > 0
+							? server.tps >= 18
+								? 'text-[#6fdc8c]'
+								: 'text-[#f1c21b]'
+							: 'text-[#8d8d8d]'} font-semibold"
 					>
-						{server.tps ? server.tps.toFixed(1) : '20.0'}
+						{server.status === ServerStatus.RUNNING && server.tps > 0 ? server.tps.toFixed(1) : '—'}
 					</span>
 					<span class="text-[#8d8d8d]">Players:</span>
 					<span class="font-semibold text-[#6fdc8c]">{server.playersOnline || 0}</span>

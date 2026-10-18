@@ -420,7 +420,14 @@ func (p *ClientPool) Close() error {
 }
 
 func (p *ClientPool) createClientForNode(node *models.Node) (*Client, error) {
-	return NewClientForNode(node, p.log, p.baseConfig)
+	cli, err := NewClientForNode(node, p.log, p.baseConfig)
+	if err != nil {
+		return nil, err
+	}
+	if p.defaultClient != nil && p.defaultClient.logStreamer != nil {
+		cli.SetLogStreamer(p.defaultClient.logStreamer)
+	}
+	return cli, nil
 }
 
 // NewClientForNode constructs a *Client configured specifically for a Node.
@@ -432,6 +439,9 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 
 	if baseConfig.APIVersion != "" {
 		opts = append(opts, client.WithVersion(baseConfig.APIVersion))
+	}
+	if baseConfig.NetworkName == "" {
+		baseConfig.NetworkName = "carbon-panel-network"
 	}
 
 	host := strings.TrimSpace(node.Host)
@@ -482,6 +492,7 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 
 	c := &Client{
 		docker: dockerCli,
+		host:   host,
 		log:    log,
 		config: baseConfig,
 	}

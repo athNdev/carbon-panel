@@ -156,7 +156,7 @@ func (m *Manager) initDirectKnocksLocked() {
 		return
 	}
 	for _, server := range servers {
-		if server.Port > 0 && server.ProxyHostname == "" && server.Status == db.StatusDeepSleep {
+		if server.Port > 0 && (server.ProxyHostname == "" || !m.config.Enabled) && server.Status == db.StatusDeepSleep {
 			_ = m.directKnocks.StartKnock(server)
 		}
 	}
@@ -316,7 +316,7 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 	}
 
 	// Always handle direct port knocking for deep sleeping direct-port servers
-	if server.Port > 0 && server.ProxyHostname == "" {
+	if server.Port > 0 && (server.ProxyHostname == "" || !m.config.Enabled) {
 		if server.Status == db.StatusDeepSleep {
 			if m.directKnocks != nil {
 				_ = m.directKnocks.StartKnock(server)
@@ -415,10 +415,20 @@ func (m *Manager) ensureDownRoute(server *db.Server, hostname string, proxy Prox
 // resolveBackend determines the backend host and port for a server.
 // If the server belongs to a remote node (!node.IsLocal), it proxies directly to node.AdvertisedIP:server.Port.
 // If the server is on the local node, it proxies to the local bridge containerIP:25565.
+func isLocalDockerNode(node *db.Node) bool {
+	if node == nil {
+		return true
+	}
+	if node.IsLocal {
+		return true
+	}
+	return node.Host == "" || strings.HasPrefix(node.Host, "unix://")
+}
+
 func (m *Manager) resolveBackend(server *db.Server) (string, int, error) {
 	if server.NodeID != "" && m.store != nil {
 		node, err := m.store.GetNode(context.Background(), server.NodeID)
-		if err == nil && node != nil && !node.IsLocal {
+		if err == nil && node != nil && !isLocalDockerNode(node) {
 			backendHost := node.AdvertisedIP
 			if backendHost == "" {
 				backendHost = node.Host
