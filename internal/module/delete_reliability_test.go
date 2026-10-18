@@ -24,12 +24,20 @@ func TestDeleteModule_DockerRemovalFailurePreservesDatabaseRow(t *testing.T) {
 	defer dockerAPI.Close()
 
 	store := setupTestStore(t)
-	defer store.Close()
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Errorf("close store: %v", err)
+		}
+	})
 	dockerClient, err := docker.NewClient(strings.Replace(dockerAPI.URL, "http://", "tcp://", 1), logger.New())
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
-	defer dockerClient.Close()
+	t.Cleanup(func() {
+		if err := dockerClient.Close(); err != nil {
+			t.Errorf("close Docker client: %v", err)
+		}
+	})
 	manager := NewManager(store, dockerClient, nil, nil, nil, logger.New())
 	module := &storage.Module{
 		ID: "module-delete-failure", Name: "delete-failure", ServerID: "server-delete-failure",

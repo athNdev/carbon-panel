@@ -96,7 +96,11 @@ func TestCreateServer_HoldsTransitionUntilAsyncContainerCreationCompletes(t *tes
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
-	defer dockerClient.Close()
+	t.Cleanup(func() {
+		if err := dockerClient.Close(); err != nil {
+			t.Errorf("close Docker client: %v", err)
+		}
+	})
 	svc.pool = nil
 	svc.docker = dockerClient
 
