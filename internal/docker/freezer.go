@@ -90,22 +90,31 @@ func (m *HibernationManager) onlinePlayers(srv *db.Server) int {
 // tryBeginTransition single-flights hibernate/wake per server: returns false
 // (and logs) if a transition for serverID is already running.
 func (m *HibernationManager) tryBeginTransition(serverID, op string) bool {
+	if !TryBeginServerTransition(serverID) {
+		if m.logger != nil {
+			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
+		}
+		return false
+	}
 	m.inflightMu.Lock()
-	defer m.inflightMu.Unlock()
 	if _, busy := m.inflight[serverID]; busy {
+		m.inflightMu.Unlock()
+		EndServerTransition(serverID)
 		if m.logger != nil {
 			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
 		}
 		return false
 	}
 	m.inflight[serverID] = struct{}{}
+	m.inflightMu.Unlock()
 	return true
 }
 
 func (m *HibernationManager) endTransition(serverID string) {
 	m.inflightMu.Lock()
-	defer m.inflightMu.Unlock()
 	delete(m.inflight, serverID)
+	m.inflightMu.Unlock()
+	EndServerTransition(serverID)
 }
 
 // RegisterWakeCallback registers a callback fired when a server is woken
