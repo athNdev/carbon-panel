@@ -1132,6 +1132,14 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		// Update server with container ID
 		if err := s.store.UpdateServerContainerID(bgCtx, server.ID, containerID); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
+			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(bgCtx), 10*time.Second)
+			defer cancel()
+			if cleanupErr := dockerCli.RemoveContainer(cleanupCtx, containerID); cleanupErr != nil {
+				s.log.Error("Failed to remove untracked container %s after identity persistence failed: %v", containerID, cleanupErr)
+			}
+			if statusErr := s.store.UpdateServerStatus(cleanupCtx, server.ID, storage.StatusError); statusErr != nil {
+				s.log.Error("Failed to mark server %s as errored after container identity persistence failed: %v", server.ID, statusErr)
+			}
 			return
 		}
 
@@ -1611,21 +1619,23 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		s.proxy.StopDirectKnock(server.ID)
 	}
 
-	// Resume paused containers, then continue when staged settings require recreation.
-	if server.Status == storage.StatusPaused && server.ContainerID != "" {
+	// Resume a paused container directly only when no staged changes require
+	// replacement. For staged replacement, keep it frozen until config loading
+	// succeeds and RecreateContainer owns the stop/remove transition.
+	if server.Status == storage.StatusPaused && server.ContainerID != "" && !needsStagedRecreate {
 		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
 		}
 		server.Status = storage.StatusRunning
-		if !needsStagedRecreate {
-			if err := s.store.UpdateServer(ctx, server); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server resumed but status could not be saved: %w", err))
-			}
-			if s.proxy != nil && server.ProxyHostname != "" {
-				_ = s.proxy.UpdateServerRoute(server)
-			}
-			return connect.NewResponse(&v1.StartServerResponse{Status: "running"}), nil
+		if err := s.store.UpdateServer(ctx, server); err != nil {
+			resumeErr := fmt.Errorf("server resumed but status could not be saved: %w", err)
+			rollbackErr := s.rollbackPausedResume(ctx, dockerCli, server)
+			return nil, connect.NewError(connect.CodeInternal, errors.Join(resumeErr, rollbackErr))
 		}
+		if s.proxy != nil && server.ProxyHostname != "" {
+			_ = s.proxy.UpdateServerRoute(server)
+		}
+		return connect.NewResponse(&v1.StartServerResponse{Status: "running"}), nil
 	}
 
 	if needsStagedRecreate && server.ContainerID != "" {
@@ -1787,6 +1797,35 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1.StartServerResponse{
 		Status: "starting",
 	}), nil
+}
+
+// rollbackPausedResume keeps the persisted PAUSED intent aligned with Docker
+// when a resume succeeds but the database cannot record RUNNING. The rollback
+// uses a detached bounded context because the RPC may already be cancelled.
+func (s *ServerService) rollbackPausedResume(ctx context.Context, dockerCli *docker.Client, server *storage.Server) error {
+	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+
+	rollbackErr := dockerCli.PauseContainer(rollbackCtx, server.ContainerID)
+	if rollbackErr == nil {
+		status, statusErr := dockerCli.GetContainerStatus(rollbackCtx, server.ContainerID)
+		if statusErr == nil && status == storage.StatusPaused {
+			server.Status = storage.StatusPaused
+			return nil
+		}
+		if statusErr != nil {
+			rollbackErr = fmt.Errorf("failed to verify refrozen container: %w", statusErr)
+		} else {
+			rollbackErr = fmt.Errorf("container reported %s after refreeze", status)
+		}
+	}
+
+	server.Status = storage.StatusError
+	persistErr := s.store.UpdateServer(rollbackCtx, server)
+	if persistErr != nil && s.log != nil {
+		s.log.Error("Failed to persist error state after paused-server resume rollback failed: %v", persistErr)
+	}
+	return errors.Join(fmt.Errorf("failed to restore paused container state: %w", rollbackErr), persistErr)
 }
 
 // StopServer stops a server
