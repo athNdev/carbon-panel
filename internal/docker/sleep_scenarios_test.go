@@ -142,7 +142,7 @@ func TestDeepSleep_StatusReadFailureDoesNotClaimAsleep(t *testing.T) {
 
 	srv, getErr := store.GetServer(ctx, "srv-status-error")
 	require.NoError(t, getErr)
-	assert.Equal(t, db.StatusRunning, srv.Status, "unknown Docker state must not be persisted as deep sleep")
+	assert.Equal(t, db.StatusError, srv.Status, "unknown Docker state must not be represented as running or deep sleep")
 	assert.True(t, refreshed, "proxy route should be restored after the failed sleep attempt")
 }
 
