@@ -391,10 +391,17 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 	return nil
 }
 
-// WakeServer boots a deeply asleep server. Idempotent: an already-running
-// server, or a boot already in flight, returns nil so concurrent joiners
-// share one boot instead of erroring (the proxy holds them meanwhile).
+// WakeServer boots a deeply asleep server. Concurrent callers wait for the
+// current lifecycle transition, then re-read state; a completed wake is
+// idempotent while an in-flight sleep is followed by a wake.
 func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) error {
+	for !m.tryBeginTransition(serverID, "wake") {
+		if err := WaitForServerTransition(ctx, serverID); err != nil {
+			return fmt.Errorf("waiting for existing server transition: %w", err)
+		}
+	}
+	defer m.endTransition(serverID)
+
 	srv, err := m.store.GetServer(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("server %s not found: %w", serverID, err)
@@ -407,11 +414,6 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 	if srv.Status != db.StatusDeepSleep {
 		return fmt.Errorf("cannot wake server %s with non-deepsleep status %s", serverID, srv.Status)
 	}
-
-	if !m.tryBeginTransition(serverID, "wake") {
-		return nil // boot already in flight; shared by concurrent joiners
-	}
-	defer m.endTransition(serverID)
 
 	m.mu.Lock()
 	prepareWake := m.wakePreparer
