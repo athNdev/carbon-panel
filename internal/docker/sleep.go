@@ -328,8 +328,16 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 	deadline := time.Now().Add(deepSleepStopTimeout)
 	for {
 		status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID)
-		if err != nil || status != db.StatusRunning {
+		if err != nil {
+			m.rollbackSleep(ctx, serverID)
+			return fmt.Errorf("failed to verify container state while deep-sleeping server %s: %w", serverID, err)
+		}
+		if status == db.StatusStopped {
 			break
+		}
+		if status != db.StatusRunning {
+			m.rollbackSleep(ctx, serverID)
+			return fmt.Errorf("cannot deep-sleep server %s while container is in status %s", serverID, status)
 		}
 		if time.Now().After(deadline) {
 			break
@@ -347,14 +355,25 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 	}
 
 	// 4. Backstop: force the container down if it is still alive.
-	if status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID); err == nil && status == db.StatusRunning {
+	if status, err := m.controller.GetContainerStatus(ctx, srv.ContainerID); err != nil {
+		m.rollbackSleep(ctx, serverID)
+		return fmt.Errorf("failed to verify container state before deep-sleep stop for server %s: %w", serverID, err)
+	} else if status == db.StatusRunning {
 		if m.logger != nil {
 			m.logger.Warn("Deep sleep: server %s did not exit on RCON stop, forcing container stop", srv.Name)
 		}
-		if _, err := m.controller.StopContainer(ctx, srv.ContainerID); err != nil {
+		found, err := m.controller.StopContainer(ctx, srv.ContainerID)
+		if err != nil {
 			m.rollbackSleep(ctx, serverID)
 			return fmt.Errorf("container stop failed for server %s: %w", serverID, err)
 		}
+		if !found {
+			m.rollbackSleep(ctx, serverID)
+			return fmt.Errorf("container for server %s disappeared before deep-sleep stop completed", serverID)
+		}
+	} else if status != db.StatusStopped {
+		m.rollbackSleep(ctx, serverID)
+		return fmt.Errorf("cannot confirm deep sleep for server %s in container status %s", serverID, status)
 	}
 
 	m.trackerMu.Lock()
