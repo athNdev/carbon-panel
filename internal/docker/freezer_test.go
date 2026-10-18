@@ -72,10 +72,11 @@ func (m *mockFreezer) GetContainerStatus(ctx context.Context, containerID string
 }
 
 type mockFreezerStore struct {
-	mu              sync.Mutex
-	servers         map[string]*db.Server
-	updateStatusErr error
-	updateServerErr error
+	mu                 sync.Mutex
+	servers            map[string]*db.Server
+	updateStatusErr    error
+	updateStatusErrFor db.ServerStatus
+	updateServerErr    error
 }
 
 func newMockFreezerStore() *mockFreezerStore {
@@ -121,7 +122,7 @@ func (s *mockFreezerStore) UpdateServer(ctx context.Context, server *db.Server) 
 func (s *mockFreezerStore) UpdateServerStatus(ctx context.Context, id string, status db.ServerStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.updateStatusErr != nil {
+	if s.updateStatusErr != nil && (s.updateStatusErrFor == "" || s.updateStatusErrFor == status) {
 		return s.updateStatusErr
 	}
 	srv, ok := s.servers[id]

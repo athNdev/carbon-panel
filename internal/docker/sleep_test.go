@@ -186,6 +186,37 @@ func TestDeepSleepManager_SleepAndWake(t *testing.T) {
 	require.NoError(t, mgr.WakeServer(ctx, "srv-sleep"))
 }
 
+func TestDeepSleepManager_SleepRollbackPersistenceFailureMarksError(t *testing.T) {
+	controller, commander, store := newDeepSleepHarness()
+	ctx, cancel := context.WithCancel(context.Background())
+	commander.mu.Lock()
+	commander.onCommand = func(_, command string) {
+		if command == "stop" {
+			cancel()
+		}
+	}
+	commander.mu.Unlock()
+
+	store.mu.Lock()
+	store.updateStatusErr = fmt.Errorf("injected running status persistence failure")
+	store.updateStatusErrFor = db.StatusRunning
+	store.mu.Unlock()
+
+	mgr := NewDeepSleepManager(controller, store, commander, nil, nil)
+	err := mgr.SleepServer(ctx, "srv-sleep")
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Contains(t, err.Error(), "injected running status persistence failure")
+
+	controller.mu.Lock()
+	containerStatus := controller.status["cnt-sleep"]
+	controller.mu.Unlock()
+	assert.Equal(t, db.StatusRunning, containerStatus)
+
+	server, err := store.GetServer(context.Background(), "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusError, server.Status, "failed rollback persistence must not leave DeepSleep recorded over a running container")
+}
+
 func TestDeepSleepManager_PreparesReplacementBeforeWakeAndRecordsStart(t *testing.T) {
 	ctx := context.Background()
 	controller, commander, store := newDeepSleepHarness()
