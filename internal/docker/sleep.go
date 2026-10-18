@@ -14,8 +14,14 @@ import (
 type SleeperStore interface {
 	GetServer(ctx context.Context, id string) (*db.Server, error)
 	ListServers(ctx context.Context) ([]*db.Server, error)
+	UpdateServer(ctx context.Context, server *db.Server) error
 	UpdateServerStatus(ctx context.Context, id string, status db.ServerStatus) error
 }
+
+// WakePreparer applies any configuration that requires container replacement
+// before the sleeping container is started. It may update server.ContainerID
+// after persisting the replacement identity.
+type WakePreparer func(ctx context.Context, server *db.Server) error
 
 // SleepController defines container start/stop/status capabilities for deep sleep.
 type SleepController interface {
@@ -46,19 +52,20 @@ var (
 // is a full container start, so the proxy must hold the client until the
 // backend answers (see internal/proxy down-route handling).
 type DeepSleepManager struct {
-	controller  SleepController
-	commander   SleepCommander
-	store       SleeperStore
-	refresher   RouteRefresher
-	logger      *logger.Logger
-	idleTracker map[string]time.Time
-	trackerMu   sync.RWMutex
-	mu          sync.Mutex
-	playerCount func(serverID string) int
-	inflight    map[string]struct{}
-	inflightMu  sync.Mutex
-	ctx         context.Context
-	cancel      context.CancelFunc
+	controller   SleepController
+	commander    SleepCommander
+	store        SleeperStore
+	refresher    RouteRefresher
+	logger       *logger.Logger
+	idleTracker  map[string]time.Time
+	trackerMu    sync.RWMutex
+	mu           sync.Mutex
+	playerCount  func(serverID string) int
+	wakePreparer WakePreparer
+	inflight     map[string]struct{}
+	inflightMu   sync.Mutex
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 // NewDeepSleepManager creates a new DeepSleepManager. commander and refresher
@@ -81,6 +88,13 @@ func (m *DeepSleepManager) SetPlayerCountProvider(provider func(serverID string)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.playerCount = provider
+}
+
+// SetWakePreparer installs the staged-configuration preflight for cold wakes.
+func (m *DeepSleepManager) SetWakePreparer(preparer WakePreparer) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.wakePreparer = preparer
 }
 
 func (m *DeepSleepManager) onlinePlayers(srv *db.Server) int {
@@ -361,10 +375,6 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		return fmt.Errorf("server %s not found: %w", serverID, err)
 	}
 
-	if srv.ContainerID == "" {
-		return fmt.Errorf("server %s has no container", serverID)
-	}
-
 	if srv.Status == db.StatusRunning {
 		return nil
 	}
@@ -377,6 +387,18 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		return nil // boot already in flight; shared by concurrent joiners
 	}
 	defer m.endTransition(serverID)
+
+	m.mu.Lock()
+	prepareWake := m.wakePreparer
+	m.mu.Unlock()
+	if prepareWake != nil {
+		if err := prepareWake(ctx, srv); err != nil {
+			return fmt.Errorf("failed to prepare server %s for wake: %w", serverID, err)
+		}
+	}
+	if srv.ContainerID == "" {
+		return fmt.Errorf("server %s has no container", serverID)
+	}
 
 	start := time.Now()
 	if err := m.controller.StartContainer(ctx, srv.ContainerID); err != nil {
@@ -411,7 +433,10 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		}
 	}
 
-	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusRunning); err != nil {
+	srv.Status = db.StatusRunning
+	now := time.Now()
+	srv.LastStarted = &now
+	if err := m.store.UpdateServer(ctx, srv); err != nil {
 		return fmt.Errorf("failed to update server status to running: %w", err)
 	}
 
