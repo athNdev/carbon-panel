@@ -645,7 +645,7 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server); handled {
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
 		if err != nil {
 			return "", err
 		}
@@ -694,7 +694,7 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server); handled {
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
 		if err != nil {
 			return "", err
 		}
@@ -713,10 +713,50 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 	return "server started successfully", nil
 }
 
-// recreateForPendingStagedConfig ensures scheduled lifecycle operations cannot
-// start an old container and advance LastStarted past an applied on-restart
-// change. A replacement ID is persisted even when Docker reports a partial
-// recreate failure, allowing the next attempt to recover from the right object.
+// StartServerForBoot applies pending restart-only configuration before the
+// startup auto-start path can mark a server as successfully started. Existing
+// running containers are left alone; only stopped containers are started.
+func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Server) error {
+	if server == nil || server.ID == "" {
+		return fmt.Errorf("server ID is required")
+	}
+	if !docker.TryBeginServerTransition(server.ID) {
+		return fmt.Errorf("server lifecycle transition already in progress")
+	}
+	defer docker.EndServerTransition(server.ID)
+	if server.ContainerID == "" {
+		return fmt.Errorf("server has no container")
+	}
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
+		return err
+	}
+
+	status, err := s.docker.GetContainerStatus(ctx, server.ContainerID)
+	if err != nil {
+		return fmt.Errorf("failed to inspect server container: %w", err)
+	}
+	if status == storage.StatusPaused {
+		if err := s.docker.UnpauseContainer(ctx, server.ContainerID); err != nil {
+			return fmt.Errorf("failed to unpause server container: %w", err)
+		}
+		status = storage.StatusRunning
+	} else if status != storage.StatusRunning && status != storage.StatusUnhealthy {
+		if err := s.docker.StartContainer(ctx, server.ContainerID); err != nil {
+			server.Status = storage.StatusError
+			_ = s.store.UpdateServer(ctx, server)
+			return fmt.Errorf("failed to start server container: %w", err)
+		}
+		status = storage.StatusStarting
+		now := time.Now()
+		server.LastStarted = &now
+	}
+	server.Status = status
+	if err := s.store.UpdateServer(ctx, server); err != nil {
+		return fmt.Errorf("container started but server state could not be saved: %w", err)
+	}
+	return nil
+}
+
 type stagedLifecycleStore interface {
 	stagedConfigStore
 	GetServerConfig(ctx context.Context, serverID string) (*storage.ServerConfig, error)
@@ -734,7 +774,11 @@ type stagedLifecycleDocker interface {
 // start an old container and advance LastStarted past an applied on-restart
 // change. A replacement ID is persisted even when Docker reports a partial
 // recreate failure, allowing the next attempt to recover from the right object.
-func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server) (bool, error) {
+// recreateForPendingStagedConfig ensures scheduled lifecycle operations cannot
+// start an old container and advance LastStarted past an applied on-restart
+// change. A replacement ID is persisted even when Docker reports a partial
+// recreate failure, allowing the next attempt to recover from the right object.
+func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server, startReplacement, markStarted bool) (bool, error) {
 	applied, err := ApplyOnRestartStagedConfigs(ctx, store, server.ID)
 	if err != nil {
 		return true, fmt.Errorf("failed to apply staged server configuration: %w", err)
@@ -795,7 +839,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 	if err := store.UpdateServer(ctx, server); err != nil {
 		return true, fmt.Errorf("replacement container created but ID could not be saved: %w", err)
 	}
-	if !result.WasRunning {
+	if startReplacement && !result.WasRunning {
 		if err := dockerClient.StartContainer(ctx, result.NewContainerID); err != nil {
 			server.Status = storage.StatusError
 			_ = store.UpdateServer(ctx, server)
@@ -805,6 +849,9 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 	if err := store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 		return true, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err)
 	}
+	if !markStarted {
+		return true, nil
+	}
 	server.Status = storage.StatusStarting
 	now := time.Now()
 	server.LastStarted = &now
@@ -812,6 +859,14 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		return true, fmt.Errorf("server restarted but status could not be saved: %w", err)
 	}
 	return true, nil
+}
+
+// PrepareDeepSleepWake applies restart-only staged changes and replaces the
+// stopped container before DeepSleepManager starts it. The manager records
+// LastStarted only after Docker reports the replacement running.
+func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Server) error {
+	_, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, false, false)
+	return err
 }
 
 func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
