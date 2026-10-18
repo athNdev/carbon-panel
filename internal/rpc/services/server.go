@@ -140,6 +140,20 @@ func (s *ServerService) checkNodeMemoryCapacity(ctx context.Context, nodeID stri
 	return nil
 }
 
+// statusAfterContainerRecreation preserves intentional deep sleep when a
+// replacement container is created stopped. Other non-running replacements
+// represent a normal stopped server; a replacement that was running remains
+// running (or starting, where the caller owns that transition).
+func statusAfterContainerRecreation(previous storage.ServerStatus, wasRunning bool) storage.ServerStatus {
+	if wasRunning {
+		return storage.StatusRunning
+	}
+	if previous == storage.StatusDeepSleep {
+		return storage.StatusDeepSleep
+	}
+	return storage.StatusStopped
+}
+
 func (s *ServerService) selectNodeWithHostCapacity(ctx context.Context, strategy docker.PlacementStrategy, requestedMemoryMB int64) (*storage.Node, error) {
 	nodes, err := s.store.ListNodesWithStats(ctx)
 	if err != nil {
@@ -1417,26 +1431,40 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		if err != nil {
 			s.log.Error("Failed to recreate container: %v", err)
 			if result != nil && result.NewContainerID != "" {
-				// Container was created but failed to start
+				// Keep whichever container identity remains authoritative after
+				// partial recreation, including the original ID on pre-removal
+				// failure and a replacement ID after create/start failure.
 				server.ContainerID = result.NewContainerID
 				server.Status = storage.StatusError
 			} else {
-				// Complete failure
 				server.Status = storage.StatusError
 				server.ContainerID = ""
 			}
-		} else {
-			server.ContainerID = result.NewContainerID
-			if result.WasRunning {
-				server.Status = storage.StatusRunning
-			} else {
-				server.Status = storage.StatusStopped
+			persistErr := s.store.UpdateServer(ctx, server)
+			operationErr := fmt.Errorf("server settings were saved, but container recreation failed: %w", err)
+			if persistErr != nil {
+				s.log.Error("Failed to persist server state after container recreation failed: %v", persistErr)
+				operationErr = fmt.Errorf("%w (also failed to persist recovery state: %v)", operationErr, persistErr)
 			}
+			return nil, connect.NewError(connect.CodeInternal, operationErr)
+		} else {
+			if result == nil || result.NewContainerID == "" {
+				server.ContainerID = ""
+				server.Status = storage.StatusError
+				persistErr := s.store.UpdateServer(ctx, server)
+				operationErr := errors.New("server settings were saved, but container recreation returned no container ID")
+				if persistErr != nil {
+					operationErr = fmt.Errorf("%w (also failed to persist recovery state: %v)", operationErr, persistErr)
+				}
+				return nil, connect.NewError(connect.CodeInternal, operationErr)
+			}
+			server.ContainerID = result.NewContainerID
+			server.Status = statusAfterContainerRecreation(server.Status, result.WasRunning)
 		}
 
-		// Update server with new container ID and status
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server after container recreation: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container was recreated but server state could not be saved: %w", err))
 		}
 	}
 
