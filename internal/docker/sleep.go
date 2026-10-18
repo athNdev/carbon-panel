@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -269,6 +270,41 @@ func (m *DeepSleepManager) rollbackWake(ctx context.Context, serverID string) {
 	}
 }
 
+// rollbackWakePersistenceFailure restores the stopped state that backs the
+// persisted deep-sleep intent when Docker started successfully but the RUNNING
+// write failed. If Docker cannot be confirmed stopped, persist ERROR instead.
+func (m *DeepSleepManager) rollbackWakePersistenceFailure(ctx context.Context, serverID, containerID string) error {
+	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+
+	found, stopErr := m.controller.StopContainer(rollbackCtx, containerID)
+	if stopErr == nil && found {
+		status, statusErr := m.controller.GetContainerStatus(rollbackCtx, containerID)
+		if statusErr == nil && status == db.StatusStopped {
+			if m.refresher != nil {
+				m.refresher(serverID)
+			}
+			return nil
+		}
+		if statusErr != nil {
+			stopErr = fmt.Errorf("failed to verify stopped container: %w", statusErr)
+		} else {
+			stopErr = fmt.Errorf("container reported %s after stop", status)
+		}
+	} else if stopErr == nil {
+		stopErr = fmt.Errorf("container disappeared before stopped state could be confirmed")
+	}
+
+	stateErr := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError)
+	if stateErr != nil && m.logger != nil {
+		m.logger.Error("Wake: failed to persist error state after start rollback failed for server %s: %v", serverID, stateErr)
+	}
+	if m.refresher != nil {
+		m.refresher(serverID)
+	}
+	return errors.Join(fmt.Errorf("failed to stop container after wake status persistence failure: %w", stopErr), stateErr)
+}
+
 // SleepServer gracefully stops a server container and marks it deeply asleep.
 // The status is pre-set to StatusDeepSleep and proxy route updated before stopping
 // the container, so the reconciler never misclassifies the container exit as an
@@ -458,7 +494,9 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 	now := time.Now()
 	srv.LastStarted = &now
 	if err := m.store.UpdateServer(ctx, srv); err != nil {
-		return fmt.Errorf("failed to update server status to running: %w", err)
+		persistErr := fmt.Errorf("failed to update server status to running: %w", err)
+		rollbackErr := m.rollbackWakePersistenceFailure(ctx, serverID, srv.ContainerID)
+		return errors.Join(persistErr, rollbackErr)
 	}
 
 	m.trackerMu.Lock()

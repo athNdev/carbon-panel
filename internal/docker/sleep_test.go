@@ -19,6 +19,7 @@ type mockSleepController struct {
 	stops     []string
 	startGate chan struct{}
 	startErr  error
+	stopErr   error
 	startHook func(containerID string)
 }
 
@@ -52,6 +53,9 @@ func (m *mockSleepController) StartContainer(ctx context.Context, containerID st
 func (m *mockSleepController) StopContainer(ctx context.Context, containerID string) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.stopErr != nil {
+		return false, m.stopErr
+	}
 	if _, ok := m.status[containerID]; !ok {
 		return false, nil
 	}
@@ -355,6 +359,56 @@ func TestDeepSleepManager_WakeContainerStartFailure_RollsBackToError(t *testing.
 	require.NoError(t, err)
 	assert.Equal(t, db.StatusError, srv.Status, "server status must be rolled back to error")
 	assert.Contains(t, refreshed, "srv-sleep", "proxy route refresher must be invoked on wake failure")
+}
+
+func TestDeepSleepManager_WakePersistenceFailureStopsContainer(t *testing.T) {
+	ctx := context.Background()
+	controller, commander, store := newDeepSleepHarness()
+	mgr := NewDeepSleepManager(controller, store, commander, nil, nil)
+	require.NoError(t, mgr.SleepServer(ctx, "srv-sleep"))
+
+	store.mu.Lock()
+	store.updateServerErr = fmt.Errorf("injected server update failure")
+	store.mu.Unlock()
+
+	err := mgr.WakeServer(ctx, "srv-sleep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to update server status to running")
+
+	controller.mu.Lock()
+	status := controller.status["cnt-sleep"]
+	stops := append([]string(nil), controller.stops...)
+	controller.mu.Unlock()
+	if status != db.StatusStopped {
+		t.Fatalf("container status = %q after persistence failure, want stopped compensation", status)
+	}
+	assert.Contains(t, stops, "cnt-sleep", "wake compensation must stop the container")
+
+	server, err := store.GetServer(ctx, "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusDeepSleep, server.Status, "failed wake must retain the stored deep-sleep intent after confirmed stop")
+}
+
+func TestDeepSleepManager_WakePersistenceAndRollbackFailureMarksError(t *testing.T) {
+	ctx := context.Background()
+	controller, commander, store := newDeepSleepHarness()
+	mgr := NewDeepSleepManager(controller, store, commander, nil, nil)
+	require.NoError(t, mgr.SleepServer(ctx, "srv-sleep"))
+
+	store.mu.Lock()
+	store.updateServerErr = fmt.Errorf("injected server update failure")
+	store.mu.Unlock()
+	controller.mu.Lock()
+	controller.stopErr = fmt.Errorf("injected container stop failure")
+	controller.mu.Unlock()
+
+	err := mgr.WakeServer(ctx, "srv-sleep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to stop container after wake status persistence failure")
+
+	server, err := store.GetServer(ctx, "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusError, server.Status, "unknown live state after failed compensation must be reported as error")
 }
 
 func TestDeepSleepManager_WakeContainerPrematureExit_AbortsFast(t *testing.T) {

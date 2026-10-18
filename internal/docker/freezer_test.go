@@ -75,6 +75,7 @@ type mockFreezerStore struct {
 	mu              sync.Mutex
 	servers         map[string]*db.Server
 	updateStatusErr error
+	updateServerErr error
 }
 
 func newMockFreezerStore() *mockFreezerStore {
@@ -109,6 +110,9 @@ func (s *mockFreezerStore) ListServers(ctx context.Context) ([]*db.Server, error
 func (s *mockFreezerStore) UpdateServer(ctx context.Context, server *db.Server) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.updateServerErr != nil {
+		return s.updateServerErr
+	}
 	srvCopy := *server
 	s.servers[server.ID] = &srvCopy
 	return nil
