@@ -217,6 +217,12 @@ func main() {
 	hibernationMgr.Start(hibernateCtx, 30*time.Second)
 	defer hibernationMgr.Stop()
 
+	// Initialize task scheduler before exposing login-triggered wake handlers so
+	// staged configuration preparation is installed before any cold wake can run.
+	taskScheduler := scheduler.NewScheduler(store, dockerClient, sender, cfg, metricsCollector, log, scheduler.Config{
+		CheckInterval: time.Duration(cfg.Docker.SyncInterval) * time.Second, // Use same interval as container status monitor
+	})
+
 	// MINE-121: deep sleep — full container stop on idle (zero RAM/CPU),
 	// boot on login intent via the proxy. Only acts on servers with
 	// AutoDeepSleep enabled. The proxy serves cached MOTDs for down routes,
@@ -227,6 +233,7 @@ func main() {
 			_ = proxyManager.UpdateServerRoute(srv)
 		}
 	}, log)
+	deepSleepMgr.SetWakePreparer(taskScheduler.PrepareDeepSleepWake)
 	deepSleepMgr.SetPlayerCountProvider(func(serverID string) int {
 		if m := metricsCollector.GetMetrics(serverID); m != nil {
 			return m.PlayersOnline
@@ -244,11 +251,6 @@ func main() {
 	defer deepSleepCancel()
 	deepSleepMgr.Start(deepSleepCtx, 60*time.Second)
 	defer deepSleepMgr.Stop()
-
-	// Initialize task scheduler
-	taskScheduler := scheduler.NewScheduler(store, dockerClient, sender, cfg, metricsCollector, log, scheduler.Config{
-		CheckInterval: time.Duration(cfg.Docker.SyncInterval) * time.Second, // Use same interval as container status monitor
-	})
 
 	// Start the scheduler
 	if err := taskScheduler.Start(); err != nil {
@@ -323,40 +325,14 @@ func main() {
 				// Wait a moment for everything to initialize
 				time.Sleep(2 * time.Second)
 
-				// Get server config
-				_, err := store.GetServerConfig(ctx, server.ID)
-				if err != nil {
-					log.Error("Failed to get config for auto-start server %s: %v", server.Name, err)
+				if err := taskScheduler.StartServerForBoot(ctx, server); err != nil {
+					log.Error("Failed to auto-start server %s: %v", server.Name, err)
 					return
-				}
-
-				status, err := dockerClient.GetContainerStatus(ctx, server.ContainerID)
-				if err != nil {
-					log.Error("Failed to find existing container for auto-start server %s: %v", server.Name, err)
-					return
-				}
-
-				if status == storage.StatusStopped {
-					// Start the container
-					if err := dockerClient.StartContainer(ctx, server.ContainerID); err != nil {
-						log.Error("Failed to start container for auto-start server %s: %v", server.Name, err)
-						return
-					}
 				}
 
 				// Start log streaming for this container (whether it was just started or already running)
-				if status == storage.StatusRunning || status == storage.StatusStopped {
-					if err := rpcServer.StartLogStreaming(server.ContainerID); err != nil {
-						log.Error("Failed to start log streaming for auto-started server %s: %v", server.Name, err)
-					}
-				}
-
-				// Update server status
-				server.Status = storage.StatusRunning
-				now := time.Now()
-				server.LastStarted = &now
-				if err := store.UpdateServer(ctx, server); err != nil {
-					log.Error("Failed to update auto-start server %s: %v", server.Name, err)
+				if err := rpcServer.StartLogStreaming(server.ContainerID); err != nil {
+					log.Error("Failed to start log streaming for auto-started server %s: %v", server.Name, err)
 				}
 
 				// Update proxy route if enabled
