@@ -718,6 +718,9 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	if server.ContainerID == "" {
 		return fmt.Errorf("server has no container")
 	}
+	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID); err != nil {
+		return err
+	}
 	if handled, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, true, true); handled {
 		return err
 	}
@@ -744,6 +747,35 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	server.Status = status
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		return fmt.Errorf("container started but server state could not be saved: %w", err)
+	}
+	return nil
+}
+
+// checkNodeMemoryCapacity protects scheduler-owned starts (boot and deep-sleep
+// wake) with the same persisted reservation and live Docker host limits as RPC
+// lifecycle operations.
+func (s *Scheduler) checkNodeMemoryCapacity(ctx context.Context, nodeID string) error {
+	if s.store == nil || s.docker == nil {
+		return fmt.Errorf("cannot verify node memory capacity without a store and Docker client")
+	}
+	node, err := s.store.GetNode(ctx, nodeID)
+	if err != nil {
+		return fmt.Errorf("failed to load node capacity: %w", err)
+	}
+	hostMemoryMB, err := s.docker.HostMemoryMB(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot verify memory capacity on node %s: %w", node.Name, err)
+	}
+	allocatedMemoryMB, _, _, err := s.store.GetNodeStats(ctx, nodeID)
+	if err != nil {
+		return fmt.Errorf("cannot verify allocated memory on node %s: %w", node.Name, err)
+	}
+	capacityMB := hostMemoryMB
+	if node.MaxMemoryMB > 0 && node.MaxMemoryMB < capacityMB {
+		capacityMB = node.MaxMemoryMB
+	}
+	if allocatedMemoryMB > capacityMB {
+		return fmt.Errorf("node %s lacks memory capacity (allocated %d MB > limit %d MB)", node.Name, allocatedMemoryMB, capacityMB)
 	}
 	return nil
 }
@@ -856,6 +888,12 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 // stopped container before DeepSleepManager starts it. The manager records
 // LastStarted only after Docker reports the replacement running.
 func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Server) error {
+	if server == nil || server.ID == "" {
+		return fmt.Errorf("server ID is required")
+	}
+	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID); err != nil {
+		return err
+	}
 	_, err := recreateForPendingStagedConfig(ctx, s.store, s.docker, s.log, server, false, false)
 	return err
 }
