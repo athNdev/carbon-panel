@@ -1736,6 +1736,18 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		s.prepareServerConfig(ctx, server, serverConfig)
 		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
 		if err != nil {
+			// RecreateContainer can remove the old container and then fail while
+			// starting the replacement. Preserve its partial result so a retry can
+			// address the live replacement instead of a stale container ID.
+			if result != nil && result.NewContainerID != "" {
+				server.ContainerID = result.NewContainerID
+			} else {
+				server.ContainerID = ""
+			}
+			server.Status = storage.StatusError
+			if persistErr := s.store.UpdateServer(ctx, server); persistErr != nil {
+				s.log.Error("Failed to persist server state after staged recreation error for server %s: %v", server.ID, persistErr)
+			}
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server with staged configuration: %w", err))
 		}
 		if result == nil || result.NewContainerID == "" {
