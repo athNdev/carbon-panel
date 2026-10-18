@@ -8,6 +8,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 
@@ -92,6 +93,202 @@ func TestCreateServer_RejectsHostBoundPort(t *testing.T) {
 	}
 	if connErr.Code() != connect.CodeInvalidArgument {
 		t.Errorf("expected CodeInvalidArgument, got %v (%v)", connErr.Code(), connErr)
+	}
+}
+
+func TestCreateServer_RejectsMemoryRequestBeyondDockerHostCapacity(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }
+
+	_, err := svc.CreateServer(ctxWithRole("operator"), connect.NewRequest(&v1.CreateServerRequest{
+		Name:        "oversized-server",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
+		DockerImage: "java21",
+		Port:        25601,
+		Memory:      6144,
+	}))
+	if err == nil {
+		t.Fatal("expected memory request larger than Docker host capacity to be rejected")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T: %v", err, err)
+	}
+	if connErr.Code() != connect.CodeResourceExhausted {
+		t.Fatalf("expected CodeResourceExhausted, got %v (%v)", connErr.Code(), connErr)
+	}
+	servers, listErr := svc.store.ListServers(context.Background())
+	if listErr != nil {
+		t.Fatalf("failed to list servers: %v", listErr)
+	}
+	if len(servers) != 0 {
+		t.Fatalf("oversized request persisted %d servers before rejecting", len(servers))
+	}
+}
+
+func TestCreateServer_SerializesMemoryReservationAgainstConcurrentRequests(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }
+	ctx := ctxWithRole("operator")
+	type result struct{ err error }
+	results := make(chan result, 2)
+	for i, port := range []int32{25603, 25604} {
+		go func(i int, port int32) {
+			_, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+				Name:        fmt.Sprintf("capacity-race-%d", i),
+				NodeId:      "test-node",
+				McVersion:   "1.20.1",
+				DockerImage: "java21",
+				Port:        port,
+				Memory:      3072,
+			}))
+			results <- result{err: err}
+		}(i, port)
+	}
+
+	accepted, exhausted := 0, 0
+	for range 2 {
+		result := <-results
+		if result.err == nil {
+			accepted++
+			continue
+		}
+		connErr, ok := result.err.(*connect.Error)
+		if !ok || connErr.Code() != connect.CodeResourceExhausted {
+			t.Fatalf("unexpected create result: %v", result.err)
+		}
+		exhausted++
+	}
+	if accepted != 1 || exhausted != 1 {
+		t.Fatalf("accepted=%d exhausted=%d, want one of each", accepted, exhausted)
+	}
+	servers, err := svc.store.ListServers(context.Background())
+	if err != nil {
+		t.Fatalf("failed to list servers: %v", err)
+	}
+	if len(servers) != 1 {
+		t.Fatalf("stored %d servers after capacity race, want 1", len(servers))
+	}
+}
+
+func TestCreateServer_AutoPlacementSkipsNodeWithoutPhysicalMemoryCapacity(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	testNode, err := svc.store.GetNode(context.Background(), "test-node")
+	if err != nil {
+		t.Fatalf("failed to load helper node: %v", err)
+	}
+	testNode.MaxMemoryMB = 1
+	if err := svc.store.UpdateNode(context.Background(), testNode); err != nil {
+		t.Fatalf("failed to cap helper node: %v", err)
+	}
+	for _, node := range []*db.Node{
+		{ID: "a-small-node", Name: "Small Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline},
+		{ID: "z-large-node", Name: "Large Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline},
+	} {
+		if err := svc.store.CreateNode(context.Background(), node); err != nil {
+			t.Fatalf("failed to seed node %s: %v", node.ID, err)
+		}
+	}
+	if err := svc.store.CreateServer(context.Background(), &db.Server{
+		ID: "large-node-reservation", Name: "large-node-reservation", NodeID: "z-large-node",
+		Port: 25607, Memory: 1024, Status: db.StatusStopped,
+	}); err != nil {
+		t.Fatalf("failed to seed existing reservation: %v", err)
+	}
+	svc.hostMemoryMB = func(_ context.Context, nodeID string) (int64, error) {
+		if nodeID == "a-small-node" {
+			return 4096, nil
+		}
+		return 16 * 1024, nil
+	}
+
+	resp, err := svc.CreateServer(ctxWithRole("operator"), connect.NewRequest(&v1.CreateServerRequest{
+		Name:        "large-modpack",
+		McVersion:   "1.20.1",
+		DockerImage: "java21",
+		Port:        25608,
+		Memory:      6144,
+	}))
+	if err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+	if resp.Msg.Server.NodeId != "z-large-node" {
+		t.Fatalf("server placed on %q, want z-large-node with sufficient physical capacity", resp.Msg.Server.NodeId)
+	}
+}
+
+func TestStartServer_RejectsServerWhenNodeMemoryIsOvercommitted(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }
+	server := &db.Server{
+		ID:          "oversized-start-test",
+		Name:        "oversized-start-test",
+		NodeID:      "test-node",
+		Port:        25602,
+		Memory:      6144,
+		Status:      db.StatusStopped,
+		ContainerID: "must-not-start",
+	}
+	if err := svc.store.CreateServer(context.Background(), server); err != nil {
+		t.Fatalf("failed to create server fixture: %v", err)
+	}
+
+	_, err := svc.StartServer(ctxWithRole("operator"), connect.NewRequest(&v1.StartServerRequest{Id: server.ID}))
+	if err == nil {
+		t.Fatal("expected start to be rejected when reservations exceed Docker host capacity")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T: %v", err, err)
+	}
+	if connErr.Code() != connect.CodeResourceExhausted {
+		t.Fatalf("expected CodeResourceExhausted, got %v (%v)", connErr.Code(), connErr)
+	}
+	updated, getErr := svc.store.GetServer(context.Background(), server.ID)
+	if getErr != nil {
+		t.Fatalf("failed to reload server: %v", getErr)
+	}
+	if updated.Status != db.StatusStopped {
+		t.Fatalf("rejected start changed status to %q", updated.Status)
+	}
+}
+
+func TestUpdateServer_RejectsMemoryIncreaseBeyondNodeCapacity(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }
+	server := &db.Server{
+		ID:     "oversized-update-test",
+		Name:   "oversized-update-test",
+		NodeID: "test-node",
+		Port:   25605,
+		Memory: 2048,
+		Status: db.StatusStopped,
+	}
+	if err := svc.store.CreateServer(context.Background(), server); err != nil {
+		t.Fatalf("failed to create server fixture: %v", err)
+	}
+
+	_, err := svc.UpdateServer(ctxWithRole("operator"), connect.NewRequest(&v1.UpdateServerRequest{
+		Id:     server.ID,
+		Memory: 6144,
+	}))
+	if err == nil {
+		t.Fatal("expected memory increase beyond node capacity to be rejected")
+	}
+	connErr, ok := err.(*connect.Error)
+	if !ok {
+		t.Fatalf("expected *connect.Error, got %T: %v", err, err)
+	}
+	if connErr.Code() != connect.CodeResourceExhausted {
+		t.Fatalf("expected CodeResourceExhausted, got %v (%v)", connErr.Code(), connErr)
+	}
+	updated, getErr := svc.store.GetServer(context.Background(), server.ID)
+	if getErr != nil {
+		t.Fatalf("failed to reload server: %v", getErr)
+	}
+	if updated.Memory != server.Memory {
+		t.Fatalf("rejected update changed memory from %d to %d", server.Memory, updated.Memory)
 	}
 }
 
