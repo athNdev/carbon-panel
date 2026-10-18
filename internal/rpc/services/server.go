@@ -37,6 +37,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"github.com/athNdev/carbon-panel/pkg/utils"
+	"github.com/containerd/errdefs"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -970,6 +971,19 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
+	// The creation task continues after this RPC returns. Claim the same
+	// lifecycle transition used by start/stop/update/delete so those operations
+	// cannot race container creation or its final database writes.
+	if !docker.TryBeginServerTransition(server.ID) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	transitionHeld := true
+	defer func() {
+		if transitionHeld {
+			docker.EndServerTransition(server.ID)
+		}
+	}()
+
 	// Serialize capacity check and DB reservation so concurrent create
 	// requests cannot both observe the same free memory and overcommit a node.
 	s.capacityMu.Lock()
@@ -1081,6 +1095,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	createServer := *server
 	startImmediately := msg.StartImmediately
 	go func(server *storage.Server, startImmediately bool) {
+		defer docker.EndServerTransition(server.ID)
 		bgCtx := context.Background()
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
 
@@ -1153,6 +1168,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			s.log.Info("Server %s created but not started immediately", server.ID)
 		}
 	}(&createServer, startImmediately)
+	transitionHeld = false // ownership transferred to the asynchronous task
 
 	// Return immediately with the server in "creating" state
 	return connect.NewResponse(&v1.CreateServerResponse{
@@ -1486,43 +1502,46 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
-	// Remove proxy route if configured
-	if s.proxy != nil && server.ProxyHostname != "" {
-		if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
-			s.log.Error("Failed to remove proxy route: %v", err)
+	var dockerCli *docker.Client
+	if server.ContainerID != "" {
+		dockerCli, err = s.getDockerClientStrict(server.NodeID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q unavailable during deletion: %w", server.NodeID, err))
 		}
 	}
 
-	// Stop and remove module containers before deleting the server
-	// (database cascade will delete module records, but containers need cleanup)
+	// Stop and remove module containers before deleting the server. A module
+	// cleanup or lookup failure must keep the parent row so the remaining
+	// resources stay addressable and deletion can be retried.
 	if s.moduleManager != nil {
 		modules, err := s.store.ListServerModules(ctx, server.ID)
-		if err == nil {
-			for _, mod := range modules {
-				if mod.ContainerID != "" {
-					if err := s.moduleManager.StopModule(ctx, mod.ID); err != nil {
-						s.log.Error("Failed to stop module %s: %v", mod.ID, err)
-					}
-					if err := s.moduleManager.DeleteModule(ctx, mod.ID); err != nil {
-						s.log.Error("Failed to delete module %s: %v", mod.ID, err)
-					}
-				}
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list server modules before deletion: %w", err))
+		}
+		for _, mod := range modules {
+			if err := s.moduleManager.DeleteModule(ctx, mod.ID); err != nil {
+				s.log.Error("Failed to delete module %s: %v", mod.ID, err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete module %s: %w", mod.ID, err))
 			}
 		}
 	}
 
-	// Stop and remove container
+	// Stop and remove the server container before deleting its database row or
+	// data directory. A failed removal must not orphan a live container.
 	if server.ContainerID != "" {
-		dockerCli, err := s.getDockerClientStrict(server.NodeID)
-		if err != nil {
-			s.log.Warn("Docker node %q unavailable during deletion of server %s (%v); skipping container removal", server.NodeID, server.ID, err)
-		} else if dockerCli != nil {
-			if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
-				s.log.Error("Failed to stop container: %v", err)
-			}
-			if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil {
-				s.log.Error("Failed to remove container: %v", err)
-			}
+		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
+			s.log.Warn("Failed to stop container %s during deletion; removal will still be attempted: %v", server.ContainerID, err)
+		}
+		if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil && !errdefs.IsNotFound(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server container %s: %w", server.ContainerID, err))
+		}
+	}
+
+	// Remove proxy route only after Docker resources are gone. If earlier
+	// cleanup failed, the live server remains reachable while the caller retries.
+	if s.proxy != nil && server.ProxyHostname != "" {
+		if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server proxy route: %w", err))
 		}
 	}
 
