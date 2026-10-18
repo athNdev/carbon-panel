@@ -1694,6 +1694,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		server.ContainerID = containerID
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
+			_ = dockerCli.RemoveContainer(ctx, containerID)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
 		}
 	}
@@ -2018,6 +2019,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		server.ContainerID = containerID
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
+			_ = dockerCli.RemoveContainer(ctx, containerID)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
 		}
 
@@ -2058,6 +2060,29 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 	// Restart container
 	if err := dockerCli.RestartContainer(ctx, server.ContainerID, 2*time.Second); err != nil {
+		s.log.Warn("Failed to restart container directly (%v), attempting recreation", err)
+		serverConfig, cfgErr := s.store.GetServerConfig(ctx, server.ID)
+		if cfgErr == nil {
+			s.prepareServerConfig(ctx, server, serverConfig)
+			recResult, recErr := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+			if recErr == nil && recResult != nil && recResult.NewContainerID != "" {
+				server.ContainerID = recResult.NewContainerID
+				now := time.Now()
+				server.Status = storage.StatusStarting
+				server.LastStarted = &now
+				_ = s.store.UpdateServer(ctx, server)
+				_ = s.store.ClearEphemeralConfigFields(ctx, server.ID)
+				if s.bus != nil {
+					s.bus.Emit(ctx, events.Event{
+						Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_RESTART,
+						ServerID: server.ID,
+					})
+				}
+				return connect.NewResponse(&v1.RestartServerResponse{
+					Status: "starting",
+				}), nil
+			}
+		}
 		s.log.Error("Failed to restart container: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restart server"))
 	}
@@ -2123,6 +2148,11 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	if err != nil {
 		s.log.Error("Failed to recreate container: %v", err)
 		server.Status = storage.StatusError
+		if result != nil && result.NewContainerID != "" {
+			server.ContainerID = result.NewContainerID
+		} else {
+			server.ContainerID = ""
+		}
 		if updateErr := s.store.UpdateServer(ctx, server); updateErr != nil {
 			s.log.Error("Failed to update server status: %v", updateErr)
 		}
