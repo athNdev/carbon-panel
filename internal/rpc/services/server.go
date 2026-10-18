@@ -964,23 +964,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 				serverConfig.CFPageURL = &modpackURL
 			}
 		} else if modpack != nil && modpack.Indexer == "modrinth" {
-			var projectSpec string
-			if msg.ModpackVersionId != "" && msg.ModpackVersionId != "latest" {
-				projectSpec = fmt.Sprintf("%s:%s", modpack.IndexerID, msg.ModpackVersionId)
-				s.log.Info("Using specific Modrinth version: %s", projectSpec)
-			} else {
-				projectSpec = modpack.IndexerID
-				s.log.Info("Using latest Modrinth version for project: %s", projectSpec)
-			}
-			serverConfig.ModrinthModpack = &projectSpec
-			downloadDeps := "required"
-			serverConfig.ModrinthDownloadDependencies = &downloadDeps
-
-			// Only set version type when using latest
-			if msg.ModpackVersionId == "" || msg.ModpackVersionId == "latest" {
-				versionType := "release"
-				serverConfig.ModrinthModpackVersionType = &versionType
-			}
+			configureModrinthModpack(serverConfig, modpack.IndexerID, msg.ModpackVersionId)
 		}
 
 		// Update config with modpack settings
@@ -1066,6 +1050,11 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 // UpdateServer updates a server
 func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v1.UpdateServerRequest]) (*connect.Response[v1.UpdateServerResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.Id) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.Id)
+
 	msg := req.Msg
 
 	server, err := s.store.GetServer(ctx, msg.Id)
@@ -1277,25 +1266,12 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 				server.ModLoader = storage.ModLoaderModrinth
 				needsRecreation = true
 
-				var projectSpec string
-				if msg.ModpackVersionId != "" && msg.ModpackVersionId != "latest" {
-					projectSpec = fmt.Sprintf("%s:%s", modpack.IndexerID, msg.ModpackVersionId)
-				} else {
-					projectSpec = modpack.IndexerID
-				}
-				serverConfig.ModrinthModpack = &projectSpec
-
-				downloadDeps := "required"
-				serverConfig.ModrinthDownloadDependencies = &downloadDeps
-
-				if msg.ModpackVersionId == "" || msg.ModpackVersionId == "latest" {
-					versionType := "release"
-					serverConfig.ModrinthModpackVersionType = &versionType
-				}
+				configureModrinthModpack(serverConfig, modpack.IndexerID, msg.ModpackVersionId)
 			}
 
 			if err := s.store.UpdateServerConfig(ctx, serverConfig); err != nil {
 				s.log.Error("Failed to update server config with modpack settings: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save modpack configuration: %w", err))
 			}
 		}
 	}
@@ -1357,6 +1333,11 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 
 // DeleteServer deletes a server
 func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v1.DeleteServerRequest]) (*connect.Response[v1.DeleteServerResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.Id) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.Id)
+
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
@@ -1394,11 +1375,11 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 			s.log.Warn("Docker node %q unavailable during deletion of server %s (%v); skipping container removal", server.NodeID, server.ID, err)
 		} else if dockerCli != nil {
 			if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
-			s.log.Error("Failed to stop container: %v", err)
-		}
-		if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil {
-			s.log.Error("Failed to remove container: %v", err)
-		}
+				s.log.Error("Failed to stop container: %v", err)
+			}
+			if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil {
+				s.log.Error("Failed to remove container: %v", err)
+			}
 		}
 	}
 
@@ -1418,6 +1399,11 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 // StartServer starts a server
 func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.Id) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.Id)
+
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
@@ -1431,31 +1417,75 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	}
 
 	// Apply staged configs on restart/start (STAGED-CONFIG)
-	if n, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID); err == nil && n > 0 {
+	n, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID)
+	if err != nil {
+		s.log.Error("Failed to apply staged config changes on start for server %s: %v", server.ID, err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged config changes: %w", err))
+	}
+	if n > 0 {
 		s.log.Info("Applied %d staged config change(s) on start for server %s", n, server.ID)
 	}
+	pendingRecreate, err := scheduler.HasPendingRestartStagedConfigRecreate(ctx, s.store, server.ID, server.LastStarted)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check staged config recovery: %w", err))
+	}
+	needsStagedRecreate := n > 0 || pendingRecreate
+	stagedContainerStarted := false
 
 	// If server was in deep sleep, release direct knock listener before starting
 	if server.Status == storage.StatusDeepSleep && s.proxy != nil {
 		s.proxy.StopDirectKnock(server.ID)
 	}
 
-	// If server is paused, unpause container (MINE-172)
+	// Resume paused containers, then continue when staged settings require recreation.
 	if server.Status == storage.StatusPaused && server.ContainerID != "" {
 		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
-			s.log.Error("Failed to unpause container: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
 		}
 		server.Status = storage.StatusRunning
+		if !needsStagedRecreate {
+			if err := s.store.UpdateServer(ctx, server); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server resumed but status could not be saved: %w", err))
+			}
+			if s.proxy != nil && server.ProxyHostname != "" {
+				_ = s.proxy.UpdateServerRoute(server)
+			}
+			return connect.NewResponse(&v1.StartServerResponse{Status: "running"}), nil
+		}
+	}
+
+	if needsStagedRecreate && server.ContainerID != "" {
+		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration: %w", err))
+		}
+		s.prepareServerConfig(ctx, server, serverConfig)
+		result, recreateErr := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+		if recreateErr != nil {
+			if result != nil && result.NewContainerID != "" {
+				server.ContainerID = result.NewContainerID
+			} else {
+				server.ContainerID = ""
+			}
+			server.Status = storage.StatusError
+			_ = s.store.UpdateServer(ctx, server)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server with staged configuration: %w", recreateErr))
+		}
+		if result == nil || result.NewContainerID == "" {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container recreation returned no container ID"))
+		}
+		server.ContainerID = result.NewContainerID
 		if err := s.store.UpdateServer(ctx, server); err != nil {
-			s.log.Error("Failed to update server status after unpause: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container recreated but its ID could not be saved: %w", err))
 		}
-		if s.proxy != nil && server.ProxyHostname != "" {
-			_ = s.proxy.UpdateServerRoute(server)
+		if !result.WasRunning {
+			if err := dockerCli.StartContainer(ctx, result.NewContainerID); err != nil {
+				server.Status = storage.StatusError
+				_ = s.store.UpdateServer(ctx, server)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start recreated server: %w", err))
+			}
 		}
-		return connect.NewResponse(&v1.StartServerResponse{
-			Status: "running",
-		}), nil
+		stagedContainerStarted = true
 	}
 
 	// If container doesn't exist (e.g. ContainerID lost/never persisted), try to recover an
@@ -1493,53 +1523,57 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		}
 	}
 
-	// Start container
-	if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
-		s.log.Error("Failed to start container, attempting to recreate: %v", err)
+	if !stagedContainerStarted {
 
-		// Get server config for container creation
-		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
-		if err != nil {
-			s.log.Error("Failed to get server config: %v", err)
-			server.Status = storage.StatusError
-			_ = s.store.UpdateServer(ctx, server)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration"))
-		}
+		// Start container
+		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
+			s.log.Error("Failed to start container, attempting to recreate: %v", err)
 
-		// Recreate container
-		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
-		if err != nil {
-			s.log.Error("Failed to recreate container: %v", err)
-			if result != nil && result.NewContainerID != "" {
-				// Container was created but failed to start
-				server.ContainerID = result.NewContainerID
-			} else {
-				// Complete failure
-				server.ContainerID = ""
-			}
-			server.Status = storage.StatusError
-			_ = s.store.UpdateServer(ctx, server)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", err))
-		}
-
-		server.ContainerID = result.NewContainerID
-
-		// RecreateContainer only starts the container if result.WasRunning was true.
-		// Since StartServer was requested, start the newly recreated container.
-		if !result.WasRunning {
-			if startErr := dockerCli.StartContainer(ctx, result.NewContainerID); startErr != nil {
-				s.log.Error("Failed to start recreated container: %v", startErr)
+			// Get server config for container creation
+			serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
+			if err != nil {
+				s.log.Error("Failed to get server config: %v", err)
 				server.Status = storage.StatusError
 				_ = s.store.UpdateServer(ctx, server)
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", startErr))
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration"))
+			}
+
+			// Recreate container
+			result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+			if err != nil {
+				s.log.Error("Failed to recreate container: %v", err)
+				if result != nil && result.NewContainerID != "" {
+					// Container was created but failed to start
+					server.ContainerID = result.NewContainerID
+				} else {
+					// Complete failure
+					server.ContainerID = ""
+				}
+				server.Status = storage.StatusError
+				_ = s.store.UpdateServer(ctx, server)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", err))
+			}
+
+			server.ContainerID = result.NewContainerID
+
+			// RecreateContainer only starts the container if result.WasRunning was true.
+			// Since StartServer was requested, start the newly recreated container.
+			if !result.WasRunning {
+				if startErr := dockerCli.StartContainer(ctx, result.NewContainerID); startErr != nil {
+					s.log.Error("Failed to start recreated container: %v", startErr)
+					server.Status = storage.StatusError
+					_ = s.store.UpdateServer(ctx, server)
+					return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server: %w", startErr))
+				}
+			}
+
+			// Update server with new container ID
+			if err := s.store.UpdateServer(ctx, server); err != nil {
+				s.log.Error("Failed to update server after container recreation: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server after container recreation"))
 			}
 		}
 
-		// Update server with new container ID
-		if err := s.store.UpdateServer(ctx, server); err != nil {
-			s.log.Error("Failed to update server after container recreation: %v", err)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server after container recreation"))
-		}
 	}
 
 	// Update server status
@@ -1549,6 +1583,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		s.log.Error("Failed to update server status: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server started but status could not be saved: %w", err))
 	}
 
 	// Update proxy route if enabled
@@ -1561,6 +1596,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	// Clear ephemeral configuration fields
 	if err := s.store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 		s.log.Error("Failed to clear ephemeral config fields: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server started but temporary config could not be cleared: %w", err))
 	}
 
 	// Emit the server-start event
@@ -1581,6 +1617,11 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 
 // StopServer stops a server
 func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.Id) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.Id)
+
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
@@ -1591,6 +1632,7 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 		server.Status = storage.StatusStopped
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server status: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server stopped but status could not be saved: %w", err))
 		}
 		return connect.NewResponse(&v1.StopServerResponse{
 			Status: "stopped",
@@ -1605,7 +1647,9 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 
 	// If server is paused, unpause it first so Docker daemon doesn't reject stop (Docker requires unpaused before stop)
 	if server.Status == storage.StatusPaused && server.ContainerID != "" {
-		_ = dockerCli.UnpauseContainer(ctx, server.ContainerID)
+		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server before stopping: %w", err))
+		}
 	}
 
 	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
@@ -1623,6 +1667,7 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		s.log.Error("Failed to update server status: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server stopped but status could not be saved: %w", err))
 	}
 
 	// Remove proxy route or direct knock listener
@@ -1654,6 +1699,11 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 
 // RestartServer restarts a server
 func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[v1.RestartServerRequest]) (*connect.Response[v1.RestartServerResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.Id) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.Id)
+
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
@@ -1664,52 +1714,83 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
 
-	// If server is paused, unpause it first so Docker can restart it
-	if server.Status == storage.StatusPaused && server.ContainerID != "" {
-		_ = dockerCli.UnpauseContainer(ctx, server.ContainerID)
+	// Apply any staged config changes marked for restart
+	stagedApplied, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID)
+	if err != nil {
+		s.log.Error("Failed to apply staged config changes on restart for server %s: %v", server.ID, err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged config changes: %w", err))
 	}
-
 	// If server is in deep sleep, release direct knock listener before starting
 	if server.Status == storage.StatusDeepSleep && s.proxy != nil {
 		s.proxy.StopDirectKnock(server.ID)
 	}
-
-	// Apply any staged config changes marked for restart
-	stagedApplied, err := scheduler.ApplyOnRestartStagedConfigs(ctx, s.store, server.ID)
-	if err != nil {
-		s.log.Warn("Failed to apply staged config changes on restart for server %s: %v", server.ID, err)
-	}
-
-	// If staged config changes were applied and container exists, recreate it with new config
-	if stagedApplied > 0 && server.ContainerID != "" {
-		serverConfig, cfgErr := s.store.GetServerConfig(ctx, server.ID)
-		if cfgErr == nil {
-			s.prepareServerConfig(ctx, server, serverConfig)
-			if recreateResult, recErr := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig); recErr == nil && recreateResult != nil {
-				server.ContainerID = recreateResult.NewContainerID
-				_ = s.store.UpdateServer(ctx, server)
-				if !recreateResult.WasRunning {
-					_ = dockerCli.StartContainer(ctx, recreateResult.NewContainerID)
-				}
-				now := time.Now()
-				server.Status = storage.StatusStarting
-				server.LastStarted = &now
-				_ = s.store.UpdateServer(ctx, server)
-				_ = s.store.ClearEphemeralConfigFields(ctx, server.ID)
-				if s.bus != nil {
-					s.bus.Emit(ctx, events.Event{
-						Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_RESTART,
-						ServerID: server.ID,
-					})
-				}
-				s.auditPower(ctx, req.Peer().Addr, activity.EventServerRestart, server.ID)
-				return connect.NewResponse(&v1.RestartServerResponse{
-					Status: "starting",
-				}), nil
-			}
+	// If server is paused, unpause it first so Docker can restart it
+	if server.Status == storage.StatusPaused && server.ContainerID != "" {
+		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server before restarting: %w", err))
 		}
 	}
 
+	pendingRecreate, err := scheduler.HasPendingRestartStagedConfigRecreate(ctx, s.store, server.ID, server.LastStarted)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check staged config recovery: %w", err))
+	}
+
+	// If staged config changes were applied and container exists, recreate it with new config
+	if (stagedApplied > 0 || pendingRecreate) && server.ContainerID != "" {
+		serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration: %w", err))
+		}
+		s.prepareServerConfig(ctx, server, serverConfig)
+		result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)
+		if err != nil {
+			// RecreateContainer can remove the old container and then fail while
+			// starting the replacement. Preserve its partial result so a retry can
+			// address the live replacement instead of a stale container ID.
+			if result != nil && result.NewContainerID != "" {
+				server.ContainerID = result.NewContainerID
+			} else {
+				server.ContainerID = ""
+			}
+			server.Status = storage.StatusError
+			if persistErr := s.store.UpdateServer(ctx, server); persistErr != nil {
+				s.log.Error("Failed to persist server state after staged recreation error for server %s: %v", server.ID, persistErr)
+			}
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server with staged configuration: %w", err))
+		}
+		if result == nil || result.NewContainerID == "" {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container recreation returned no container ID"))
+		}
+		server.ContainerID = result.NewContainerID
+		if err := s.store.UpdateServer(ctx, server); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container recreated but its ID could not be saved: %w", err))
+		}
+		if !result.WasRunning {
+			if err := dockerCli.StartContainer(ctx, result.NewContainerID); err != nil {
+				server.Status = storage.StatusError
+				_ = s.store.UpdateServer(ctx, server)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start recreated server: %w", err))
+			}
+		}
+		now := time.Now()
+		server.Status = storage.StatusStarting
+		server.LastStarted = &now
+		if err := s.store.UpdateServer(ctx, server); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server recreated but status could not be saved: %w", err))
+		}
+		if err := s.store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err))
+		}
+		if s.bus != nil {
+			s.bus.Emit(ctx, events.Event{
+				Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_RESTART,
+				ServerID: server.ID,
+			})
+		}
+		s.auditPower(ctx, req.Peer().Addr, activity.EventServerRestart, server.ID)
+		return connect.NewResponse(&v1.RestartServerResponse{Status: "starting"}), nil
+	}
 	// If container doesn't exist, create it and start it
 	if server.ContainerID == "" {
 		// Get server config for container creation
@@ -1746,11 +1827,13 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server status: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server restarted but status could not be saved: %w", err))
 		}
 
 		// Clear ephemeral configuration fields
 		if err := s.store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 			s.log.Error("Failed to clear ephemeral config fields: %v", err)
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err))
 		}
 
 		// Emit the server-restart event
@@ -1778,11 +1861,13 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	server.LastStarted = &now
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		s.log.Error("Failed to update server status: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server restarted but status could not be saved: %w", err))
 	}
 
 	// Clear ephemeral configuration fields
 	if err := s.store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 		s.log.Error("Failed to clear ephemeral config fields: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err))
 	}
 
 	// Emit the server-restart event
@@ -1802,6 +1887,11 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 // Destroys and recreates a server container from scratch - brute force reset
 func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request[v1.RecreateServerRequest]) (*connect.Response[v1.RecreateServerResponse], error) {
+	if !docker.TryBeginServerTransition(req.Msg.Id) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(req.Msg.Id)
+
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
@@ -1862,6 +1952,7 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	// Clear ephemeral configuration fields
 	if err := s.store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 		s.log.Error("Failed to clear ephemeral config fields: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server recreated but temporary config could not be cleared: %w", err))
 	}
 
 	s.log.Info("Server %s recreated successfully with new container %s", server.Name, result.NewContainerID)

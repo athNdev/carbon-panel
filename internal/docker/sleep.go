@@ -100,22 +100,31 @@ func (m *DeepSleepManager) onlinePlayers(srv *db.Server) int {
 }
 
 func (m *DeepSleepManager) tryBeginTransition(serverID, op string) bool {
+	if !TryBeginServerTransition(serverID) {
+		if m.logger != nil {
+			m.logger.Debug("Deep sleep: skipping %s for server %s: transition already in flight", op, serverID)
+		}
+		return false
+	}
 	m.inflightMu.Lock()
-	defer m.inflightMu.Unlock()
 	if _, busy := m.inflight[serverID]; busy {
+		m.inflightMu.Unlock()
+		EndServerTransition(serverID)
 		if m.logger != nil {
 			m.logger.Debug("Deep sleep: skipping %s for server %s: transition already in flight", op, serverID)
 		}
 		return false
 	}
 	m.inflight[serverID] = struct{}{}
+	m.inflightMu.Unlock()
 	return true
 }
 
 func (m *DeepSleepManager) endTransition(serverID string) {
 	m.inflightMu.Lock()
-	defer m.inflightMu.Unlock()
 	delete(m.inflight, serverID)
+	m.inflightMu.Unlock()
+	EndServerTransition(serverID)
 }
 
 // IsTransitioning returns whether the server is currently transitioning (sleeping or waking).
