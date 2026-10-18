@@ -442,6 +442,16 @@ func containerIP(summary *container.Summary) string {
 // observed state, adopting a drifted container ID, self-healing a missing
 // container, and emitting lifecycle events on real transitions.
 func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error {
+	// RPC lifecycle operations, deep sleep, freezing, and reconciliation all
+	// mutate the same server/container relationship. A pass that overlaps one
+	// of those transitions can observe a half-created or half-stopped container
+	// and persist a false state. Leave the current pass to the next Docker event
+	// or periodic sweep when another operation owns the server.
+	if !docker.TryBeginServerTransition(serverID) {
+		return nil
+	}
+	defer docker.EndServerTransition(serverID)
+
 	server, err := r.store.GetServer(ctx, serverID)
 	if err != nil {
 		// Deleted, or a transient DB read failure; either way there is nothing

@@ -191,6 +191,7 @@ func TestUpdateServer_PrivilegedOverrides_RejectedWithoutElevatedPermission(t *t
 	if err != nil {
 		t.Fatalf("failed to create server fixture: %v", err)
 	}
+	waitForServerTransition(t, created.Msg.Server.Id)
 
 	operatorCtx := ctxWithRole("operator")
 	_, err = svc.UpdateServer(operatorCtx, connect.NewRequest(&v1.UpdateServerRequest{
@@ -223,6 +224,7 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 	if err != nil {
 		t.Fatalf("failed to create server fixture: %v", err)
 	}
+	waitForServerTransition(t, created.Msg.Server.Id)
 
 	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id:              created.Msg.Server.Id,

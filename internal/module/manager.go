@@ -13,6 +13,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/containerd/errdefs"
 )
 
 // Manager handles the lifecycle of modules
@@ -676,6 +677,10 @@ func (m *Manager) DeleteModule(ctx context.Context, moduleID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get module: %w", err)
 	}
+	dockerCli := m.resolveDocker(module.NodeID)
+	if module.ContainerID != "" && dockerCli == nil {
+		return fmt.Errorf("no Docker client available for module node %q", module.NodeID)
+	}
 
 	// Stop if running
 	if module.Status == storage.ModuleStatusRunning {
@@ -686,15 +691,15 @@ func (m *Manager) DeleteModule(ctx context.Context, moduleID string) error {
 
 	// Remove container
 	if module.ContainerID != "" {
-		if err := m.resolveDocker(module.NodeID).RemoveContainer(ctx, module.ContainerID); err != nil {
-			m.logger.Error("Failed to remove module container: %v", err)
+		if err := dockerCli.RemoveContainer(ctx, module.ContainerID); err != nil && !errdefs.IsNotFound(err) {
+			return fmt.Errorf("failed to remove module container %s: %w", module.ContainerID, err)
 		}
 	}
 
 	// Clean up associated API token
 	if module.TokenID != "" {
 		if err := m.store.DeleteAPITokenByID(ctx, module.TokenID); err != nil {
-			m.logger.Error("Failed to delete module API token: %v", err)
+			return fmt.Errorf("failed to delete module API token: %w", err)
 		}
 	}
 
