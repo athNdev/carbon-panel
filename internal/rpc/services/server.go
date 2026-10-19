@@ -144,6 +144,48 @@ func (s *ServerService) checkNodeMemoryCapacity(ctx context.Context, nodeID stri
 	return nil
 }
 
+// checkServerStartCapacity ensures starting a server does not exceed the node's
+// memory limit when combined with other currently active (running/starting) servers.
+func (s *ServerService) checkServerStartCapacity(ctx context.Context, server *storage.Server) error {
+	if server == nil {
+		return fmt.Errorf("server is nil")
+	}
+	node, err := s.store.GetNode(ctx, server.NodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to load target node capacity: %w", err))
+	}
+	hostMemoryMB, err := s.getHostMemoryMB(ctx, server.NodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot verify memory capacity on node %s: %w", node.Name, err))
+	}
+
+	capacityMB := hostMemoryMB
+	if node.MaxMemoryMB > 0 && node.MaxMemoryMB < capacityMB {
+		capacityMB = node.MaxMemoryMB
+	}
+
+	// Server itself cannot exceed node capacity
+	if int64(server.Memory) > capacityMB {
+		return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("node %s lacks memory capacity (server requires %d MB > limit %d MB)", node.Name, server.Memory, capacityMB))
+	}
+
+	// Active running/starting memory + this server (if not already running) cannot exceed capacity
+	runningMemoryMB, err := s.store.GetNodeRunningMemoryMB(ctx, server.NodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot verify running memory on node %s: %w", node.Name, err))
+	}
+
+	additionalMB := int64(server.Memory)
+	if server.Status == storage.StatusRunning || server.Status == storage.StatusStarting {
+		additionalMB = 0
+	}
+
+	if runningMemoryMB+additionalMB > capacityMB {
+		return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("node %s lacks memory capacity to run server (running %d MB + requested %d MB > limit %d MB)", node.Name, runningMemoryMB, additionalMB, capacityMB))
+	}
+	return nil
+}
+
 // statusAfterContainerRecreation preserves intentional deep sleep when a
 // replacement container is created stopped. Other non-running replacements
 // represent a normal stopped server; a replacement that was running remains
@@ -1147,7 +1189,8 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	startImmediately := msg.StartImmediately
 	go func(server *storage.Server, startImmediately bool) {
 		defer docker.EndServerTransition(server.ID)
-		bgCtx := context.Background()
+		bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
 
 		s.prepareServerConfig(bgCtx, server, serverConfig)
@@ -1655,7 +1698,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		_ = s.store.UpdateServer(ctx, server)
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
-	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, 0); err != nil {
+	if err := s.checkServerStartCapacity(ctx, server); err != nil {
 		return nil, err
 	}
 
@@ -2006,7 +2049,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
-	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, 0); err != nil {
+	if err := s.checkServerStartCapacity(ctx, server); err != nil {
 		return nil, err
 	}
 
@@ -2268,7 +2311,7 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable: %w", server.NodeID, err))
 	}
-	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID, 0); err != nil {
+	if err := s.checkServerStartCapacity(ctx, server); err != nil {
 		return nil, err
 	}
 	result, err := dockerCli.RecreateContainer(ctx, server.ContainerID, server, serverConfig)

@@ -114,6 +114,7 @@ func main() {
 	dockerClient, err := docker.NewClient(cfg.Docker.Host, log, docker.ClientConfig{
 		APIVersion:      cfg.Docker.Version,
 		NetworkName:     cfg.Docker.NetworkName,
+		NetworkMTU:      cfg.Docker.NetworkMTU,
 		RegistryURL:     cfg.Docker.RegistryURL,
 		DNS:             cfg.Docker.DNS,
 		Labels:          cfg.Docker.Labels,

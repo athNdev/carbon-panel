@@ -151,6 +151,35 @@ func TestStore_NodeCRUD(t *testing.T) {
 		t.Fatalf("unexpected node stats: mem=%d, count=%d, running=%d", mem, count, running)
 	}
 
+	runningMem, err := store.GetNodeRunningMemoryMB(ctx, "node-remote-1")
+	if err != nil {
+		t.Fatalf("GetNodeRunningMemoryMB failed: %v", err)
+	}
+	if runningMem != 4096 {
+		t.Fatalf("expected running memory 4096, got %d", runningMem)
+	}
+
+	stoppedServer := &Server{
+		ID:        "server-node-stopped",
+		Name:      "Stopped Server",
+		ModLoader: ModLoaderVanilla,
+		MCVersion: "1.20.4",
+		NodeID:    "node-remote-1",
+		Status:    StatusStopped,
+		Memory:    2048,
+		DataPath:  "/tmp/server-stopped",
+	}
+	if err := store.CreateServer(ctx, stoppedServer); err != nil {
+		t.Fatalf("failed to create stopped server: %v", err)
+	}
+	runningMemAfter, err := store.GetNodeRunningMemoryMB(ctx, "node-remote-1")
+	if err != nil {
+		t.Fatalf("GetNodeRunningMemoryMB after stopped server failed: %v", err)
+	}
+	if runningMemAfter != 4096 {
+		t.Fatalf("expected running memory to remain 4096, got %d", runningMemAfter)
+	}
+
 	// Check ListNodesWithStats
 	nodesWithStats, err := store.ListNodesWithStats(ctx)
 	if err != nil {
@@ -160,7 +189,7 @@ func TestStore_NodeCRUD(t *testing.T) {
 	for _, n := range nodesWithStats {
 		if n.ID == "node-remote-1" {
 			foundRemote = true
-			if n.AllocatedMemoryMB != 4096 || n.ServerCount != 1 || n.RunningCount != 1 {
+			if n.AllocatedMemoryMB != 6144 || n.ServerCount != 2 || n.RunningCount != 1 {
 				t.Fatalf("node-remote-1 stats mismatch in ListNodesWithStats: %+v", n)
 			}
 		}
@@ -169,9 +198,12 @@ func TestStore_NodeCRUD(t *testing.T) {
 		t.Fatalf("node-remote-1 not found in ListNodesWithStats")
 	}
 
-	// Delete the server, then deleting node should succeed
+	// Delete both servers, then deleting node should succeed
 	if err := store.DeleteServer(ctx, "server-node-1"); err != nil {
-		t.Fatalf("failed to delete server: %v", err)
+		t.Fatalf("failed to delete server-node-1: %v", err)
+	}
+	if err := store.DeleteServer(ctx, "server-node-stopped"); err != nil {
+		t.Fatalf("failed to delete server-node-stopped: %v", err)
 	}
 
 	if err := store.DeleteNode(ctx, "node-remote-1"); err != nil {

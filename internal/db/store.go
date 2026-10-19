@@ -1378,6 +1378,16 @@ func (s *Store) GetNodeStats(ctx context.Context, nodeID string) (allocatedMemMB
 	return agg.TotalMemory, agg.ServerCount, agg.RunningCount, nil
 }
 
+// GetNodeRunningMemoryMB returns the sum of memory for all active (running or starting) servers on a node.
+func (s *Store) GetNodeRunningMemoryMB(ctx context.Context, nodeID string) (int64, error) {
+	var runningMem int64
+	err := s.db.WithContext(ctx).Model(&Server{}).
+		Select("COALESCE(SUM(memory), 0)").
+		Where("node_id = ? AND status IN (?, ?)", nodeID, StatusRunning, StatusStarting).
+		Scan(&runningMem).Error
+	return runningMem, err
+}
+
 func (s *Store) ListNodesWithStats(ctx context.Context) ([]*Node, error) {
 	nodes, err := s.ListNodes(ctx)
 	if err != nil {
