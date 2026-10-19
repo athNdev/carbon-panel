@@ -440,7 +440,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 	function formatMemory(mb: number | bigint): string {
 		const val = Number(mb);
-		if (val <= 0) return 'Unlimited';
+		if (val <= 0) return '0 MB';
 		if (val >= 1024) {
 			return `${(val / 1024).toFixed(1)} GB`;
 		}
@@ -584,8 +584,32 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 									</div>
 									<div class="font-medium text-foreground">
 										{formatMemory(node.allocatedMemoryMb)}
-										{#if node.maxMemoryMb > 0}
+										{#if Number(node.maxMemoryMb) > 0}
 											<span class="text-muted-foreground">/ {formatMemory(node.maxMemoryMb)}</span>
+										{/if}
+									</div>
+								</div>
+
+								<div class="space-y-0.5">
+									<div class="flex items-center gap-1 text-muted-foreground">
+										<Activity class="h-3.5 w-3.5" />
+										<span>Available RAM</span>
+									</div>
+									<div class="font-medium text-foreground">
+										{#if Number(node.availableMemoryMb) > 0}
+											<span class="font-semibold text-emerald-500"
+												>{formatMemory(node.availableMemoryMb)}</span
+											>
+										{:else if Number(node.maxMemoryMb) > 0 && Number(node.maxMemoryMb) <= Number(node.allocatedMemoryMb)}
+											<span class="font-semibold text-rose-500">0 MB (Full)</span>
+										{:else if Number(node.maxMemoryMb) > 0}
+											<span class="font-semibold text-emerald-500"
+												>{formatMemory(
+													Number(node.maxMemoryMb) - Number(node.allocatedMemoryMb)
+												)}</span
+											>
+										{:else}
+											<span class="text-muted-foreground">Dynamic</span>
 										{/if}
 									</div>
 								</div>

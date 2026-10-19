@@ -104,6 +104,8 @@ type Node struct {
 	AllocatedMemoryMb int64                  `protobuf:"varint,18,opt,name=allocated_memory_mb,json=allocatedMemoryMb,proto3" json:"allocated_memory_mb,omitempty"`
 	ServerCount       int32                  `protobuf:"varint,19,opt,name=server_count,json=serverCount,proto3" json:"server_count,omitempty"`
 	RunningCount      int32                  `protobuf:"varint,20,opt,name=running_count,json=runningCount,proto3" json:"running_count,omitempty"`
+	TotalMemoryMb     int64                  `protobuf:"varint,21,opt,name=total_memory_mb,json=totalMemoryMb,proto3" json:"total_memory_mb,omitempty"`
+	AvailableMemoryMb int64                  `protobuf:"varint,22,opt,name=available_memory_mb,json=availableMemoryMb,proto3" json:"available_memory_mb,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -274,6 +276,20 @@ func (x *Node) GetServerCount() int32 {
 func (x *Node) GetRunningCount() int32 {
 	if x != nil {
 		return x.RunningCount
+	}
+	return 0
+}
+
+func (x *Node) GetTotalMemoryMb() int64 {
+	if x != nil {
+		return x.TotalMemoryMb
+	}
+	return 0
+}
+
+func (x *Node) GetAvailableMemoryMb() int64 {
+	if x != nil {
+		return x.AvailableMemoryMb
 	}
 	return 0
 }
@@ -1006,7 +1022,7 @@ var File_carbonpanel_v1_node_proto protoreflect.FileDescriptor
 
 const file_carbonpanel_v1_node_proto_rawDesc = "" +
 	"\n" +
-	"\x19carbonpanel/v1/node.proto\x12\x0ecarbonpanel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf7\x05\n" +
+	"\x19carbonpanel/v1/node.proto\x12\x0ecarbonpanel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcf\x06\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -1032,7 +1048,9 @@ const file_carbonpanel_v1_node_proto_rawDesc = "" +
 	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12.\n" +
 	"\x13allocated_memory_mb\x18\x12 \x01(\x03R\x11allocatedMemoryMb\x12!\n" +
 	"\fserver_count\x18\x13 \x01(\x05R\vserverCount\x12#\n" +
-	"\rrunning_count\x18\x14 \x01(\x05R\frunningCountB\x11\n" +
+	"\rrunning_count\x18\x14 \x01(\x05R\frunningCount\x12&\n" +
+	"\x0ftotal_memory_mb\x18\x15 \x01(\x03R\rtotalMemoryMb\x12.\n" +
+	"\x13available_memory_mb\x18\x16 \x01(\x03R\x11availableMemoryMbB\x11\n" +
 	"\x0f_last_heartbeat\"\x12\n" +
 	"\x10ListNodesRequest\"?\n" +
 	"\x11ListNodesResponse\x12*\n" +

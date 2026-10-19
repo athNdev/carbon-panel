@@ -16,17 +16,17 @@ cd "$(dirname "$0")/../web/carbon-panel"
 
 MEM_KB="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || true)"
 if [ -n "$MEM_KB" ]; then
-	BUDGET_KB=$((MEM_KB * 55 / 100))
-	[ "$BUDGET_KB" -lt 900000 ] && BUDGET_KB=900000
-	[ "$BUDGET_KB" -gt 2621440 ] && BUDGET_KB=2621440
+	BUDGET_KB=$((MEM_KB * 75 / 100))
+	[ "$BUDGET_KB" -lt 1572864 ] && BUDGET_KB=1572864
+	[ "$BUDGET_KB" -gt 3145728 ] && BUDGET_KB=3145728
 	HEAP_MB=$(((BUDGET_KB - 262144) / 1024))
-	[ "$HEAP_MB" -lt 625 ] && HEAP_MB=625
+	[ "$HEAP_MB" -lt 1536 ] && HEAP_MB=1536
 	CAP="$HEAP_MB"
 else
-	CAP=1024
+	CAP=2048
 fi
 EXIST="$(printf '%s' "${NODE_OPTIONS:-}" | sed -n 's/.*--max-old-space-size=\([0-9][0-9]*\).*/\1/p')"
-if [ -n "$EXIST" ] && [ "$EXIST" -lt "$CAP" ]; then
+if [ -n "$EXIST" ]; then
 	CAP="$EXIST"
 fi
 REST="$(printf '%s' "${NODE_OPTIONS:-}" | sed 's/--max-old-space-size=[0-9][0-9]*//g')"
