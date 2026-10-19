@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -56,6 +57,34 @@ func TestReadHandshakePacket_Valid(t *testing.T) {
 		t.Fatalf("failed to read valid handshake packet: %v", err)
 	}
 	if pkt.ServerAddress != "play.example.com" || pkt.ServerPort != 25565 || pkt.NextState != 1 {
+		t.Errorf("unexpected parsed packet: %+v", pkt)
+	}
+}
+
+// TestReadHandshakePacket_ExtendedForgeModpack confirms handshakes exceeding
+// 255 bytes (such as Forge/NeoForge/Fabric modpack handshakes embedding FML tokens)
+// are accepted up to MaxHandshakePacketLength.
+func TestReadHandshakePacket_ExtendedForgeModpack(t *testing.T) {
+	longAddress := "play.modpack.example.com\x00FML3\x00" + strings.Repeat("mod-channel-token;", 40)
+	if len(longAddress) <= 255 {
+		t.Fatalf("expected test address length > 255, got %d", len(longAddress))
+	}
+
+	var buf bytes.Buffer
+	if err := WriteHandshakePacket(&buf, &HandshakePacket{
+		ProtocolVersion: 765,
+		ServerAddress:   longAddress,
+		ServerPort:      25565,
+		NextState:       1,
+	}); err != nil {
+		t.Fatalf("failed to write handshake packet: %v", err)
+	}
+
+	pkt, err := ReadHandshakePacket(&buf)
+	if err != nil {
+		t.Fatalf("expected extended handshake packet to parse successfully, got: %v", err)
+	}
+	if pkt.ServerAddress != longAddress || pkt.ServerPort != 25565 || pkt.NextState != 1 {
 		t.Errorf("unexpected parsed packet: %+v", pkt)
 	}
 }

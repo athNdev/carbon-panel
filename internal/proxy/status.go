@@ -62,8 +62,13 @@ func serveStatusResponse(conn net.Conn, protocolVersion VarInt, motd string) err
 		return fmt.Errorf("failed to read status request: %w", err)
 	}
 
+	proto := int(protocolVersion)
+	if proto <= 0 {
+		proto = 765
+	}
+
 	body, err := json.Marshal(statusPayload{
-		Version:     statusVersion{Name: "carbon-panel", Protocol: int(protocolVersion)},
+		Version:     statusVersion{Name: "carbon-panel", Protocol: proto},
 		Players:     statusPlayers{Max: 20, Online: 0},
 		Description: statusDescription{Text: motd},
 	})
@@ -103,7 +108,23 @@ func serveStatusResponse(conn net.Conn, protocolVersion VarInt, motd string) err
 	pongBody = append(pongBody, pingData[1:9]...)
 	pong := appendVarInt(nil, VarInt(len(pongBody)))
 	pong = append(pong, pongBody...)
-	_, _ = conn.Write(pong)
+	if _, err := conn.Write(pong); err != nil {
+		return nil
+	}
+
+	// Graceful close: give client time to receive Pong without TCP reset.
+	// If the connection is a TCPConn, half-close write side (sends FIN) and
+	// drain until the client closes or the deadline expires.
+	if tcp, ok := conn.(*net.TCPConn); ok {
+		_ = tcp.CloseWrite()
+		_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		discard := make([]byte, 64)
+		for {
+			if _, err := conn.Read(discard); err != nil {
+				break
+			}
+		}
+	}
 	return nil
 }
 
@@ -132,8 +153,22 @@ func sendLoginDisconnect(conn net.Conn, message string) error {
 	if err := conn.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return err
 	}
-	_, err = conn.Write(out)
-	return err
+	if _, err := conn.Write(out); err != nil {
+		return err
+	}
+
+	// Send FIN to flush the disconnect packet, then drain to avoid TCP RST
+	if tcp, ok := conn.(*net.TCPConn); ok {
+		_ = tcp.CloseWrite()
+		_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		discard := make([]byte, 128)
+		for {
+			if _, err := conn.Read(discard); err != nil {
+				break
+			}
+		}
+	}
+	return nil
 }
 
 // appendVarInt encodes v and appends it to b.

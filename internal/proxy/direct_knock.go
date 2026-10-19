@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -125,6 +126,13 @@ func (m *DirectKnockManager) handleConn(conn net.Conn, dk *directKnockListener, 
 		// Login intent: player wants to join!
 		if m.logger != nil {
 			m.logger.Info("Direct knock: login intent on port %d for server %s; closing listener and waking", dk.port, serverName)
+		}
+
+		// Drain client's Login Start packet if present so kernel socket receive buffer is clean
+		_ = conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+		if loginLen, err := ReadVarInt(conn); err == nil && loginLen > 0 && loginLen < 4096 {
+			loginData := make([]byte, loginLen)
+			_, _ = io.ReadFull(conn, loginData)
 		}
 
 		// Close listener immediately so the host port is freed for Docker!
