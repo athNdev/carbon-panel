@@ -536,8 +536,11 @@ func (s *ProxyService) UpdateServerRouting(ctx context.Context, req *connect.Req
 		}
 
 		dockerCli, err := s.pool.GetClientStrict(server.NodeID)
-		if err != nil {
+		if err != nil || dockerCli == nil {
 			s.log.Error("Failed to resolve docker client for node %s: %v", server.NodeID, err)
+			if err == nil {
+				err = fmt.Errorf("no docker client available")
+			}
 			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to reach node %s for container recreation: %w", server.NodeID, err))
 		}
 

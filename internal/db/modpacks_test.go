@@ -115,8 +115,8 @@ func TestSearchIndexedModpacks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("indexer search failed: %v", err)
 	}
-	if total != 1 {
-		t.Errorf("fuego search = %d, want 1", total)
+	if total != 1 || len(results) != 1 || results[0].ID != "f1" {
+		t.Errorf("fuego search = %+v (%d), want f1 (1)", results, total)
 	}
 
 	listed, total, err := store.ListIndexedModpacks(ctx, 0, 10)
