@@ -2,9 +2,9 @@ package metrics
 
 import (
 	"context"
+	"maps"
 	"net"
 	"net/url"
-	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -612,10 +612,18 @@ func (c *Collector) collectSLPData() {
 		slpCtx, slpCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
 		result, err := slpClient.Ping(slpCtx, targetHost, targetPort, server.MCVersion)
 		slpCancel()
-		if err != nil && !isRemote && targetPort != docker.DefaultMinecraftPort {
-			fallbackCtx, fallbackCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
-			result, err = slpClient.Ping(fallbackCtx, targetHost, docker.DefaultMinecraftPort, server.MCVersion)
-			fallbackCancel()
+		if err != nil && !isRemote {
+			if targetPort != docker.DefaultMinecraftPort {
+				fallbackCtx, fallbackCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
+				result, err = slpClient.Ping(fallbackCtx, targetHost, docker.DefaultMinecraftPort, server.MCVersion)
+				fallbackCancel()
+			}
+			// If container bridge IP is unreachable from host, fallback to loopback host port if mapped
+			if err != nil && targetHost != "127.0.0.1" && server.Port > 0 {
+				loopbackCtx, loopbackCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
+				result, err = slpClient.Ping(loopbackCtx, "127.0.0.1", server.Port, server.MCVersion)
+				loopbackCancel()
+			}
 		}
 
 		if err != nil {

@@ -51,6 +51,8 @@ type Hub struct {
 	enforcer    *rbac.Enforcer
 	store       *storage.Store
 	docker      *docker.Client
+	pool        *docker.ClientPool
+	poolMu      sync.RWMutex
 	log         *logger.Logger
 	sender      *command.Sender
 
@@ -146,6 +148,29 @@ func NewHub(logStreamer *logger.LogStreamer, authManager *auth.Manager, enforcer
 
 		registerTimeout: defaultRegisterTimeout,
 	}
+}
+
+// SetPool sets the Docker client pool for multi-node support.
+func (h *Hub) SetPool(pool *docker.ClientPool) {
+	h.poolMu.Lock()
+	defer h.poolMu.Unlock()
+	h.pool = pool
+}
+
+// dockerFor returns the Docker client responsible for the given nodeID.
+// If the pool is configured, GetClientStrict is attempted; if nodeID is empty or
+// resolution fails, it falls back to the default Docker client.
+func (h *Hub) dockerFor(nodeID string) *docker.Client {
+	h.poolMu.RLock()
+	pool := h.pool
+	h.poolMu.RUnlock()
+
+	if pool != nil && nodeID != "" {
+		if cli, err := pool.GetClientStrict(nodeID); err == nil && cli != nil {
+			return cli
+		}
+	}
+	return h.docker
 }
 
 // SetCheckOrigin overrides the WebSocket upgrader origin validation function.
@@ -538,10 +563,17 @@ func (c *Client) handleSubscribe(msg *v1.SubscribeMessage) {
 
 	// Check if already subscribed
 	c.subscriptionsMu.Lock()
-	if _, exists := c.subscriptions[msg.ServerId]; !exists {
+	if sub, exists := c.subscriptions[msg.ServerId]; !exists {
 		// Subscribe to log streamer
 		ch := c.hub.logStreamer.Subscribe(server.ContainerID)
 		c.subscriptions[msg.ServerId] = &subscription{ch: ch, containerID: server.ContainerID}
+		go c.forwardLogs(msg.ServerId, ch)
+	} else if sub.containerID != server.ContainerID {
+		// Container recreated or adopted: rebind subscription to current container
+		c.hub.logStreamer.Unsubscribe(sub.containerID, sub.ch)
+		ch := c.hub.logStreamer.Subscribe(server.ContainerID)
+		sub.containerID = server.ContainerID
+		sub.ch = ch
 		go c.forwardLogs(msg.ServerId, ch)
 	}
 	c.subscriptionsMu.Unlock()
@@ -634,7 +666,12 @@ func (c *Client) handleCommand(msg *v1.CommandMessage) {
 	}
 
 	// Check server status
-	status, err := c.hub.docker.GetContainerStatus(ctx, server.ContainerID)
+	dockerCli := c.hub.dockerFor(server.NodeID)
+	if dockerCli == nil {
+		c.sendCommandResult(msg.ServerId, false, "", "node unavailable")
+		return
+	}
+	status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 	if err != nil || status != storage.StatusRunning {
 		c.sendCommandResult(msg.ServerId, false, "", "server is not running")
 		return

@@ -132,6 +132,9 @@ func NewServer(
 	if clientPool == nil && dockerCli != nil {
 		clientPool = docker.NewClientPool(store, dockerCli, log)
 	}
+	if clientPool != nil {
+		wsHub.SetPool(clientPool)
+	}
 	if placementEngine == nil && store != nil {
 		placementEngine = docker.NewPlacementEngine(store)
 	}
