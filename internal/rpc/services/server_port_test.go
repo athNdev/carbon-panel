@@ -248,6 +248,47 @@ func TestStartServer_RejectsServerWhenNodeMemoryIsOvercommitted(t *testing.T) {
 	}
 }
 
+func TestStartServer_AllowsStartWhenOtherServersAreStopped(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }
+	// Existing stopped server allocates 3072 MB
+	stoppedServer := &db.Server{
+		ID:          "stopped-alloc-test",
+		Name:        "stopped-alloc-test",
+		NodeID:      "test-node",
+		Port:        25603,
+		Memory:      3072,
+		Status:      db.StatusStopped,
+		ContainerID: "stopped-container",
+	}
+	if err := svc.store.CreateServer(context.Background(), stoppedServer); err != nil {
+		t.Fatalf("failed to create stopped server: %v", err)
+	}
+
+	// Target server to start requires 2048 MB. Total allocated would be 5120 > 4096,
+	// but running memory is 0, so starting should pass capacity check.
+	targetServer := &db.Server{
+		ID:          "target-start-test",
+		Name:        "target-start-test",
+		NodeID:      "test-node",
+		Port:        25604,
+		Memory:      2048,
+		Status:      db.StatusStopped,
+		ContainerID: "test-container-id",
+	}
+	if err := svc.store.CreateServer(context.Background(), targetServer); err != nil {
+		t.Fatalf("failed to create target server: %v", err)
+	}
+
+	// StartServer should pass capacity check (will proceed to Docker container start)
+	_, err := svc.StartServer(ctxWithRole("operator"), connect.NewRequest(&v1.StartServerRequest{Id: targetServer.ID}))
+	if err != nil {
+		if connErr, ok := err.(*connect.Error); ok && connErr.Code() == connect.CodeResourceExhausted {
+			t.Fatalf("unexpected CodeResourceExhausted when other servers are stopped: %v", err)
+		}
+	}
+}
+
 func TestUpdateServer_RejectsMemoryIncreaseBeyondNodeCapacity(t *testing.T) {
 	svc, _ := newDockerPrivilegeTestService(t)
 	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 4096, nil }

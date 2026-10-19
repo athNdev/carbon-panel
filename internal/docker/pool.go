@@ -63,6 +63,11 @@ func NewClientPool(store NodeStore, defaultClient *Client, log *logger.Logger, c
 	var baseCfg ClientConfig
 	if len(cfg) > 0 {
 		baseCfg = cfg[0]
+	} else if defaultClient != nil {
+		baseCfg = defaultClient.GetConfig()
+		if baseCfg.NetworkName == "" {
+			baseCfg.NetworkName = "carbon-panel-network"
+		}
 	} else {
 		baseCfg = ClientConfig{
 			NetworkName: "carbon-panel-network",
@@ -198,6 +203,14 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 		return nil, fmt.Errorf("node %s not found in store: %w", nodeID, err)
 	}
 
+	if node.IsLocal && p.defaultClient != nil {
+		p.mu.Lock()
+		p.clients[nodeID] = p.defaultClient
+		p.mu.Unlock()
+		atomic.AddUint64(&p.stats.cacheHits, 1)
+		return p.defaultClient, nil
+	}
+
 	// Build the client outside the pool lock: NewClientForNode performs a
 	// bounded API-version ping, and holding p.mu across that network call
 	// would stall every other node's callers behind an unresponsive daemon.
@@ -259,6 +272,14 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 	node, err := p.store.GetNode(context.Background(), nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("node %s not found: %w", nodeID, err)
+	}
+
+	if node.IsLocal && p.defaultClient != nil {
+		p.mu.Lock()
+		p.clients[nodeID] = p.defaultClient
+		p.mu.Unlock()
+		atomic.AddUint64(&p.stats.cacheHits, 1)
+		return p.defaultClient, nil
 	}
 
 	// See GetClient: build the client outside the pool lock so its bounded
