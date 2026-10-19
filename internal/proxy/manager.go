@@ -135,6 +135,13 @@ func (m *Manager) SetSleepWakeHandler(h WakeHandler) {
 }
 
 // StopDirectKnock stops any active direct knock listener for a server.
+// InitDirectKnocks initializes direct knock listeners for all eligible asleep servers.
+func (m *Manager) InitDirectKnocks() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.initDirectKnocksLocked()
+}
+
 func (m *Manager) StopDirectKnock(serverID string) {
 	if m.directKnocks != nil {
 		m.directKnocks.StopKnock(serverID)
@@ -144,6 +151,14 @@ func (m *Manager) StopDirectKnock(serverID string) {
 // GetDirectKnockManager returns the direct knock manager instance.
 func (m *Manager) GetDirectKnockManager() *DirectKnockManager {
 	return m.directKnocks
+}
+
+// isDirectPortServer returns true if the server is not proxied through an active proxy listener.
+func isDirectPortServer(server *db.Server, proxyEnabled bool) bool {
+	if server == nil || server.Port <= 0 {
+		return false
+	}
+	return !proxyEnabled || server.ProxyHostname == "" || server.ProxyPort == 0 || server.ProxyListenerID == ""
 }
 
 func (m *Manager) initDirectKnocksLocked() {
@@ -158,7 +173,7 @@ func (m *Manager) initDirectKnocksLocked() {
 		return
 	}
 	for _, server := range servers {
-		if server.Port > 0 && (server.ProxyHostname == "" || !m.config.Enabled) && server.Status == db.StatusDeepSleep {
+		if isDirectPortServer(server, m.config.Enabled) && server.Status == db.StatusDeepSleep {
 			_ = m.directKnocks.StartKnock(server)
 		}
 	}
@@ -318,7 +333,7 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 	}
 
 	// Always handle direct port knocking for deep sleeping direct-port servers
-	if server.Port > 0 && (server.ProxyHostname == "" || !m.config.Enabled) {
+	if isDirectPortServer(server, m.config.Enabled) {
 		if server.Status == db.StatusDeepSleep {
 			if m.directKnocks != nil {
 				_ = m.directKnocks.StartKnock(server)

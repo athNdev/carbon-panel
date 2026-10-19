@@ -163,6 +163,11 @@ func (s *ProxyService) UpdateProxyConfig(ctx context.Context, req *connect.Reque
 	// Update in-memory configuration
 	s.config.Proxy.Enabled = msg.Enabled
 	s.config.Proxy.BaseURL = msg.BaseUrl
+	if s.pool != nil {
+		s.pool.SetProxyEnabled(msg.Enabled)
+	} else if s.docker != nil {
+		s.docker.SetProxyEnabled(msg.Enabled)
+	}
 
 	s.log.Info("Proxy configuration saved to database: enabled=%v, base_url=%v", msg.Enabled, msg.BaseUrl)
 
@@ -178,6 +183,11 @@ func (s *ProxyService) UpdateProxyConfig(ctx context.Context, req *connect.Reque
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start proxy: %w", err))
 			}
 		}
+	} else if !msg.Enabled && s.proxyManager != nil && s.proxyManager.IsRunning() {
+		if err := s.proxyManager.Stop(); err != nil {
+			s.log.Error("Failed to stop proxy manager: %v", err)
+		}
+		s.proxyManager.InitDirectKnocks()
 	}
 
 	// Return updated status (same as GetProxyStatus response)
