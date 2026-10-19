@@ -40,24 +40,32 @@ func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
 type stagedConfigStore interface {
 	ListStagedConfigChanges(ctx context.Context, serverID string, status storage.StagedStatus) ([]*storage.StagedConfigChange, error)
 	ApplyStagedConfigChange(ctx context.Context, id string) (*storage.StagedConfigChange, error)
+	RollbackStagedConfigChange(ctx context.Context, id string) (*storage.StagedConfigChange, error)
 }
 
-func applyStagedByMode(ctx context.Context, store stagedConfigStore, serverID string, mode storage.StagedApplyMode) (int, error) {
+func applyStagedByMode(ctx context.Context, store stagedConfigStore, serverID string, mode storage.StagedApplyMode) ([]*storage.StagedConfigChange, error) {
 	changes, err := store.ListStagedConfigChanges(ctx, serverID, storage.StagedStatusStaged)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	applied := 0
+	var applied []*storage.StagedConfigChange
 	for _, c := range changes {
 		if c.ApplyMode != mode {
 			continue
 		}
-		if _, err := store.ApplyStagedConfigChange(ctx, c.ID); err != nil {
+		rec, err := store.ApplyStagedConfigChange(ctx, c.ID)
+		if err != nil {
 			return applied, err
 		}
-		applied++
+		applied = append(applied, rec)
 	}
 	return applied, nil
+}
+
+// ApplyOnRestartStagedConfigRecords applies all "on_restart" staged changes for a
+// server and returns the applied records (SCH-1).
+func ApplyOnRestartStagedConfigRecords(ctx context.Context, store stagedConfigStore, serverID string) ([]*storage.StagedConfigChange, error) {
+	return applyStagedByMode(ctx, store, serverID, storage.StagedApplyOnRestart)
 }
 
 // ApplyOnRestartStagedConfigs applies all "on_restart" staged changes for a
@@ -69,7 +77,8 @@ func applyStagedByMode(ctx context.Context, store stagedConfigStore, serverID st
 // Container recreation itself stays the caller's responsibility (same split
 // as ConfigService.UpdateServerConfig -> recreateContainer).
 func ApplyOnRestartStagedConfigs(ctx context.Context, store stagedConfigStore, serverID string) (int, error) {
-	return applyStagedByMode(ctx, store, serverID, storage.StagedApplyOnRestart)
+	records, err := ApplyOnRestartStagedConfigRecords(ctx, store, serverID)
+	return len(records), err
 }
 
 // HasPendingRestartStagedConfigRecreate reports whether restart-only staged
