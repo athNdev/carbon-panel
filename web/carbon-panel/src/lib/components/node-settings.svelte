@@ -578,6 +578,9 @@
 										{formatMemory(node.allocatedMemoryMb)}
 										{#if Number(node.maxMemoryMb) > 0}
 											<span class="text-muted-foreground">/ {formatMemory(node.maxMemoryMb)}</span>
+										{:else if Number(node.totalMemoryMb) > 0}
+											<span class="text-muted-foreground">/ {formatMemory(node.totalMemoryMb)}</span
+											>
 										{/if}
 									</div>
 								</div>
@@ -593,6 +596,8 @@
 												>{formatMemory(node.availableMemoryMb)}</span
 											>
 										{:else if Number(node.maxMemoryMb) > 0 && Number(node.maxMemoryMb) <= Number(node.allocatedMemoryMb)}
+											<span class="font-semibold text-rose-500">0 MB (Full)</span>
+										{:else if Number(node.totalMemoryMb) > 0 && Number(node.totalMemoryMb) <= Number(node.allocatedMemoryMb)}
 											<span class="font-semibold text-rose-500">0 MB (Full)</span>
 										{:else if Number(node.maxMemoryMb) > 0}
 											<span class="font-semibold text-emerald-500"

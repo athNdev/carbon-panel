@@ -2,6 +2,8 @@ package metrics
 
 import (
 	"context"
+	"net"
+	"net/url"
 	"maps"
 	"strings"
 	"sync"
@@ -87,6 +89,10 @@ type Collector struct {
 	lifecycle   map[string]lifecycleState
 	lifecycleMu sync.Mutex
 
+	tpsWorkingCmd map[string]string
+	tpsFailedAt   map[string]time.Time
+	tpsMu         sync.Mutex
+
 	running  bool
 	stopChan chan struct{}
 	wg       sync.WaitGroup
@@ -121,6 +127,8 @@ func NewCollectorWithPool(store *storage.Store, dockerCli *docker.Client, pool *
 		log:             log,
 		metrics:         make(map[string]*ServerMetrics),
 		lifecycle:       make(map[string]lifecycleState),
+		tpsWorkingCmd:   make(map[string]string),
+		tpsFailedAt:     make(map[string]time.Time),
 		collectorConfig: cc,
 	}
 }
@@ -361,8 +369,29 @@ func (c *Collector) collectRCONData() {
 
 		// Get TPS if configured
 		if server.TPSCommand != "" {
-			for _, cmd := range strings.Split(server.TPSCommand, " ?? ") {
-				cmd = strings.TrimSpace(cmd)
+			c.tpsMu.Lock()
+			workingCmd, hasWorking := c.tpsWorkingCmd[server.ID]
+			failedAt, hasFailed := c.tpsFailedAt[server.ID]
+			c.tpsMu.Unlock()
+
+			// If all candidates recently failed, back off for 2 minutes to prevent log spam
+			if !hasWorking && hasFailed && time.Since(failedAt) < 2*time.Minute {
+				continue
+			}
+
+			candidates := []string{workingCmd}
+			if !hasWorking {
+				candidates = nil
+				for _, cmd := range strings.Split(server.TPSCommand, " ?? ") {
+					cmd = strings.TrimSpace(cmd)
+					if cmd != "" {
+						candidates = append(candidates, cmd)
+					}
+				}
+			}
+
+			foundWorking := false
+			for _, cmd := range candidates {
 				if cmd == "" {
 					continue
 				}
@@ -374,9 +403,20 @@ func (c *Collector) collectRCONData() {
 							m.TPS = tps
 							m.LastUpdated = time.Now()
 						})
+						c.tpsMu.Lock()
+						c.tpsWorkingCmd[server.ID] = cmd
+						delete(c.tpsFailedAt, server.ID)
+						c.tpsMu.Unlock()
+						foundWorking = true
 						break
 					}
 				}
+			}
+
+			if !foundWorking && !hasWorking {
+				c.tpsMu.Lock()
+				c.tpsFailedAt[server.ID] = time.Now()
+				c.tpsMu.Unlock()
 			}
 		}
 	}
@@ -451,6 +491,8 @@ func (c *Collector) updateMetrics(serverID string, update func(*ServerMetrics)) 
 func (c *Collector) RemoveMetrics(serverID string) {
 	c.mu.Lock()
 	delete(c.metrics, serverID)
+	delete(c.tpsWorkingCmd, serverID)
+	delete(c.tpsFailedAt, serverID)
 	c.mu.Unlock()
 	c.clearLifecycle(serverID)
 }
@@ -473,6 +515,24 @@ func (c *Collector) collectSLPDataLoop(stop <-chan struct{}) {
 			return
 		}
 	}
+}
+
+func extractHost(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || strings.HasPrefix(raw, "unix://") {
+		return ""
+	}
+	if strings.Contains(raw, "://") {
+		if u, err := url.Parse(raw); err == nil {
+			if h := u.Hostname(); h != "" {
+				return h
+			}
+		}
+	}
+	if host, _, err := net.SplitHostPort(raw); err == nil {
+		return host
+	}
+	return raw
 }
 
 func slpPort(server *storage.Server) int {
@@ -511,33 +571,55 @@ func (c *Collector) collectSLPData() {
 			continue
 		}
 
-		// Get container IP
-		var cli proxy.DockerInspector
-		if dockerCli != nil {
-			cli = dockerCli.GetDockerClient()
+		// Determine SLP host and port
+		targetHost := ""
+		targetPort := docker.DefaultMinecraftPort
+		isRemote := false
+
+		if server.NodeID != "" && c.store != nil {
+			if node, err := c.store.GetNode(ctx, server.NodeID); err == nil && node != nil && !node.IsLocal {
+				isRemote = true
+				if node.AdvertisedIP != "" {
+					targetHost = node.AdvertisedIP
+				} else if node.Host != "" {
+					targetHost = extractHost(node.Host)
+				}
+				if server.Port > 0 {
+					targetPort = server.Port
+				}
+			}
 		}
-		containerIP, err := proxy.GetContainerIP(cli, server.ContainerID, c.config.Docker.NetworkName)
-		if err != nil {
-			c.log.Debug("Metrics collector SLP: failed to get container IP for %s: %v", server.ID, err)
-			c.updateMetrics(server.ID, func(m *ServerMetrics) {
-				m.SLPAvailable = false
-			})
-			continue
+
+		if targetHost == "" {
+			// Local node: resolve container IP directly
+			var cli proxy.DockerInspector
+			if dockerCli != nil {
+				cli = dockerCli.GetDockerClient()
+			}
+			containerIP, err := proxy.GetContainerIP(cli, server.ContainerID, c.config.Docker.NetworkName)
+			if err != nil {
+				targetHost = "127.0.0.1"
+				if server.Port > 0 {
+					targetPort = server.Port
+				}
+			} else {
+				targetHost = containerIP
+				targetPort = slpPort(server)
+			}
 		}
 
 		// SLP ping w/ server version for protocol
 		slpCtx, slpCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
-		port := slpPort(server)
-		result, err := slpClient.Ping(slpCtx, containerIP, port, server.MCVersion)
+		result, err := slpClient.Ping(slpCtx, targetHost, targetPort, server.MCVersion)
 		slpCancel()
-		if err != nil && port != docker.DefaultMinecraftPort {
+		if err != nil && !isRemote && targetPort != docker.DefaultMinecraftPort {
 			fallbackCtx, fallbackCancel := context.WithTimeout(ctx, c.collectorConfig.SLPTimeout)
-			result, err = slpClient.Ping(fallbackCtx, containerIP, docker.DefaultMinecraftPort, server.MCVersion)
+			result, err = slpClient.Ping(fallbackCtx, targetHost, docker.DefaultMinecraftPort, server.MCVersion)
 			fallbackCancel()
 		}
 
 		if err != nil {
-			c.log.Debug("Metrics collector SLP: failed to ping %s (%s:%d): %v", server.ID, containerIP, port, err)
+			c.log.Debug("Metrics collector SLP: failed to ping %s (%s:%d): %v", server.ID, targetHost, targetPort, err)
 			c.updateMetrics(server.ID, func(m *ServerMetrics) {
 				m.SLPAvailable = false
 			})
