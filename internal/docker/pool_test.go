@@ -324,3 +324,55 @@ func TestClientPool_Stats(t *testing.T) {
 		t.Fatalf("expected 3 requests, 1 miss, 1 fallback, got %+v", stats)
 	}
 }
+
+func TestClientPool_LocalNodeReturnsDefaultClient(t *testing.T) {
+	log := logger.New()
+	defaultCli := &Client{log: log}
+	localNode := &models.Node{
+		ID:      "uuid-local-node-1234",
+		Name:    "Local Node",
+		IsLocal: true,
+		Host:    "unix:///var/run/docker.sock",
+	}
+	store := newMockNodeStore(localNode)
+	pool := NewClientPool(store, defaultCli, log)
+	defer func() { _ = pool.Close() }()
+
+	// GetClient should return defaultCli
+	cli, err := pool.GetClient("uuid-local-node-1234")
+	if err != nil {
+		t.Fatalf("GetClient failed: %v", err)
+	}
+	if cli != defaultCli {
+		t.Fatalf("expected defaultClient, got %v", cli)
+	}
+
+	// GetClientStrict should return defaultCli
+	cliStrict, err := pool.GetClientStrict("uuid-local-node-1234")
+	if err != nil {
+		t.Fatalf("GetClientStrict failed: %v", err)
+	}
+	if cliStrict != defaultCli {
+		t.Fatalf("expected defaultClient, got %v", cliStrict)
+	}
+}
+
+func TestClientPool_BaseConfigInheritance(t *testing.T) {
+	log := logger.New()
+	defaultCli := &Client{
+		log: log,
+		config: ClientConfig{
+			NetworkName: "custom-net",
+			NetworkMTU:  1280,
+		},
+	}
+	pool := NewClientPool(nil, defaultCli, log)
+	defer func() { _ = pool.Close() }()
+
+	if pool.baseConfig.NetworkName != "custom-net" {
+		t.Fatalf("expected custom-net, got %s", pool.baseConfig.NetworkName)
+	}
+	if pool.baseConfig.NetworkMTU != 1280 {
+		t.Fatalf("expected MTU 1280, got %d", pool.baseConfig.NetworkMTU)
+	}
+}

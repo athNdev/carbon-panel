@@ -823,7 +823,7 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	if server.ContainerID == "" {
 		return fmt.Errorf("server has no container")
 	}
-	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID); err != nil {
+	if err := s.checkNodeMemoryCapacity(ctx, server); err != nil {
 		return err
 	}
 	dockerCli := s.dockerForNode(server.NodeID)
@@ -860,12 +860,15 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 // checkNodeMemoryCapacity protects scheduler-owned starts (boot and deep-sleep
 // wake) with the same persisted reservation and live Docker host limits as RPC
 // lifecycle operations.
-func (s *Scheduler) checkNodeMemoryCapacity(ctx context.Context, nodeID string) error {
-	dockerCli := s.dockerForNode(nodeID)
+func (s *Scheduler) checkNodeMemoryCapacity(ctx context.Context, server *storage.Server) error {
+	if server == nil {
+		return fmt.Errorf("server is nil")
+	}
+	dockerCli := s.dockerForNode(server.NodeID)
 	if s.store == nil || dockerCli == nil {
 		return fmt.Errorf("cannot verify node memory capacity without a store and Docker client")
 	}
-	node, err := s.store.GetNode(ctx, nodeID)
+	node, err := s.store.GetNode(ctx, server.NodeID)
 	if err != nil {
 		return fmt.Errorf("failed to load node capacity: %w", err)
 	}
@@ -873,16 +876,23 @@ func (s *Scheduler) checkNodeMemoryCapacity(ctx context.Context, nodeID string) 
 	if err != nil {
 		return fmt.Errorf("cannot verify memory capacity on node %s: %w", node.Name, err)
 	}
-	allocatedMemoryMB, _, _, err := s.store.GetNodeStats(ctx, nodeID)
-	if err != nil {
-		return fmt.Errorf("cannot verify allocated memory on node %s: %w", node.Name, err)
-	}
 	capacityMB := hostMemoryMB
 	if node.MaxMemoryMB > 0 && node.MaxMemoryMB < capacityMB {
 		capacityMB = node.MaxMemoryMB
 	}
-	if allocatedMemoryMB > capacityMB {
-		return fmt.Errorf("node %s lacks memory capacity (allocated %d MB > limit %d MB)", node.Name, allocatedMemoryMB, capacityMB)
+	if int64(server.Memory) > capacityMB {
+		return fmt.Errorf("node %s lacks memory capacity (server requires %d MB > limit %d MB)", node.Name, server.Memory, capacityMB)
+	}
+	runningMemoryMB, err := s.store.GetNodeRunningMemoryMB(ctx, server.NodeID)
+	if err != nil {
+		return fmt.Errorf("cannot verify running memory on node %s: %w", node.Name, err)
+	}
+	additionalMB := int64(server.Memory)
+	if server.Status == storage.StatusRunning || server.Status == storage.StatusStarting {
+		additionalMB = 0
+	}
+	if runningMemoryMB+additionalMB > capacityMB {
+		return fmt.Errorf("node %s lacks memory capacity (running %d MB + requested %d MB > limit %d MB)", node.Name, runningMemoryMB, additionalMB, capacityMB)
 	}
 	return nil
 }
@@ -1018,7 +1028,7 @@ func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Se
 	if server == nil || server.ID == "" {
 		return fmt.Errorf("server ID is required")
 	}
-	if err := s.checkNodeMemoryCapacity(ctx, server.NodeID); err != nil {
+	if err := s.checkNodeMemoryCapacity(ctx, server); err != nil {
 		return err
 	}
 	dockerCli := s.dockerForNode(server.NodeID)
