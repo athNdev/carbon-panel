@@ -147,6 +147,22 @@ class WebSocketClient {
 		this.subscriptions.clear();
 	}
 
+	reconnect(): void {
+		this.cleanup();
+		if (this.socket) {
+			try {
+				this.socket.close();
+			} catch {
+				// Socket may already be in closed/closing state; ignore close errors during cleanup
+			}
+			this.socket = null;
+		}
+		this.state.connectionState = 'disconnected';
+		this.state.error = null;
+		this.reconnectAttempts = 0;
+		this.connect(false);
+	}
+
 	private cleanup(): void {
 		if (this.pingTimer) {
 			clearInterval(this.pingTimer);
@@ -193,17 +209,17 @@ class WebSocketClient {
 	}
 
 	private scheduleReconnect(): void {
-		if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-			console.log('[WS] Max reconnect attempts reached');
-			// Surface an explicit terminal state instead of leaving the previous
-			// state (e.g. 'connected') in place, which made the console look alive
-			// while no socket existed.
+		const isTerminalBackoff = this.reconnectAttempts >= this.maxReconnectAttempts;
+		if (isTerminalBackoff) {
+			console.log('[WS] Max rapid reconnect attempts reached; continuing periodic retries');
 			this.state.connectionState = 'disconnected';
-			this.state.error = 'Unable to connect. Please refresh the page.';
-			return;
+			this.state.error = 'Connection lost. Retrying in background or click Reconnect.';
 		}
 
-		const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+		const delay = isTerminalBackoff
+			? 30000
+			: Math.min(30000, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
+
 		this.reconnectAttempts++;
 
 		console.log(`[WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
