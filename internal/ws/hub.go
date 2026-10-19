@@ -13,7 +13,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -144,9 +146,7 @@ func NewHub(logStreamer *logger.LogStreamer, authManager *auth.Manager, enforcer
 		log:         log,
 		sender:      sender,
 		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true // Allow all origins (CORS handled elsewhere)
-			},
+			CheckOrigin: checkSameOrigin,
 		},
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
@@ -155,6 +155,11 @@ func NewHub(logStreamer *logger.LogStreamer, authManager *auth.Manager, enforcer
 
 		registerTimeout: defaultRegisterTimeout,
 	}
+}
+
+// SetCheckOrigin overrides the WebSocket upgrader origin validation function.
+func (h *Hub) SetCheckOrigin(check func(r *http.Request) bool) {
+	h.upgrader.CheckOrigin = check
 }
 
 // sendRegister hands a client to the Run loop, reporting false rather than
@@ -857,4 +862,86 @@ func (c *Client) sendPong() {
 	c.sendControl(&v1.WebSocketServerMessage{
 		Type: v1.WSMessageType_WS_MESSAGE_TYPE_PONG,
 	})
+}
+
+// checkSameOrigin verifies that the request Origin matches the request Host
+// or an allowed reverse-proxy Host, preventing Cross-Site WebSocket Hijacking (CSWSH).
+// Non-browser clients omitting the Origin header are permitted.
+func checkSameOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true // Non-browser clients (CLI, curl, native tests) don't send Origin
+	}
+
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	// Must be an http or https scheme
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+
+	// Exact host:port match with request Host
+	if strings.EqualFold(u.Host, r.Host) {
+		return true
+	}
+
+	// Check against X-Forwarded-Host if behind a reverse proxy
+	if xfh := r.Header.Get("X-Forwarded-Host"); xfh != "" {
+		hosts := strings.Split(xfh, ",")
+		firstHost := strings.TrimSpace(hosts[0])
+		if strings.EqualFold(u.Host, firstHost) {
+			return true
+		}
+		originHost := u.Hostname()
+		if fHost, _, err := net.SplitHostPort(firstHost); err == nil {
+			if strings.EqualFold(originHost, fHost) {
+				return true
+			}
+		} else if strings.EqualFold(originHost, firstHost) {
+			return true
+		}
+	}
+
+	// Normalize host and port for default HTTP(S) ports
+	originHost := u.Hostname()
+	originPort := u.Port()
+	if originPort == "" {
+		if u.Scheme == "https" {
+			originPort = "443"
+		} else {
+			originPort = "80"
+		}
+	}
+
+	reqHost, reqPort, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		reqHost = r.Host
+		if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+			reqPort = "443"
+		} else {
+			reqPort = "80"
+		}
+	}
+
+	if strings.EqualFold(originHost, reqHost) && originPort == reqPort {
+		return true
+	}
+
+	// Allow loopback-to-loopback connections for local development
+	if isLoopbackHost(originHost) && isLoopbackHost(reqHost) {
+		return true
+	}
+
+	return false
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

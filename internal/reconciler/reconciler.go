@@ -630,7 +630,7 @@ func (r *Reconciler) selfHealRecreate(ctx context.Context, cli Client, server *d
 
 // updateRoute re-points the proxy at the server's current backend.
 func (r *Reconciler) updateRoute(ctx context.Context, server *db.Server) {
-	if r.proxy == nil || (server.ProxyHostname == "" && server.Status != db.StatusDeepSleep) {
+	if r.proxy == nil || (server.ProxyHostname == "" && server.Port <= 0) {
 		return
 	}
 	if err := r.proxy.UpdateServerRoute(server); err != nil && r.log != nil {

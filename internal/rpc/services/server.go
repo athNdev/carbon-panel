@@ -1604,11 +1604,15 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Remove proxy route only after Docker resources are gone. If earlier
-	// cleanup failed, the live server remains reachable while the caller retries.
-	if s.proxy != nil && server.ProxyHostname != "" {
-		if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server proxy route: %w", err))
+	// Remove proxy route or direct knock listener only after Docker resources are gone.
+	// If earlier cleanup failed, the live server remains reachable while the caller retries.
+	if s.proxy != nil {
+		if server.ProxyHostname != "" {
+			if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server proxy route: %w", err))
+			}
+		} else {
+			s.proxy.StopDirectKnock(server.ID)
 		}
 	}
 
