@@ -14,14 +14,8 @@ test('ServerConsole does not depend on Tooltip context and has accessible toolti
 		!content.includes('Tooltip.Root'),
 		'ServerConsole must not use Tooltip.Root (causes Context "Tooltip.Provider" not found)'
 	);
-	assert.ok(
-		!content.includes('Tooltip.Trigger'),
-		'ServerConsole must not use Tooltip.Trigger'
-	);
-	assert.ok(
-		!content.includes('Tooltip.Content'),
-		'ServerConsole must not use Tooltip.Content'
-	);
+	assert.ok(!content.includes('Tooltip.Trigger'), 'ServerConsole must not use Tooltip.Trigger');
+	assert.ok(!content.includes('Tooltip.Content'), 'ServerConsole must not use Tooltip.Content');
 	assert.ok(
 		!content.includes('$lib/components/ui/tooltip'),
 		'ServerConsole must not import tooltip UI primitives'
@@ -54,7 +48,7 @@ test('Root layout provides global Tooltip.Provider safety net', () => {
 	const content = fs.readFileSync(layoutPath, 'utf-8');
 
 	assert.ok(
-		content.includes('import * as Tooltip from \'$lib/components/ui/tooltip/index.js\';') ||
+		content.includes("import * as Tooltip from '$lib/components/ui/tooltip/index.js';") ||
 			content.includes("from '$lib/components/ui/tooltip"),
 		'Root layout must import Tooltip provider'
 	);

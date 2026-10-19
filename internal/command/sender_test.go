@@ -304,3 +304,43 @@ func TestSendCommand_NilConfigHandledGracefully(t *testing.T) {
 		t.Errorf("expected 'ok', got %q", out)
 	}
 }
+
+func TestSendCommandRemoteNodeExecutesDirectly(t *testing.T) {
+	store := testStore(t)
+	// Create a remote node
+	node := &storage.Node{
+		ID:      "remote-node-1",
+		Name:    "remote-node",
+		Host:    "tcp://192.168.0.200:2375",
+		IsLocal: false,
+		Status:  storage.NodeStatusOnline,
+	}
+	if err := store.CreateNode(context.Background(), node); err != nil {
+		t.Fatalf("SaveNode: %v", err)
+	}
+
+	srv := &storage.Server{
+		ID:          "s-remote",
+		Name:        "remote-server",
+		ContainerID: "c-remote",
+		NodeID:      "remote-node-1",
+		Status:      storage.StatusRunning,
+	}
+	if err := store.CreateServer(context.Background(), srv); err != nil {
+		t.Fatalf("SaveServer: %v", err)
+	}
+
+	exec := &fakeExecutor{output: "remote-exec-success"}
+	s := testSender(store, exec, nil)
+
+	out, err := s.SendCommand(context.Background(), "s-remote", "say hi")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "remote-exec-success" {
+		t.Fatalf("expected 'remote-exec-success', got %q", out)
+	}
+	if exec.calls != 1 || exec.lastID != "c-remote" {
+		t.Fatalf("expected 1 call to container c-remote, got %d calls to %q", exec.calls, exec.lastID)
+	}
+}
