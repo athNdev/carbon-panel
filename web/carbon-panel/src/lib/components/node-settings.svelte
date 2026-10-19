@@ -438,15 +438,6 @@
 		}
 		return `${val} MB`;
 	}
-
-	function formatMaxMemory(mb: number | bigint): string {
-		const val = Number(mb);
-		if (val <= 0) return 'Unlimited';
-		if (val >= 1024) {
-			return `${(val / 1024).toFixed(1)} GB`;
-		}
-		return `${val} MB`;
-	}
 </script>
 
 <div class="space-y-6">
