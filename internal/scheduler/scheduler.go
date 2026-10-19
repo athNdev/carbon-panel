@@ -881,7 +881,7 @@ type stagedLifecycleDocker interface {
 // change. A replacement ID is persisted even when Docker reports a partial
 // recreate failure, allowing the next attempt to recover from the right object.
 func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server, startReplacement, markStarted bool) (bool, error) {
-	applied, err := ApplyOnRestartStagedConfigs(ctx, store, server.ID)
+	appliedRecords, err := ApplyOnRestartStagedConfigRecords(ctx, store, server.ID)
 	if err != nil {
 		return true, fmt.Errorf("failed to apply staged server configuration: %w", err)
 	}
@@ -889,7 +889,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 	if err != nil {
 		return true, fmt.Errorf("failed to check staged configuration recovery: %w", err)
 	}
-	if applied == 0 && !pending {
+	if len(appliedRecords) == 0 && !pending {
 		return false, nil
 	}
 
@@ -929,12 +929,25 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		if persistErr := store.UpdateServer(ctx, server); persistErr != nil && log != nil {
 			log.Error("Failed to persist server state after scheduled staged recreation error for server %s: %v", server.ID, persistErr)
 		}
+		// Rollback newly applied staged configs on container recreate failure (SCH-1)
+		for _, rec := range appliedRecords {
+			if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
+				log.Error("Failed to auto-rollback staged config %s after scheduled recreate error: %v", rec.ID, rbErr)
+			} else if log != nil {
+				log.Warn("Auto-rolled back staged config %s due to scheduled recreate failure on server %s", rec.ID, server.ID)
+			}
+		}
 		return true, fmt.Errorf("failed to recreate server with staged configuration: %w", recreateErr)
 	}
 	if result == nil || result.NewContainerID == "" {
 		server.ContainerID = ""
 		server.Status = storage.StatusError
 		_ = store.UpdateServer(ctx, server)
+		for _, rec := range appliedRecords {
+			if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
+				log.Error("Failed to auto-rollback staged config %s after scheduled recreate missing container ID: %v", rec.ID, rbErr)
+			}
+		}
 		return true, fmt.Errorf("container recreation returned no container ID")
 	}
 	server.ContainerID = result.NewContainerID
@@ -945,6 +958,13 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		if err := dockerClient.StartContainer(ctx, result.NewContainerID); err != nil {
 			server.Status = storage.StatusError
 			_ = store.UpdateServer(ctx, server)
+			for _, rec := range appliedRecords {
+				if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
+					log.Error("Failed to auto-rollback staged config %s after scheduled start failure: %v", rec.ID, rbErr)
+				} else if log != nil {
+					log.Warn("Auto-rolled back staged config %s due to scheduled start failure on server %s", rec.ID, server.ID)
+				}
+			}
 			return true, fmt.Errorf("failed to start recreated server: %w", err)
 		}
 	}
