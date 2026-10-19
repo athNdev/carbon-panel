@@ -33,10 +33,17 @@ REST="$(printf '%s' "${NODE_OPTIONS:-}" | sed 's/--max-old-space-size=[0-9][0-9]
 export NODE_OPTIONS="--max-old-space-size=${CAP} ${REST}"
 
 run_vite_build() {
+	local cmd
 	if command -v node >/dev/null 2>&1; then
-		node ./node_modules/vite/bin/vite.js build
+		cmd="node ./node_modules/vite/bin/vite.js build"
 	else
-		bun ./node_modules/vite/bin/vite.js build
+		cmd="bun ./node_modules/vite/bin/vite.js build"
+	fi
+
+	if command -v systemd-run >/dev/null 2>&1 && systemd-run --user --scope true >/dev/null 2>&1; then
+		systemd-run --user --scope -p ManagedOOMPreference=avoid bash -c "$cmd"
+	else
+		$cmd
 	fi
 }
 
