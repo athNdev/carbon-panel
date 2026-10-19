@@ -706,3 +706,32 @@ func TestReconcileMigratesLogSubscriptionsWhenDBAlreadyUpdated(t *testing.T) {
 		t.Fatalf("migration calls = %+v, want one old-id -> new-id", calls)
 	}
 }
+
+func TestReconcileDirectPortServer_CallsUpdateRouteOnStatusChange(t *testing.T) {
+	// A server with no proxy hostname but with a direct port (Port > 0)
+	// must still trigger UpdateServerRoute so direct knock listeners can be stopped or started.
+	server := &db.Server{
+		ID:            "s-direct",
+		Name:          "DirectMC",
+		NodeID:        "default",
+		ContainerID:   "c-direct",
+		ProxyHostname: "",
+		Port:          25565,
+		Status:        db.StatusRunning,
+	}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		summary: &container.Summary{ID: "c-direct"},
+		state:   &docker.ContainerState{ContainerID: "c-direct", Status: db.StatusStopped, HasExited: true, ExitCode: 0},
+	}
+	proxy := &fakeProxy{}
+	r := newTestReconciler(t, store, cli, proxy, &fakeBus{})
+
+	if err := r.ReconcileServer(context.Background(), "s-direct"); err != nil {
+		t.Fatalf("ReconcileServer failed: %v", err)
+	}
+
+	if proxy.count() == 0 {
+		t.Fatalf("expected proxy.UpdateServerRoute to be called for direct-port server on status change")
+	}
+}
