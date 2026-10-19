@@ -229,7 +229,7 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 	}
 	waitForServerTransition(t, created.Msg.Server.Id)
 
-	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
+	_, _ = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id:              created.Msg.Server.Id,
 		DockerOverrides: dangerousOverrides(),
 	}))
@@ -352,7 +352,7 @@ func TestUpdateServer_PrivilegedOverrides_AuditLogRecorded(t *testing.T) {
 	waitForServerTransition(t, created.Msg.Server.Id)
 
 	// Clear out earlier logs for a clean count or query after update
-	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
+	_, _ = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id:              created.Msg.Server.Id,
 		DockerOverrides: dangerousOverrides(),
 	}))

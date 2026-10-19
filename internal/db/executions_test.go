@@ -9,7 +9,7 @@ import (
 func TestTaskExecution_CRUD(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	mk := func(id, taskID, serverID string, status ExecutionStatus) {
 		if err := store.CreateTaskExecution(ctx, &TaskExecution{
@@ -69,7 +69,7 @@ func TestTaskExecution_CRUD(t *testing.T) {
 func TestScheduledTask_ChildrenDueNextRun(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	parent := &ScheduledTask{
 		ID: "parent", ServerID: "srv-1", Name: "p",
@@ -137,7 +137,7 @@ func TestScheduledTask_ChildrenDueNextRun(t *testing.T) {
 func TestEnsureDefaultNode_Missing(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if _, err := store.EnsureDefaultNode(ctx); err == nil {
 		t.Error("missing default node returned without error")
@@ -192,7 +192,7 @@ func TestStore_FailOrphanedTaskExecutions(t *testing.T) {
 func TestStore_HasRunningExecution(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	hasRunning, err := store.HasRunningExecution(ctx, "task-none")
 	if err != nil {
