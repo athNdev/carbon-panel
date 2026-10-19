@@ -60,7 +60,7 @@ func (s *Sender) resolveExecutor(nodeID string) DockerExecutor {
 func (s *Sender) SendCommand(ctx context.Context, serverID string, command string) (string, error) {
 	server, err := s.store.GetServer(ctx, serverID)
 
-	if err != nil {
+	if err != nil || server == nil {
 		return "", fmt.Errorf("server container not found")
 	}
 	if server.ContainerID == "" {
@@ -71,6 +71,9 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 
 	// old docker exec command
 	dockerExec := func(cause error) (string, error) {
+		if executor == nil {
+			return "", fmt.Errorf("no docker executor available: %w", cause)
+		}
 		output, err := executor.ExecCommand(ctx, server.ContainerID, command)
 		if err != nil {
 			return "", fmt.Errorf("rcon path failed: %w; fallback exec failed: %v", cause, err)
@@ -83,12 +86,13 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 		return dockerExec(fmt.Errorf("failed to load server config: %w", err))
 	}
 
-	if serverCfg.EnableRCON != nil && *serverCfg.EnableRCON == false {
+	if serverCfg != nil && serverCfg.EnableRCON != nil && !*serverCfg.EnableRCON {
 		return dockerExec(fmt.Errorf("rcon is disabled for this server"))
 	}
 
 	var rconPort int
-	if v, ok := s.config.Minecraft.GlobalConfig["rconPort"]; ok && v != nil {
+	if s.config != nil && s.config.Minecraft.GlobalConfig != nil {
+		if v, ok := s.config.Minecraft.GlobalConfig["rconPort"]; ok && v != nil {
 		switch t := v.(type) {
 		case int:
 			rconPort = t
@@ -102,19 +106,22 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 			}
 		}
 	}
-	if serverCfg.RCONPort != nil {
+	}
+	if serverCfg != nil && serverCfg.RCONPort != nil {
 		rconPort = *serverCfg.RCONPort
 	}
 
 	var rconPassword string
-	if v, ok := s.config.Minecraft.GlobalConfig["rconPassword"]; ok && v != nil {
+	if s.config != nil && s.config.Minecraft.GlobalConfig != nil {
+		if v, ok := s.config.Minecraft.GlobalConfig["rconPassword"]; ok && v != nil {
 		if p, ok := v.(string); ok {
 			rconPassword = p
 		} else {
 			rconPassword = fmt.Sprint(v)
 		}
 	}
-	if serverCfg.RCONPassword != nil {
+	}
+	if serverCfg != nil && serverCfg.RCONPassword != nil {
 		rconPassword = *serverCfg.RCONPassword
 	}
 
@@ -122,7 +129,11 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 	if dc, ok := executor.(interface{ GetDockerClient() *client.Client }); ok {
 		cli = dc.GetDockerClient()
 	}
-	ip, err := proxy.GetContainerIP(cli, server.ContainerID, s.config.Docker.NetworkName)
+	networkName := ""
+	if s.config != nil {
+		networkName = s.config.Docker.NetworkName
+	}
+	ip, err := proxy.GetContainerIP(cli, server.ContainerID, networkName)
 	if err != nil {
 		return dockerExec(fmt.Errorf("failed to resolve container ip: %w", err))
 	}
