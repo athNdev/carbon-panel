@@ -229,7 +229,7 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 	}
 	waitForServerTransition(t, created.Msg.Server.Id)
 
-	_, _ = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
+	_, err = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
 		Id:              created.Msg.Server.Id,
 		DockerOverrides: dangerousOverrides(),
 	}))
