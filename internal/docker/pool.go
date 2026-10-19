@@ -55,6 +55,7 @@ type ClientPool struct {
 	stopChan      chan struct{}
 	checkerActive bool
 	stats         poolStatsInternal
+	hostMemories  map[string]int64
 }
 
 // NewClientPool creates a new multi-node Docker ClientPool.
@@ -77,6 +78,7 @@ func NewClientPool(store NodeStore, defaultClient *Client, log *logger.Logger, c
 		defaultClient: defaultClient,
 		defaultNodeID: "default",
 		stopChan:      make(chan struct{}),
+		hostMemories:  make(map[string]int64),
 	}
 
 	if defaultClient != nil {
@@ -296,6 +298,7 @@ func (p *ClientPool) RemoveNode(nodeID string) error {
 		delete(p.clients, nodeID)
 	}
 	delete(p.nodeConfigs, nodeID)
+	delete(p.hostMemories, nodeID)
 	return nil
 }
 
@@ -324,6 +327,14 @@ func (p *ClientPool) PingNode(ctx context.Context, nodeID string) (bool, error) 
 		return false, fmt.Errorf("ping failed for node %s: %w", nodeID, err)
 	}
 
+	// Ensure network and cache host memory capacity
+	_ = cli.EnsureNetwork()
+	if mem, memErr := cli.HostMemoryMB(ctx); memErr == nil && mem > 0 {
+		p.mu.Lock()
+		p.hostMemories[nodeID] = mem
+		p.mu.Unlock()
+	}
+
 	now := time.Now().UTC()
 	node.LastHeartbeat = &now
 	node.Status = models.NodeStatusOnline
@@ -332,6 +343,36 @@ func (p *ClientPool) PingNode(ctx context.Context, nodeID string) (bool, error) 
 	}
 
 	return true, nil
+}
+
+// GetHostMemoryMB returns the cached host memory capacity in MB for a node,
+// or queries the Docker daemon directly if not yet cached.
+func (p *ClientPool) GetHostMemoryMB(ctx context.Context, nodeID string) (int64, error) {
+	p.mu.RLock()
+	if mem, ok := p.hostMemories[nodeID]; ok && mem > 0 {
+		p.mu.RUnlock()
+		return mem, nil
+	}
+	p.mu.RUnlock()
+
+	cli, err := p.GetClientStrict(nodeID)
+	if err != nil || cli == nil {
+		if (nodeID == p.defaultNodeID || nodeID == "") && p.defaultClient != nil {
+			cli = p.defaultClient
+		} else {
+			return 0, fmt.Errorf("no client available for node %s: %w", nodeID, err)
+		}
+	}
+
+	mem, err := cli.HostMemoryMB(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	p.mu.Lock()
+	p.hostMemories[nodeID] = mem
+	p.mu.Unlock()
+	return mem, nil
 }
 
 // StartHealthChecker starts background health checking for all enabled nodes.
@@ -490,6 +531,10 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 		log:    log,
 		config: baseConfig,
 	}
+
+	go func() {
+		_ = c.EnsureNetwork()
+	}()
 
 	return c, nil
 }

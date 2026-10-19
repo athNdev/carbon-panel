@@ -79,6 +79,38 @@ func dbNodeToProto(node *storage.Node) *v1.Node {
 		AllocatedMemoryMb: node.AllocatedMemoryMB,
 		ServerCount:       int32(node.ServerCount),
 		RunningCount:      int32(node.RunningCount),
+		TotalMemoryMb:     node.TotalMemoryMB,
+		AvailableMemoryMb: node.AvailableMemoryMB,
+	}
+}
+
+func (s *NodeService) populateNodeMemory(ctx context.Context, node *storage.Node, protoNode *v1.Node) {
+	if protoNode == nil || node == nil {
+		return
+	}
+	var totalMem int64
+	if s.pool != nil {
+		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		if hostMem, err := s.pool.GetHostMemoryMB(probeCtx, node.ID); err == nil && hostMem > 0 {
+			totalMem = hostMem
+		}
+	}
+
+	if totalMem > 0 {
+		protoNode.TotalMemoryMb = totalMem
+		if protoNode.MaxMemoryMb == 0 {
+			protoNode.MaxMemoryMb = totalMem
+		}
+	}
+
+	effectiveLimit := protoNode.MaxMemoryMb
+	if effectiveLimit > 0 {
+		avail := effectiveLimit - protoNode.AllocatedMemoryMb
+		if avail < 0 {
+			avail = 0
+		}
+		protoNode.AvailableMemoryMb = avail
 	}
 }
 
@@ -92,7 +124,9 @@ func (s *NodeService) ListNodes(ctx context.Context, req *connect.Request[v1.Lis
 
 	protoNodes := make([]*v1.Node, 0, len(nodes))
 	for _, node := range nodes {
-		protoNodes = append(protoNodes, dbNodeToProto(node))
+		pNode := dbNodeToProto(node)
+		s.populateNodeMemory(ctx, node, pNode)
+		protoNodes = append(protoNodes, pNode)
 	}
 
 	return connect.NewResponse(&v1.ListNodesResponse{
@@ -119,8 +153,11 @@ func (s *NodeService) GetNode(ctx context.Context, req *connect.Request[v1.GetNo
 		node.RunningCount = running
 	}
 
+	pNode := dbNodeToProto(node)
+	s.populateNodeMemory(ctx, node, pNode)
+
 	return connect.NewResponse(&v1.GetNodeResponse{
-		Node: dbNodeToProto(node),
+		Node: pNode,
 	}), nil
 }
 

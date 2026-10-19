@@ -1042,6 +1042,32 @@
 												<p class="mt-1 truncate font-mono text-xs text-[#8d8d8d]">
 													{node.host || node.advertisedIp || 'local socket'}
 												</p>
+												<div
+													class="mt-1 flex items-center gap-1.5 font-mono text-xs text-[#8d8d8d]"
+												>
+													{#if Number(node.availableMemoryMb) > 0}
+														<span class="text-emerald-400"
+															>{(Number(node.availableMemoryMb) / 1024).toFixed(1)} GB free</span
+														>
+													{:else if Number(node.maxMemoryMb) > 0}
+														<span
+															class={Number(node.maxMemoryMb) > Number(node.allocatedMemoryMb)
+																? 'text-emerald-400'
+																: 'text-rose-400'}
+														>
+															{(
+																Math.max(
+																	0,
+																	Number(node.maxMemoryMb) - Number(node.allocatedMemoryMb)
+																) / 1024
+															).toFixed(1)} GB free
+														</span>
+													{/if}
+													<span>•</span>
+													<span
+														>{(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB allocated</span
+													>
+												</div>
 											</button>
 										{/each}
 									</div>

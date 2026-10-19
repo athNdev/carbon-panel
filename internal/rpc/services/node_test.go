@@ -108,6 +108,9 @@ func TestNodeService_CreateAndGetNode(t *testing.T) {
 	if getRes.Msg.Node.Id != created.Id {
 		t.Errorf("expected ID %s, got %s", created.Id, getRes.Msg.Node.Id)
 	}
+	if getRes.Msg.Node.AvailableMemoryMb != 16384 {
+		t.Errorf("expected available memory 16384, got %d", getRes.Msg.Node.AvailableMemoryMb)
+	}
 
 	// 4. GetNode non-existing
 	_, err = svc.GetNode(ctx, connect.NewRequest(&v1.GetNodeRequest{
