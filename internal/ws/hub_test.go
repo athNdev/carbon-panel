@@ -7,6 +7,7 @@
 package ws
 
 import (
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"testing"
 
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -50,4 +51,19 @@ func TestHubMigrateServerContainerIsSafeWithoutSubscription(t *testing.T) {
 	h.MigrateServerContainer("s1", "new-container")
 	h.MigrateServerContainer("", "new-container")
 	h.MigrateServerContainer("s1", "")
+}
+
+func TestHubDockerFor_ResolvesWithPoolAndFallback(t *testing.T) {
+	defaultCli := &docker.Client{}
+	h := &Hub{docker: defaultCli}
+
+	// No pool configured -> returns default docker client
+	if got := h.dockerFor("node-1"); got != defaultCli {
+		t.Fatalf("expected defaultCli, got %v", got)
+	}
+
+	// With empty nodeID -> returns default docker client
+	if got := h.dockerFor(""); got != defaultCli {
+		t.Fatalf("expected defaultCli for empty nodeID, got %v", got)
+	}
 }
