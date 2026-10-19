@@ -295,4 +295,17 @@ func TestConfigValidateMethod(t *testing.T) {
 	if err := cfgBadOIDC.Validate(); err == nil {
 		t.Fatal("expected error when OIDC is enabled but issuer URI is empty")
 	}
+
+	// Negative storage snapshot config
+	cfgNegMaxSnap := *cfg
+	cfgNegMaxSnap.Storage.MaxSnapshots = -1
+	if err := cfgNegMaxSnap.Validate(); err == nil {
+		t.Fatal("expected error for negative storage.max_snapshots")
+	}
+
+	cfgNegSnapRet := *cfg
+	cfgNegSnapRet.Storage.SnapshotRetentionDays = -1
+	if err := cfgNegSnapRet.Validate(); err == nil {
+		t.Fatal("expected error for negative storage.snapshot_retention_days")
+	}
 }
