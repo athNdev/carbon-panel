@@ -155,6 +155,16 @@ func (s *Scheduler) Start() error {
 		return fmt.Errorf("scheduler already running")
 	}
 
+	// Recover orphaned executions left in running state by a prior abnormal process exit.
+	if s.store != nil {
+		ctx := context.Background()
+		if count, err := s.store.FailOrphanedTaskExecutions(ctx, "interrupted by panel restart"); err != nil {
+			s.log.Error("Failed to recover orphaned task executions: %v", err)
+		} else if count > 0 {
+			s.log.Warn("Recovered %d orphaned task execution(s) from prior session", count)
+		}
+	}
+
 	s.running = true
 	s.stopChan = make(chan struct{})
 
@@ -585,12 +595,33 @@ func (s *Scheduler) CancelExecution(executionID string) error {
 	cancel, exists := s.runningExecutions[executionID]
 	s.executionMu.RUnlock()
 
-	if !exists {
-		return fmt.Errorf("execution not found or already finished")
+	if exists {
+		cancel()
+		return nil
 	}
 
-	cancel()
-	return nil
+	// If not running in active memory, check if it was left orphaned in storage
+	if s.store != nil {
+		ctx := context.Background()
+		exec, err := s.store.GetTaskExecution(ctx, executionID)
+		if err == nil && exec != nil && exec.Status == storage.ExecutionStatusRunning {
+			now := time.Now()
+			exec.Status = storage.ExecutionStatusCancelled
+			exec.Error = "execution cancelled"
+			exec.EndedAt = &now
+			if exec.StartedAt.IsZero() {
+				exec.Duration = 0
+			} else {
+				exec.Duration = now.Sub(exec.StartedAt).Milliseconds()
+			}
+			if updateErr := s.store.UpdateTaskExecution(ctx, exec); updateErr != nil {
+				return fmt.Errorf("failed to cancel orphaned execution: %w", updateErr)
+			}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("execution not found or already finished")
 }
 
 // updateNextRun calculates and updates the next run time for a task
