@@ -1,10 +1,19 @@
+# SPDX-License-Identifier: MIT AND MPL-2.0
+# This file includes DiscoPanel material under the MIT License,
+# Copyright (c) 2025 Nicholas W. Heyer. The MIT license text is in LICENSE
+# and still applies to that inherited material.
+# Maintainer changes are licensed under the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain
+# one at https://mozilla.org/MPL/2.0/.
+
+
 FROM golang:alpine AS builder
 
 WORKDIR /build
 
 # Copy go mod files first for caching
 COPY go.mod go.sum ./
-RUN go mod download
+RUN for i in 1 2 3 4 5; do go mod download && exit 0; echo "go mod download failed (attempt $i), retrying"; sleep $((i*5)); done; exit 1
 
 # Copy source code
 COPY cmd/status/ ./cmd/status/
