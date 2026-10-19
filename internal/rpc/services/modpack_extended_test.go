@@ -154,3 +154,39 @@ func TestModpackService_ImportRemoteModpack_ComputesSha256(t *testing.T) {
 	require.NotEmpty(t, files)
 	assert.Equal(t, expectedHex, files[0].Sha256)
 }
+func TestModpackService_ImportRemoteModpack_ExceedsMaxSize(t *testing.T) {
+	t.Setenv("DISCO_ALLOW_LOOPBACK_TEST", "1")
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+	log := logger.New()
+
+	dataDir := t.TempDir()
+	cfg := &config.Config{
+		Storage: config.StorageConfig{
+			DataDir: dataDir,
+		},
+	}
+	svc := NewModpackService(store, cfg, nil, log)
+	ctx := context.Background()
+
+	// Set small size limit
+	origLimit := maxRemoteModpackSize
+	maxRemoteModpackSize = 50
+	defer func() { maxRemoteModpackSize = origLimit }()
+
+	// Host a 100-byte response
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/zip")
+		_, _ = w.Write(bytes.Repeat([]byte("A"), 100))
+	}))
+	defer ts.Close()
+
+	req := &v1.ImportRemoteModpackRequest{
+		Url:                 ts.URL + "/pack.zip",
+		Name:                "Huge Pack",
+		AllowPrivateNetwork: true,
+	}
+	_, err := svc.ImportRemoteModpack(ctx, connect.NewRequest(req))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds maximum allowed size")
+}

@@ -1119,6 +1119,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 					serverConfig.CFSlug = &cfSlug
 				} else {
 					s.log.Error("Failed to copy manual modpack file %s: %v", sourcePath, copyErr)
+					_ = os.Remove(destPath)
 				}
 			}
 		} else if modpackURL != "" && server.ModLoader == storage.ModLoaderAutoCurseForge {
@@ -2158,6 +2159,13 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			})
 		}
 
+		// Update proxy route if enabled
+		if s.proxy != nil && server.ProxyHostname != "" {
+			if err := s.proxy.UpdateServerRoute(server); err != nil {
+				s.log.Error("Failed to update proxy route on restart: %v", err)
+			}
+		}
+
 		return connect.NewResponse(&v1.RestartServerResponse{
 			Status: "starting",
 		}), nil
@@ -2183,12 +2191,19 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 						ServerID: server.ID,
 					})
 				}
+				if s.proxy != nil && server.ProxyHostname != "" {
+					if err := s.proxy.UpdateServerRoute(server); err != nil {
+						s.log.Error("Failed to update proxy route on restart: %v", err)
+					}
+				}
 				return connect.NewResponse(&v1.RestartServerResponse{
 					Status: "starting",
 				}), nil
 			}
 		}
 		s.log.Error("Failed to restart container: %v", err)
+		server.Status = storage.StatusError
+		_ = s.store.UpdateServer(ctx, server)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restart server"))
 	}
 
@@ -2213,6 +2228,13 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_RESTART,
 			ServerID: server.ID,
 		})
+	}
+
+	// Update proxy route if enabled
+	if s.proxy != nil && server.ProxyHostname != "" {
+		if err := s.proxy.UpdateServerRoute(server); err != nil {
+			s.log.Error("Failed to update proxy route on restart: %v", err)
+		}
 	}
 
 	s.auditPower(ctx, req.Peer().Addr, activity.EventServerRestart, server.ID)
