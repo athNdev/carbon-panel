@@ -10,7 +10,6 @@ import (
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
-	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/gorilla/websocket"
@@ -273,7 +272,7 @@ func TestSendControl_WaitsForBufferSpace(t *testing.T) {
 func newHandshakeHub(t *testing.T, cfg *config.AuthConfig) *Hub {
 	t.Helper()
 	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
-	store, err := storage.NewSQLiteStore(&config.Config{
+	store, err := db.NewSQLiteStore(&config.Config{
 		Database: config.DatabaseConfig{
 			Path:           fmt.Sprintf("file:%s?mode=memory&cache=shared", dbName),
 			AutoMigrate:    true,
