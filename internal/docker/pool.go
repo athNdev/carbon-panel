@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/moby/moby/client"
-	"github.com/docker/go-connections/tlsconfig"
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/docker/go-connections/tlsconfig"
+	"github.com/moby/moby/client"
 )
 
 // NodeStore defines the DB interface needed by ClientPool
@@ -360,6 +360,14 @@ func (p *ClientPool) PingNode(ctx context.Context, nodeID string) (bool, error) 
 	if err != nil {
 		node.Status = models.NodeStatusOffline
 		_ = p.store.UpdateNode(ctx, node)
+		if nodeID != p.defaultNodeID && !node.IsLocal {
+			p.mu.Lock()
+			if cached, ok := p.clients[nodeID]; ok && cached == cli {
+				_ = cached.Close()
+				delete(p.clients, nodeID)
+			}
+			p.mu.Unlock()
+		}
 		return false, fmt.Errorf("ping failed for node %s: %w", nodeID, err)
 	}
 
@@ -462,12 +470,21 @@ func (p *ClientPool) checkAllNodes(ctx context.Context) {
 		return
 	}
 
+	var wg sync.WaitGroup
 	for _, node := range nodes {
 		if !node.Enabled {
 			continue
 		}
-		_, _ = p.PingNode(ctx, node.ID)
+		n := node
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			nodeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			_, _ = p.PingNode(nodeCtx, n.ID)
+		}()
 	}
+	wg.Wait()
 }
 
 // Close closes all managed clients and stops background tasks.
