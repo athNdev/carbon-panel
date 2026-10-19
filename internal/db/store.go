@@ -1239,6 +1239,22 @@ func (s *Store) DeleteTaskExecutions(ctx context.Context, taskID string) error {
 	return s.db.WithContext(ctx).Where("task_id = ?", taskID).Delete(&TaskExecution{}).Error
 }
 
+// FailOrphanedTaskExecutions marks all task executions currently recorded in
+// the 'running' state as failed with the given reason. This is invoked during
+// scheduler startup to resolve executions left dangling by an unexpected daemon
+// crash or host reboot.
+func (s *Store) FailOrphanedTaskExecutions(ctx context.Context, reason string) (int64, error) {
+	now := time.Now()
+	res := s.db.WithContext(ctx).Model(&TaskExecution{}).
+		Where("status = ?", ExecutionStatusRunning).
+		Updates(map[string]any{
+			"status":   ExecutionStatusFailed,
+			"error":    reason,
+			"ended_at": &now,
+		})
+	return res.RowsAffected, res.Error
+}
+
 // Node operations
 
 func (s *Store) CreateNode(ctx context.Context, node *Node) error {
