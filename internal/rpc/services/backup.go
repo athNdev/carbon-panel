@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"connectrpc.com/connect"
 
@@ -27,16 +28,25 @@ var _ carbonpanelv1connect.BackupServiceHandler = (*BackupService)(nil)
 
 // BackupService manages on-demand backup records (MINE-138).
 type BackupService struct {
-	store    *storage.Store
-	docker   *docker.Client
-	pool     *docker.ClientPool
-	s3cfg    appconfig.S3Config
-	log      *logger.Logger
-	enforcer *rbac.Enforcer
+	store            *storage.Store
+	docker           *docker.Client
+	pool             *docker.ClientPool
+	s3cfg            appconfig.S3Config
+	log              *logger.Logger
+	enforcer         *rbac.Enforcer
+	restoringMu      sync.Mutex
+	restoringServers map[string]bool
 }
 
 func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *docker.ClientPool, s3cfg appconfig.S3Config, log *logger.Logger) *BackupService {
-	return &BackupService{store: store, docker: dockerCli, pool: pool, s3cfg: s3cfg, log: log}
+	return &BackupService{
+		store:            store,
+		docker:           dockerCli,
+		pool:             pool,
+		s3cfg:            s3cfg,
+		log:              log,
+		restoringServers: make(map[string]bool),
+	}
 }
 
 // SetEnforcer injects the RBAC enforcer used for per-server authorization on
@@ -149,10 +159,15 @@ func (s *BackupService) DeleteBackup(ctx context.Context, req *connect.Request[v
 	if rec.Locked {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("backup is locked"))
 	}
-	if err := os.Remove(rec.Path); err != nil && !os.IsNotExist(err) {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete archive: %w", err))
+	if rec.Status == "restoring" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("backup is currently being restored"))
 	}
-	_ = os.Remove(rec.Path + ".sha256")
+	if rec.Path != "" {
+		if err := os.Remove(rec.Path); err != nil && !os.IsNotExist(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete archive: %w", err))
+		}
+		_ = os.Remove(rec.Path + ".sha256")
+	}
 	if rec.RemoteKey != "" && s3uploader.Enabled(s.s3cfg) {
 		if up, err := s3uploader.NewUploader(s.s3cfg); err == nil {
 			if err := up.Delete(ctx, rec.RemoteKey); err != nil {
@@ -198,6 +213,24 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
+
+	s.restoringMu.Lock()
+	if s.restoringServers == nil {
+		s.restoringServers = make(map[string]bool)
+	}
+	if s.restoringServers[rec.ServerID] || rec.Status == "restoring" {
+		s.restoringMu.Unlock()
+		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("a backup restore is already in progress for server %s", rec.ServerID))
+	}
+	s.restoringServers[rec.ServerID] = true
+	s.restoringMu.Unlock()
+
+	defer func() {
+		s.restoringMu.Lock()
+		delete(s.restoringServers, rec.ServerID)
+		s.restoringMu.Unlock()
+	}()
+
 	if err := s.store.SetBackupStatus(ctx, rec.ID, "restoring"); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mark restoring"))
 	}
