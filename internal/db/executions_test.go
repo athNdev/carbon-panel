@@ -143,3 +143,46 @@ func TestEnsureDefaultNode_Missing(t *testing.T) {
 		t.Error("missing default node returned without error")
 	}
 }
+
+func TestStore_FailOrphanedTaskExecutions(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	defer store.Close()
+
+	now := time.Now()
+	e1 := &TaskExecution{ID: "e-run-1", TaskID: "task-1", ServerID: "srv-1", Status: ExecutionStatusRunning, StartedAt: now}
+	e2 := &TaskExecution{ID: "e-run-2", TaskID: "task-2", ServerID: "srv-1", Status: ExecutionStatusRunning, StartedAt: now}
+	e3 := &TaskExecution{ID: "e-done", TaskID: "task-1", ServerID: "srv-1", Status: ExecutionStatusCompleted, StartedAt: now, EndedAt: &now}
+
+	if err := store.CreateTaskExecution(ctx, e1); err != nil {
+		t.Fatalf("create e1 failed: %v", err)
+	}
+	if err := store.CreateTaskExecution(ctx, e2); err != nil {
+		t.Fatalf("create e2 failed: %v", err)
+	}
+	if err := store.CreateTaskExecution(ctx, e3); err != nil {
+		t.Fatalf("create e3 failed: %v", err)
+	}
+
+	recovered, err := store.FailOrphanedTaskExecutions(ctx, "interrupted by test")
+	if err != nil {
+		t.Fatalf("FailOrphanedTaskExecutions error: %v", err)
+	}
+	if recovered != 2 {
+		t.Fatalf("expected 2 recovered, got %d", recovered)
+	}
+
+	// Verify statuses
+	e1After, err := store.GetTaskExecution(ctx, "e-run-1")
+	if err != nil || e1After.Status != ExecutionStatusFailed || e1After.Error != "interrupted by test" || e1After.EndedAt == nil {
+		t.Fatalf("e1After unexpected: %+v, %v", e1After, err)
+	}
+	e2After, err := store.GetTaskExecution(ctx, "e-run-2")
+	if err != nil || e2After.Status != ExecutionStatusFailed || e2After.Error != "interrupted by test" || e2After.EndedAt == nil {
+		t.Fatalf("e2After unexpected: %+v, %v", e2After, err)
+	}
+	e3After, err := store.GetTaskExecution(ctx, "e-done")
+	if err != nil || e3After.Status != ExecutionStatusCompleted {
+		t.Fatalf("e3After unexpected: %+v, %v", e3After, err)
+	}
+}

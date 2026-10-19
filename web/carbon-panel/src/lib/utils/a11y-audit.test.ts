@@ -129,3 +129,18 @@ test('icon-only buttons in server-files, ModuleLogsDialog, ServerModules, and Al
 		assert.ok(content.includes('aria-label='), `${comp} must declare aria-label on icon buttons`);
 	}
 });
+
+test("ServerConsole provides manual reconnect action and fallback polling when websocket disconnected", () => {
+	const consolePath = path.resolve(import.meta.dirname, "../components/server-console.svelte");
+	const content = fs.readFileSync(consolePath, "utf-8");
+
+	assert.ok(content.includes("wsClient.reconnect()"), "ServerConsole must provide manual wsClient.reconnect() action");
+	assert.ok(content.includes("aria-label=\"Reconnect WebSocket\""), "Reconnect action must include accessible aria-label");
+	assert.ok(content.includes("startFallbackPolling"), "ServerConsole must include fallback log polling when disconnected");
+	assert.ok(content.includes("stopFallbackPolling"), "ServerConsole must stop fallback polling on unmount or authentication");
+
+	const wsPath = path.resolve(import.meta.dirname, "../stores/websocket.svelte.ts");
+	const wsContent = fs.readFileSync(wsPath, "utf-8");
+	assert.ok(wsContent.includes("reconnect(): void"), "WebSocketClient must expose public reconnect method");
+	assert.ok(wsContent.includes("isTerminalBackoff"), "WebSocketClient must maintain background retries beyond rapid attempts");
+});
