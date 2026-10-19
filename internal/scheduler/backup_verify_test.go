@@ -96,3 +96,45 @@ func TestPruneBackupsLockedExempt(t *testing.T) {
 		t.Fatalf("minBackups survivor pruned: %v", err)
 	}
 }
+
+func TestPruneBackupsLockedNamesAndSha256Cleaned(t *testing.T) {
+	dir := t.TempDir()
+	base := time.Now().Add(-72 * time.Hour)
+	mk := func(name string, age time.Duration) {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte("x"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p+".sha256", []byte("sum"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		ts := base.Add(age)
+		if err := os.Chtimes(p, ts, ts); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("srv_1.zip", 0)
+	mk("srv_2.zip", time.Hour)
+	mk("srv_3.zip", 2*time.Hour)
+
+	locked := map[string]bool{"srv_1.zip": true}
+	n, err := pruneBackups(dir, "srv_", 1, 1, 1, locked)
+	if err != nil {
+		t.Fatalf("prune: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("expected 1 pruned, got %d", n)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "srv_1.zip")); err != nil {
+		t.Fatalf("locked backup pruned: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "srv_1.zip.sha256")); err != nil {
+		t.Fatalf("locked backup sha256 removed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "srv_2.zip")); !os.IsNotExist(err) {
+		t.Fatalf("expected srv_2.zip to be pruned")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "srv_2.zip.sha256")); !os.IsNotExist(err) {
+		t.Fatalf("expected srv_2.zip.sha256 to be pruned")
+	}
+}
