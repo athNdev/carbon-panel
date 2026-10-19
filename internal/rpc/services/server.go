@@ -106,6 +106,9 @@ func (s *ServerService) getHostMemoryMB(ctx context.Context, nodeID string) (int
 	if s.hostMemoryMB != nil {
 		return s.hostMemoryMB(ctx, nodeID)
 	}
+	if s.pool != nil {
+		return s.pool.GetHostMemoryMB(ctx, nodeID)
+	}
 	cli, err := s.getDockerClientStrict(nodeID)
 	if err != nil || cli == nil {
 		if err == nil {
