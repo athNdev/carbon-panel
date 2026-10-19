@@ -296,7 +296,10 @@ func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.S
 		return fmt.Errorf("docker client pool not configured")
 	}
 	dockerCli, err := s.pool.GetClientStrict(server.NodeID)
-	if err != nil {
+	if err != nil || dockerCli == nil {
+		if err == nil {
+			err = fmt.Errorf("no docker client available")
+		}
 		return fmt.Errorf("failed to resolve docker client for node %s: %w", server.NodeID, err)
 	}
 	// Inherit global settings if server-specific keys are unset.
