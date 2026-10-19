@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"connectrpc.com/connect"
 
@@ -208,6 +210,7 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	// S3 round-trip (MINE-138 slice 2): fetch the archive when only the
 	// remote copy remains (e.g. DeleteLocalCopy was enabled).
 	archivePath := rec.Path
+	downloadedTemp := false
 	if _, err := os.Stat(archivePath); err != nil {
 		if rec.RemoteKey == "" || !s3uploader.Enabled(s.s3cfg) {
 			done("failed")
@@ -220,13 +223,40 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		}
 		tmp := archivePath
 		if tmp == "" {
-			tmp = rec.Name
+			tmp = filepath.Join(os.TempDir(), "carbon-backups", rec.ServerID, rec.Name)
 		}
 		if err := up.Download(ctx, rec.RemoteKey, tmp); err != nil {
 			done("failed")
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("s3 download failed: %w", err))
 		}
 		archivePath = tmp
+		if s.s3cfg.DeleteLocalCopy {
+			downloadedTemp = true
+		}
+	}
+
+	defer func() {
+		if downloadedTemp {
+			_ = os.Remove(archivePath)
+			_ = os.Remove(archivePath + ".sha256")
+		}
+	}()
+
+	// Verify archive integrity before taking down container or touching data files
+	if rec.SHA256 != "" {
+		sum, err := files.SHA256File(archivePath)
+		if err != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to compute backup checksum: %w", err))
+		}
+		if !strings.EqualFold(sum, rec.SHA256) {
+			done("failed")
+			return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("backup archive checksum mismatch: expected %s, got %s", rec.SHA256, sum))
+		}
+	}
+	if err := files.VerifyZipArchive(archivePath); err != nil {
+		done("failed")
+		return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("backup archive corrupt or invalid: %w", err))
 	}
 
 	dockerCli := s.dockerFor(server.NodeID)
