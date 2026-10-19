@@ -459,14 +459,14 @@ func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error
 	defer docker.EndServerTransition(serverID)
 
 	server, err := r.store.GetServer(ctx, serverID)
-	if err != nil {
+	if err != nil || server == nil {
 		// Deleted, or a transient DB read failure; either way there is nothing
 		// safe to converge.
 		return nil
 	}
 
 	cli, err := r.clients.GetClientStrict(server.NodeID)
-	if err != nil {
+	if err != nil || cli == nil {
 		if r.log != nil {
 			r.log.Warn("reconciler: node %q unavailable for server %s: %v", server.NodeID, server.Name, err)
 		}

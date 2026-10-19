@@ -147,17 +147,20 @@ func TestServeHTTP_CSWSH_OriginValidation(t *testing.T) {
 
 	// 1. Same-origin connects successfully
 	validOrigin := ts.URL
-	conn, res, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
 		"Origin": []string{validOrigin},
 	})
 	if err != nil {
 		t.Fatalf("same-origin dial failed: %v", err)
 	}
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
+	}
 	_ = conn.Close()
 
 	// 2. Cross-origin request is rejected with 403 Forbidden
 	evilOrigin := "http://malicious-website.example.com"
-	_, res, err = websocket.DefaultDialer.Dial(wsURL, http.Header{
+	_, res, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
 		"Origin": []string{evilOrigin},
 	})
 	if err == nil {
@@ -165,6 +168,9 @@ func TestServeHTTP_CSWSH_OriginValidation(t *testing.T) {
 	}
 	if res == nil || res.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403 Forbidden for CSWSH attempt, got %v", res)
+	}
+	if res.Body != nil {
+		_ = res.Body.Close()
 	}
 
 	// 3. Custom check origin can override
