@@ -89,6 +89,24 @@
 	// `effect_update_depth_exceeded`, which unlinks and abandons the whole
 	// flushed batch (including this page's poll interval). Plain `let` keeps the
 	// value out of the reactivity graph entirely.
+	let fallbackPollTimer: ReturnType<typeof setInterval> | null = null;
+
+	function startFallbackPolling() {
+		if (fallbackPollTimer) return;
+		fallbackPollTimer = setInterval(() => {
+			if (active && wsClient.state.connectionState !== 'authenticated') {
+				fetchLogs();
+			}
+		}, 5000);
+	}
+
+	function stopFallbackPolling() {
+		if (fallbackPollTimer) {
+			clearInterval(fallbackPollTimer);
+			fallbackPollTimer = null;
+		}
+	}
+
 	let previousConnectionState = 'disconnected';
 	$effect(() => {
 		const s = wsConnectionState;
@@ -100,6 +118,12 @@
 			alertMessage = 'Console connection lost. Attempting to reconnect.';
 		}
 		previousConnectionState = s;
+
+		if (active && s !== 'authenticated') {
+			startFallbackPolling();
+		} else {
+			stopFallbackPolling();
+		}
 	});
 	let cleanupHandlers: (() => void)[] = [];
 	let previousServerId = server.id;
@@ -107,6 +131,7 @@
 	let previousStatus = server.status;
 
 	onDestroy(() => {
+		stopFallbackPolling();
 		untrack(() => cleanupWebSocket());
 	});
 
@@ -195,6 +220,7 @@
 	}
 
 	function cleanupWebSocket() {
+		stopFallbackPolling();
 		wsClient.unsubscribe(server.id);
 		cleanupHandlers.forEach((cleanup) => cleanup());
 		cleanupHandlers = [];
@@ -385,6 +411,16 @@
 						<CarbonTag type="yellow" size="sm">
 							<span class="motion-pulse">RECONNECTING</span>
 						</CarbonTag>
+					{/if}
+					{#if wsConnectionState === 'disconnected'}
+						<button
+							type="button"
+							onclick={() => wsClient.reconnect()}
+							class="cursor-pointer font-mono text-xs text-[#78a9ff] hover:text-[#a6c8ff] hover:underline"
+							aria-label="Reconnect WebSocket"
+						>
+							Reconnect
+						</button>
 					{/if}
 				</div>
 
