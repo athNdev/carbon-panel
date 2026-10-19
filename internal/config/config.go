@@ -84,11 +84,13 @@ type DockerConfig struct {
 }
 
 type StorageConfig struct {
-	DataDir       string   `mapstructure:"data_dir" json:"data_dir"`
-	BackupDir     string   `mapstructure:"backup_dir" json:"backup_dir"`
-	TempDir       string   `mapstructure:"temp_dir" json:"temp_dir"`
-	MaxUploadSize int64    `mapstructure:"max_upload_size" json:"max_upload_size"`
-	S3            S3Config `mapstructure:"s3" json:"s3"`
+	DataDir               string   `mapstructure:"data_dir" json:"data_dir"`
+	BackupDir             string   `mapstructure:"backup_dir" json:"backup_dir"`
+	TempDir               string   `mapstructure:"temp_dir" json:"temp_dir"`
+	MaxUploadSize         int64    `mapstructure:"max_upload_size" json:"max_upload_size"`
+	MaxSnapshots          int      `mapstructure:"max_snapshots" json:"max_snapshots"`
+	SnapshotRetentionDays int      `mapstructure:"snapshot_retention_days" json:"snapshot_retention_days"`
+	S3                    S3Config `mapstructure:"s3" json:"s3"`
 }
 
 // S3Config enables S3-compatible offsite backup upload (MINE-138).
@@ -242,6 +244,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("storage.backup_dir", "./backups")
 	v.SetDefault("storage.temp_dir", "./tmp")
 	v.SetDefault("storage.max_upload_size", 500*1024*1024) // 500MB
+	v.SetDefault("storage.max_snapshots", 5)
+	v.SetDefault("storage.snapshot_retention_days", 0) // 0 = unlimited age
 
 	// Proxy defaults
 	v.SetDefault("proxy.enabled", false)
@@ -350,6 +354,13 @@ func validateConfig(cfg *Config) error {
 	cfg.Storage.TempDir, err = filepath.Abs(cfg.Storage.TempDir)
 	if err != nil {
 		return fmt.Errorf("invalid temp directory: %w", err)
+	}
+
+	if cfg.Storage.MaxSnapshots < 0 {
+		return fmt.Errorf("storage.max_snapshots cannot be negative, got: %d", cfg.Storage.MaxSnapshots)
+	}
+	if cfg.Storage.SnapshotRetentionDays < 0 {
+		return fmt.Errorf("storage.snapshot_retention_days cannot be negative, got: %d", cfg.Storage.SnapshotRetentionDays)
 	}
 
 	// Validate upload limits
