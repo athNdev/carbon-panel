@@ -98,7 +98,10 @@ func (s *ServerService) getHostMemoryMB(ctx context.Context, nodeID string) (int
 		return s.hostMemoryMB(ctx, nodeID)
 	}
 	cli, err := s.getDockerClientStrict(nodeID)
-	if err != nil {
+	if err != nil || cli == nil {
+		if err == nil {
+			err = fmt.Errorf("no docker client available for node %s", nodeID)
+		}
 		return 0, err
 	}
 	return cli.HostMemoryMB(ctx)

@@ -277,3 +277,30 @@ func TestSendCommandRedactsRCONPasswordInError(t *testing.T) {
 		t.Errorf("expected placeholder in error, got: %v", err)
 	}
 }
+
+func TestSendCommand_NilExecutorHandledGracefully(t *testing.T) {
+	store := testStore(t)
+	makeServer(t, store, "s-nil-exec", "c-nil-exec")
+	s := NewSender(store, &config.Config{}, nil, nil)
+	_, err := s.SendCommand(context.Background(), "s-nil-exec", "list")
+	if err == nil {
+		t.Fatal("expected error when executor is nil, got nil")
+	}
+	if !strings.Contains(err.Error(), "no docker executor available") {
+		t.Errorf("expected 'no docker executor available', got: %v", err)
+	}
+}
+
+func TestSendCommand_NilConfigHandledGracefully(t *testing.T) {
+	store := testStore(t)
+	makeServer(t, store, "s-nil-cfg", "c-nil-cfg")
+	exec := &fakeExecutor{output: "ok"}
+	s := NewSender(store, nil, exec, nil)
+	out, err := s.SendCommand(context.Background(), "s-nil-cfg", "list")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "ok" {
+		t.Errorf("expected 'ok', got %q", out)
+	}
+}
