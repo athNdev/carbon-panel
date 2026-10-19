@@ -116,16 +116,6 @@ func (s *BackupService) dockerFor(nodeID string) *docker.Client {
 	return s.docker
 }
 
-func (s *BackupService) dockerForStrict(nodeID string) (*docker.Client, error) {
-	if s.pool != nil {
-		return s.pool.GetClientStrict(nodeID)
-	}
-	if s.docker != nil {
-		return s.docker, nil
-	}
-	return nil, fmt.Errorf("no docker client available")
-}
-
 func dbBackupToProto(b *storage.BackupRecord) *v1.BackupRecord {
 	return &v1.BackupRecord{
 		Id: b.ID, ServerId: b.ServerID, Name: b.Name,
