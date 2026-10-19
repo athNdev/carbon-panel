@@ -41,6 +41,13 @@ export default defineConfig({
 	define: {
 		__APP_VERSION__: JSON.stringify(getVersion())
 	},
+	build: {
+		sourcemap: false,
+		rollupOptions: {
+			maxParallelFileOps: 2,
+			cache: false
+		}
+	},
 	server: {
 		host: '0.0.0.0',
 		port: 5174,

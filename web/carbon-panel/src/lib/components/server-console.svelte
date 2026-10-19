@@ -24,7 +24,6 @@
 		Wifi,
 		WifiOff
 	} from '@lucide/svelte';
-	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import AnsiToHtml from 'ansi-to-html';
 	import { getStringForEnum } from '$lib/utils';
 	import { wsClient } from '$lib/stores/websocket.svelte';
@@ -426,89 +425,57 @@
 
 				<!-- Toolbar Icon Buttons -->
 				<div class="flex items-center gap-1">
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<button
-								type="button"
-								onclick={fetchLogs}
-								disabled={loading}
-								aria-label="Refresh logs"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:cursor-not-allowed disabled:opacity-40"
-							>
-								{#if loading}
-									<Loader2 class="h-3.5 w-3.5 animate-spin" />
-								{:else}
-									<RefreshCw class="h-3.5 w-3.5" />
-								{/if}
-							</button>
-						</Tooltip.Trigger>
-						<Tooltip.Content
-							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
-						>
-							Refresh logs
-						</Tooltip.Content>
-					</Tooltip.Root>
+					<button
+						type="button"
+						onclick={fetchLogs}
+						disabled={loading}
+						aria-label="Refresh logs"
+						title="Refresh logs"
+						class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						{#if loading}
+							<Loader2 class="h-3.5 w-3.5 animate-spin" />
+						{:else}
+							<RefreshCw class="h-3.5 w-3.5" />
+						{/if}
+					</button>
 
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<button
-								type="button"
-								onclick={uploadToMCLogs}
-								disabled={uploading}
-								aria-label="Upload logs to mclo.gs"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:cursor-not-allowed disabled:opacity-40"
-							>
-								{#if uploading}
-									<Loader2 class="h-3.5 w-3.5 animate-spin" />
-								{:else}
-									<Upload class="h-3.5 w-3.5" />
-								{/if}
-							</button>
-						</Tooltip.Trigger>
-						<Tooltip.Content
-							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
-						>
-							Upload to mclo.gs
-						</Tooltip.Content>
-					</Tooltip.Root>
+					<button
+						type="button"
+						onclick={uploadToMCLogs}
+						disabled={uploading}
+						aria-label="Upload logs to mclo.gs"
+						title="Upload logs to mclo.gs"
+						class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						{#if uploading}
+							<Loader2 class="h-3.5 w-3.5 animate-spin" />
+						{:else}
+							<Upload class="h-3.5 w-3.5" />
+						{/if}
+					</button>
 
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<button
-								type="button"
-								onclick={downloadLogs}
-								disabled={logEntries.length === 0}
-								aria-label="Download raw log"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:opacity-40"
-							>
-								<Download class="h-3.5 w-3.5" />
-							</button>
-						</Tooltip.Trigger>
-						<Tooltip.Content
-							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
-						>
-							Download raw log
-						</Tooltip.Content>
-					</Tooltip.Root>
+					<button
+						type="button"
+						onclick={downloadLogs}
+						disabled={logEntries.length === 0}
+						aria-label="Download raw log"
+						title="Download raw log"
+						class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:opacity-40"
+					>
+						<Download class="h-3.5 w-3.5" />
+					</button>
 
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<button
-								type="button"
-								onclick={clearLogs}
-								disabled={logEntries.length === 0}
-								aria-label="Clear log buffer"
-								class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-[#ff8389] focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:opacity-40"
-							>
-								<Trash2 class="h-3.5 w-3.5" />
-							</button>
-						</Tooltip.Trigger>
-						<Tooltip.Content
-							class="rounded-none border border-[#393939] bg-[#262626] text-xs text-[#f4f4f4]"
-						>
-							Clear buffer
-						</Tooltip.Content>
-					</Tooltip.Root>
+					<button
+						type="button"
+						onclick={clearLogs}
+						disabled={logEntries.length === 0}
+						aria-label="Clear log buffer"
+						title="Clear log buffer"
+						class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-[#ff8389] focus-visible:outline-2 focus-visible:outline-[#0f62fe] disabled:opacity-40"
+					>
+						<Trash2 class="h-3.5 w-3.5" />
+					</button>
 				</div>
 			</div>
 
