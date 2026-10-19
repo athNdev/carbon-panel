@@ -160,3 +160,40 @@ func TestValidateServerPorts(t *testing.T) {
 func portList(containerPort, hostPort int32) []*v1.AdditionalPort {
 	return []*v1.AdditionalPort{{Name: "x", ContainerPort: containerPort, HostPort: hostPort, Protocol: "tcp"}}
 }
+
+
+func TestIsProxyServer(t *testing.T) {
+	c := &Client{config: ClientConfig{ProxyEnabled: false}}
+
+	// When proxy is disabled globally, nothing is treated as a proxied server
+	srv := &models.Server{ID: "1", Port: 25566, ProxyHostname: "mc.example.com", ProxyPort: 25565}
+	if c.isProxyServer(srv) {
+		t.Errorf("expected isProxyServer=false when ProxyEnabled=false")
+	}
+
+	c.SetProxyEnabled(true)
+
+	// Direct port server with no proxy port
+	directSrv := &models.Server{ID: "2", Port: 25566, ProxyHostname: "mc.example.com", ProxyPort: 0}
+	if c.isProxyServer(directSrv) {
+		t.Errorf("expected isProxyServer=false when ProxyPort=0")
+	}
+
+	// Server without hostname
+	noHostSrv := &models.Server{ID: "3", Port: 25566, ProxyHostname: "", ProxyPort: 25565}
+	if c.isProxyServer(noHostSrv) {
+		t.Errorf("expected isProxyServer=false when ProxyHostname is empty")
+	}
+
+	// Proxied server with listener assigned
+	proxiedSrv := &models.Server{ID: "4", Port: 25565, ProxyHostname: "mc.example.com", ProxyPort: 25565}
+	if !c.isProxyServer(proxiedSrv) {
+		t.Errorf("expected isProxyServer=true when ProxyEnabled, hostname set, and ProxyPort > 0")
+	}
+
+	// Internal proxied server with Port 0
+	internalProxiedSrv := &models.Server{ID: "5", Port: 0, ProxyHostname: "mc.example.com", ProxyPort: 0}
+	if !c.isProxyServer(internalProxiedSrv) {
+		t.Errorf("expected isProxyServer=true when Port=0 and ProxyHostname set")
+	}
+}

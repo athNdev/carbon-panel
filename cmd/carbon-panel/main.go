@@ -112,6 +112,7 @@ func main() {
 		EnableRateLimit: cfg.Docker.EnableRateLimit,
 		RateLimitPerMin: cfg.Docker.RateLimitPerMin,
 		RateLimitBurst:  cfg.Docker.RateLimitBurst,
+		ProxyEnabled:    cfg.Proxy.Enabled,
 	})
 	if err != nil {
 		log.Fatal("Failed to initialize Docker client: %v", err)
@@ -149,6 +150,7 @@ func main() {
 			cfg.Proxy.Enabled = proxyConfig.Enabled
 			cfg.Proxy.BaseURL = proxyConfig.BaseURL
 		}
+		dockerClient.SetProxyEnabled(cfg.Proxy.Enabled)
 
 		// Load listeners and build ports array
 		listeners, err := store.GetProxyListeners(ctx)
@@ -178,6 +180,7 @@ func main() {
 	// module manager can resolve per-node Docker clients rather than always
 	// targeting the local daemon).
 	clientPool := docker.NewClientPool(store, dockerClient, log)
+	clientPool.SetProxyEnabled(cfg.Proxy.Enabled)
 	clientPool.StartHealthChecker(30 * time.Second)
 	defer clientPool.StopHealthChecker()
 

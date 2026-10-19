@@ -360,7 +360,9 @@
 				placementStrategy: nodePlacementMode === 'auto' ? placementStrategy : '',
 				modpackId: selectedModpack?.id || '',
 				modpackVersionId: versionToSend || '',
-				port: useProxyMode ? 0 : formData.port
+				port: useProxyMode ? 0 : formData.port,
+				proxyHostname: useProxyMode && proxyEnabled ? formData.proxyHostname : '',
+				proxyListenerId: useProxyMode && proxyEnabled ? formData.proxyListenerId : ''
 			};
 
 			const response = await rpcClient.server.createServer(createRequest);

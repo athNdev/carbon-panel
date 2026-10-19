@@ -824,15 +824,17 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	// If auto deep sleep is enabled but no proxy hostname is provided,
 	// auto-generate one if proxy is enabled globally so wake-on-login works (MINE-172).
 	if msg.AutoDeepSleep && proxyHostname == "" && s.config != nil && s.config.Proxy.Enabled {
-		baseName := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(msg.Name), " ", "-"))
-		if baseName == "" {
-			baseName = "mc-server"
-		}
 		proxyConfig, _, err := s.store.GetProxyConfig(ctx)
-		if err == nil && proxyConfig != nil && proxyConfig.BaseURL != "" {
-			proxyHostname = baseName + "." + proxyConfig.BaseURL
-		} else {
-			proxyHostname = baseName
+		if err == nil && proxyConfig != nil && proxyConfig.Enabled {
+			baseName := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(msg.Name), " ", "-"))
+			if baseName == "" {
+				baseName = "mc-server"
+			}
+			if proxyConfig.BaseURL != "" {
+				proxyHostname = baseName + "." + proxyConfig.BaseURL
+			} else {
+				proxyHostname = baseName
+			}
 		}
 	}
 
