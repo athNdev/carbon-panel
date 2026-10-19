@@ -13,6 +13,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -622,4 +624,43 @@ func WithinReal(root, target string) bool {
 	}
 
 	return Within(realRoot, current)
+}
+
+// SHA256File calculates and returns the hex-encoded SHA256 hash of a file on disk.
+func SHA256File(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// VerifyZipArchive opens the zip archive and reads every entry so that stored
+// file CRCs are verified.
+func VerifyZipArchive(path string) error {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = r.Close() }()
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return fmt.Errorf("entry %s: %w", f.Name, err)
+		}
+		_, copyErr := io.Copy(io.Discard, rc)
+		closeErr := rc.Close()
+		if copyErr != nil {
+			return fmt.Errorf("entry %s: %w", f.Name, copyErr)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("entry %s: %w", f.Name, closeErr)
+		}
+	}
+	return nil
 }

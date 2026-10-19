@@ -8,7 +8,10 @@ package s3
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 )
@@ -68,5 +71,39 @@ func TestDelete_EmptyKey(t *testing.T) {
 	}
 	if err := u.Delete(context.Background(), ""); err != nil {
 		t.Errorf("empty key delete returned error: %v", err)
+	}
+}
+
+func TestDownload_FailureCleansUpLocalFile(t *testing.T) {
+	u, err := NewUploader(appconfig.S3Config{
+		Enabled:   true,
+		Bucket:    "nonexistent-bucket",
+		AccessKey: "ak",
+		SecretKey: "sk",
+		Endpoint:  "http://127.0.0.1:54321",
+	})
+	if err != nil {
+		t.Fatalf("config rejected: %v", err)
+	}
+
+	nestedDir := filepath.Join(t.TempDir(), "deeply", "nested", "backups")
+	localPath := filepath.Join(nestedDir, "test.zip")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	err = u.Download(ctx, "srv-1/test.zip", localPath)
+	if err == nil {
+		t.Fatal("expected download error against unreachable endpoint, got nil")
+	}
+
+	// Verify the directory was created
+	if fi, statErr := os.Stat(nestedDir); statErr != nil || !fi.IsDir() {
+		t.Errorf("expected download directory to be created: %v", statErr)
+	}
+
+	// Verify the failed local file was cleaned up and does not linger
+	if _, statErr := os.Stat(localPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected failed local file to be cleaned up: %v", statErr)
 	}
 }
