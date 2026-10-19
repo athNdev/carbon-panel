@@ -722,6 +722,8 @@ func (s *ModpackService) ImportUploadedModpack(ctx context.Context, req *connect
 	}), nil
 }
 
+var maxRemoteModpackSize int64 = 2 * 1024 * 1024 * 1024 // 2GB limit to prevent disk exhaustion
+
 // ImportRemoteModpack imports a modpack from a remote URL (e.g. GitHub release, CDN, static host)
 func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.Request[v1.ImportRemoteModpackRequest]) (*connect.Response[v1.ImportRemoteModpackResponse], error) {
 	msg := req.Msg
@@ -780,13 +782,18 @@ func (s *ModpackService) ImportRemoteModpack(ctx context.Context, req *connect.R
 		os.Remove(tempPath)
 	}()
 
+
 	hasher := sha256.New()
-	written, err := io.Copy(io.MultiWriter(tempFile, hasher), resp.Body)
+	written, err := io.Copy(io.MultiWriter(tempFile, hasher), io.LimitReader(resp.Body, maxRemoteModpackSize+1))
 	if err != nil {
 		s.log.Error("Failed to save remote modpack to temp file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save downloaded file: %w", err))
 	}
 	tempFile.Close()
+
+	if written > maxRemoteModpackSize {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("remote modpack exceeds maximum allowed size (2GB)"))
+	}
 
 	sha256Hex := hex.EncodeToString(hasher.Sum(nil))
 

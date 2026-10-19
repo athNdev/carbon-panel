@@ -1189,7 +1189,8 @@ func (c *Client) RemoveContainer(ctx context.Context, containerID string) error 
 		c.logStreamer.RemoveContainer(containerID)
 	}
 	_, err := c.docker.ContainerRemove(ctx, containerID, client.ContainerRemoveOptions{
-		Force: true,
+		Force:         true,
+		RemoveVolumes: true,
 	})
 	return err
 }
