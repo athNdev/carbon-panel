@@ -286,26 +286,33 @@ func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID, containe
 
 	target := db.StatusError
 	var observeErr error
-	status, err := ctrl.GetContainerStatus(rollbackCtx, containerID)
-	if err != nil {
-		observeErr = fmt.Errorf("failed to observe container during deep-sleep rollback: %w", err)
+	if ctrl == nil {
+		observeErr = fmt.Errorf("no docker controller available for server %s on node %q during deep-sleep rollback", serverID, nodeID)
 	} else {
-		switch status {
-		case db.StatusRunning, db.StatusStarting, db.StatusUnhealthy:
-			target = status
-		case db.StatusStopped:
-			target = db.StatusDeepSleep
-		default:
-			observeErr = fmt.Errorf("container reported unexpected status %s during deep-sleep rollback", status)
+		status, err := ctrl.GetContainerStatus(rollbackCtx, containerID)
+		if err != nil {
+			observeErr = fmt.Errorf("failed to observe container during deep-sleep rollback: %w", err)
+		} else {
+			switch status {
+			case db.StatusRunning, db.StatusStarting, db.StatusUnhealthy:
+				target = status
+			case db.StatusStopped:
+				target = db.StatusDeepSleep
+			default:
+				observeErr = fmt.Errorf("container reported unexpected status %s during deep-sleep rollback", status)
+			}
 		}
 	}
 
-	stateErr := m.store.UpdateServerStatus(rollbackCtx, serverID, target)
-	if stateErr != nil && target != db.StatusError {
-		stateErr = errors.Join(stateErr, m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError))
-	}
-	if stateErr != nil && m.logger != nil {
-		m.logger.Error("Deep sleep: failed to persist rollback state for server %s: %v", serverID, stateErr)
+	var stateErr error
+	if m.store != nil {
+		stateErr = m.store.UpdateServerStatus(rollbackCtx, serverID, target)
+		if stateErr != nil && target != db.StatusError {
+			stateErr = errors.Join(stateErr, m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError))
+		}
+		if stateErr != nil && m.logger != nil {
+			m.logger.Error("Deep sleep: failed to persist rollback state for server %s: %v", serverID, stateErr)
+		}
 	}
 	if m.refresher != nil {
 		m.refresher(serverID)
@@ -316,8 +323,10 @@ func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID, containe
 func (m *DeepSleepManager) rollbackWake(ctx context.Context, serverID string) {
 	failCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	if err := m.store.UpdateServerStatus(failCtx, serverID, db.StatusError); err != nil && m.logger != nil {
-		m.logger.Error("Wake: failed to update status to error for server %s: %v", serverID, err)
+	if m.store != nil {
+		if err := m.store.UpdateServerStatus(failCtx, serverID, db.StatusError); err != nil && m.logger != nil {
+			m.logger.Error("Wake: failed to update status to error for server %s: %v", serverID, err)
+		}
 	}
 	if m.refresher != nil {
 		m.refresher(serverID)
@@ -331,27 +340,37 @@ func (m *DeepSleepManager) rollbackWakePersistenceFailure(ctx context.Context, c
 	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
 
-	found, stopErr := ctrl.StopContainer(rollbackCtx, containerID)
-	if stopErr == nil && found {
-		status, statusErr := ctrl.GetContainerStatus(rollbackCtx, containerID)
-		if statusErr == nil && status == db.StatusStopped {
-			if m.refresher != nil {
-				m.refresher(serverID)
+	var stopErr error
+	if ctrl == nil {
+		stopErr = fmt.Errorf("no docker controller available during wake persistence failure rollback")
+	} else {
+		found, err := ctrl.StopContainer(rollbackCtx, containerID)
+		if err == nil && found {
+			status, statusErr := ctrl.GetContainerStatus(rollbackCtx, containerID)
+			if statusErr == nil && status == db.StatusStopped {
+				if m.refresher != nil {
+					m.refresher(serverID)
+				}
+				return nil
 			}
-			return nil
-		}
-		if statusErr != nil {
-			stopErr = fmt.Errorf("failed to verify stopped container: %w", statusErr)
+			if statusErr != nil {
+				stopErr = fmt.Errorf("failed to verify stopped container: %w", statusErr)
+			} else {
+				stopErr = fmt.Errorf("container reported %s after stop", status)
+			}
+		} else if err != nil {
+			stopErr = err
 		} else {
-			stopErr = fmt.Errorf("container reported %s after stop", status)
+			stopErr = fmt.Errorf("container disappeared before stopped state could be confirmed")
 		}
-	} else if stopErr == nil {
-		stopErr = fmt.Errorf("container disappeared before stopped state could be confirmed")
 	}
 
-	stateErr := m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError)
-	if stateErr != nil && m.logger != nil {
-		m.logger.Error("Wake: failed to persist error state after start rollback failed for server %s: %v", serverID, stateErr)
+	var stateErr error
+	if m.store != nil {
+		stateErr = m.store.UpdateServerStatus(rollbackCtx, serverID, db.StatusError)
+		if stateErr != nil && m.logger != nil {
+			m.logger.Error("Wake: failed to persist error state after start rollback failed for server %s: %v", serverID, stateErr)
+		}
 	}
 	if m.refresher != nil {
 		m.refresher(serverID)
@@ -364,6 +383,9 @@ func (m *DeepSleepManager) rollbackWakePersistenceFailure(ctx context.Context, c
 // the container, so the reconciler never misclassifies the container exit as an
 // unexpected stop or clobbers proxy routes (MINE-121, MINE-172).
 func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) error {
+	if m.store == nil {
+		return fmt.Errorf("store is nil")
+	}
 	if !m.tryBeginTransition(serverID, "sleep") {
 		return fmt.Errorf("sleep already in flight for server %s", serverID)
 	}
@@ -484,6 +506,9 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 // current lifecycle transition, then re-read state; a completed wake is
 // idempotent while an in-flight sleep is followed by a wake.
 func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) error {
+	if m.store == nil {
+		return fmt.Errorf("store is nil")
+	}
 	for !m.tryBeginTransition(serverID, "wake") {
 		if err := WaitForServerTransition(ctx, serverID); err != nil {
 			return fmt.Errorf("waiting for existing server transition: %w", err)
