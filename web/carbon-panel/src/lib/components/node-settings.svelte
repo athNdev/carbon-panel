@@ -579,7 +579,8 @@
 										{#if Number(node.maxMemoryMb) > 0}
 											<span class="text-muted-foreground">/ {formatMemory(node.maxMemoryMb)}</span>
 										{:else if Number(node.totalMemoryMb) > 0}
-											<span class="text-muted-foreground">/ {formatMemory(node.totalMemoryMb)}</span>
+											<span class="text-muted-foreground">/ {formatMemory(node.totalMemoryMb)}</span
+											>
 										{/if}
 									</div>
 								</div>
