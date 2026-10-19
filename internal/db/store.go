@@ -1239,6 +1239,19 @@ func (s *Store) DeleteTaskExecutions(ctx context.Context, taskID string) error {
 	return s.db.WithContext(ctx).Where("task_id = ?", taskID).Delete(&TaskExecution{}).Error
 }
 
+// HasRunningExecution reports whether an active execution is recorded as running
+// in the database for the given task (SCH-5).
+func (s *Store) HasRunningExecution(ctx context.Context, taskID string) (bool, error) {
+	var count int64
+	err := s.db.WithContext(ctx).Model(&TaskExecution{}).
+		Where("task_id = ? AND status = ?", taskID, ExecutionStatusRunning).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // FailOrphanedTaskExecutions marks all task executions currently recorded in
 // the 'running' state as failed with the given reason. This is invoked during
 // scheduler startup to resolve executions left dangling by an unexpected daemon

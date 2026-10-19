@@ -108,7 +108,7 @@ func TestIsPrivilegedDockerOverride_DangerousFields(t *testing.T) {
 		{"seccomp:unconfined", &v1.DockerOverrides{SecurityOpt: []string{"seccomp:unconfined"}}},
 		{"seccomp=unconfined", &v1.DockerOverrides{SecurityOpt: []string{"seccomp=unconfined"}}},
 		{"label:disable", &v1.DockerOverrides{SecurityOpt: []string{"label:disable"}}},
-		{"label=disable", &v1.DockerOverrides{SecurityOpt: []string{"label=disable"}}},
+		{"label=disable", &v1.DockerOverrides{SecurityOpt: []string{"label:disable"}}},
 		{"mixed with benign", &v1.DockerOverrides{
 			SecurityOpt: []string{"no-new-privileges:true", "apparmor:unconfined"},
 			CapDrop:     []string{"ALL"},
@@ -181,6 +181,44 @@ func TestValidateDockerOverrides_BenignOverridesAlwaysAllowed(t *testing.T) {
 	}
 	if err := ValidateDockerOverrides(nil, false); err != nil {
 		t.Errorf("expected nil overrides to be allowed, got %v", err)
+	}
+}
+
+func TestPrivilegedOverrideFields(t *testing.T) {
+	// nil overrides
+	if got := PrivilegedOverrideFields(nil); len(got) != 0 {
+		t.Errorf("expected empty map for nil overrides, got %v", got)
+	}
+
+	// benign overrides -> empty map
+	benign := &v1.DockerOverrides{
+		PidsLimit:   1024,
+		CpusetCpus:  "0,1",
+		ReadOnly:    true,
+		CapDrop:     []string{"ALL"},
+		SecurityOpt: []string{"no-new-privileges:true"},
+	}
+	if got := PrivilegedOverrideFields(benign); len(got) != 0 {
+		t.Errorf("expected empty map for benign overrides, got %v", got)
+	}
+
+	// dangerous overrides
+	dangerous := &v1.DockerOverrides{
+		Privileged:  true,
+		CapAdd:      []string{"SYS_ADMIN", "NET_ADMIN"},
+		SecurityOpt: []string{"no-new-privileges:true", "apparmor:unconfined", "seccomp=unconfined"},
+	}
+	got := PrivilegedOverrideFields(dangerous)
+	if got["privileged"] != true {
+		t.Errorf("expected privileged=true, got %v", got["privileged"])
+	}
+	capAdd, ok := got["cap_add"].([]string)
+	if !ok || len(capAdd) != 2 || capAdd[0] != "SYS_ADMIN" {
+		t.Errorf("unexpected cap_add: %v", got["cap_add"])
+	}
+	secOpt, ok := got["security_opt"].([]string)
+	if !ok || len(secOpt) != 2 || secOpt[0] != "apparmor:unconfined" || secOpt[1] != "seccomp=unconfined" {
+		t.Errorf("unexpected security_opt: %v", got["security_opt"])
 	}
 }
 

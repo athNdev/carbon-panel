@@ -212,15 +212,53 @@ func (s *ServerService) SetPlacementEngine(engine *docker.PlacementEngine) {
 // auditPower records a server power event in the audit trail (MINE-141).
 // Audit failures are logged, never returned.
 func (s *ServerService) auditPower(ctx context.Context, ip, event, serverID string) {
+	s.auditServerLifecycle(ctx, ip, event, serverID)
+}
+
+// auditServerLifecycle records a server lifecycle event in the audit trail (MINE-141, SEC-3).
+// Audit failures are logged, never returned.
+func (s *ServerService) auditServerLifecycle(ctx context.Context, ip, event, serverID string) {
 	actorID, actorName := "", ""
 	if u := auth.GetUserFromContext(ctx); u != nil {
 		actorID, actorName = u.ID, u.Username
 	}
 	if err := activity.Log(s.store.DB(), activity.Entry{
-		ActorID: actorID, ActorName: actorName, IP: ip,
-		Event: event, SubjectTyp: "server", SubjectID: serverID,
+		ActorID:    actorID,
+		ActorName:  actorName,
+		IP:         ip,
+		Event:      event,
+		SubjectTyp: "server",
+		SubjectID:  serverID,
 	}); err != nil {
 		s.log.Error("Audit log failed for %s: %v", event, err)
+	}
+}
+
+// auditPrivilegedOverrides records an immutable audit log entry whenever privileged
+// Docker overrides are granted to a server (SEC-3).
+func (s *ServerService) auditPrivilegedOverrides(ctx context.Context, ip, serverID string, overrides *v1.DockerOverrides) {
+	if !docker.IsPrivilegedDockerOverride(overrides) {
+		return
+	}
+	actorID, actorName := "", ""
+	if u := auth.GetUserFromContext(ctx); u != nil {
+		actorID, actorName = u.ID, u.Username
+	}
+	fields := docker.PrivilegedOverrideFields(overrides)
+	propsJSON, _ := json.Marshal(map[string]any{
+		"action":          "grant_docker_privileged_overrides",
+		"override_fields": fields,
+	})
+	if err := activity.Log(s.store.DB(), activity.Entry{
+		ActorID:    actorID,
+		ActorName:  actorName,
+		IP:         ip,
+		Event:      activity.EventServerPrivilegedOverrides,
+		SubjectTyp: "server",
+		SubjectID:  serverID,
+		Properties: string(propsJSON),
+	}); err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerPrivilegedOverrides, err)
 	}
 }
 
@@ -1187,6 +1225,12 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	}(&createServer, startImmediately)
 	transitionHeld = false // ownership transferred to the asynchronous task
 
+	peerIP := req.Peer().Addr
+	s.auditServerLifecycle(ctx, peerIP, activity.EventServerCreate, server.ID)
+	if docker.IsPrivilegedDockerOverride(msg.DockerOverrides) {
+		s.auditPrivilegedOverrides(ctx, peerIP, server.ID, msg.DockerOverrides)
+	}
+
 	// Return immediately with the server in "creating" state
 	return connect.NewResponse(&v1.CreateServerResponse{
 		Server: dbServerToProto(server),
@@ -1444,6 +1488,12 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		capacityLockHeld = false
 	}
 
+	peerIP := req.Peer().Addr
+	s.auditServerLifecycle(ctx, peerIP, activity.EventServerUpdate, server.ID)
+	if docker.IsPrivilegedDockerOverride(msg.DockerOverrides) {
+		s.auditPrivilegedOverrides(ctx, peerIP, server.ID, msg.DockerOverrides)
+	}
+
 	// If container needs recreation
 	if needsRecreation {
 		// Get server config for container creation
@@ -1567,6 +1617,9 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		s.log.Error("Failed to delete server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete server"))
 	}
+
+	peerIP := req.Peer().Addr
+	s.auditServerLifecycle(ctx, peerIP, activity.EventServerDelete, server.ID)
 
 	// Delete data directory
 	if err := os.RemoveAll(server.DataPath); err != nil {
