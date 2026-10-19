@@ -94,6 +94,21 @@ func NewClientPool(store NodeStore, defaultClient *Client, log *logger.Logger, c
 }
 
 // RegisterClient explicitly registers a client for a given nodeID.
+// SetProxyEnabled propagates the proxy mode setting across all pooled clients and base config.
+func (p *ClientPool) SetProxyEnabled(enabled bool) {
+	if p == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.baseConfig.ProxyEnabled = enabled
+	for _, cli := range p.clients {
+		if cli != nil {
+			cli.SetProxyEnabled(enabled)
+		}
+	}
+}
+
 func (p *ClientPool) RegisterClient(nodeID string, cli *Client) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
