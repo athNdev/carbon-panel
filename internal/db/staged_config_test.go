@@ -198,3 +198,55 @@ func TestApplyStagedConfigChange_InvalidPayloadRollsBack(t *testing.T) {
 	require.NotNil(t, live.MOTD)
 	assert.Equal(t, "original", *live.MOTD, "invalid payload must not modify live config")
 }
+
+func TestStagedConfigChange_Rollback(t *testing.T) {
+	ctx := context.Background()
+	store := newStagedTestStore(t, "srv-staged-rollback")
+
+	// Initially live config MOTD is "original".
+	staged, err := store.StageConfigChange(ctx, "srv-staged-rollback", map[string]any{"motd": "new-motd"}, StagedApplyOnRestart, "")
+	require.NoError(t, err)
+
+	// Rolling back an unapplied (staged) change must fail.
+	_, err = store.RollbackStagedConfigChange(ctx, staged.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only applied changes can be rolled back")
+
+	// Apply the staged change.
+	applied, err := store.ApplyStagedConfigChange(ctx, staged.ID)
+	require.NoError(t, err)
+	assert.Equal(t, StagedStatusApplied, applied.Status)
+	assert.NotEmpty(t, applied.PreviousPayload)
+	assert.Contains(t, applied.PreviousPayload, "original")
+
+	live, err := store.GetServerConfig(ctx, "srv-staged-rollback")
+	require.NoError(t, err)
+	assert.Equal(t, "new-motd", *live.MOTD)
+
+	// Roll back the applied change.
+	rolledBack, err := store.RollbackStagedConfigChange(ctx, staged.ID)
+	require.NoError(t, err)
+	assert.Equal(t, StagedStatusRolledBack, rolledBack.Status)
+	require.NotNil(t, rolledBack.RolledBackAt)
+
+	// Verify live config restored to "original".
+	live, err = store.GetServerConfig(ctx, "srv-staged-rollback")
+	require.NoError(t, err)
+	assert.Equal(t, "original", *live.MOTD)
+
+	// Rolling back again must fail.
+	_, err = store.RollbackStagedConfigChange(ctx, staged.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only applied changes can be rolled back")
+
+	// Record with empty PreviousPayload cannot be rolled back.
+	stagedEmptyPrev, err := store.StageConfigChange(ctx, "srv-staged-rollback", map[string]any{"motd": "test2"}, StagedApplyOnRestart, "")
+	require.NoError(t, err)
+	appliedEmptyPrev, err := store.ApplyStagedConfigChange(ctx, stagedEmptyPrev.ID)
+	require.NoError(t, err)
+	require.NoError(t, store.DB().Model(&StagedConfigChange{}).Where("id = ?", appliedEmptyPrev.ID).Update("previous_payload", "").Error)
+
+	_, err = store.RollbackStagedConfigChange(ctx, appliedEmptyPrev.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no recorded previous state")
+}

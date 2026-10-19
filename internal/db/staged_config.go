@@ -232,6 +232,22 @@ func (s *Store) ApplyStagedConfigChange(ctx context.Context, id string) (*Staged
 		if err != nil {
 			return err
 		}
+
+		// Capture the previous values of every key touched by diff (SCH-1)
+		prevDiff := make(map[string]any, len(diff))
+		for k := range diff {
+			if v, ok := base[k]; ok {
+				prevDiff[k] = v
+			} else {
+				prevDiff[k] = nil
+			}
+		}
+		prevBytes, err := json.Marshal(prevDiff)
+		if err != nil {
+			return fmt.Errorf("failed to serialize previous config state: %w", err)
+		}
+		staged.PreviousPayload = string(prevBytes)
+
 		merged, err := json.Marshal(MergeMaps(base, diff))
 		if err != nil {
 			return err
@@ -260,6 +276,81 @@ func (s *Store) ApplyStagedConfigChange(ctx context.Context, id string) (*Staged
 		return nil, err
 	}
 	return applied, nil
+}
+
+// RollbackStagedConfigChange reverts an applied staged config change by restoring the
+// previous values of all modified fields back onto the live ServerConfig, and marking
+// the staged record as rolled_back (SCH-1).
+func (s *Store) RollbackStagedConfigChange(ctx context.Context, id string) (*StagedConfigChange, error) {
+	var rolledBack *StagedConfigChange
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		claim := tx.Model(&StagedConfigChange{}).
+			Where("id = ? AND status = ?", id, string(StagedStatusApplied)).
+			UpdateColumn("status", "rolling_back")
+		if claim.Error != nil {
+			return claim.Error
+		}
+		if claim.RowsAffected != 1 {
+			return fmt.Errorf("only applied changes can be rolled back")
+		}
+
+		var staged StagedConfigChange
+		if err := tx.Where("id = ?", id).First(&staged).Error; err != nil {
+			return fmt.Errorf("staged config change not found: %w", err)
+		}
+
+		if staged.PreviousPayload == "" {
+			return fmt.Errorf("staged config change has no recorded previous state to roll back to")
+		}
+
+		var prevDiff map[string]any
+		if err := json.Unmarshal([]byte(staged.PreviousPayload), &prevDiff); err != nil {
+			return fmt.Errorf("previous staged payload is corrupt: %w", err)
+		}
+		if prevDiff == nil {
+			return fmt.Errorf("previous staged payload must be a JSON object")
+		}
+
+		live := &ServerConfig{}
+		err := tx.Where("server_id = ?", staged.ServerID).First(live).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			live = s.CreateDefaultServerConfig(staged.ServerID)
+		} else if err != nil {
+			return fmt.Errorf("failed to read live server config: %w", err)
+		}
+
+		base, err := ServerConfigToMap(live)
+		if err != nil {
+			return err
+		}
+		merged, err := json.Marshal(MergeMaps(base, prevDiff))
+		if err != nil {
+			return err
+		}
+		next := &ServerConfig{}
+		if err := json.Unmarshal(merged, next); err != nil {
+			return fmt.Errorf("rolled back config is invalid: %w", err)
+		}
+		// Preserve identity fields regardless of what the payload contained.
+		next.ID = live.ID
+		next.ServerID = live.ServerID
+		if err := tx.Save(next).Error; err != nil {
+			return fmt.Errorf("failed to save rolled back server config: %w", err)
+		}
+
+		now := time.Now()
+		staged.Status = StagedStatusRolledBack
+		staged.RolledBackAt = &now
+		if err := tx.Save(&staged).Error; err != nil {
+			return fmt.Errorf("failed to mark staged config as rolled back: %w", err)
+		}
+		rolledBack = &staged
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return rolledBack, nil
 }
 
 // ListDueScheduledStagedChanges returns staged + scheduled records whose cron

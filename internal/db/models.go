@@ -498,9 +498,10 @@ const (
 type StagedStatus string
 
 const (
-	StagedStatusStaged    StagedStatus = "staged"
-	StagedStatusApplied   StagedStatus = "applied"
-	StagedStatusDiscarded StagedStatus = "discarded"
+	StagedStatusStaged     StagedStatus = "staged"
+	StagedStatusApplied    StagedStatus = "applied"
+	StagedStatusDiscarded  StagedStatus = "discarded"
+	StagedStatusRolledBack StagedStatus = "rolled_back"
 )
 
 // StagedConfigChange records a config change made to an instance regardless of
@@ -512,15 +513,17 @@ const (
 // conflict detection when the live config moved since staging, RBAC-gated
 // approvals, and audit linkage.
 type StagedConfigChange struct {
-	ID        string          `json:"id" gorm:"primaryKey"`
-	ServerID  string          `json:"server_id" gorm:"not null;index;column:server_id"`
-	Payload   string          `json:"payload" gorm:"type:text;column:payload"` // JSON diff vs live config
-	ApplyMode StagedApplyMode `json:"apply_mode" gorm:"not null;column:apply_mode"`
-	CronExpr  string          `json:"cron_expr" gorm:"column:cron_expr"` // required when ApplyMode == scheduled
-	Status    StagedStatus    `json:"status" gorm:"not null;default:staged;index"`
-	CreatedAt time.Time       `json:"created_at" gorm:"autoCreateTime;index"`
-	AppliedAt *time.Time      `json:"applied_at" gorm:"column:applied_at"`
-	Server    *Server         `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
+	ID              string          `json:"id" gorm:"primaryKey"`
+	ServerID        string          `json:"server_id" gorm:"not null;index;column:server_id"`
+	Payload         string          `json:"payload" gorm:"type:text;column:payload"` // JSON diff vs live config
+	PreviousPayload string          `json:"previous_payload,omitempty" gorm:"type:text;column:previous_payload"` // JSON diff of previous values before apply (SCH-1)
+	ApplyMode       StagedApplyMode `json:"apply_mode" gorm:"not null;column:apply_mode"`
+	CronExpr        string          `json:"cron_expr" gorm:"column:cron_expr"` // required when ApplyMode == scheduled
+	Status          StagedStatus    `json:"status" gorm:"not null;default:staged;index"`
+	CreatedAt       time.Time       `json:"created_at" gorm:"autoCreateTime;index"`
+	AppliedAt       *time.Time      `json:"applied_at,omitempty" gorm:"column:applied_at"`
+	RolledBackAt    *time.Time      `json:"rolled_back_at,omitempty" gorm:"column:rolled_back_at"`
+	Server          *Server         `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
 }
 
 // TaskType defines the type of scheduled task
