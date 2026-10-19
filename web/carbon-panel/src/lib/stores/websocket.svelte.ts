@@ -143,7 +143,9 @@ class WebSocketClient {
 		if (this.socket) {
 			try {
 				this.socket.close();
-			} catch (_) {}
+			} catch {
+				// Socket may already be in closed/closing state; ignore close errors during cleanup
+			}
 			this.socket = null;
 		}
 		this.state.connectionState = 'disconnected';

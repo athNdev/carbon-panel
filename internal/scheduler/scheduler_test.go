@@ -147,7 +147,9 @@ func TestScheduler_DispatchUpdatesNextRunAndCleansUp(t *testing.T) {
 
 func TestScheduler_StartRecoversOrphanedExecutions(t *testing.T) {
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() {
+		_ = store.Close()
+	}()
 
 	ctx := context.Background()
 	log := logger.New()
@@ -193,7 +195,9 @@ func TestScheduler_StartRecoversOrphanedExecutions(t *testing.T) {
 	if err := s.Start(); err != nil {
 		t.Fatalf("failed to start scheduler: %v", err)
 	}
-	defer s.Stop()
+	defer func() {
+		_ = s.Stop()
+	}()
 
 	recovered, err := store.GetTaskExecution(ctx, execID)
 	if err != nil {
@@ -212,7 +216,9 @@ func TestScheduler_StartRecoversOrphanedExecutions(t *testing.T) {
 
 func TestScheduler_CancelExecution_OrphanedInStore(t *testing.T) {
 	store := setupTestStore(t)
-	defer store.Close()
+	defer func() {
+		_ = store.Close()
+	}()
 
 	ctx := context.Background()
 	log := logger.New()

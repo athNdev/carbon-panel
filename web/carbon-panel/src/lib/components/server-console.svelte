@@ -416,7 +416,7 @@
 						<button
 							type="button"
 							onclick={() => wsClient.reconnect()}
-							class="text-xs text-[#78a9ff] hover:text-[#a6c8ff] hover:underline cursor-pointer font-mono"
+							class="cursor-pointer font-mono text-xs text-[#78a9ff] hover:text-[#a6c8ff] hover:underline"
 							aria-label="Reconnect WebSocket"
 						>
 							Reconnect

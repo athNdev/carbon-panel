@@ -147,7 +147,9 @@ func TestEnsureDefaultNode_Missing(t *testing.T) {
 func TestStore_FailOrphanedTaskExecutions(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() {
+		_ = store.Close()
+	}()
 
 	now := time.Now()
 	e1 := &TaskExecution{ID: "e-run-1", TaskID: "task-1", ServerID: "srv-1", Status: ExecutionStatusRunning, StartedAt: now}
