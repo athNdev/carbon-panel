@@ -692,7 +692,11 @@
 											{:else}
 												<span class="text-rose-400">Offline</span>
 											{/if}
-											• {(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB RAM
+											• {Number(node.availableMemoryMb) > 0
+												? `${(Number(node.availableMemoryMb) / 1024).toFixed(1)} GB free`
+												: Number(node.maxMemoryMb) > 0
+													? `${(Math.max(0, Number(node.maxMemoryMb) - Number(node.allocatedMemoryMb)) / 1024).toFixed(1)} GB free`
+													: `${(Number(node.allocatedMemoryMb) / 1024).toFixed(1)} GB allocated`}
 										</div>
 									</div>
 								</SelectItem>
