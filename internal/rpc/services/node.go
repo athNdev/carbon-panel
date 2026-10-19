@@ -99,12 +99,12 @@ func (s *NodeService) populateNodeMemory(ctx context.Context, node *storage.Node
 
 	if totalMem > 0 {
 		protoNode.TotalMemoryMb = totalMem
-		if protoNode.MaxMemoryMb == 0 {
-			protoNode.MaxMemoryMb = totalMem
-		}
 	}
 
 	effectiveLimit := protoNode.MaxMemoryMb
+	if effectiveLimit == 0 && protoNode.TotalMemoryMb > 0 {
+		effectiveLimit = protoNode.TotalMemoryMb
+	}
 	if effectiveLimit > 0 {
 		avail := effectiveLimit - protoNode.AllocatedMemoryMb
 		if avail < 0 {

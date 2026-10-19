@@ -232,3 +232,40 @@ func TestSLPPort(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHost(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"tcp://192.168.0.130:2375", "192.168.0.130"},
+		{"http://10.0.0.5:8080", "10.0.0.5"},
+		{"unix:///var/run/docker.sock", ""},
+		{"192.168.0.131:2375", "192.168.0.131"},
+		{"192.168.0.132", "192.168.0.132"},
+		{"", ""},
+	}
+	for _, tc := range tests {
+		got := extractHost(tc.input)
+		if got != tc.want {
+			t.Errorf("extractHost(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestTPSBackoffCache(t *testing.T) {
+	c := NewCollectorWithPool(nil, nil, nil, nil, nil, nil, nil)
+	c.tpsWorkingCmd["s1"] = "tps"
+	c.tpsFailedAt["s1"] = time.Now()
+
+	c.RemoveMetrics("s1")
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if _, ok := c.tpsWorkingCmd["s1"]; ok {
+		t.Errorf("expected tpsWorkingCmd for s1 to be cleared")
+	}
+	if _, ok := c.tpsFailedAt["s1"]; ok {
+		t.Errorf("expected tpsFailedAt for s1 to be cleared")
+	}
+}
