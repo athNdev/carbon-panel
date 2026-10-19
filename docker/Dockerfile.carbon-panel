@@ -46,7 +46,7 @@ RUN apk add --no-cache gcc musl-dev sqlite-dev
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN for i in 1 2 3 4 5; do go mod download && exit 0; echo "go mod download failed (attempt $i), retrying"; sleep $((i*5)); done; exit 1
 
 COPY . .
 COPY --from=proto-builder /app/pkg/proto ./pkg/proto/
