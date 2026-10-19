@@ -72,6 +72,31 @@ func IsPrivilegedDockerOverride(overrides *v1.DockerOverrides) bool {
 	return false
 }
 
+// PrivilegedOverrideFields extracts a structured map of requested privileged fields
+// for immutable audit trail recording (SEC-3).
+func PrivilegedOverrideFields(overrides *v1.DockerOverrides) map[string]any {
+	fields := make(map[string]any)
+	if overrides == nil {
+		return fields
+	}
+	if overrides.GetPrivileged() {
+		fields["privileged"] = true
+	}
+	if len(overrides.GetCapAdd()) > 0 {
+		fields["cap_add"] = overrides.GetCapAdd()
+	}
+	var dangerousSecOpts []string
+	for _, opt := range overrides.GetSecurityOpt() {
+		if isDangerousSecurityOpt(opt) {
+			dangerousSecOpts = append(dangerousSecOpts, opt)
+		}
+	}
+	if len(dangerousSecOpts) > 0 {
+		fields["security_opt"] = dangerousSecOpts
+	}
+	return fields
+}
+
 // ValidateDockerOverrides enforces that only callers holding the elevated
 // Docker permission may request privileged-mode settings (see
 // IsPrivilegedDockerOverride). It must be called with the caller's
