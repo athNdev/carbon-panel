@@ -598,11 +598,17 @@
 									</div>
 									<div class="font-medium text-foreground">
 										{#if Number(node.availableMemoryMb) > 0}
-											<span class="font-semibold text-emerald-500">{formatMemory(node.availableMemoryMb)}</span>
+											<span class="font-semibold text-emerald-500"
+												>{formatMemory(node.availableMemoryMb)}</span
+											>
 										{:else if Number(node.maxMemoryMb) > 0 && Number(node.maxMemoryMb) <= Number(node.allocatedMemoryMb)}
 											<span class="font-semibold text-rose-500">0 MB (Full)</span>
 										{:else if Number(node.maxMemoryMb) > 0}
-											<span class="font-semibold text-emerald-500">{formatMemory(Number(node.maxMemoryMb) - Number(node.allocatedMemoryMb))}</span>
+											<span class="font-semibold text-emerald-500"
+												>{formatMemory(
+													Number(node.maxMemoryMb) - Number(node.allocatedMemoryMb)
+												)}</span
+											>
 										{:else}
 											<span class="text-muted-foreground">Dynamic</span>
 										{/if}
