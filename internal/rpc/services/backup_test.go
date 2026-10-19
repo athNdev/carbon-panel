@@ -222,3 +222,99 @@ func TestBackupService_RestoreBackup_IntegrityVerification(t *testing.T) {
 		t.Errorf("restored content = %q, err=%v", string(content), err)
 	}
 }
+
+func TestBackupService_RestoreBackup_ConcurrencyAndRestoringStatus(t *testing.T) {
+	store := setupTestStore(t)
+	defer func() { _ = store.Close() }()
+	ctx := context.Background()
+	log := logger.New()
+
+	svc := NewBackupService(store, nil, nil, appconfig.S3Config{}, log)
+	enforcer, err := rbac.NewEnforcer(store.DB())
+	if err != nil {
+		t.Fatalf("NewEnforcer: %v", err)
+	}
+	_ = enforcer.SeedDefaultPolicies(false)
+	svc.SetEnforcer(enforcer)
+	ctx = auth.WithUser(ctx, &auth.AuthenticatedUser{ID: "u-admin", Username: "admin", Roles: []string{"admin"}})
+
+	serverDataDir := t.TempDir()
+	serverID := "srv-concurrency-test"
+	if err := store.CreateServer(ctx, &storage.Server{
+		ID:       serverID,
+		Name:     "concurrency-test",
+		DataPath: serverDataDir,
+		NodeID:   "local",
+	}); err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+
+	backupDir := t.TempDir()
+	srcDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, "server.properties"), []byte("motd=Carbon\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	validZip := filepath.Join(backupDir, "valid.zip")
+	if _, err := files.CreateZipArchive([]string{"server.properties"}, srcDir, validZip, true); err != nil {
+		t.Fatal(err)
+	}
+	realSum, err := files.SHA256File(validZip)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := newBackupRecord("b-restoring", serverID, validZip)
+	rec.SHA256 = realSum
+	rec.Status = "restoring"
+	if err := store.CreateBackupRecord(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Attempting to restore a backup that has Status == "restoring" should fail with CodeFailedPrecondition
+	_, err = svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-restoring"}))
+	if err == nil {
+		t.Fatal("expected restore of 'restoring' backup to fail, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("expected CodeFailedPrecondition, got %v", connect.CodeOf(err))
+	}
+
+	// 2. Attempting to delete a backup that has Status == "restoring" should fail with CodeFailedPrecondition
+	_, err = svc.DeleteBackup(ctx, connect.NewRequest(&v1.DeleteBackupRequest{Id: "b-restoring"}))
+	if err == nil {
+		t.Fatal("expected delete of 'restoring' backup to fail, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("expected CodeFailedPrecondition, got %v", connect.CodeOf(err))
+	}
+
+	// 3. Concurrent restore simulation: if another restore is actively in progress for serverID
+	svc.restoringMu.Lock()
+	svc.restoringServers[serverID] = true
+	svc.restoringMu.Unlock()
+
+	rec2 := newBackupRecord("b-concurrent", serverID, validZip)
+	rec2.SHA256 = realSum
+	rec2.Status = "complete"
+	if err := store.CreateBackupRecord(ctx, rec2); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-concurrent"}))
+	if err == nil {
+		t.Fatal("expected concurrent restore to fail, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("expected CodeFailedPrecondition, got %v", connect.CodeOf(err))
+	}
+
+	svc.restoringMu.Lock()
+	delete(svc.restoringServers, serverID)
+	svc.restoringMu.Unlock()
+
+	// Once unlocked, restore should succeed
+	resp, err := svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-concurrent"}))
+	if err != nil || !resp.Msg.Success {
+		t.Fatalf("expected restore to succeed after release, got err=%v", err)
+	}
+}
