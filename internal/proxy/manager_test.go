@@ -247,3 +247,36 @@ func TestManager_AddAndRemoveModuleRoute(t *testing.T) {
 		t.Errorf("expected routes to be empty after removal, got %+v", routes)
 	}
 }
+
+
+func TestIsDirectPortServer(t *testing.T) {
+	// Nil or zero port
+	if isDirectPortServer(nil, true) {
+		t.Errorf("expected false for nil server")
+	}
+	if isDirectPortServer(&db.Server{Port: 0}, true) {
+		t.Errorf("expected false for port 0")
+	}
+
+	// When proxy is disabled globally, every server with port > 0 is direct port
+	srvWithProxy := &db.Server{Port: 25566, ProxyHostname: "mc.example.com", ProxyPort: 25565, ProxyListenerID: "l1"}
+	if !isDirectPortServer(srvWithProxy, false) {
+		t.Errorf("expected true when proxyEnabled=false")
+	}
+
+	// When proxy is enabled globally, but server lacks proxy listener or port
+	srvNoListener := &db.Server{Port: 25566, ProxyHostname: "mc.example.com", ProxyPort: 0, ProxyListenerID: ""}
+	if !isDirectPortServer(srvNoListener, true) {
+		t.Errorf("expected true when ProxyPort=0 and ProxyListenerID is empty")
+	}
+
+	srvNoHostname := &db.Server{Port: 25566, ProxyHostname: "", ProxyPort: 25565, ProxyListenerID: "l1"}
+	if !isDirectPortServer(srvNoHostname, true) {
+		t.Errorf("expected true when ProxyHostname is empty")
+	}
+
+	// Fully configured proxied server
+	if isDirectPortServer(srvWithProxy, true) {
+		t.Errorf("expected false for fully configured proxied server")
+	}
+}
