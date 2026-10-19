@@ -336,7 +336,7 @@ func TestClientPool_LocalNodeReturnsDefaultClient(t *testing.T) {
 	}
 	store := newMockNodeStore(localNode)
 	pool := NewClientPool(store, defaultCli, log)
-	defer pool.Close()
+	defer func() { _ = pool.Close() }()
 
 	// GetClient should return defaultCli
 	cli, err := pool.GetClient("uuid-local-node-1234")
@@ -367,7 +367,7 @@ func TestClientPool_BaseConfigInheritance(t *testing.T) {
 		},
 	}
 	pool := NewClientPool(nil, defaultCli, log)
-	defer pool.Close()
+	defer func() { _ = pool.Close() }()
 
 	if pool.baseConfig.NetworkName != "custom-net" {
 		t.Fatalf("expected custom-net, got %s", pool.baseConfig.NetworkName)
