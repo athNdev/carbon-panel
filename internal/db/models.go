@@ -880,4 +880,6 @@ type Node struct {
 	AllocatedMemoryMB int64 `json:"allocated_memory_mb" gorm:"-"`
 	ServerCount       int   `json:"server_count" gorm:"-"`
 	RunningCount      int   `json:"running_count" gorm:"-"`
+	TotalMemoryMB     int64 `json:"total_memory_mb" gorm:"-"`
+	AvailableMemoryMB int64 `json:"available_memory_mb" gorm:"-"`
 }

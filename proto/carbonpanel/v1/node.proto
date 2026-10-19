@@ -42,6 +42,8 @@ message Node {
   int64 allocated_memory_mb = 18;
   int32 server_count = 19;
   int32 running_count = 20;
+  int64 total_memory_mb = 21;
+  int64 available_memory_mb = 22;
 }
 
 // Docker node management service
