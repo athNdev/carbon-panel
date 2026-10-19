@@ -2,9 +2,12 @@ package services
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
@@ -240,5 +243,137 @@ func TestUpdateServer_PrivilegedOverrides_AllowedWithElevatedPermission(t *testi
 	}
 	if updated.DockerOverrides == nil || !updated.DockerOverrides.Privileged {
 		t.Errorf("expected authorized Privileged:true override to be persisted")
+	}
+}
+
+func TestCreateServer_PrivilegedOverrides_AuditLogRecorded(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := ctxWithRole("docker-admin")
+
+	resp, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name:            "audit-server",
+		NodeId:          "test-node",
+		McVersion:       "1.20.1",
+		DockerImage:     "java21",
+		Port:            25571,
+		DockerOverrides: dangerousOverrides(),
+	}))
+	if err != nil {
+		t.Fatalf("expected CreateServer to succeed, got %v", err)
+	}
+
+	serverID := resp.Msg.Server.Id
+	logs, err := activity.List(svc.store.DB(), serverID, "", time.Time{}, 50)
+	if err != nil {
+		t.Fatalf("failed to query activity logs: %v", err)
+	}
+
+	var foundPrivAudit, foundCreateAudit bool
+	for _, l := range logs {
+		if l.Event == activity.EventServerCreate {
+			foundCreateAudit = true
+		}
+		if l.Event == activity.EventServerPrivilegedOverrides {
+			foundPrivAudit = true
+			if l.ActorName != "test-user" {
+				t.Errorf("expected actor test-user, got %s", l.ActorName)
+			}
+			if !strings.Contains(l.Properties, "grant_docker_privileged_overrides") {
+				t.Errorf("expected properties to contain action grant_docker_privileged_overrides, got %s", l.Properties)
+			}
+			if !strings.Contains(l.Properties, "SYS_ADMIN") {
+				t.Errorf("expected properties to contain SYS_ADMIN, got %s", l.Properties)
+			}
+		}
+	}
+	if !foundCreateAudit {
+		t.Errorf("expected server.create audit log entry")
+	}
+	if !foundPrivAudit {
+		t.Errorf("expected server.privileged_overrides audit log entry")
+	}
+}
+
+func TestCreateServer_BenignOverrides_NoPrivilegedAuditLog(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := ctxWithRole("operator")
+
+	resp, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name:        "benign-audit-server",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
+		DockerImage: "java21",
+		Port:        25572,
+		DockerOverrides: &v1.DockerOverrides{
+			PidsLimit: 1024,
+		},
+	}))
+	if err != nil {
+		t.Fatalf("expected CreateServer to succeed, got %v", err)
+	}
+
+	serverID := resp.Msg.Server.Id
+	logs, err := activity.List(svc.store.DB(), serverID, "", time.Time{}, 50)
+	if err != nil {
+		t.Fatalf("failed to query activity logs: %v", err)
+	}
+
+	var foundPrivAudit, foundCreateAudit bool
+	for _, l := range logs {
+		if l.Event == activity.EventServerCreate {
+			foundCreateAudit = true
+		}
+		if l.Event == activity.EventServerPrivilegedOverrides {
+			foundPrivAudit = true
+		}
+	}
+	if !foundCreateAudit {
+		t.Errorf("expected server.create audit log entry")
+	}
+	if foundPrivAudit {
+		t.Errorf("did not expect server.privileged_overrides audit log entry for benign overrides")
+	}
+}
+
+func TestUpdateServer_PrivilegedOverrides_AuditLogRecorded(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	adminCtx := ctxWithRole("docker-admin")
+
+	created, err := svc.CreateServer(adminCtx, connect.NewRequest(&v1.CreateServerRequest{
+		Name:        "update-audit-server",
+		NodeId:      "test-node",
+		McVersion:   "1.20.1",
+		DockerImage: "java21",
+		Port:        25573,
+	}))
+	if err != nil {
+		t.Fatalf("failed to create server fixture: %v", err)
+	}
+	waitForServerTransition(t, created.Msg.Server.Id)
+
+	// Clear out earlier logs for a clean count or query after update
+	_, _ = svc.UpdateServer(adminCtx, connect.NewRequest(&v1.UpdateServerRequest{
+		Id:              created.Msg.Server.Id,
+		DockerOverrides: dangerousOverrides(),
+	}))
+	// Even if Docker recreation fails in test stub, UpdateServer finishes and records audit logs
+	logs, err := activity.List(svc.store.DB(), created.Msg.Server.Id, "", time.Time{}, 50)
+	if err != nil {
+		t.Fatalf("failed to list activity logs: %v", err)
+	}
+	var foundPrivAudit, foundUpdateAudit bool
+	for _, l := range logs {
+		if l.Event == activity.EventServerUpdate {
+			foundUpdateAudit = true
+		}
+		if l.Event == activity.EventServerPrivilegedOverrides {
+			foundPrivAudit = true
+		}
+	}
+	if !foundUpdateAudit {
+		t.Errorf("expected server.update audit log")
+	}
+	if !foundPrivAudit {
+		t.Errorf("expected server.privileged_overrides audit log")
 	}
 }

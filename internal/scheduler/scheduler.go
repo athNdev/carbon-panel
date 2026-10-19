@@ -313,14 +313,10 @@ func (s *Scheduler) checkAndRunDueTasks() {
 	}
 
 	for _, task := range tasks {
-		s.runningTasksMu.Lock()
-		if s.runningTasks[task.ID] {
-			s.runningTasksMu.Unlock()
+		if !s.tryClaimTask(context.Background(), task.ID) {
 			s.log.Debug("Task %s is already running, skipping duplicate dispatch", task.Name)
 			continue
 		}
-		s.runningTasks[task.ID] = true
-		s.runningTasksMu.Unlock()
 
 		// Update next run time immediately to prevent re-querying from DB if check runs again before task finishes
 		s.updateNextRun(task)
@@ -329,15 +325,37 @@ func (s *Scheduler) checkAndRunDueTasks() {
 		s.wg.Add(1)
 		go func(t *storage.ScheduledTask) {
 			defer s.wg.Done()
-			defer func() {
-				s.runningTasksMu.Lock()
-				delete(s.runningTasks, t.ID)
-				s.runningTasksMu.Unlock()
-			}()
+			defer s.releaseTask(t.ID)
 			// A scheduled run is owned by the scheduler, not by any caller.
 			_, _ = s.executeTask(context.Background(), t, "scheduled", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
 		}(task)
 	}
+}
+
+// tryClaimTask attempts to atomically register taskID as running in memory and checks
+// the database for any active running executions (SCH-5). Returns true if successfully claimed.
+func (s *Scheduler) tryClaimTask(ctx context.Context, taskID string) bool {
+	s.runningTasksMu.Lock()
+	defer s.runningTasksMu.Unlock()
+
+	if s.runningTasks[taskID] {
+		return false
+	}
+	if s.store != nil {
+		hasRunning, err := s.store.HasRunningExecution(ctx, taskID)
+		if err == nil && hasRunning {
+			return false
+		}
+	}
+	s.runningTasks[taskID] = true
+	return true
+}
+
+// releaseTask unregisters taskID from in-memory running tasks.
+func (s *Scheduler) releaseTask(taskID string) {
+	s.runningTasksMu.Lock()
+	delete(s.runningTasks, taskID)
+	s.runningTasksMu.Unlock()
 }
 
 // TriggerTask manually triggers a task execution
@@ -347,10 +365,12 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 		return nil, err
 	}
 
-	// Conflicting execution guard (MINE-146): never run the same task twice.
-	if s.IsTaskRunning(taskID) {
+	// Conflicting execution guard (MINE-146, SCH-5): never run the same task twice.
+	if !s.tryClaimTask(ctx, taskID) {
 		return nil, ErrTaskAlreadyRunning
 	}
+	defer s.releaseTask(taskID)
+
 	// Thread the caller context so an RPC cancel (or client disconnect)
 	// actually interrupts the task instead of the work outliving the request.
 	execution, err := s.executeTask(ctx, task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
@@ -360,8 +380,19 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 // IsTaskRunning checks if a task is currently executing
 func (s *Scheduler) IsTaskRunning(taskID string) bool {
 	s.runningTasksMu.Lock()
-	defer s.runningTasksMu.Unlock()
-	return s.runningTasks[taskID]
+	if s.runningTasks[taskID] {
+		s.runningTasksMu.Unlock()
+		return true
+	}
+	s.runningTasksMu.Unlock()
+
+	if s.store != nil {
+		hasRunning, err := s.store.HasRunningExecution(context.Background(), taskID)
+		if err == nil && hasRunning {
+			return true
+		}
+	}
+	return false
 }
 
 // Schedulers subscription to the central event bus
@@ -372,9 +403,15 @@ func (s *Scheduler) HandleServerEvent(ctx context.Context, event events.Event) {
 		return
 	}
 	for _, task := range tasks {
+		if !s.tryClaimTask(ctx, task.ID) {
+			s.log.Debug("Event-triggered task %s is already running, skipping duplicate dispatch", task.Name)
+			continue
+		}
+
 		s.wg.Add(1)
 		go func(t *storage.ScheduledTask) {
 			defer s.wg.Done()
+			defer s.releaseTask(t.ID)
 			// WithoutCancel keeps the bus dispatch context's Values (trace ids)
 			// but not its cancellation: a task legitimately outlives the dispatch
 			// that scheduled it, so inheriting the bus cancel would kill it.
