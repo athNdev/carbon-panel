@@ -111,20 +111,7 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		}
 	}
 
-	var lockedNames map[string]bool
-	if s.store != nil {
-		if recs, err := s.store.ListBackupRecords(ctx, server.ID, 0); err == nil {
-			lockedNames = make(map[string]bool)
-			for _, r := range recs {
-				if r.Locked {
-					lockedNames[r.Name] = true
-					lockedNames[filepath.Base(r.Path)] = true
-				}
-			}
-		}
-	}
-
-	pruned, pruneErr := pruneBackups(destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups, lockedNames)
+	pruned, pruneErr := s.pruneServerBackups(ctx, server, destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
 
 	output := fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)%s",
 		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), remoteNote)
@@ -218,6 +205,106 @@ func (s *Scheduler) pauseWorldSaves(ctx context.Context, server *storage.Server)
 			s.log.Error("Backup: failed to re-enable world saves on server %s: %v", server.Name, err)
 		}
 	}
+}
+
+// pruneServerBackups enforces backup retention rules (retentionDays, minBackups, maxBackups)
+// across both database records (including remote S3 copies) and local disk files.
+// Files and records marked locked or ending in .locked.zip are sticky and never pruned.
+func (s *Scheduler) pruneServerBackups(ctx context.Context, server *storage.Server, destDir, prefix string, retentionDays, minBackups, maxBackups int) (int, error) {
+	if retentionDays <= 0 && maxBackups <= 0 {
+		return 0, nil
+	}
+
+	var lockedNames map[string]bool
+	totalPruned := 0
+	var firstErr error
+
+	if s.store != nil && server != nil {
+		recs, err := s.store.ListBackupRecords(ctx, server.ID, 0)
+		if err != nil {
+			s.log.Warn("Failed to list backup records for pruning: %v", err)
+		} else {
+			lockedNames = make(map[string]bool)
+			var eligible []*storage.BackupRecord
+
+			for _, r := range recs {
+				isLocked := r.Locked || strings.HasSuffix(r.Name, ".locked.zip")
+				if isLocked {
+					lockedNames[r.Name] = true
+					if r.Path != "" {
+						lockedNames[filepath.Base(r.Path)] = true
+					}
+					continue
+				}
+				if prefix != "" && !strings.HasPrefix(r.Name, prefix) && (r.Path == "" || !strings.HasPrefix(filepath.Base(r.Path), prefix)) {
+					continue
+				}
+				eligible = append(eligible, r)
+			}
+
+			// ListBackupRecords is newest-first (Order("created_at DESC")).
+			toDelete := make(map[string]*storage.BackupRecord)
+			if maxBackups > 0 && len(eligible) > maxBackups {
+				for _, r := range eligible[maxBackups:] {
+					toDelete[r.ID] = r
+				}
+			}
+			if retentionDays > 0 {
+				cutoff := time.Now().AddDate(0, 0, -retentionDays)
+				protected := max(minBackups, 1)
+				if len(eligible) > protected {
+					for _, r := range eligible[protected:] {
+						if r.CreatedAt.Before(cutoff) {
+							toDelete[r.ID] = r
+						}
+					}
+				}
+			}
+
+			var up *s3uploader.Uploader
+			if s3uploader.Enabled(s.appConfig.Storage.S3) {
+				up, _ = s3uploader.NewUploader(s.appConfig.Storage.S3)
+			}
+
+			for _, r := range toDelete {
+				// Delete local archive and sha256 sidecar if present
+				if r.Path != "" {
+					_ = os.Remove(r.Path)
+					_ = os.Remove(r.Path + ".sha256")
+				}
+				if destDir != "" && r.Name != "" {
+					p := filepath.Join(destDir, r.Name)
+					_ = os.Remove(p)
+					_ = os.Remove(p + ".sha256")
+				}
+				// Delete remote S3 backup if present
+				if r.RemoteKey != "" && up != nil {
+					if err := up.Delete(ctx, r.RemoteKey); err != nil && s.log != nil {
+						s.log.Warn("Failed to delete remote S3 backup %s during pruning: %v", r.RemoteKey, err)
+					}
+				}
+				// Delete database record
+				if err := s.store.DeleteBackupRecord(ctx, r.ID); err != nil {
+					if firstErr == nil {
+						firstErr = fmt.Errorf("failed to delete backup record: %w", err)
+					}
+				} else {
+					totalPruned++
+				}
+			}
+		}
+	}
+
+	// Clean up any unrecorded or legacy files on disk matching the prefix
+	diskPruned, diskErr := pruneBackups(destDir, prefix, retentionDays, minBackups, maxBackups, lockedNames)
+	if diskErr != nil && firstErr == nil {
+		firstErr = diskErr
+	}
+	if s.store == nil {
+		totalPruned = diskPruned
+	}
+
+	return totalPruned, firstErr
 }
 
 // Removes old backups matching prefix in dir, keeping at most maxBackups (0 = unlimited) and dropping any older than retentionDays.
