@@ -72,13 +72,28 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 	// old docker exec command
 	dockerExec := func(cause error) (string, error) {
 		if executor == nil {
-			return "", fmt.Errorf("no docker executor available: %w", cause)
+			if cause != nil {
+				return "", fmt.Errorf("no docker executor available: %w", cause)
+			}
+			return "", fmt.Errorf("no docker executor available")
 		}
 		output, err := executor.ExecCommand(ctx, server.ContainerID, command)
 		if err != nil {
-			return "", fmt.Errorf("rcon path failed: %w; fallback exec failed: %v", cause, err)
+			if cause != nil {
+				return "", fmt.Errorf("rcon path failed: %w; fallback exec failed: %v", cause, err)
+			}
+			return "", fmt.Errorf("fallback exec failed: %w", err)
 		}
 		return output, nil
+	}
+
+	// Remote nodes run on isolated Docker bridge networks that are not routable
+	// from the panel over IP. Execute commands directly via Docker exec rather
+	// than waiting on an unroutable TCP RCON handshake.
+	if server.NodeID != "" && s.store != nil {
+		if node, err := s.store.GetNode(ctx, server.NodeID); err == nil && node != nil && !node.IsLocal {
+			return dockerExec(nil)
+		}
 	}
 
 	serverCfg, err := s.store.GetServerConfig(ctx, serverID)
