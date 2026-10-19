@@ -474,3 +474,46 @@ func TestDeepSleepManager_WakeContainerPrematureExit_AbortsFast(t *testing.T) {
 	assert.Equal(t, db.StatusError, srv.Status, "server status must be marked as error")
 	assert.Contains(t, refreshed, "srv-sleep", "proxy route refresher must be invoked")
 }
+
+func TestDeepSleepManager_RollbackSleep_NilControllerMarksError(t *testing.T) {
+	ctx := context.Background()
+	_, commander, store := newDeepSleepHarness()
+
+	var refreshed []string
+	refresher := func(serverID string) {
+		refreshed = append(refreshed, serverID)
+	}
+
+	// Create manager with nil controller and resolver returning nil
+	mgr := NewDeepSleepManager(nil, store, commander, refresher, nil)
+	mgr.SetControllerResolver(func(nodeID string) SleepController {
+		return nil
+	})
+
+	// Pre-condition: server is in DeepSleep status before rollback
+	require.NoError(t, store.UpdateServerStatus(ctx, "srv-sleep", db.StatusDeepSleep))
+
+	// Calling rollbackSleep directly with nil controller must not panic, and must mark status as error
+	err := mgr.rollbackSleep(ctx, "srv-sleep", "cnt-sleep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no docker controller available")
+
+	srv, err := store.GetServer(ctx, "srv-sleep")
+	require.NoError(t, err)
+	assert.Equal(t, db.StatusError, srv.Status, "server status must be marked as error on nil controller during rollback")
+	assert.Contains(t, refreshed, "srv-sleep", "proxy route refresher must be invoked on rollback")
+}
+
+func TestDeepSleepManager_NilStoreGuards(t *testing.T) {
+	ctx := context.Background()
+	controller := newMockSleepController()
+	mgr := NewDeepSleepManager(controller, nil, nil, nil, nil)
+
+	err := mgr.SleepServer(ctx, "srv-sleep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "store is nil")
+
+	err = mgr.WakeServer(ctx, "srv-sleep")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "store is nil")
+}
