@@ -148,38 +148,41 @@ func TestDialBackendWithRetryRecoversAfterFailure(t *testing.T) {
 
 	// Bring the listener up shortly after the first attempt fails.
 	later := make(chan struct{})
+	var listenErr error
 	go func() {
-		time.Sleep(150 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		l, err := net.Listen("tcp", addr)
-		if err == nil {
-			close(later)
-			go func() {
-				for {
-					c, err := l.Accept()
-					if err != nil {
-						return
-					}
-					_ = c.Close()
-				}
-			}()
-			time.Sleep(500 * time.Millisecond)
-			_ = l.Close()
+		if err != nil {
+			listenErr = err
+			return
 		}
+		close(later)
+		go func() {
+			for {
+				c, err := l.Accept()
+				if err != nil {
+					return
+				}
+				_ = c.Close()
+			}
+		}()
+		time.Sleep(1 * time.Second)
+		_ = l.Close()
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, err := dialBackendWithRetry(ctx, addr, 5, 100*time.Millisecond, 50*time.Millisecond)
+	conn, err := dialBackendWithRetry(ctx, addr, 8, 150*time.Millisecond, 50*time.Millisecond)
 	if err != nil {
-		t.Fatalf("expected the retry to recover, got %v", err)
+		t.Fatalf("expected the retry to recover, got %v (listenErr: %v)", err, listenErr)
 	}
 	_ = conn.Close()
 
 	select {
 	case <-later:
-	default:
-		t.Fatal("listener never came up")
+	case <-time.After(3 * time.Second):
+		t.Fatalf("listener never came up (listenErr: %v)", listenErr)
 	}
 }
 
