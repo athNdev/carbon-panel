@@ -345,3 +345,153 @@ func TestDirectKnock_StopAll(t *testing.T) {
 		t.Fatalf("expected all knock listeners to be stopped")
 	}
 }
+
+// Test 6: Direct knock completes full SLP Ping and Pong round-trip without early RST
+func TestDirectKnock_SLPPingAndPongRoundTrip(t *testing.T) {
+	port := getFreePort(t)
+	log := logger.New()
+	mgr := NewDirectKnockManager(nil, log)
+
+	srv := &db.Server{
+		ID:     "srv-slp-pingpong",
+		Name:   "Test Server SLP PingPong",
+		Port:   port,
+		Status: db.StatusDeepSleep,
+	}
+
+	if err := mgr.StartKnock(srv); err != nil {
+		t.Fatalf("StartKnock failed: %v", err)
+	}
+	defer mgr.StopAll()
+
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
+	if err != nil {
+		t.Fatalf("failed to dial knock port: %v", err)
+	}
+	defer conn.Close()
+
+	// 1. Handshake (NextState = 1)
+	handshake := buildTestHandshakePacket(765, "127.0.0.1", uint16(port), 1)
+	if _, err := conn.Write(handshake); err != nil {
+		t.Fatalf("failed to write handshake: %v", err)
+	}
+
+	// 2. Status Request (ID 0x00)
+	var req bytes.Buffer
+	writeTestVarInt(&req, 1)
+	writeTestVarInt(&req, 0)
+	if _, err := conn.Write(req.Bytes()); err != nil {
+		t.Fatalf("failed to write status request: %v", err)
+	}
+
+	// 3. Status Response
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	respLen, err := ReadVarInt(conn)
+	if err != nil {
+		t.Fatalf("failed to read status response length: %v", err)
+	}
+	respData := make([]byte, respLen)
+	if _, err := io.ReadFull(conn, respData); err != nil {
+		t.Fatalf("failed to read status response data: %v", err)
+	}
+
+	// 4. Ping Request (ID 0x01 + 8-byte payload)
+	var pingReq bytes.Buffer
+	writeTestVarInt(&pingReq, 9) // 1 byte ID + 8 bytes payload
+	writeTestVarInt(&pingReq, 1) // ID 0x01
+	pingPayload := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+	pingReq.Write(pingPayload)
+	if _, err := conn.Write(pingReq.Bytes()); err != nil {
+		t.Fatalf("failed to write ping request: %v", err)
+	}
+
+	// 5. Pong Response (ID 0x01 + 8-byte payload)
+	pongLen, err := ReadVarInt(conn)
+	if err != nil {
+		t.Fatalf("failed to read pong packet length: %v", err)
+	}
+	pongData := make([]byte, pongLen)
+	if _, err := io.ReadFull(conn, pongData); err != nil {
+		t.Fatalf("failed to read pong data: %v", err)
+	}
+	if len(pongData) != 9 || pongData[0] != 0x01 {
+		t.Fatalf("expected pong packet id 1 with 8 bytes, got %v", pongData)
+	}
+	if !bytes.Equal(pongData[1:], pingPayload) {
+		t.Fatalf("pong payload mismatch: got %v, want %v", pongData[1:], pingPayload)
+	}
+}
+
+// Test 7: Direct knock handles Login intent when client immediately sends Login Start packet
+func TestDirectKnock_LoginIntentWithLoginStartPacket(t *testing.T) {
+	port := getFreePort(t)
+	log := logger.New()
+	mgr := NewDirectKnockManager(nil, log)
+
+	srv := &db.Server{
+		ID:     "srv-login-start-test",
+		Name:   "Test Server Login Start",
+		Port:   port,
+		Status: db.StatusDeepSleep,
+	}
+
+	if err := mgr.StartKnock(srv); err != nil {
+		t.Fatalf("StartKnock failed: %v", err)
+	}
+	defer mgr.StopAll()
+
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
+	if err != nil {
+		t.Fatalf("failed to dial knock port: %v", err)
+	}
+	defer conn.Close()
+
+	// 1. Send Handshake with NextState = 2 (Login)
+	handshake := buildTestHandshakePacket(765, "127.0.0.1", uint16(port), 2)
+	if _, err := conn.Write(handshake); err != nil {
+		t.Fatalf("failed to write handshake: %v", err)
+	}
+
+	// 2. Immediately send Login Start packet (Packet ID 0x00, String 'Steve')
+	var loginStart bytes.Buffer
+	var loginInner bytes.Buffer
+	writeTestVarInt(&loginInner, 0) // Packet ID 0x00 (Login Start)
+	username := "Steve"
+	writeTestVarInt(&loginInner, len(username))
+	loginInner.WriteString(username)
+	writeTestVarInt(&loginStart, loginInner.Len())
+	loginStart.Write(loginInner.Bytes())
+
+	if _, err := conn.Write(loginStart.Bytes()); err != nil {
+		t.Fatalf("failed to write login start: %v", err)
+	}
+
+	// 3. Read disconnect response
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	respLen, err := ReadVarInt(conn)
+	if err != nil {
+		t.Fatalf("failed to read disconnect packet length: %v", err)
+	}
+	respData := make([]byte, respLen)
+	if _, err := io.ReadFull(conn, respData); err != nil {
+		t.Fatalf("failed to read disconnect payload: %v", err)
+	}
+
+	reader := bytes.NewReader(respData)
+	pktID, err := ReadVarInt(reader)
+	if err != nil || pktID != 0 {
+		t.Fatalf("expected packet id 0, got %d", pktID)
+	}
+	msgLen, err := ReadVarInt(reader)
+	if err != nil {
+		t.Fatalf("failed to read disconnect message length: %v", err)
+	}
+	msgBytes := make([]byte, msgLen)
+	if _, err := io.ReadFull(reader, msgBytes); err != nil {
+		t.Fatalf("failed to read disconnect message: %v", err)
+	}
+	msg := string(msgBytes)
+	if !strings.Contains(msg, "Carbon") || !strings.Contains(msg, "deep sleep") {
+		t.Fatalf("expected disconnect message to mention Carbon and deep sleep, got: %s", msg)
+	}
+}

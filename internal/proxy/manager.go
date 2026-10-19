@@ -152,6 +152,17 @@ func isDirectPortServer(server *db.Server, proxyEnabled bool) bool {
 	return !proxyEnabled || server.ProxyHostname == "" || server.ProxyPort == 0 || server.ProxyListenerID == ""
 }
 
+func (m *Manager) isLocalServer(server *db.Server) bool {
+	if server == nil || server.NodeID == "" || m.store == nil {
+		return true
+	}
+	node, err := m.store.GetNode(context.Background(), server.NodeID)
+	if err != nil || node == nil {
+		return true
+	}
+	return isLocalDockerNode(node)
+}
+
 func (m *Manager) initDirectKnocksLocked() {
 	if m.store == nil || m.directKnocks == nil {
 		return
@@ -165,6 +176,9 @@ func (m *Manager) initDirectKnocksLocked() {
 	}
 	for _, server := range servers {
 		if isDirectPortServer(server, m.config.Enabled) && server.Status == db.StatusDeepSleep {
+			if !m.isLocalServer(server) {
+				continue
+			}
 			_ = m.directKnocks.StartKnock(server)
 		}
 	}
@@ -323,15 +337,15 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 		return nil
 	}
 
-	// Always handle direct port knocking for deep sleeping direct-port servers
+	// Always handle direct port knocking for deep sleeping direct-port servers on the local node
 	if isDirectPortServer(server, m.config.Enabled) {
-		if server.Status == db.StatusDeepSleep {
+		if server.Status == db.StatusDeepSleep && m.isLocalServer(server) {
 			if m.directKnocks != nil {
 				_ = m.directKnocks.StartKnock(server)
 			}
 		} else {
 			if m.directKnocks != nil {
-			m.directKnocks.StopKnock(server.ID)
+				m.directKnocks.StopKnock(server.ID)
 			}
 		}
 	}
