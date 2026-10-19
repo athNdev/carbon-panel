@@ -9,15 +9,17 @@ import (
 	storage "github.com/athNdev/carbon-panel/internal/db"
 )
 
-// Event names written by the audit trail (MINE-141).
+// Event names written by the audit trail (MINE-141, SEC-3).
 const (
-	EventAuthLogin    = "auth.login"
-	EventAuthLogout   = "auth.logout"
-	EventServerStart  = "server.start"
-	EventServerStop    = "server.stop"
-	EventServerRestart = "server.restart"
-	EventServerCreate = "server.create"
-	EventServerDelete = "server.delete"
+	EventAuthLogin                 = "auth.login"
+	EventAuthLogout                = "auth.logout"
+	EventServerStart               = "server.start"
+	EventServerStop                = "server.stop"
+	EventServerRestart             = "server.restart"
+	EventServerCreate              = "server.create"
+	EventServerUpdate              = "server.update"
+	EventServerDelete              = "server.delete"
+	EventServerPrivilegedOverrides = "server.privileged_overrides"
 )
 
 // Entry is a single audit record.

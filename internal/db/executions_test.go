@@ -188,3 +188,51 @@ func TestStore_FailOrphanedTaskExecutions(t *testing.T) {
 		t.Fatalf("e3After unexpected: %+v, %v", e3After, err)
 	}
 }
+
+func TestStore_HasRunningExecution(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	defer store.Close()
+
+	hasRunning, err := store.HasRunningExecution(ctx, "task-none")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if hasRunning {
+		t.Errorf("expected false for nonexistent task")
+	}
+
+	now := time.Now()
+	e1 := &TaskExecution{
+		ID:        "e-running",
+		TaskID:    "task-x",
+		ServerID:  "srv-1",
+		Status:    ExecutionStatusRunning,
+		StartedAt: now,
+	}
+	if err := store.CreateTaskExecution(ctx, e1); err != nil {
+		t.Fatalf("failed to create execution: %v", err)
+	}
+
+	hasRunning, err = store.HasRunningExecution(ctx, "task-x")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasRunning {
+		t.Errorf("expected true for task with running execution")
+	}
+
+	e1.Status = ExecutionStatusCompleted
+	e1.EndedAt = &now
+	if err := store.UpdateTaskExecution(ctx, e1); err != nil {
+		t.Fatalf("failed to update execution: %v", err)
+	}
+
+	hasRunning, err = store.HasRunningExecution(ctx, "task-x")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if hasRunning {
+		t.Errorf("expected false after execution completed")
+	}
+}
