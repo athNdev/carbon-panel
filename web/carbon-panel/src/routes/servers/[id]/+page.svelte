@@ -103,16 +103,16 @@
 	);
 
 	const connectAddress = $derived.by(() => {
-		if (!server) return "";
+		if (!server) return '';
 		if (isProxied) {
 			const portSuffix =
-				server.proxyPort && server.proxyPort !== 25565 ? `:${server.proxyPort}` : "";
+				server.proxyPort && server.proxyPort !== 25565 ? `:${server.proxyPort}` : '';
 			return `${server.proxyHostname}${portSuffix}`;
 		}
 		const host =
-			typeof window !== "undefined" && window.location.hostname
+			typeof window !== 'undefined' && window.location.hostname
 				? window.location.hostname
-				: "localhost";
+				: 'localhost';
 		return `${host}:${server.port}`;
 	});
 
@@ -563,8 +563,8 @@
 							Restarting server container
 						{:else if server.status === ServerStatus.DEEPSLEEP}
 							{isProxied
-								? "Deep sleeping (container stopped, proxy listening for login wake)"
-								: "Deep sleeping (container stopped, direct port listening for login wake)"}
+								? 'Deep sleeping (container stopped, proxy listening for login wake)'
+								: 'Deep sleeping (container stopped, direct port listening for login wake)'}
 						{:else if server.status === ServerStatus.PAUSED}
 							Paused via cgroup freezer (instant resume available)
 						{:else if server.status === ServerStatus.STOPPING}
@@ -586,9 +586,15 @@
 					>
 					<div class="flex items-center gap-2">
 						{#if isProxied}
-							<span class="rounded-none bg-[#0f62fe]/20 px-1.5 py-0.5 font-mono text-[10px] text-[#78a9ff]">PROXIED</span>
+							<span
+								class="rounded-none bg-[#0f62fe]/20 px-1.5 py-0.5 font-mono text-[10px] text-[#78a9ff]"
+								>PROXIED</span
+							>
 						{:else}
-							<span class="rounded-none bg-[#393939] px-1.5 py-0.5 font-mono text-[10px] text-[#c6c6c6]">DIRECT PORT</span>
+							<span
+								class="rounded-none bg-[#393939] px-1.5 py-0.5 font-mono text-[10px] text-[#c6c6c6]"
+								>DIRECT PORT</span
+							>
 						{/if}
 						<ExternalLink class="h-4 w-4 text-[#78a9ff]" />
 					</div>
