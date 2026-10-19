@@ -24,6 +24,7 @@ import (
 //   - GET    /api/v1/staged-config/{serverID}/staged[?status=staged]  list changes
 //   - POST   /api/v1/staged-config/{serverID}/staged                  stage a diff
 //   - POST   /api/v1/staged-config/{serverID}/staged/{id}/apply       apply now
+//   - POST   /api/v1/staged-config/{serverID}/staged/{id}/rollback    rollback applied change (SCH-1)
 //   - DELETE /api/v1/staged-config/{serverID}/staged/{id}             discard
 //
 // Staging records the change regardless of the instance's operational state.
@@ -93,6 +94,8 @@ func (h *StagedConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		h.handleStage(w, r, serverID)
 	case len(parts) == 4 && parts[3] == "apply" && r.Method == http.MethodPost:
 		h.handleApply(w, r, parts[2])
+	case len(parts) == 4 && parts[3] == "rollback" && r.Method == http.MethodPost:
+		h.handleRollback(w, r, parts[2])
 	case len(parts) == 3 && r.Method == http.MethodDelete:
 		h.handleDiscard(w, r, parts[2])
 	default:
@@ -144,6 +147,15 @@ func (h *StagedConfigHandler) handleApply(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "change": applied})
+}
+
+func (h *StagedConfigHandler) handleRollback(w http.ResponseWriter, r *http.Request, stagedID string) {
+	rolledBack, err := h.store.RollbackStagedConfigChange(r.Context(), stagedID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to rollback staged change: %v", err), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "change": rolledBack})
 }
 
 func (h *StagedConfigHandler) handleDiscard(w http.ResponseWriter, r *http.Request, stagedID string) {

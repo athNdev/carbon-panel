@@ -24,9 +24,10 @@ import (
 
 // fakeStagedStore is an in-memory stagedConfigStore for hook tests.
 type fakeStagedStore struct {
-	changes []*storage.StagedConfigChange
-	applied []string
-	failOn  map[string]bool
+	changes    []*storage.StagedConfigChange
+	applied    []string
+	rolledBack []string
+	failOn     map[string]bool
 }
 
 type fakeLifecycleStore struct {
@@ -84,6 +85,17 @@ func (f *fakeStagedStore) ApplyStagedConfigChange(_ context.Context, id string) 
 		if c.ID == id {
 			c.Status = storage.StagedStatusApplied
 			f.applied = append(f.applied, id)
+			return c, nil
+		}
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+func (f *fakeStagedStore) RollbackStagedConfigChange(_ context.Context, id string) (*storage.StagedConfigChange, error) {
+	for _, c := range f.changes {
+		if c.ID == id {
+			c.Status = storage.StagedStatusRolledBack
+			f.rolledBack = append(f.rolledBack, id)
 			return c, nil
 		}
 	}
@@ -163,6 +175,7 @@ func TestRecreateForPendingStagedConfigPersistsPartialContainerID(t *testing.T) 
 	assert.Equal(t, storage.StatusError, store.server.Status)
 	assert.Empty(t, client.starts)
 	assert.Nil(t, server.LastStarted, "failed recreate must leave staged recovery pending")
+	assert.Equal(t, []string{"restart-config"}, store.rolledBack, "staged configs must be auto-rolled back on recreate error")
 }
 
 func TestPrepareDeepSleepWakeRecreatesWithoutStartingOrAdvancingLastStarted(t *testing.T) {
@@ -230,4 +243,38 @@ func TestSchedulerWakePathsRejectOvercommittedNode(t *testing.T) {
 	if err := s.StartServerForBoot(ctx, server); err == nil || !strings.Contains(err.Error(), "lacks memory capacity") {
 		t.Fatalf("StartServerForBoot error = %v, want memory capacity rejection", err)
 	}
+}
+
+func TestRecreateForPendingStagedConfigRollbackOnStartFailure(t *testing.T) {
+	ctx := context.Background()
+	store := &fakeLifecycleStore{
+		fakeStagedStore: &fakeStagedStore{changes: []*storage.StagedConfigChange{{
+			ID: "restart-config-2", ServerID: "srv-1", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusStaged,
+		}}},
+		serverConfig: &storage.ServerConfig{},
+	}
+	client := &fakeLifecycleDocker{
+		result: &docker.RecreateContainerResult{NewContainerID: "replacement-id-2", WasRunning: false},
+	}
+	// Make StartContainer fail
+	failClient := &failingStartDocker{fakeLifecycleDocker: client, failOn: "replacement-id-2"}
+	server := &storage.Server{ID: "srv-1", ContainerID: "old-id", Status: storage.StatusStopped}
+
+	handled, err := recreateForPendingStagedConfig(ctx, store, failClient, nil, server, true, true)
+	require.True(t, handled)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to start recreated server")
+	assert.Equal(t, []string{"restart-config-2"}, store.rolledBack, "staged configs must be auto-rolled back on start error")
+}
+
+type failingStartDocker struct {
+	*fakeLifecycleDocker
+	failOn string
+}
+
+func (f *failingStartDocker) StartContainer(ctx context.Context, id string) error {
+	if id == f.failOn {
+		return fmt.Errorf("start failed for container %s", id)
+	}
+	return f.fakeLifecycleDocker.StartContainer(ctx, id)
 }
