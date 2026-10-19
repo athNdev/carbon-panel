@@ -148,3 +148,47 @@ func TestZipRoundTrip(t *testing.T) {
 		t.Errorf("extracted content = %q, %v", data, err)
 	}
 }
+
+func TestSHA256FileAndVerifyZipArchive(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "hello.txt")
+	if err := os.WriteFile(filePath, []byte("hello world"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// SHA256 of "hello world" is b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+	expectedSum := "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+	sum, err := SHA256File(filePath)
+	if err != nil {
+		t.Fatalf("SHA256File failed: %v", err)
+	}
+	if sum != expectedSum {
+		t.Errorf("SHA256File = %q, want %q", sum, expectedSum)
+	}
+
+	// Missing file returns error
+	if _, err := SHA256File(filepath.Join(dir, "non-existent.txt")); err == nil {
+		t.Error("expected error for non-existent file, got nil")
+	}
+
+	// Create a valid zip archive
+	archivePath := filepath.Join(dir, "valid.zip")
+	_, err = CreateZipArchive([]string{"hello.txt"}, dir, archivePath, true)
+	if err != nil {
+		t.Fatalf("CreateZipArchive failed: %v", err)
+	}
+
+	// Verify valid archive
+	if err := VerifyZipArchive(archivePath); err != nil {
+		t.Errorf("VerifyZipArchive failed on valid archive: %v", err)
+	}
+
+	// Corrupted archive (truncated or invalid header)
+	corruptPath := filepath.Join(dir, "corrupt.zip")
+	if err := os.WriteFile(corruptPath, []byte("not-a-valid-zip-content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyZipArchive(corruptPath); err == nil {
+		t.Error("VerifyZipArchive should fail on corrupted archive, got nil")
+	}
+}

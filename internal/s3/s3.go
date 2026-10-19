@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -99,6 +100,9 @@ func (u *Uploader) Upload(ctx context.Context, serverID, localPath string) (stri
 
 // Download fetches an object key to a local path.
 func (u *Uploader) Download(ctx context.Context, key, localPath string) error {
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return fmt.Errorf("create download dir: %w", err)
+	}
 	f, err := os.Create(localPath)
 	if err != nil {
 		return err
@@ -110,6 +114,8 @@ func (u *Uploader) Download(ctx context.Context, key, localPath string) error {
 		Key:      &key,
 		WriterAt: f,
 	}); err != nil {
+		_ = f.Close()
+		_ = os.Remove(localPath)
 		return fmt.Errorf("s3 download: %w", err)
 	}
 	return nil
