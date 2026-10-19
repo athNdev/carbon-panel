@@ -30,6 +30,7 @@ type Manager struct {
 	activityHandler  ActivityHandler
 	sleepWakeHandler WakeHandler
 	valkeySync       *ValkeySyncManager
+	serverHostnames  map[string]string
 }
 
 // DockerInspector is the subset of the Docker client used for container IP
@@ -41,12 +42,13 @@ type DockerInspector interface {
 // NewManager creates a new proxy manager
 func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dockerCli ...DockerInspector) *Manager {
 	m := &Manager{
-		proxies:      make(map[int]Proxier),
-		directKnocks: NewDirectKnockManager(nil, logger),
-		store:        store,
-		config:      &cfg.Proxy,
-		logger:      logger,
-		networkName: cfg.Docker.NetworkName,
+		proxies:         make(map[int]Proxier),
+		directKnocks:    NewDirectKnockManager(nil, logger),
+		store:           store,
+		config:         &cfg.Proxy,
+		logger:         logger,
+		networkName:    cfg.Docker.NetworkName,
+		serverHostnames: make(map[string]string),
 	}
 
 	if cfg.Proxy.ValkeyURL != "" {
@@ -344,6 +346,12 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 	}
 
 	hostname := m.generateHostname(server)
+	if hostname != "" {
+		if m.serverHostnames == nil {
+			m.serverHostnames = make(map[string]string)
+		}
+		m.serverHostnames[server.ID] = hostname
+	}
 
 	// Add or update route for servers that are starting, running, hibernated (paused), or deeply asleep with proxy hostname
 	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting || server.Status == db.StatusPaused || server.Status == db.StatusDeepSleep) && server.ProxyHostname != "" {
@@ -379,8 +387,8 @@ func (m *Manager) UpdateServerRoute(server *db.Server) error {
 			_ = m.valkeySync.BroadcastRouteAdd(context.Background(), server.ID, hostname, backendHost, backendPort, listener.Port)
 		}
 		m.logger.Info("Updated route for server %s (%s -> %s:%d, paused=%v) on port %d", server.Name, hostname, backendHost, backendPort, server.Status == db.StatusPaused, listener.Port)
-	} else if server.Status == db.StatusStopped || server.Status == db.StatusStopping {
-		// Remove route if server is stopped or stopping
+	} else if server.Status == db.StatusStopped || server.Status == db.StatusStopping || server.Status == db.StatusError {
+		// Remove route if server is stopped, stopping, or in error
 		proxy.RemoveRoute(hostname)
 		if m.valkeySync != nil {
 			_ = m.valkeySync.BroadcastRouteRemove(context.Background(), hostname, listener.Port)
@@ -464,12 +472,19 @@ func (m *Manager) RemoveServerRoute(serverID string) error {
 		return nil
 	}
 
-	server, err := m.store.GetServer(context.Background(), serverID)
-	if err != nil {
-		return err
+	hostname := ""
+	if m.serverHostnames != nil {
+		hostname = m.serverHostnames[serverID]
+		delete(m.serverHostnames, serverID)
 	}
 
-	hostname := m.generateHostname(server)
+	if hostname == "" {
+		server, err := m.store.GetServer(context.Background(), serverID)
+		if err != nil {
+			return err
+		}
+		hostname = m.generateHostname(server)
+	}
 
 	// Remove from all proxies (in case it was moved between listeners)
 	for _, proxy := range m.proxies {
