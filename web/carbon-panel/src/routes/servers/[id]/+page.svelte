@@ -93,10 +93,38 @@ one at https://mozilla.org/MPL/2.0/.
 		return new Date(Number(timestamp.seconds) * 1000 + timestamp.nanos / 1_000_000);
 	}
 
+	let proxyStatus = $state<{ enabled: boolean; baseUrl: string } | null>(null);
+
 	onMount(() => {
+		rpcClient.proxy
+			.getProxyStatus({})
+			.then((res) => {
+				proxyStatus = { enabled: res.enabled, baseUrl: res.baseUrl };
+			})
+			.catch(() => {
+				// Proxy might be disabled or unreachable, ignore
+			});
 		return () => {
 			if (interval) clearInterval(interval);
 		};
+	});
+
+	const isProxied = $derived(
+		Boolean(proxyStatus?.enabled && server?.proxyHostname && (server?.proxyPort ?? 0) > 0)
+	);
+
+	const connectAddress = $derived.by(() => {
+		if (!server) return '';
+		if (isProxied) {
+			const portSuffix =
+				server.proxyPort && server.proxyPort !== 25565 ? `:${server.proxyPort}` : '';
+			return `${server.proxyHostname}${portSuffix}`;
+		}
+		const host =
+			typeof window !== 'undefined' && window.location.hostname
+				? window.location.hostname
+				: 'localhost';
+		return `${host}:${server.port}`;
 	});
 
 	$effect(() => {
@@ -545,7 +573,9 @@ one at https://mozilla.org/MPL/2.0/.
 						{:else if server.status === ServerStatus.RESTARTING}
 							Restarting server container
 						{:else if server.status === ServerStatus.DEEPSLEEP}
-							Deep sleeping (container stopped, proxy listening for login wake)
+							{isProxied
+								? 'Deep sleeping (container stopped, proxy listening for login wake)'
+								: 'Deep sleeping (container stopped, direct port listening for login wake)'}
 						{:else if server.status === ServerStatus.PAUSED}
 							Paused via cgroup freezer (instant resume available)
 						{:else if server.status === ServerStatus.STOPPING}
@@ -565,24 +595,32 @@ one at https://mozilla.org/MPL/2.0/.
 					<span class="font-mono text-xs tracking-wider text-[#8d8d8d] uppercase"
 						>Network Ingress</span
 					>
-					<ExternalLink class="h-4 w-4 text-[#78a9ff]" />
+					<div class="flex items-center gap-2">
+						{#if isProxied}
+							<span
+								class="rounded-none bg-[#0f62fe]/20 px-1.5 py-0.5 font-mono text-[10px] text-[#78a9ff]"
+								>PROXIED</span
+							>
+						{:else}
+							<span
+								class="rounded-none bg-[#393939] px-1.5 py-0.5 font-mono text-[10px] text-[#c6c6c6]"
+								>DIRECT PORT</span
+							>
+						{/if}
+						<ExternalLink class="h-4 w-4 text-[#78a9ff]" />
+					</div>
 				</div>
 				<div class="py-3">
 					<p class="font-mono text-xs text-[#8d8d8d] uppercase">Connect String</p>
 					<p class="mt-0.5 truncate font-mono text-base font-semibold text-[#f4f4f4]">
-						{#if server.proxyHostname}
-							{server.proxyHostname}
-						{:else}
-							localhost:{server.port}
-						{/if}
+						{connectAddress}
 					</p>
 				</div>
 				<div class="border-t border-[#393939] pt-2">
 					<button
 						type="button"
 						onclick={() => {
-							const addr = server?.proxyHostname || `localhost:${server?.port}`;
-							copyConnection(addr);
+							copyConnection(connectAddress);
 						}}
 						class="flex h-8 w-full cursor-pointer items-center justify-center gap-2 rounded-none border border-[#393939] bg-[#161616] px-3 font-mono text-xs text-[#78a9ff] transition-colors hover:bg-[#353535]"
 					>

@@ -278,6 +278,7 @@ type ClientConfig struct {
 	EnableRateLimit bool
 	RateLimitPerMin int
 	RateLimitBurst  int
+	ProxyEnabled    bool
 }
 
 type ContainerLogStreamer interface {
@@ -306,6 +307,24 @@ func (c *Client) GetConfig() ClientConfig {
 		return ClientConfig{}
 	}
 	return c.config
+}
+
+// SetProxyEnabled toggles the proxy mode for port isolation and proxy routing
+func (c *Client) SetProxyEnabled(enabled bool) {
+	if c == nil {
+		return
+	}
+	c.config.ProxyEnabled = enabled
+}
+
+// isProxyServer determines if a server should be treated as proxied:
+// proxy must be enabled globally, the server must have a proxy hostname,
+// and it must be attached to a proxy listener (ProxyPort > 0) or use internal port 0.
+func (c *Client) isProxyServer(server *models.Server) bool {
+	if server == nil {
+		return false
+	}
+	return c.config.ProxyEnabled && server.ProxyHostname != "" && (server.ProxyPort > 0 || server.Port == 0)
 }
 
 // detectHostMTU discovers the minimum MTU across active non-loopback, non-virtual
@@ -551,7 +570,7 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 // validated by the daemon.
 func validateServerPorts(server *models.Server) error {
 	gamePort := server.Port
-	if server.ProxyHostname != "" {
+	if server.ProxyHostname != "" && (server.ProxyPort > 0 || server.Port == 0) {
 		gamePort = DefaultMinecraftPort
 	}
 	if gamePort < 1 || gamePort > 65535 {
@@ -608,7 +627,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	env := buildEnvFromConfig(serverConfig)
 
 	// Determine container port - proxy servers always use default port internally
-	useProxy := server.ProxyHostname != ""
+	useProxy := c.isProxyServer(server)
 	containerPort := server.Port
 	if useProxy {
 		containerPort = DefaultMinecraftPort
