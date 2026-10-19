@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"net/http"
 	"net/netip"
 	"os"
@@ -270,6 +271,7 @@ func GetRequiredJavaVersion(mcVersion string, modLoader models.ModLoader) string
 type ClientConfig struct {
 	APIVersion      string
 	NetworkName     string
+	NetworkMTU      int
 	RegistryURL     string
 	DNS             string
 	Labels          map[string]string
@@ -297,6 +299,41 @@ type Client struct {
 // Auto manage streams at the client level when set
 func (c *Client) SetLogStreamer(ls ContainerLogStreamer) {
 	c.logStreamer = ls
+}
+
+func (c *Client) GetConfig() ClientConfig {
+	if c == nil {
+		return ClientConfig{}
+	}
+	return c.config
+}
+
+// detectHostMTU discovers the minimum MTU across active non-loopback, non-virtual
+// network interfaces on the host. Returns 0 if unable to detect or if all interfaces
+// are standard/virtual.
+func detectHostMTU() int {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return 0
+	}
+	minMTU := 0
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		name := strings.ToLower(iface.Name)
+		if strings.HasPrefix(name, "docker") || strings.HasPrefix(name, "br-") ||
+			strings.HasPrefix(name, "veth") || strings.HasPrefix(name, "flannel") ||
+			strings.HasPrefix(name, "cni") {
+			continue
+		}
+		if iface.MTU > 0 {
+			if minMTU == 0 || iface.MTU < minMTU {
+				minMTU = iface.MTU
+			}
+		}
+	}
+	return minMTU
 }
 
 func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client, error) {
@@ -1570,8 +1607,20 @@ func (c *Client) EnsureNetwork() error {
 
 	if !exists {
 		// Create network - let Docker allocate subnet from its configured default-address-pools
+		driverOpts := make(map[string]string)
+		targetMTU := c.config.NetworkMTU
+		if targetMTU == 0 {
+			if detected := detectHostMTU(); detected > 0 && detected < 1500 {
+				targetMTU = detected
+			}
+		}
+		if targetMTU > 0 {
+			driverOpts["com.docker.network.driver.mtu"] = strconv.Itoa(targetMTU)
+		}
+
 		createOpts := client.NetworkCreateOptions{
-			Driver: "bridge",
+			Driver:  "bridge",
+			Options: driverOpts,
 			Labels: map[string]string{
 				"carbon-panel.managed": "true",
 			},
