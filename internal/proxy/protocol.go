@@ -89,6 +89,11 @@ type HandshakePacket struct {
 	NextState       VarInt // 1 for status, 2 for login
 }
 
+// MaxHandshakePacketLength is the maximum allowed length of a Minecraft
+// handshake packet (32KB). Minecraft strings can be up to 32767 characters,
+// and Forge/Fabric/FML clients embed extended channel tokens in the address field.
+const MaxHandshakePacketLength = 32768
+
 // ReadHandshakePacket reads a handshake packet from the connection
 func ReadHandshakePacket(r io.Reader) (*HandshakePacket, error) {
 	// Read packet length
@@ -97,7 +102,7 @@ func ReadHandshakePacket(r io.Reader) (*HandshakePacket, error) {
 		return nil, fmt.Errorf("failed to read packet length: %w", err)
 	}
 
-	if length < 1 || length > 255 {
+	if length < 1 || length > MaxHandshakePacketLength {
 		return nil, fmt.Errorf("invalid packet length: %d", length)
 	}
 
@@ -138,7 +143,7 @@ func ReadHandshakePacket(r io.Reader) (*HandshakePacket, error) {
 	// to a negative int32 (make() panics on a negative length) or to a large
 	// positive value (a multi-GB allocation attempt) before the subsequent
 	// ReadFull would ever fail. Bound it to what's actually left in the
-	// packet buffer, which is itself already capped to 255 bytes above.
+	// packet buffer, which is itself already capped to MaxHandshakePacketLength above.
 	if addressLen < 0 || int(addressLen) > buf.Len() {
 		return nil, fmt.Errorf("invalid address length: %d", addressLen)
 	}
