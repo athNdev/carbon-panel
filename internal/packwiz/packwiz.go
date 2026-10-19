@@ -587,13 +587,18 @@ func (m *Manager) ServePackFile(packID, relativePath string) ([]byte, string, er
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	pDir := filepath.Clean(m.packDir(packID))
 	cleanRel := filepath.Clean(relativePath)
 	cleanRel = strings.TrimPrefix(cleanRel, "/")
 	if strings.Contains(cleanRel, "..") {
 		return nil, "", fmt.Errorf("invalid path")
 	}
 
-	fullPath := filepath.Join(m.packDir(packID), cleanRel)
+	fullPath := filepath.Clean(filepath.Join(pDir, cleanRel))
+	if !strings.HasPrefix(fullPath, pDir+string(filepath.Separator)) && fullPath != pDir {
+		return nil, "", fmt.Errorf("path escapes pack directory")
+	}
+
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, "", err
@@ -689,7 +694,7 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 
 	// Create overrides dir
 	_, _ = zw.Create("overrides/")
-	return nil
+	return zw.Close()
 }
 
 // ExportCurseForge generates a CurseForge .zip modpack
@@ -761,7 +766,7 @@ func (m *Manager) ExportCurseForge(packID string, w io.Writer) error {
 	}
 
 	_, _ = zw.Create("overrides/")
-	return nil
+	return zw.Close()
 }
 
 // BakeToServer extracts server-side mods directly into /data/mods
@@ -771,7 +776,8 @@ func (m *Manager) BakeToServer(packID, modsDir string) (int, error) {
 		return 0, err
 	}
 
-	if err := os.MkdirAll(modsDir, 0755); err != nil {
+	cleanModsDir := filepath.Clean(modsDir)
+	if err := os.MkdirAll(cleanModsDir, 0755); err != nil {
 		return 0, fmt.Errorf("failed to create mods directory: %w", err)
 	}
 
@@ -785,7 +791,14 @@ func (m *Manager) BakeToServer(packID, modsDir string) (int, error) {
 			continue
 		}
 
-		targetFile := filepath.Join(modsDir, mod.FileName)
+		cleanFileName := filepath.Base(filepath.Clean(mod.FileName))
+		if cleanFileName == "." || cleanFileName == "/" || strings.Contains(cleanFileName, "..") {
+			continue
+		}
+		targetFile := filepath.Join(cleanModsDir, cleanFileName)
+		if !strings.HasPrefix(filepath.Clean(targetFile), cleanModsDir+string(filepath.Separator)) {
+			continue
+		}
 
 		// Download directly
 		resp, err := m.httpClient.Get(mod.DownloadURL)
@@ -802,12 +815,14 @@ func (m *Manager) BakeToServer(packID, modsDir string) (int, error) {
 			continue
 		}
 
-		_, copyErr := io.Copy(out, resp.Body)
+		_, copyErr := io.Copy(out, io.LimitReader(resp.Body, 500*1024*1024))
 		_ = resp.Body.Close()
 		_ = out.Close()
 
 		if copyErr == nil {
 			installed++
+		} else {
+			_ = os.Remove(targetFile)
 		}
 	}
 
@@ -1055,14 +1070,14 @@ func (m *Manager) AddModFromURL(packID string, req DirectURLModRequest) (*ModIte
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch download URL: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %d when fetching mod URL", resp.StatusCode)
 	}
 
 	hasher := sha256.New()
-	written, err := io.Copy(hasher, resp.Body)
+	written, err := io.Copy(hasher, io.LimitReader(resp.Body, 500*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading mod stream: %w", err)
 	}
@@ -1296,8 +1311,12 @@ func (m *Manager) SavePackFile(packID, relPath string, r io.Reader) error {
 		return fmt.Errorf("invalid file path")
 	}
 
-	pDir := m.packDir(packID)
-	target := filepath.Join(pDir, cleanRel)
+	pDir := filepath.Clean(m.packDir(packID))
+	target := filepath.Clean(filepath.Join(pDir, cleanRel))
+	if !strings.HasPrefix(target, pDir+string(filepath.Separator)) {
+		return fmt.Errorf("path escapes pack directory")
+	}
+
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		return err
 	}
@@ -1306,10 +1325,12 @@ func (m *Manager) SavePackFile(packID, relPath string, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
 
-	if _, err := io.Copy(f, r); err != nil {
-		return err
+	_, copyErr := io.Copy(f, io.LimitReader(r, 500*1024*1024))
+	_ = f.Close()
+	if copyErr != nil {
+		_ = os.Remove(target)
+		return copyErr
 	}
 
 	return m.RefreshPack(packID)
@@ -1323,8 +1344,12 @@ func (m *Manager) DeletePackFile(packID, relPath string) error {
 		return fmt.Errorf("invalid file path")
 	}
 
-	pDir := m.packDir(packID)
-	target := filepath.Join(pDir, cleanRel)
+	pDir := filepath.Clean(m.packDir(packID))
+	target := filepath.Clean(filepath.Join(pDir, cleanRel))
+	if !strings.HasPrefix(target, pDir+string(filepath.Separator)) {
+		return fmt.Errorf("path escapes pack directory")
+	}
+
 	_ = os.Remove(target)
 
 	return m.RefreshPack(packID)
