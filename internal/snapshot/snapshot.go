@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,19 +19,21 @@ import (
 
 // Engine manages volume snapshots, pre-update backups, and rollbacks for servers (MINE-23)
 type Engine struct {
-	store        *storage.Store
-	docker       *docker.Client
-	pool         *docker.ClientPool
-	sender       *command.Sender
-	backupDir    string
-	maxSnapshots int
-	log          *logger.Logger
+	store         *storage.Store
+	docker        *docker.Client
+	pool          *docker.ClientPool
+	sender        *command.Sender
+	backupDir     string
+	maxSnapshots  int
+	retentionDays int
+	log           *logger.Logger
 }
 
 // Config holds configuration for the SnapshotEngine
 type Config struct {
-	BackupDir    string
-	MaxSnapshots int // Max pre-update snapshots to retain per server (default: 5)
+	BackupDir     string
+	MaxSnapshots  int // Max pre-update snapshots to retain per server (default: 5)
+	RetentionDays int // Max age in days to retain pre-update snapshots (0 = unlimited age)
 }
 
 // NewEngine creates a new SnapshotEngine
@@ -43,10 +46,14 @@ func NewEngine(store *storage.Store, dockerClient *docker.Client, sender *comman
 func NewEngineWithPool(store *storage.Store, dockerClient *docker.Client, pool *docker.ClientPool, sender *command.Sender, log *logger.Logger, cfg ...Config) *Engine {
 	backupDir := ""
 	maxSnapshots := 5
+	retentionDays := 0
 	if len(cfg) > 0 {
 		backupDir = cfg[0].BackupDir
 		if cfg[0].MaxSnapshots > 0 {
 			maxSnapshots = cfg[0].MaxSnapshots
+		}
+		if cfg[0].RetentionDays > 0 {
+			retentionDays = cfg[0].RetentionDays
 		}
 	}
 	if log == nil {
@@ -57,13 +64,14 @@ func NewEngineWithPool(store *storage.Store, dockerClient *docker.Client, pool *
 	}
 
 	return &Engine{
-		store:        store,
-		docker:       dockerClient,
-		pool:         pool,
-		sender:       sender,
-		backupDir:    backupDir,
-		maxSnapshots: maxSnapshots,
-		log:          log,
+		store:         store,
+		docker:        dockerClient,
+		pool:          pool,
+		sender:        sender,
+		backupDir:     backupDir,
+		maxSnapshots:  maxSnapshots,
+		retentionDays: retentionDays,
+		log:           log,
 	}
 }
 
@@ -119,6 +127,23 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 		return nil, fmt.Errorf("failed to create snapshot archive: %w", err)
 	}
 
+	// Verify archive integrity before writing checksum or saving record
+	if err := files.VerifyZipArchive(archivePath); err != nil {
+		_ = os.Remove(archivePath)
+		return nil, fmt.Errorf("snapshot archive failed verification: %w", err)
+	}
+
+	// Write SHA256 checksum sidecar
+	sum, sumErr := files.SHA256File(archivePath)
+	if sumErr != nil {
+		_ = os.Remove(archivePath)
+		return nil, fmt.Errorf("failed to checksum snapshot archive: %w", sumErr)
+	}
+	if err := os.WriteFile(archivePath+".sha256", []byte(sum+"  "+filepath.Base(archivePath)+"\n"), 0644); err != nil {
+		_ = os.Remove(archivePath)
+		return nil, fmt.Errorf("failed to write snapshot checksum: %w", err)
+	}
+
 	var size int64
 	if info, err := os.Stat(archivePath); err == nil {
 		size = info.Size()
@@ -139,8 +164,8 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 		if err := e.store.CreateSnapshot(ctx, snapshot); err != nil {
 			e.log.Warn("Failed to persist snapshot record in database: %v", err)
 		}
-		// Prune older snapshots
-		e.pruneSnapshots(ctx, server.ID)
+		// Prune older snapshots according to retention policy
+		_, _ = e.PruneSnapshots(ctx, server.ID)
 	}
 
 	e.log.Info("Successfully created pre-update snapshot %s (%s, %d bytes) for server %s",
@@ -181,6 +206,33 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	if _, err := os.Stat(snapshot.FilePath); os.IsNotExist(err) {
 		return fmt.Errorf("snapshot archive not found on disk at: %s", snapshot.FilePath)
 	}
+
+	// Verify checksum sidecar if present
+	sidecarPath := snapshot.FilePath + ".sha256"
+	if sidecarBytes, err := os.ReadFile(sidecarPath); err == nil {
+		parts := strings.Fields(string(sidecarBytes))
+		if len(parts) > 0 {
+			expectedSum := parts[0]
+			actualSum, err := files.SHA256File(snapshot.FilePath)
+			if err != nil {
+				return fmt.Errorf("failed to checksum snapshot archive: %w", err)
+			}
+			if !strings.EqualFold(actualSum, expectedSum) {
+				return fmt.Errorf("cannot safely rollback: snapshot archive checksum mismatch (expected %s, got %s)", expectedSum, actualSum)
+			}
+		}
+	}
+
+	// Verify zip archive integrity before stopping container or modifying filesystem
+	if err := files.VerifyZipArchive(snapshot.FilePath); err != nil {
+		return fmt.Errorf("cannot safely rollback: snapshot archive failed integrity verification: %w", err)
+	}
+
+	// Lifecycle concurrency guard (prevent racing with user/reconciler operations)
+	if !docker.TryBeginServerTransition(server.ID) {
+		return fmt.Errorf("cannot safely rollback: server %s is currently undergoing another transition", server.ID)
+	}
+	defer docker.EndServerTransition(server.ID)
 
 	wasRunning := server.Status == storage.StatusRunning || server.Status == storage.StatusStarting
 	dockerCli := e.resolveDocker(server.NodeID)
@@ -242,25 +294,87 @@ func (e *Engine) DeleteSnapshot(ctx context.Context, snapshotID string) error {
 	}
 
 	_ = os.Remove(snap.FilePath)
+	_ = os.Remove(snap.FilePath + ".sha256")
 	return e.store.DeleteSnapshot(ctx, snapshotID)
 }
 
-// pruneSnapshots enforces retention limit
-func (e *Engine) pruneSnapshots(ctx context.Context, serverID string) {
-	if e.maxSnapshots <= 0 || e.store == nil {
-		return
+// PruneSnapshots enforces retention limits (max count and age) for a server.
+func (e *Engine) PruneSnapshots(ctx context.Context, serverID string) (int, error) {
+	if e.store == nil || (e.maxSnapshots <= 0 && e.retentionDays <= 0) {
+		return 0, nil
 	}
 	snaps, err := e.store.ListSnapshots(ctx, serverID)
-	if err != nil || len(snaps) <= e.maxSnapshots {
-		return
+	if err != nil {
+		return 0, err
+	}
+	if len(snaps) == 0 {
+		return 0, nil
 	}
 
-	for i := e.maxSnapshots; i < len(snaps); i++ {
-		toDelete := snaps[i]
-		e.log.Info("Pruning excess snapshot %s (%s)", toDelete.ID, toDelete.Name)
-		_ = os.Remove(toDelete.FilePath)
-		_ = e.store.DeleteSnapshot(ctx, toDelete.ID)
+	toDelete := make(map[string]*storage.ServerSnapshot)
+
+	// Count-based pruning: keep newest maxSnapshots
+	if e.maxSnapshots > 0 && len(snaps) > e.maxSnapshots {
+		for _, s := range snaps[e.maxSnapshots:] {
+			toDelete[s.ID] = s
+		}
 	}
+
+	// Age-based pruning: keep at least 1 most recent snapshot regardless of age
+	if e.retentionDays > 0 {
+		cutoff := time.Now().AddDate(0, 0, -e.retentionDays)
+		for _, s := range snaps[1:] {
+			if s.CreatedAt.Before(cutoff) {
+				toDelete[s.ID] = s
+			}
+		}
+	}
+
+	pruned := 0
+	var firstErr error
+	for _, s := range toDelete {
+		e.log.Info("Pruning expired snapshot %s (%s)", s.ID, s.Name)
+		if err := os.Remove(s.FilePath); err != nil && !os.IsNotExist(err) {
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+		_ = os.Remove(s.FilePath + ".sha256")
+		if err := e.store.DeleteSnapshot(ctx, s.ID); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+		} else {
+			pruned++
+		}
+	}
+	return pruned, firstErr
+}
+
+// pruneSnapshots is an internal helper retained for compatibility.
+func (e *Engine) pruneSnapshots(ctx context.Context, serverID string) {
+	_, _ = e.PruneSnapshots(ctx, serverID)
+}
+
+// PruneAllSnapshots runs retention pruning across all registered servers.
+func (e *Engine) PruneAllSnapshots(ctx context.Context) (int, error) {
+	if e.store == nil || (e.maxSnapshots <= 0 && e.retentionDays <= 0) {
+		return 0, nil
+	}
+	servers, err := e.store.ListServers(ctx)
+	if err != nil {
+		return 0, err
+	}
+	totalPruned := 0
+	var firstErr error
+	for _, srv := range servers {
+		pruned, err := e.PruneSnapshots(ctx, srv.ID)
+		totalPruned += pruned
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return totalPruned, firstErr
 }
 
 // gatherVolumePaths collects paths inside dataDir relative to dataDir, skipping temp/git caches

@@ -97,7 +97,9 @@ func NewScheduler(store *storage.Store, docker *docker.Client, sender *command.S
 	var snapEngine *snapshot.Engine
 	if appCfg != nil {
 		snapEngine = snapshot.NewEngine(store, docker, sender, log, snapshot.Config{
-			BackupDir: appCfg.Storage.BackupDir,
+			BackupDir:     appCfg.Storage.BackupDir,
+			MaxSnapshots:  appCfg.Storage.MaxSnapshots,
+			RetentionDays: appCfg.Storage.SnapshotRetentionDays,
 		})
 	}
 
@@ -288,6 +290,14 @@ func (s *Scheduler) checkAndRunDueTasks() {
 		if s.metrics != nil {
 			if n := s.metrics.PruneStale(2 * time.Hour); n > 0 {
 				s.log.Info("Pruned %d stale metric snapshots", n)
+			}
+		}
+		// Snapshot retention (DEP-3): prune expired snapshots across all servers.
+		if s.snapshotEngine != nil {
+			if n, err := s.snapshotEngine.PruneAllSnapshots(ctx); err != nil {
+				s.log.Error("Failed to prune expired snapshots: %v", err)
+			} else if n > 0 {
+				s.log.Info("Pruned %d expired server snapshots", n)
 			}
 		}
 	}
