@@ -3,11 +3,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package alias
 
 import (
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -20,8 +20,8 @@ func TestNewContext_HostIDs(t *testing.T) {
 	if ctx == nil || ctx.Host == nil {
 		t.Fatal("nil context or host")
 	}
-	// UIDs are non-negative on every platform.
-	if ctx.Host.UID < 0 || ctx.Host.GID < 0 {
+	// os.Getuid/Getgid return -1 on platforms without Unix user IDs.
+	if runtime.GOOS != "windows" && (ctx.Host.UID < 0 || ctx.Host.GID < 0) {
 		t.Errorf("host IDs = %d/%d", ctx.Host.UID, ctx.Host.GID)
 	}
 }
