@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 import { writable, derived } from 'svelte/store';
 import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
 import { ServerStatus } from '$lib/proto/carbonpanel/v1/common_pb';

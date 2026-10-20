@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 import { TriggeredEventType } from '$lib/proto/carbonpanel/v1/event_pb';
 
 export interface EventTypeMeta {

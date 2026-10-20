@@ -5,7 +5,6 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 -->
 
-
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
 	import { page } from '$app/state';
