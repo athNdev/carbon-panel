@@ -957,6 +957,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			HostPort:      protoPort.HostPort,
 			Protocol:      protocol,
 			Name:          protoPort.Name,
+			ExposePublic:  protoPort.ExposePublic,
 		})
 	}
 
@@ -1457,6 +1458,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 				HostPort:      protoPort.HostPort,
 				Protocol:      protocol,
 				Name:          protoPort.Name,
+				ExposePublic:  protoPort.ExposePublic,
 			})
 		}
 
