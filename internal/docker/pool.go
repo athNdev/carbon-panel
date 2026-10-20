@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -524,6 +523,12 @@ func (p *ClientPool) createClientForNode(node *models.Node) (*Client, error) {
 	return cli, nil
 }
 
+// dockerTLSInsecure reports whether a node tls_skip_verify flag may disable
+// certificate checks. The node row alone never does.
+func dockerTLSInsecure(nodeSkipVerify bool) bool {
+	return nodeSkipVerify && os.Getenv("CARBON_ALLOW_INSECURE_DOCKER_TLS") == "1"
+}
+
 // NewClientForNode constructs a *Client configured specifically for a Node.
 // Supports unix:// sockets, tcp:// (with optional TLS certs or TLS skip verify), and ssh://.
 func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientConfig) (*Client, error) {
@@ -558,6 +563,13 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 	// so build the TLS config here and hand the client a transport carrying
 	// it (this branch only runs for TCP hosts, where DefaultTransport
 	// semantics apply).
+	//
+	// A node row cannot turn verification off by itself (MINE-180). The
+	// homelab escape is the process env CARBON_ALLOW_INSECURE_DOCKER_TLS=1.
+	skipVerify := dockerTLSInsecure(node.TLSSkipVerify)
+	if node.TLSSkipVerify && !skipVerify && log != nil {
+		log.Warn("Docker TLS verification stays on for node %s; set CARBON_ALLOW_INSECURE_DOCKER_TLS=1 to honor tls_skip_verify", node.Name)
+	}
 	if node.TLSEnabled || node.TLSCert != "" || node.TLSCACert != "" || node.TLSSkipVerify {
 		caFile, certFile, keyFile, err := resolveTLSCertFiles(node)
 		if err != nil {
@@ -568,7 +580,7 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 			CAFile:             caFile,
 			CertFile:           certFile,
 			KeyFile:            keyFile,
-			InsecureSkipVerify: node.TLSSkipVerify,
+			InsecureSkipVerify: skipVerify,
 			ExclusiveRootPools: caFile != "",
 		})
 		if err != nil {
