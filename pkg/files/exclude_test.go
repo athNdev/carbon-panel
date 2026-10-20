@@ -54,7 +54,7 @@ func TestCreateZipArchiveSkipsExcluded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	for _, f := range r.File {
 		if filepath.Base(f.Name) == "session.lock" {
 			t.Fatalf("archive contains %s", f.Name)
