@@ -177,6 +177,33 @@ func TestSnapshot_Rollback_RunningContainerRequiresStop(t *testing.T) {
 	assert.Contains(t, string(content), "modified=true")
 }
 
+func TestSnapshot_Rollback_ReportsArchiveStatErrors(t *testing.T) {
+	store := setupTestStore(t)
+	defer func() { _ = store.Close() }()
+
+	ctx := context.Background()
+	server := &storage.Server{
+		ID:       uuid.New().String(),
+		Name:     "rollback-stat-error-server",
+		DataPath: t.TempDir(),
+		Status:   storage.StatusStopped,
+	}
+	require.NoError(t, store.CreateServer(ctx, server))
+
+	snapshot := &storage.ServerSnapshot{
+		ID:       uuid.New().String(),
+		ServerID: server.ID,
+		Name:     "invalid archive path",
+		FilePath: string([]byte{0}),
+	}
+	require.NoError(t, store.CreateSnapshot(ctx, snapshot))
+
+	engine := NewEngine(store, nil, nil, logger.New(), Config{})
+	err := engine.Rollback(ctx, server, snapshot.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to stat snapshot archive")
+}
+
 func TestSnapshot_Pruning(t *testing.T) {
 	store := setupTestStore(t)
 	defer func() { _ = store.Close() }()

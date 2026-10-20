@@ -209,8 +209,11 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 		}
 	}
 
-	if _, err := os.Stat(snapshot.FilePath); os.IsNotExist(err) {
-		return fmt.Errorf("snapshot archive not found on disk at: %s", snapshot.FilePath)
+	if _, err := os.Stat(snapshot.FilePath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("snapshot archive not found on disk at: %s", snapshot.FilePath)
+		}
+		return fmt.Errorf("failed to stat snapshot archive %s: %w", snapshot.FilePath, err)
 	}
 
 	// Verify checksum sidecar if present
