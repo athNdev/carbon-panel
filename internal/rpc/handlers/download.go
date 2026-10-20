@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package handlers
 
 import (
@@ -25,7 +24,7 @@ import (
 // NewDownloadStreamHandler creates an HTTP handler for streaming file downloads.
 //
 //	GET /api/v1/download/{sessionId}
-//	Auth: Authorization header OR ?token= query param
+//	Auth: Authorization header or cp_session cookie. Query tokens are ignored.
 //	Response: file bytes with Content-Disposition, supports Range headers for resume.
 func NewDownloadStreamHandler(downloadManager *download.Manager, authManager *auth.Manager, enforcer *rbac.Enforcer, log *logger.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -41,12 +40,9 @@ func NewDownloadStreamHandler(downloadManager *download.Manager, authManager *au
 			return
 		}
 
-		// Get auth header, fall back to ?token= query param
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			if token := r.URL.Query().Get("token"); token != "" {
-				authHeader = "Bearer " + token
-			}
+		authHeader := ""
+		if token := auth.SessionTokenFromRequest(r); token != "" {
+			authHeader = "Bearer " + token
 		}
 
 		user, err := authManager.AuthenticateFromHeader(r.Context(), authHeader)

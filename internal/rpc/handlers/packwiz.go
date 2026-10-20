@@ -3,19 +3,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package handlers
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"strconv"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
@@ -84,11 +83,9 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Auth check for studio management routes
 	if h.authManager != nil && h.authManager.IsAnyAuthEnabled() {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			if token := r.URL.Query().Get("token"); token != "" {
-				authHeader = "Bearer " + token
-			}
+		authHeader := ""
+		if token := auth.SessionTokenFromRequest(r); token != "" {
+			authHeader = "Bearer " + token
 		}
 		user, err := h.authManager.AuthenticateFromHeader(r.Context(), authHeader)
 		if err != nil {
@@ -277,11 +274,11 @@ func (h *PackwizHandler) handleCheckUpdates(w http.ResponseWriter, r *http.Reque
 
 func (h *PackwizHandler) handleApplyUpdates(w http.ResponseWriter, r *http.Request, packID string) {
 	var req struct {
-		Slug             string `json:"slug"`
-		TargetVersionID  string `json:"target_version_id"`
-		TargetFileName   string `json:"target_file_name"`
-		TargetURL        string `json:"target_url"`
-		ApplyAll         bool   `json:"apply_all"`
+		Slug            string `json:"slug"`
+		TargetVersionID string `json:"target_version_id"`
+		TargetFileName  string `json:"target_file_name"`
+		TargetURL       string `json:"target_url"`
+		ApplyAll        bool   `json:"apply_all"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)

@@ -462,7 +462,10 @@ one at https://mozilla.org/MPL/2.0/.
 
 	function triggerStreamDownload(sessionId: string, filename: string) {
 		const token = authStore.getToken();
-		const url = `/api/v1/download/${sessionId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+		if (token) {
+			document.cookie = `cp_session=${encodeURIComponent(token)}; Path=/; SameSite=Strict`;
+		}
+		const url = `/api/v1/download/${sessionId}`;
 		const a = document.createElement('a');
 		a.href = url;
 		a.download = filename;
