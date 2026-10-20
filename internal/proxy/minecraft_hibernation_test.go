@@ -217,4 +217,108 @@ func TestMinecraftProxy_LoginIntentResetsIdle(t *testing.T) {
 	dialAndHandshake(2) // Login intent
 	time.Sleep(200 * time.Millisecond)
 	assert.Equal(t, int32(1), activityCount.Load(), "Login intent must fire ActivityHandler once")
+
+	dialAndHandshake(3) // Transfer, same as login (MINE-203)
+	time.Sleep(200 * time.Millisecond)
+	assert.Equal(t, int32(2), activityCount.Load(), "Transfer intent must fire ActivityHandler once")
+}
+
+func TestMinecraftProxy_TransferIntentWakesHibernated(t *testing.T) {
+	backendListener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = backendListener.Close() }()
+	backendPort := backendListener.Addr().(*net.TCPAddr).Port
+
+	var backendAccepted atomic.Bool
+	go func() {
+		conn, err := backendListener.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		backendAccepted.Store(true)
+	}()
+
+	var wakeCalled atomic.Bool
+	proxy := NewMinecraftProxy(&Config{
+		ListenAddr: "127.0.0.1:0",
+		WakeHandler: func(ctx context.Context, serverID string) error {
+			if serverID == "srv-transfer" {
+				wakeCalled.Store(true)
+			}
+			return nil
+		},
+	})
+	require.NoError(t, proxy.Start())
+	defer func() { _ = proxy.Stop() }()
+	time.Sleep(50 * time.Millisecond)
+
+	proxy.AddRoute("srv-transfer", "transfer.test.local", "127.0.0.1", backendPort)
+	proxy.SetRouteHibernated("transfer.test.local", true)
+
+	clientConn, err := net.DialTimeout("tcp", proxy.listener.Addr().String(), 2*time.Second)
+	require.NoError(t, err)
+	defer func() { _ = clientConn.Close() }()
+	require.NoError(t, WriteHandshakePacket(clientConn, &HandshakePacket{
+		ProtocolVersion: 767,
+		ServerAddress:   "transfer.test.local",
+		ServerPort:      25565,
+		NextState:       3,
+	}))
+
+	require.Eventually(t, func() bool {
+		return wakeCalled.Load() && backendAccepted.Load()
+	}, 5*time.Second, 10*time.Millisecond, "transfer handshake must wake and dial")
+	assert.False(t, proxy.GetRoutes()["transfer.test.local"].Hibernated)
+}
+
+func TestMinecraftProxy_TransferRejectedWhenDisabled(t *testing.T) {
+	backendListener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = backendListener.Close() }()
+	backendPort := backendListener.Addr().(*net.TCPAddr).Port
+
+	var backendAccepted atomic.Bool
+	go func() {
+		conn, err := backendListener.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		backendAccepted.Store(true)
+	}()
+
+	var wakeCalled atomic.Bool
+	reject := false
+	proxy := NewMinecraftProxy(&Config{
+		ListenAddr:       "127.0.0.1:0",
+		AcceptsTransfers: &reject,
+		WakeHandler: func(ctx context.Context, serverID string) error {
+			wakeCalled.Store(true)
+			return nil
+		},
+	})
+	require.NoError(t, proxy.Start())
+	defer func() { _ = proxy.Stop() }()
+	time.Sleep(50 * time.Millisecond)
+
+	proxy.AddRoute("srv-transfer", "transfer.test.local", "127.0.0.1", backendPort)
+	proxy.SetRouteHibernated("transfer.test.local", true)
+
+	clientConn, err := net.DialTimeout("tcp", proxy.listener.Addr().String(), 2*time.Second)
+	require.NoError(t, err)
+	defer func() { _ = clientConn.Close() }()
+	require.NoError(t, WriteHandshakePacket(clientConn, &HandshakePacket{
+		ProtocolVersion: 767,
+		ServerAddress:   "transfer.test.local",
+		ServerPort:      25565,
+		NextState:       3,
+	}))
+
+	msg := readLoginDisconnect(t, clientConn)
+	assert.Contains(t, msg, "not accepted")
+	time.Sleep(200 * time.Millisecond)
+	assert.False(t, wakeCalled.Load(), "disabled transfers must not wake")
+	assert.False(t, backendAccepted.Load(), "disabled transfers must not dial")
+	assert.True(t, proxy.GetRoutes()["transfer.test.local"].Hibernated)
 }

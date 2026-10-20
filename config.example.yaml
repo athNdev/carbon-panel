@@ -112,6 +112,10 @@ proxy:
   listen_ports: [25565] # Multiple ports to listen on (listen_port will be added if not present)
   port_range_min: 25565
   port_range_max: 25665
+  # Handshake NextState=3 (Transfer) is treated as login. Velocity defaults
+  # accepts-transfers to false; Carbon defaults to true so a transferred
+  # player still reaches the hostname route. Set false to disconnect them.
+  accepts_transfers: true
 
 # Example usage:
 # With proxy enabled and base_url set to "mc.example.com":

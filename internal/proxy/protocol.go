@@ -86,7 +86,14 @@ type HandshakePacket struct {
 	ProtocolVersion VarInt
 	ServerAddress   string
 	ServerPort      uint16
-	NextState       VarInt // 1 for status, 2 for login
+	NextState       VarInt // 1 status, 2 login, 3 transfer (then Login)
+}
+
+// isLoginIntent reports whether a handshake should wake, reset idle, and
+// relay like a login. Transfer (NextState 3, Java 1.20.5+) is not a third
+// connection state: the client reconnects and runs Login (MINE-203).
+func isLoginIntent(nextState VarInt) bool {
+	return nextState == 2 || nextState == 3
 }
 
 // MaxHandshakePacketLength is the maximum allowed length of a Minecraft
