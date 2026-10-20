@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
-	"syscall"
 
 	"github.com/athNdev/carbon-panel/cmd/geyser/pin"
 )
@@ -26,7 +24,7 @@ func main() {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		fatal("failed to create data dir: %v", err)
 	}
-	if err := os.Chown(dataDir, puid, pgid); err != nil {
+	if err := chownPath(dataDir, puid, pgid); err != nil {
 		fatal("failed to chown data dir: %v", err)
 	}
 
@@ -47,7 +45,7 @@ func main() {
 		if err := generateConfig(); err != nil {
 			fatal("failed to generate config: %v", err)
 		}
-		if err := os.Chown(configFile, puid, pgid); err != nil {
+		if err := chownPath(configFile, puid, pgid); err != nil {
 			fatal("failed to chown config: %v", err)
 		}
 	}
@@ -81,15 +79,7 @@ func main() {
 		fatal("failed to chdir: %v", err)
 	}
 
-	// Drop privileges and exec java
-	if err := syscall.Setgid(pgid); err != nil {
-		fatal("failed to setgid: %v", err)
-	}
-	if err := syscall.Setuid(puid); err != nil {
-		fatal("failed to setuid: %v", err)
-	}
-
-	if err := syscall.Exec(javaPath, args, os.Environ()); err != nil {
+	if err := runJava(javaPath, args, puid, pgid); err != nil {
 		fatal("failed to exec java: %v", err)
 	}
 }
@@ -206,15 +196,6 @@ func getEnvInt(key string, def int) int {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-func chownRecursive(path string, uid, gid int) error {
-	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		return os.Chown(name, uid, gid)
-	})
 }
 
 func fatal(format string, args ...any) {
