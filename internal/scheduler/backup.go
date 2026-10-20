@@ -41,6 +41,10 @@ type BackupTaskConfig struct {
 	StopForBackup bool `json:"stop_for_backup"`
 }
 
+func secureBackupArtifact(path string) error {
+	return os.Chmod(path, 0600)
+}
+
 // defaultBackupExcludes drops lock files, rotated logs, map tiles, and
 // profiler temp files from every scheduled archive.
 var defaultBackupExcludes = []string{
@@ -75,8 +79,11 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 
 	// Backups are grouped per server using the unique server data directory name
 	destDir := filepath.Join(s.appConfig.Storage.BackupDir, filepath.Base(server.DataPath))
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0700); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
+	}
+	if err := os.Chmod(destDir, 0700); err != nil {
+		return "", fmt.Errorf("failed to secure backup directory: %w", err)
 	}
 
 	backupName := config.BackupName
@@ -116,6 +123,9 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	if err != nil {
 		return "", fmt.Errorf("failed to create backup archive: %w", err)
 	}
+	if err := secureBackupArtifact(destPath); err != nil {
+		return "", fmt.Errorf("failed to secure backup archive: %w", err)
+	}
 
 	var size int64
 	if info, err := os.Stat(destPath); err == nil {
@@ -127,7 +137,8 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	if sumErr != nil {
 		return "", fmt.Errorf("failed to checksum backup archive: %w", sumErr)
 	}
-	if err := os.WriteFile(destPath+".sha256", []byte(sum+"  "+filepath.Base(destPath)+"\n"), 0644); err != nil {
+	sidecarPath := destPath + ".sha256"
+	if err := os.WriteFile(sidecarPath, []byte(sum+"  "+filepath.Base(destPath)+"\n"), 0600); err != nil {
 		return "", fmt.Errorf("failed to write backup checksum: %w", err)
 	}
 	if err := verifyZipArchive(destPath); err != nil {
