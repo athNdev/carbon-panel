@@ -151,6 +151,19 @@ func dbBackupToProto(b *storage.BackupRecord) *v1.BackupRecord {
 	}
 }
 
+// newBackupDownloadPath creates a private, uniquely named staging directory
+// for a remote restore. Do not derive this path from a database-controlled
+// backup name: a malformed record must never influence where S3 writes.
+func newBackupDownloadPath() (string, func(), error) {
+	dir, err := os.MkdirTemp("", "carbon-panel-backup-")
+	if err != nil {
+		return "", nil, err
+	}
+	return filepath.Join(dir, "archive.zip"), func() {
+		_ = os.RemoveAll(dir)
+	}, nil
+}
+
 func (s *BackupService) ListBackups(ctx context.Context, req *connect.Request[v1.ListBackupsRequest]) (*connect.Response[v1.ListBackupsResponse], error) {
 	recs, err := s.store.ListBackupRecords(ctx, req.Msg.ServerId, clampLimit(int(req.Msg.Limit)))
 	if err != nil {
@@ -259,7 +272,7 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	// S3 round-trip (MINE-138 slice 2): fetch the archive when only the
 	// remote copy remains (e.g. DeleteLocalCopy was enabled).
 	archivePath := rec.Path
-	downloadedTemp := false
+	var cleanupDownloaded func()
 	if _, err := os.Stat(archivePath); err != nil {
 		if rec.RemoteKey == "" || !s3uploader.Enabled(s.s3cfg) {
 			done("failed")
@@ -270,23 +283,23 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 			done("failed")
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("s3 unavailable: %w", err))
 		}
-		tmp := archivePath
-		if tmp == "" {
-			tmp = filepath.Join(os.TempDir(), "carbon-backups", rec.ServerID, rec.Name)
+		tmp, cleanup, err := newBackupDownloadPath()
+		if err != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create secure backup staging path: %w", err))
 		}
 		if err := up.Download(ctx, rec.RemoteKey, tmp); err != nil {
+			cleanup()
 			done("failed")
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("s3 download failed: %w", err))
 		}
 		archivePath = tmp
-		if s.s3cfg.DeleteLocalCopy {
-			downloadedTemp = true
-		}
+		cleanupDownloaded = cleanup
 	}
 
 	defer func() {
-		if downloadedTemp {
-			_ = os.Remove(archivePath)
+		if cleanupDownloaded != nil {
+			cleanupDownloaded()
 			_ = os.Remove(archivePath + ".sha256")
 		}
 	}()
