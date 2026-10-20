@@ -11,6 +11,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -143,7 +144,7 @@ func (h *OIDCHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Verify state
 	stateCookie, err := r.Cookie("oidc_state")
-	if err != nil || stateCookie.Value != r.URL.Query().Get("state") {
+	if err != nil || !sameOIDCState(stateCookie.Value, r.URL.Query().Get("state")) {
 		http.Error(w, "Invalid state parameter", http.StatusBadRequest)
 		return
 	}
@@ -162,6 +163,7 @@ func (h *OIDCHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	if h.httpClient != nil {
 		ctx = oidc.ClientContext(ctx, h.httpClient)
 	}
+
 	oauth2Token, err := h.oauth2Config.Exchange(ctx, r.URL.Query().Get("code"))
 	if err != nil {
 		h.log.Error("OIDC: failed to exchange code for token: %v", err)
@@ -508,5 +510,13 @@ func generateState() (string, error) {
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
+
 	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+func sameOIDCState(cookieState, callbackState string) bool {
+	if cookieState == "" || len(cookieState) != len(callbackState) {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(cookieState), []byte(callbackState)) == 1
 }
