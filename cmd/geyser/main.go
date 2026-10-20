@@ -38,6 +38,10 @@ func main() {
 		}
 	}
 
+	if err := pin.InstallFloodgate(getEnv("JAVA_PLUGINS_DIR", ""), http.DefaultClient); err != nil {
+		fatal("failed to install floodgate: %v", err)
+	}
+
 	// Generate config if needed
 	if getEnv("OVERWRITE_CONFIG", "false") == "true" || !fileExists(configFile) {
 		if err := generateConfig(); err != nil {
@@ -95,6 +99,10 @@ func downloadGeyser(dest string) error {
 }
 
 func generateConfig() error {
+	auth, err := pin.RemoteAuthType(os.Getenv("REMOTE_AUTH_TYPE"), os.Getenv("GEYSER_ALLOW_OFFLINE_AUTH"))
+	if err != nil {
+		return err
+	}
 	config := fmt.Sprintf(`bedrock:
   address: %s
   port: %s
@@ -146,7 +154,7 @@ metrics:
 		getEnv("BEDROCK_ENABLE_PROXY_PROTOCOL", "false"),
 		getEnv("REMOTE_ADDRESS", "auto"),
 		getEnv("REMOTE_PORT", "25565"),
-		getEnv("REMOTE_AUTH_TYPE", "online"),
+		auth,
 		getEnv("REMOTE_ALLOW_PASS_AUTH", "true"),
 		getEnv("REMOTE_USE_PROXY_PROTOCOL", "false"),
 		getEnv("REMOTE_FORWARD_HOSTNAME", "false"),

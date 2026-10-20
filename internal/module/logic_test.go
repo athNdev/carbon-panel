@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 // Merged in the MINE-172 integration: this file existed independently on
 // both lines of development, so the union of both test sets is kept.
 
@@ -104,6 +103,20 @@ func TestInitBuiltinTemplates_SeedsAndIdempotent(t *testing.T) {
 	}
 	if !byID["builtin-geyser"] {
 		t.Error("builtin-geyser template missing")
+	}
+	for _, tpl := range templates {
+		if tpl.ID != "builtin-geyser" {
+			continue
+		}
+		if strings.Contains(tpl.DefaultEnv, `"offline"`) {
+			t.Error("geyser template must not default REMOTE_AUTH_TYPE to offline")
+		}
+		if !strings.Contains(tpl.DefaultEnv, "floodgate") {
+			t.Error("geyser template must default auth to floodgate")
+		}
+		if !strings.Contains(tpl.DefaultVolumes, "/plugins") {
+			t.Error("geyser template must mount the server plugins directory for Floodgate")
+		}
 	}
 
 	countBefore := len(templates)

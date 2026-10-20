@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package module
 
 import (
@@ -25,7 +24,7 @@ func InitBuiltinTemplates(store *storage.Store) error {
 		{
 			ID:                "builtin-geyser",
 			Name:              "Geyser",
-			Description:       "Allows Bedrock Edition players to join Java Edition servers. Requires Floodgate plugin on the server for seamless authentication.",
+			Description:       "Allows Bedrock Edition players to join Java Edition servers. Auth defaults to Floodgate. The shared plugins/floodgate/key.pem is the key both this sidecar and the Floodgate plugin read.",
 			Type:              storage.ModuleTemplateTypeBuiltin,
 			DockerImage:       "athndev/carbon-panel-geyser:latest",
 			Category:          "proxy",
@@ -45,10 +44,15 @@ func InitBuiltinTemplates(store *storage.Store) error {
 				"BEDROCK_SERVERNAME": "Geyser",
 				"REMOTE_ADDRESS": "carbon-panel-server-{{server.id}}",
 				"REMOTE_PORT": "25565",
-				"REMOTE_AUTH_TYPE": "offline"
+				"REMOTE_AUTH_TYPE": "floodgate",
+				"JAVA_PLUGINS_DIR": "/java-plugins",
+				"GEYSER_FLOODGATE_KEY_FILE": "/java-plugins/floodgate/key.pem"
 			}`,
-			DefaultVolumes:  `[{"source": "{{server.data_path}}/modules/geyser", "target": "/data", "read_only": false}]`,
-			Documentation:   "Geyser acts as a proxy, translating Bedrock packets to Java packets.",
+			DefaultVolumes: `[
+				{"source": "{{server.data_path}}/modules/geyser", "target": "/data", "read_only": false},
+				{"source": "{{server.data_path}}/plugins", "target": "/java-plugins", "read_only": false, "create_dir": true}
+			]`,
+			Documentation:   "Geyser translates Bedrock packets to Java packets. Default auth is floodgate, so a Bedrock client cannot join as an arbitrary Java name. The entrypoint installs the pinned Floodgate Spigot jar into plugins/ when that directory is mounted, and both sides share plugins/floodgate/key.pem. Offline auth is refused unless GEYSER_ALLOW_OFFLINE_AUTH=1, which is only appropriate when the Java server itself is offline-mode behind Velocity.",
 			HealthCheckPort: 19132,
 			DefaultMemory:   1024,
 		},
