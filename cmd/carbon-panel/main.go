@@ -32,7 +32,6 @@ import (
 	"github.com/athNdev/carbon-panel/internal/rpc"
 	"github.com/athNdev/carbon-panel/internal/scheduler"
 	"github.com/athNdev/carbon-panel/pkg/logger"
-	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
 // shouldAutoStartOnBoot reports whether a persisted server should be started
@@ -47,6 +46,11 @@ func shouldAutoStartOnBoot(server *storage.Server) bool {
 		return false
 	}
 	if server.Status == storage.StatusDeepSleep {
+		return false
+	}
+	// A create still in progress has no container yet. Boot must not treat
+	// that row as a failed start.
+	if server.Status == storage.StatusCreating {
 		return false
 	}
 	return server.AutoStart && !server.Detached
@@ -367,12 +371,6 @@ func main() {
 				}
 
 				log.Info("Successfully auto-started server: %s", server.Name)
-
-				// Emit the server-start event
-				eventBus.Emit(ctx, events.Event{
-					Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
-					ServerID: server.ID,
-				})
 			}()
 		}
 	}

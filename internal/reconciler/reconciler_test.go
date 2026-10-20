@@ -241,7 +241,9 @@ func TestDecide(t *testing.T) {
 		{"missing + desired running detached never self-heals", running, existsDeleted, true, true, errStatus, actNone, "missing"},
 		{"missing + desired stopped is a no-op", stopped, existsDeleted, false, true, "", actNone, ""},
 		{"missing + desired stopping converges to stopped", stopping, existsDeleted, false, true, stopped, actNone, ""},
-		{"missing + desired starting waits for create", starting, existsDeleted, false, true, "", actNone, ""},
+		{"missing + desired starting recreates", starting, existsDeleted, false, true, starting, actRecreate, "recreating"},
+		{"missing + desired creating recreates", db.StatusCreating, existsDeleted, false, true, starting, actRecreate, "recreating"},
+		{"missing + desired creating without self-heal waits", db.StatusCreating, existsDeleted, false, false, "", actNone, ""},
 		{"running + desired running is a no-op", running, existsRunning, false, true, "", actNone, ""},
 		{"running + desired starting converges up", starting, existsRunning, false, true, running, actNone, ""},
 		{"running + desired stopped syncs to reality", stopped, existsRunning, false, true, running, actNone, ""},
@@ -417,11 +419,38 @@ func TestReconcileSelfHealsMissingContainer(t *testing.T) {
 	if len(store.statuses) != 1 || store.statuses[0].status != db.StatusStarting {
 		t.Fatalf("status writes = %+v, want one starting", store.statuses)
 	}
-	if types := bus.types(); len(types) != 1 || types[0] != v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START {
-		t.Fatalf("events = %v, want [SERVER_START]", types)
+	if types := bus.types(); len(types) != 0 {
+		t.Fatalf("events = %v, want none until the container is running", types)
 	}
 	if proxy.count() == 0 {
 		t.Fatalf("proxy route was not refreshed after self-heal")
+	}
+}
+
+func TestReconcileStartingToRunningEmitsServerStartOnce(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Creating", NodeID: "default", ContainerID: "c1", Status: db.StatusStarting}
+	store := newFakeStore(server)
+	cli := &fakeClient{
+		summary: &container.Summary{ID: "c1"},
+		state:   &docker.ContainerState{ContainerID: "c1", Status: db.StatusRunning},
+	}
+	bus := &fakeBus{}
+	r := newTestReconciler(t, store, cli, &fakeProxy{}, bus)
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("ReconcileServer: %v", err)
+	}
+	if len(store.statuses) != 1 || store.statuses[0].status != db.StatusRunning {
+		t.Fatalf("status writes = %+v, want running", store.statuses)
+	}
+	if types := bus.types(); len(types) != 1 || types[0] != v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START {
+		t.Fatalf("events = %v, want [SERVER_START]", types)
+	}
+
+	if err := r.ReconcileServer(context.Background(), "s1"); err != nil {
+		t.Fatalf("second ReconcileServer: %v", err)
+	}
+	if types := bus.types(); len(types) != 1 {
+		t.Fatalf("events after converge = %v, want the same single SERVER_START", types)
 	}
 }
 

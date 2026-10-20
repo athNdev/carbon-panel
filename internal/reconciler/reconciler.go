@@ -648,11 +648,11 @@ func (r *Reconciler) updateRoute(ctx context.Context, server *db.Server) {
 
 // emitTransition publishes the lifecycle event corresponding to a status change.
 //
-// The RPC service already emits SERVER_START / SERVER_STOP when it initiates a
-// start, stop, or restart, so the reconciler deliberately does not re-announce
-// those: it only reports transitions it discovered itself (external
-// `docker start|stop`, crashes, self-heal recreation). SERVER_HEALTHY is
-// reserved for a container that has actually become available.
+// SERVER_START is announced once, on the transition into running, including
+// when the previous row was creating or starting. Create, unpause, and
+// StartServer share this writer so a panel-initiated start is not announced
+// twice (D-005). SERVER_STOP is still skipped when the RPC already recorded
+// stopping. SERVER_HEALTHY is only the recovery from unhealthy.
 func (r *Reconciler) emitTransition(ctx context.Context, server *db.Server, from, to db.ServerStatus, reason string) {
 	if r.log != nil {
 		r.log.Info("reconciler: server %s transitioned %s -> %s%s", server.Name, from, to, reasonSuffix(reason))
@@ -665,15 +665,15 @@ func (r *Reconciler) emitTransition(ctx context.Context, server *db.Server, from
 	var eventType v1.TriggeredEventType
 	switch to {
 	case db.StatusStarting, db.StatusCreating:
-		if from == db.StatusStarting {
-			// Already announced by the initiating RPC call.
-			return
-		}
-		eventType = v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START
+		// Start is announced once, when the container is actually running.
+		// A row that only reached "starting" has not finished that transition.
+		return
 	case db.StatusRunning:
-		if from == db.StatusStarting || from == db.StatusUnhealthy {
+		if from == db.StatusUnhealthy {
 			eventType = v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_HEALTHY
 		} else {
+			// Previous status "starting" or "creating" must not swallow the
+			// start event. Create, unpause, and StartServer all land here.
 			eventType = v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START
 		}
 	case db.StatusStopped, db.StatusError:
@@ -742,10 +742,12 @@ func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool)
 		return decision{reconcileRoute: true}
 	}
 	if !obs.Exists {
-		if desired == db.StatusRunning {
-			// The catastrophic-loss case this epic targets: Watchtower,
-			// force-recreate, or an over-eager purge removed the container while
-			// the DB still believes the server is up.
+		switch desired {
+		case db.StatusRunning, db.StatusStarting, db.StatusCreating:
+			// Missing while the panel still wants the server up, including a
+			// create or start whose container never appeared. An in-flight
+			// lifecycle transition is skipped before decide, so this is not
+			// a create that still holds the lock.
 			if selfHeal && !detached {
 				return decision{
 					status: db.StatusStarting,
@@ -753,15 +755,13 @@ func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool)
 					reason: "container missing; recreating",
 				}
 			}
-			return decision{status: db.StatusError, reason: "container missing"}
-		}
-
-		switch desired {
+			if desired == db.StatusRunning {
+				return decision{status: db.StatusError, reason: "container missing"}
+			}
+			return decision{}
 		case db.StatusStopping, db.StatusPaused:
 			return decision{status: db.StatusStopped, reconcileRoute: true}
 		default:
-			// Starting/Creating may be mid-create, and Stopped/Error are already
-			// consistent with a missing container.
 			return decision{}
 		}
 	}

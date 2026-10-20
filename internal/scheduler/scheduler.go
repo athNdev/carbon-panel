@@ -848,7 +848,7 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
 			return fmt.Errorf("failed to unpause server container: %w", err)
 		}
-		status = storage.StatusRunning
+		status = storage.StatusStarting
 	} else if status != storage.StatusRunning && status != storage.StatusUnhealthy {
 		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
 			server.Status = storage.StatusError

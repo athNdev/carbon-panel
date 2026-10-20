@@ -1770,6 +1770,14 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		if s.proxy != nil && server.ProxyHostname != "" {
 			_ = s.proxy.UpdateServerRoute(server)
 		}
+		// Unpause lands on running inside this RPC, so it announces here.
+		// Create and StartServer announce from the reconciler when it records running.
+		if s.bus != nil {
+			s.bus.Emit(ctx, events.Event{
+				Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
+				ServerID: server.ID,
+			})
+		}
 		return connect.NewResponse(&v1.StartServerResponse{Status: "running"}), nil
 	}
 
@@ -1936,13 +1944,8 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server started but temporary config could not be cleared: %w", err))
 	}
 
-	// Emit the server-start event
-	if s.bus != nil {
-		s.bus.Emit(ctx, events.Event{
-			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
-			ServerID: server.ID,
-		})
-	}
+	// SERVER_START is emitted by the reconciler when status becomes running,
+	// so create, unpause, and this RPC share one announcement.
 
 	// Audit trail (MINE-141): never break the op on audit failure.
 	s.auditPower(ctx, req.Peer().Addr, activity.EventServerStart, server.ID)
