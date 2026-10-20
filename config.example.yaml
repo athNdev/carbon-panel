@@ -116,6 +116,9 @@ proxy:
   # accepts-transfers to false; Carbon defaults to true so a transferred
   # player still reaches the hostname route. Set false to disconnect them.
   accepts_transfers: true
+  # Minimum gap between handshakes from one IP on the Gate listen port.
+  # Status and login share the budget. 0 disables. Play sessions stay up.
+  login_ratelimit_ms: 3000
 
 # Example usage:
 # With proxy enabled and base_url set to "mc.example.com":
