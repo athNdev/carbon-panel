@@ -119,9 +119,6 @@ jobs:
       - name: Ensure embedded web build directory exists
         run: mkdir -p web/carbon-panel/build && touch web/carbon-panel/build/.gitkeep
 
-      # Cloud packages that own goroutines (MINE-210). Postgres-only tests
-      # skip unless TEST_DATABASE_URL is set. nodeagent is omitted: its
-      # Docker-backed tests are not part of this job.
       - name: Run race detector
         run: go test -race -count=1 ./internal/rpc/... ./internal/reconciler/ ./internal/scheduler/ ./internal/docker/ ./internal/activity/ ./internal/metrics/ ./internal/proxy/ ./internal/db/ ./internal/ws/ ./internal/s3/ ./internal/snapshot/ ./internal/module/
 
@@ -172,7 +169,3 @@ jobs:
 
       - name: Production Vite Build
         run: bun run build
-
-  # Always-on gate (MINE-210). .github/workflows/cloud-ci.yml runs the same
-  # scripts only when cloud/** changes, so a console break outside that
-  # filter would still merge. No Clerk, Postgres, or Stripe secrets.
