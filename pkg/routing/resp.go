@@ -95,7 +95,7 @@ func (c *RespClient) connect() error {
 
 	if c.password != "" {
 		if err := c.executeCommandLocked("AUTH", c.password); err != nil {
-			c.conn.Close()
+			_ = c.conn.Close()
 			c.conn = nil
 			c.reader = nil
 			return fmt.Errorf("valkey authentication failed: %w", err)
@@ -207,23 +207,23 @@ func (c *RespClient) Subscribe(ctx context.Context, channel string, onMessage fu
 	if c.password != "" {
 		authCmd := formatRESPCommand("AUTH", c.password)
 		if _, err := conn.Write([]byte(authCmd)); err != nil {
-			conn.Close()
+			_ = conn.Close()
 			return err
 		}
 		if _, err := parseRESP(reader); err != nil {
-			conn.Close()
+			_ = conn.Close()
 			return err
 		}
 	}
 
 	subCmd := formatRESPCommand("SUBSCRIBE", channel)
 	if _, err := conn.Write([]byte(subCmd)); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return err
 	}
 
 	go func() {
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		for {
 			select {
 			case <-c.subChan:
@@ -262,7 +262,7 @@ func (c *RespClient) Close() error {
 	}
 
 	if c.subConn != nil {
-		c.subConn.Close()
+		_ = c.subConn.Close()
 		c.subConn = nil
 	}
 	if c.conn != nil {
@@ -276,9 +276,9 @@ func (c *RespClient) Close() error {
 
 func formatRESPCommand(args ...string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("*%d\r\n", len(args)))
+	fmt.Fprintf(&sb, "*%d\r\n", len(args))
 	for _, arg := range args {
-		sb.WriteString(fmt.Sprintf("$%d\r\n%s\r\n", len(arg), arg))
+		fmt.Fprintf(&sb, "$%d\r\n%s\r\n", len(arg), arg)
 	}
 	return sb.String()
 }
