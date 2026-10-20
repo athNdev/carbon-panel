@@ -66,12 +66,14 @@ type LocalConfig struct {
 }
 
 type ServerConfig struct {
-	Port         string `mapstructure:"port" json:"port"`
-	Host         string `mapstructure:"host" json:"host"`
-	ReadTimeout  int    `mapstructure:"read_timeout" json:"read_timeout"`
-	WriteTimeout int    `mapstructure:"write_timeout" json:"write_timeout"`
-	IdleTimeout  int    `mapstructure:"idle_timeout" json:"idle_timeout"`
-	UserAgent    string `mapstructure:"user_agent" json:"user_agent"`
+	Port           string   `mapstructure:"port" json:"port"`
+	Host           string   `mapstructure:"host" json:"host"`
+	ReadTimeout    int      `mapstructure:"read_timeout" json:"read_timeout"`
+	WriteTimeout   int      `mapstructure:"write_timeout" json:"write_timeout"`
+	IdleTimeout    int      `mapstructure:"idle_timeout" json:"idle_timeout"`
+	UserAgent      string   `mapstructure:"user_agent" json:"user_agent"`
+	TrustProxy     bool     `mapstructure:"trust_proxy" json:"trust_proxy"`
+	AllowedOrigins []string `mapstructure:"allowed_origins" json:"allowed_origins"`
 }
 
 type DockerConfig struct {
@@ -226,6 +228,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.write_timeout", 15)
 	v.SetDefault("server.idle_timeout", 60)
 	v.SetDefault("server.user_agent", "CarbonPanel/1.0 (github.com/athNdev/carbon-panel)")
+	v.SetDefault("server.trust_proxy", false)
+	v.SetDefault("server.allowed_origins", []string{})
 
 	// Database defaults
 	v.SetDefault("database.path", "./data/carbon-panel.db")

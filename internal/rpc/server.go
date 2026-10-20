@@ -132,6 +132,7 @@ func NewServer(
 
 	// Initialize WebSocket hub
 	wsHub := ws.NewHub(logStreamer, authManager, enforcer, store, dockerCli, sender, log)
+	wsHub.SetOriginPolicy(cfg.Server.AllowedOrigins, cfg.Server.TrustProxy)
 	go wsHub.Run()
 
 	if clientPool == nil && dockerCli != nil {
