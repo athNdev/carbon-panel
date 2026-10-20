@@ -100,8 +100,13 @@ func NewServer(
 		}
 	}
 
-	// Initialize auth manager
-	authManager, err := auth.NewManager(store, enforcer, &cfg.Auth)
+	// Initialize auth manager. The recovery key file lives next to the
+	// panel database and is adopted on startup instead of rotated (MINE-209).
+	authCfg := cfg.Auth
+	if authCfg.RecoveryKeyFile == "" && cfg.Storage.DataDir != "" {
+		authCfg.RecoveryKeyFile = filepath.Join(cfg.Storage.DataDir, "recovery.key")
+	}
+	authManager, err := auth.NewManager(store, enforcer, &authCfg)
 	if err != nil {
 		log.Error("Failed to initialize auth manager: %v", err)
 	}
@@ -606,7 +611,18 @@ func extractObjectID(req connect.AnyRequest, fieldName string) string {
 
 // RecoveryKey returns the current recovery key from the auth manager.
 func (s *Server) RecoveryKey() string {
+	if s.authManager == nil {
+		return ""
+	}
 	return s.authManager.GetRecoveryKey()
+}
+
+// RecoveryKeyCreated reports whether this process generated a new recovery key.
+func (s *Server) RecoveryKeyCreated() bool {
+	if s.authManager == nil {
+		return false
+	}
+	return s.authManager.RecoveryKeyCreated()
 }
 
 // dbReady reports whether the database is reachable. It backs /readyz.
