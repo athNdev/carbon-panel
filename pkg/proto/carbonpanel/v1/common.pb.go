@@ -709,6 +709,10 @@ type AdditionalPort struct {
 	ContainerPort int32                  `protobuf:"varint,2,opt,name=container_port,json=containerPort,proto3" json:"container_port,omitempty"` // Port inside the container
 	HostPort      int32                  `protobuf:"varint,3,opt,name=host_port,json=hostPort,proto3" json:"host_port,omitempty"`                // Port on the host machine
 	Protocol      string                 `protobuf:"bytes,4,opt,name=protocol,proto3" json:"protocol,omitempty"`                                 // Protocol: "tcp" or "udp" (defaults to "tcp" if empty)
+	// Publish this port on every host interface. When false, a proxied server
+	// binds the port on loopback so it cannot bypass Gate. Unproxied servers
+	// still publish on 0.0.0.0. Existing rows stay private.
+	ExposePublic  bool `protobuf:"varint,5,opt,name=expose_public,json=exposePublic,proto3" json:"expose_public,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -769,6 +773,13 @@ func (x *AdditionalPort) GetProtocol() string {
 		return x.Protocol
 	}
 	return ""
+}
+
+func (x *AdditionalPort) GetExposePublic() bool {
+	if x != nil {
+		return x.ExposePublic
+	}
+	return false
 }
 
 // Volume mount configuration for container
@@ -1487,12 +1498,13 @@ const file_carbonpanel_v1_common_proto_rawDesc = "" +
 	"\x0fmax_players_slp\x18% \x01(\x05R\rmaxPlayersSlp\x12\x18\n" +
 	"\afavicon\x18& \x01(\tR\afavicon\x12\x17\n" +
 	"\anode_id\x18( \x01(\tR\x06nodeIdB\x0f\n" +
-	"\r_last_started\"\x84\x01\n" +
+	"\r_last_started\"\xa9\x01\n" +
 	"\x0eAdditionalPort\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\x0econtainer_port\x18\x02 \x01(\x05R\rcontainerPort\x12\x1b\n" +
 	"\thost_port\x18\x03 \x01(\x05R\bhostPort\x12\x1a\n" +
-	"\bprotocol\x18\x04 \x01(\tR\bprotocol\"\x8d\x01\n" +
+	"\bprotocol\x18\x04 \x01(\tR\bprotocol\x12#\n" +
+	"\rexpose_public\x18\x05 \x01(\bR\fexposePublic\"\x8d\x01\n" +
 	"\vVolumeMount\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x1b\n" +

@@ -48,7 +48,11 @@ one at https://mozilla.org/MPL/2.0/.
 		onchange?.(ports);
 	}
 
-	function updatePort(index: number, field: keyof AdditionalPort, value: string | number) {
+	function updatePort(
+		index: number,
+		field: keyof AdditionalPort,
+		value: string | number | boolean
+	) {
 		ports[index] = {
 			...ports[index],
 			[field]: value
@@ -95,7 +99,8 @@ one at https://mozilla.org/MPL/2.0/.
 		<div>
 			<Label class="text-sm font-medium">Additional Ports</Label>
 			<p class="mt-1 text-xs text-muted-foreground">
-				Configure extra ports for mods, plugins, or services (e.g., BlueMap, voice chat, dynmap)
+				Extra ports stay on loopback when the server is proxied. Mark a port public only when
+				clients must reach it directly, such as Bedrock UDP.
 			</p>
 		</div>
 		<Button
@@ -190,6 +195,17 @@ one at https://mozilla.org/MPL/2.0/.
 								</Button>
 							</div>
 						</div>
+
+						<label class="flex items-center gap-2 pl-1 text-xs text-muted-foreground">
+							<input
+								type="checkbox"
+								class="h-3.5 w-3.5"
+								checked={port.exposePublic}
+								{disabled}
+								onchange={(event) => updatePort(index, 'exposePublic', event.currentTarget.checked)}
+							/>
+							Public on the internet
+						</label>
 
 						{#if portErrors[index]}
 							<div class="flex items-center gap-2 pl-1 text-destructive">

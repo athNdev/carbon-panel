@@ -127,6 +127,10 @@ message AdditionalPort {
   int32 container_port = 2; // Port inside the container
   int32 host_port = 3; // Port on the host machine
   string protocol = 4; // Protocol: "tcp" or "udp" (defaults to "tcp" if empty)
+  // Publish this port on every host interface. When false, a proxied server
+  // binds the port on loopback so it cannot bypass Gate. Unproxied servers
+  // still publish on 0.0.0.0. Existing rows stay private.
+  bool expose_public = 5;
 }
 
 // Volume mount configuration for container
