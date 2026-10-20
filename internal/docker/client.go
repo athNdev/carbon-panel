@@ -1010,9 +1010,18 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	c.log.Warn("Container name %q conflicted on create (%v), resolving conflict", containerName, err)
 
 	if conflictID := parseConflictingContainerID(err); conflictID != "" {
-		if _, inspectErr := c.docker.ContainerInspect(ctx, conflictID, client.ContainerInspectOptions{}); inspectErr == nil {
+		inspectResult, inspectErr := c.docker.ContainerInspect(ctx, conflictID, client.ContainerInspectOptions{})
+		if inspectErr == nil && inspectResult.Container.State != nil && isAliveContainerState(inspectResult.Container.State.Status) {
 			c.log.Info("Adopting conflicting container %s directly from conflict error for %s", conflictID, containerName)
 			return conflictID, nil
+		}
+		if inspectErr == nil {
+			// An exited or dead container still owns the name. Adopting it
+			// would skip the config this create was about to apply (MINE-104).
+			c.log.Warn("Removing stale conflicting container %s for %s so create can apply the new config", conflictID, containerName)
+			if _, rmErr := c.docker.ContainerRemove(ctx, conflictID, client.ContainerRemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+				return "", fmt.Errorf("container name %q already in use and stale container %s could not be removed: %w (original conflict: %v)", containerName, conflictID, rmErr, err)
+			}
 		}
 	}
 
@@ -1039,7 +1048,7 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	})
 	if retryErr != nil {
 		if isConflictError(retryErr) {
-			if existing, resolveErr := resolve(); resolveErr == nil && existing.ID != "" {
+			if existing, resolveErr := resolve(); resolveErr == nil && existing.ID != "" && isAliveContainerState(existing.State) {
 				c.log.Info("Adopting container %s after retry conflict on %s", existing.ID, containerName)
 				return existing.ID, nil
 			}
