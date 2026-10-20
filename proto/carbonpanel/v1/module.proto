@@ -116,6 +116,9 @@ message ModulePort {
   string protocol = 4;
   // Whether to route traffic through the Carbon Panel proxy.
   bool proxy_enabled = 5;
+  // Publish this port on every host interface even when the server is proxied.
+  // Bedrock UDP (Geyser) sets this; other ports stay private.
+  bool expose_public = 6;
 }
 
 // ModuleDependency declares a dependency on another module.

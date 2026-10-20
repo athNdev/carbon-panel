@@ -333,7 +333,10 @@ type ModulePort struct {
 	// Protocol: "tcp" or "udp". Defaults to "tcp".
 	Protocol string `protobuf:"bytes,4,opt,name=protocol,proto3" json:"protocol,omitempty"`
 	// Whether to route traffic through the Carbon Panel proxy.
-	ProxyEnabled  bool `protobuf:"varint,5,opt,name=proxy_enabled,json=proxyEnabled,proto3" json:"proxy_enabled,omitempty"`
+	ProxyEnabled bool `protobuf:"varint,5,opt,name=proxy_enabled,json=proxyEnabled,proto3" json:"proxy_enabled,omitempty"`
+	// Publish this port on every host interface even when the server is proxied.
+	// Bedrock UDP (Geyser) sets this; other ports stay private.
+	ExposePublic  bool `protobuf:"varint,6,opt,name=expose_public,json=exposePublic,proto3" json:"expose_public,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -399,6 +402,13 @@ func (x *ModulePort) GetProtocol() string {
 func (x *ModulePort) GetProxyEnabled() bool {
 	if x != nil {
 		return x.ProxyEnabled
+	}
+	return false
+}
+
+func (x *ModulePort) GetExposePublic() bool {
+	if x != nil {
+		return x.ExposePublic
 	}
 	return false
 }
@@ -3813,14 +3823,15 @@ var File_carbonpanel_v1_module_proto protoreflect.FileDescriptor
 
 const file_carbonpanel_v1_module_proto_rawDesc = "" +
 	"\n" +
-	"\x1bcarbonpanel/v1/module.proto\x12\x0ecarbonpanel.v1\x1a\x1acarbonpanel/v1/event.proto\x1a\x1bcarbonpanel/v1/server.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa5\x01\n" +
+	"\x1bcarbonpanel/v1/module.proto\x12\x0ecarbonpanel.v1\x1a\x1acarbonpanel/v1/event.proto\x1a\x1bcarbonpanel/v1/server.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xca\x01\n" +
 	"\n" +
 	"ModulePort\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\x0econtainer_port\x18\x02 \x01(\x05R\rcontainerPort\x12\x1b\n" +
 	"\thost_port\x18\x03 \x01(\x05R\bhostPort\x12\x1a\n" +
 	"\bprotocol\x18\x04 \x01(\tR\bprotocol\x12#\n" +
-	"\rproxy_enabled\x18\x05 \x01(\bR\fproxyEnabled\"\x82\x01\n" +
+	"\rproxy_enabled\x18\x05 \x01(\bR\fproxyEnabled\x12#\n" +
+	"\rexpose_public\x18\x06 \x01(\bR\fexposePublic\"\x82\x01\n" +
 	"\x10ModuleDependency\x12\x1b\n" +
 	"\tmodule_id\x18\x01 \x01(\tR\bmoduleId\x12(\n" +
 	"\x10wait_for_healthy\x18\x02 \x01(\bR\x0ewaitForHealthy\x12'\n" +
