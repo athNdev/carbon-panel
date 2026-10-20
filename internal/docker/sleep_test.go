@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,6 +18,7 @@ type mockSleepController struct {
 	status    map[string]db.ServerStatus
 	starts    []string
 	stops     []string
+	policies  []container.RestartPolicy
 	startGate chan struct{}
 	startErr  error
 	stopErr   error
@@ -62,6 +64,13 @@ func (m *mockSleepController) StopContainer(ctx context.Context, containerID str
 	m.status[containerID] = db.StatusStopped
 	m.stops = append(m.stops, containerID)
 	return true, nil
+}
+
+func (m *mockSleepController) SetRestartPolicy(ctx context.Context, containerID string, policy container.RestartPolicy) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.policies = append(m.policies, policy)
+	return nil
 }
 
 func (m *mockSleepController) GetContainerStatus(ctx context.Context, containerID string) (db.ServerStatus, error) {
@@ -163,6 +172,8 @@ func TestDeepSleepManager_SleepAndWake(t *testing.T) {
 
 	controller.mu.Lock()
 	assert.Empty(t, controller.stops, "graceful RCON stop must exit before the force-stop backstop")
+	require.NotEmpty(t, controller.policies)
+	assert.Equal(t, container.RestartPolicyMode("no"), controller.policies[0].Name)
 	controller.mu.Unlock()
 
 	srv, err := store.GetServer(ctx, "srv-sleep")
@@ -175,6 +186,8 @@ func TestDeepSleepManager_SleepAndWake(t *testing.T) {
 	require.NoError(t, mgr.WakeServer(ctx, "srv-sleep"))
 	controller.mu.Lock()
 	assert.Contains(t, controller.starts, "cnt-sleep")
+	require.GreaterOrEqual(t, len(controller.policies), 2)
+	assert.Equal(t, DefaultRestartPolicy, controller.policies[len(controller.policies)-1])
 	controller.mu.Unlock()
 
 	srv, err = store.GetServer(ctx, "srv-sleep")

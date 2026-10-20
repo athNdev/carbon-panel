@@ -728,11 +728,13 @@ type decision struct {
 // operator and risk a crash loop.
 func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool) decision {
 	if desired == db.StatusDeepSleep {
-		// Deeply-asleep servers are owned by the DeepSleepManager: an exited
-		// or missing container IS the expected state, and a running container
-		// is a boot in flight. Never heal, recreate, or reflap (MINE-121),
-		// but always keep the down-route armed so knock-to-wake survives route
-		// loss or panel restarts.
+		// Deeply-asleep servers are owned by the DeepSleepManager. An exited
+		// or missing container is the expected state. A running container that
+		// is not inside a held wake (the transition lock skips this pass) is a
+		// Docker restart-policy surprise: stop it, and do not adopt it as running.
+		if obs.Exists && (obs.Status == db.StatusRunning || obs.Status == db.StatusUnhealthy || obs.Status == db.StatusStarting) {
+			return decision{action: actStop, reconcileRoute: true}
+		}
 		return decision{reconcileRoute: true}
 	}
 	if !obs.Exists {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/moby/moby/api/types/container"
 )
 
 // SleeperStore defines storage operations needed by DeepSleepManager.
@@ -30,6 +31,8 @@ type SleepController interface {
 	// StopContainer stops a container, returning (found, err).
 	StopContainer(ctx context.Context, containerID string) (bool, error)
 	GetContainerStatus(ctx context.Context, containerID string) (db.ServerStatus, error)
+	// SetRestartPolicy changes the container restart policy without recreating it.
+	SetRestartPolicy(ctx context.Context, containerID string, policy container.RestartPolicy) error
 }
 
 // SleepCommander sends in-game console commands (RCON) for graceful shutdown.
@@ -420,6 +423,13 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		m.refresher(serverID)
 	}
 
+	// Docker's on-failure policy would bring the JVM back after the stop.
+	// Pin restart to "no" before the stop so a surprise start is not a wake.
+	if err := ctrl.SetRestartPolicy(ctx, srv.ContainerID, container.RestartPolicy{Name: "no"}); err != nil {
+		rollbackErr := m.rollbackSleep(ctx, serverID, srv.ContainerID)
+		return errors.Join(fmt.Errorf("failed to disable restart policy for server %s: %w", serverID, err), rollbackErr)
+	}
+
 	// 2. Flush world and ask the JVM to exit cleanly via RCON. Best effort:
 	// without RCON the docker stop backstop below still applies.
 	if m.commander != nil {
@@ -555,6 +565,11 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 	if ctrl == nil {
 		m.rollbackWake(ctx, serverID)
 		return fmt.Errorf("no docker controller available for server %s on node %s", serverID, srv.NodeID)
+	}
+
+	if err := ctrl.SetRestartPolicy(ctx, srv.ContainerID, DefaultRestartPolicy); err != nil {
+		m.rollbackWake(ctx, serverID)
+		return fmt.Errorf("failed to restore restart policy for server %s: %w", serverID, err)
 	}
 
 	start := time.Now()

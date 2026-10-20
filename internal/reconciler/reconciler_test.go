@@ -252,7 +252,7 @@ func TestDecide(t *testing.T) {
 		{"deepsleep + missing container is stable", deepsleep, existsDeleted, false, true, "", actNone, ""},
 		{"deepsleep + exited container is stable", deepsleep, existsExitedClean, false, true, "", actNone, ""},
 		{"deepsleep + crashed container never heals", deepsleep, existsCrash, false, true, "", actNone, ""},
-		{"deepsleep + running container is a boot in flight", deepsleep, existsRunning, false, true, "", actNone, ""},
+		{"deepsleep + running container is stopped, not adopted", deepsleep, existsRunning, false, true, "", actStop, ""},
 	}
 
 	for _, tt := range tests {
