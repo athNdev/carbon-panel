@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 // Merged in the MINE-172 integration: this file existed independently on
 // both lines of development, so the union of both test sets is kept.
 
@@ -85,8 +84,14 @@ func newHandshakeTestHub(t *testing.T, anonymousAccess bool) (*Hub, string) {
 
 func TestHandshakeToken_Extraction(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/ws?token=abc123", nil)
-	if got := handshakeToken(req); got != "abc123" {
-		t.Errorf("query token = %q, want abc123", got)
+	if got := handshakeToken(req); got != "" {
+		t.Errorf("query token = %q, want empty", got)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookie, Value: "cookie-token"})
+	if got := handshakeToken(req); got != "cookie-token" {
+		t.Errorf("cookie token = %q, want cookie-token", got)
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/ws", nil)
@@ -134,8 +139,10 @@ func TestServeHTTP_UpgradesWithValidToken(t *testing.T) {
 	ts := httptest.NewServer(hub)
 	defer ts.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws?token=" + token
-	conn, res, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws"
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+token)
+	conn, res, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
 		t.Fatalf("dial with valid token failed: %v (status %v)", err, res)
 	}

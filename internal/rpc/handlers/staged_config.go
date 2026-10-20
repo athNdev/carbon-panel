@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package handlers
 
 import (
@@ -49,11 +48,9 @@ func NewStagedConfigHandler(store *storage.Store, log *logger.Logger, authManage
 
 func (h *StagedConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.authManager != nil && h.authManager.IsAnyAuthEnabled() {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			if token := r.URL.Query().Get("token"); token != "" {
-				authHeader = "Bearer " + token
-			}
+		authHeader := ""
+		if token := auth.SessionTokenFromRequest(r); token != "" {
+			authHeader = "Bearer " + token
 		}
 		user, err := h.authManager.AuthenticateFromHeader(r.Context(), authHeader)
 		if err != nil {

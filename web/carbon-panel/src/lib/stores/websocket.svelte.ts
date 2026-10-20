@@ -81,10 +81,13 @@ class WebSocketClient {
 		this.state.error = null;
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		// Pre-upgrade credential (MINE-164): the server rejects handshakes
-		// without a valid token before a socket exists.
+		// Pre-upgrade credential (MINE-164) rides the cp_session cookie so the
+		// session token is not written into the URL (MINE-185).
 		const preAuth = get(authStore).token || '';
-		const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(preAuth)}`;
+		if (preAuth) {
+			document.cookie = `cp_session=${encodeURIComponent(preAuth)}; Path=/; SameSite=Strict`;
+		}
+		const wsUrl = `${protocol}//${window.location.host}/ws`;
 
 		try {
 			this.socket = new WebSocket(wsUrl);

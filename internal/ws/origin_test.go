@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package ws
 
 import (
@@ -172,12 +171,13 @@ func TestServeHTTP_CSWSH_OriginValidation(t *testing.T) {
 	ts := httptest.NewServer(hub)
 	defer ts.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws?token=" + token
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws"
 
 	// 1. Same-origin connects successfully
 	validOrigin := ts.URL
 	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
-		"Origin": []string{validOrigin},
+		"Origin":        []string{validOrigin},
+		"Authorization": []string{"Bearer " + token},
 	})
 	if err != nil {
 		t.Fatalf("same-origin dial failed: %v", err)
@@ -190,7 +190,8 @@ func TestServeHTTP_CSWSH_OriginValidation(t *testing.T) {
 	// 2. Cross-origin request is rejected with 403 Forbidden
 	evilOrigin := "http://malicious-website.example.com"
 	_, res, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
-		"Origin": []string{evilOrigin},
+		"Origin":        []string{evilOrigin},
+		"Authorization": []string{"Bearer " + token},
 	})
 	if err == nil {
 		t.Fatal("expected cross-origin dial to fail, but it succeeded")
@@ -207,7 +208,8 @@ func TestServeHTTP_CSWSH_OriginValidation(t *testing.T) {
 		return true // Allow all for this custom override
 	})
 	conn, _, err = websocket.DefaultDialer.Dial(wsURL, http.Header{
-		"Origin": []string{evilOrigin},
+		"Origin":        []string{evilOrigin},
+		"Authorization": []string{"Bearer " + token},
 	})
 	if err != nil {
 		t.Fatalf("dial failed with custom check origin override: %v", err)

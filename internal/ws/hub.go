@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package ws
 
 import (
@@ -379,18 +378,12 @@ func (h *Hub) authenticateToken(ctx context.Context, token string) (*auth.Authen
 	return nil, errWSAuthRequired
 }
 
-// handshakeToken extracts the pre-upgrade credential: explicit ?token=
-// query parameter first (what the web console sends), then the
-// Authorization header (Bearer session/dp_ token, same as the RPC API).
+// handshakeToken extracts the pre-upgrade credential from the Authorization
+// header or the cp_session cookie. Session JWTs in the query string are
+// ignored (MINE-185). The OIDC browser redirect /login?token= is the one
+// remaining place a session token appears in a URL; it is not accepted here.
 func handshakeToken(r *http.Request) string {
-	if token := r.URL.Query().Get("token"); token != "" {
-		return token
-	}
-	if header := r.Header.Get("Authorization"); header != "" {
-		token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(header, "Bearer "), "bearer "))
-		return token
-	}
-	return ""
+	return auth.SessionTokenFromRequest(r)
 }
 
 // ServeHTTP handles WebSocket upgrade requests
