@@ -10,7 +10,7 @@ import (
 func TestReserveBackendPortPairDistinctAndReleased(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	gameA, rconA, err := store.ReserveBackendPortPair(ctx, "node-a", "server-a", nil)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestReserveBackendPortPairDistinctAndReleased(t *testing.T) {
 func TestReserveBackendPortPairSkipsDockerAndServerPorts(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if err := store.CreateServer(ctx, &Server{
 		ID: "held", Name: "held", ModLoader: ModLoaderVanilla, MCVersion: "1.21",
@@ -70,7 +70,7 @@ func TestReserveBackendPortPairSkipsDockerAndServerPorts(t *testing.T) {
 func TestReserveBackendPortPairConcurrent(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	const n = 8
 	ports := make([]int, n)
