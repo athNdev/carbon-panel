@@ -3,10 +3,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package upload
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -127,6 +127,30 @@ func TestSession_WriteStream(t *testing.T) {
 	}
 	if _, _, err := m.WriteStream("missing", strings.NewReader("x"), 0); err == nil {
 		t.Error("stream for unknown session accepted")
+	}
+}
+
+func TestSession_WriteStreamRejectsInvalidRange(t *testing.T) {
+	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
+
+	sess, err := m.InitSession("stream.bin", 8, 8)
+	if err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+	for _, offset := range []int64{-1, 9} {
+		if _, _, err := m.WriteStream(sess.ID, strings.NewReader("x"), offset); !errors.Is(err, ErrInvalidOffset) {
+			t.Errorf("offset %d: expected ErrInvalidOffset, got %v", offset, err)
+		}
+	}
+	if _, _, err := m.WriteStream(sess.ID, strings.NewReader("123456789"), 0); !errors.Is(err, ErrUploadOverflow) {
+		t.Fatalf("expected ErrUploadOverflow for oversized stream, got %v", err)
+	}
+	if sess.BytesReceived != 0 {
+		t.Fatalf("rejected stream advanced BytesReceived to %d", sess.BytesReceived)
+	}
+	if sess.Completed {
+		t.Fatal("rejected stream marked session completed")
 	}
 }
 
