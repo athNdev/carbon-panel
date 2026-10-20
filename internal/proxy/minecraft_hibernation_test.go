@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -150,9 +149,15 @@ func TestMinecraftProxy_HibernatedStatusPingDoesNotWake(t *testing.T) {
 		NextState:       1, // Status
 	})
 	require.NoError(t, err)
+	// Status Request (packet id 0x00, empty body) so the proxy can answer MOTD.
+	_, err = clientConn.Write([]byte{0x01, 0x00})
+	require.NoError(t, err)
 
-	// Give the proxy time to (incorrectly) wake or dial, then assert stillness.
-	time.Sleep(300 * time.Millisecond)
+	_ = clientConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	buf := make([]byte, 4096)
+	n, err := clientConn.Read(buf)
+	require.NoError(t, err)
+	assert.Contains(t, string(buf[:n]), hibernatedMOTD)
 
 	assert.False(t, wakeCalled.Load(), "WakeHandler must NOT fire on status ping")
 	assert.False(t, backendAccepted.Load(), "Backend must NOT be dialed on status ping")

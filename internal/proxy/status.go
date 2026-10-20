@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -17,9 +16,10 @@ import (
 // Deep-sleep MOTDs served from the proxy while the backend uses zero RAM.
 // The client never touches Docker on this path (MINE-121, mc-router parity).
 const (
-	asleepMOTD    = "Server is asleep - join to wake it up!"
-	deepSleepMOTD = "Server is in deep sleep - join to wake it up!"
-	loadingMOTD   = "Server is waking up - join to connect!"
+	asleepMOTD     = "Server is asleep - join to wake it up!"
+	deepSleepMOTD  = "Server is in deep sleep - join to wake it up!"
+	loadingMOTD    = "Server is waking up - join to connect!"
+	hibernatedMOTD = "Sleeping — join to wake"
 )
 
 // statusVersion mirrors the version block of a Server List Ping response.
@@ -44,6 +44,7 @@ type statusPayload struct {
 	Version     statusVersion     `json:"version"`
 	Players     statusPlayers     `json:"players"`
 	Description statusDescription `json:"description"`
+	Favicon     string            `json:"favicon,omitempty"`
 }
 
 // serveStatusResponse answers one server-list ping on an already-accepted
@@ -51,6 +52,10 @@ type statusPayload struct {
 // with the given MOTD, echoes an optional Ping/Pong, then returns (the caller
 // closes the connection). The backend is never dialed.
 func serveStatusResponse(conn net.Conn, protocolVersion VarInt, motd string) error {
+	return serveStatusResponseWithFavicon(conn, protocolVersion, motd, "")
+}
+
+func serveStatusResponseWithFavicon(conn net.Conn, protocolVersion VarInt, motd, favicon string) error {
 	if err := conn.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil {
 		return err
 	}
@@ -77,6 +82,7 @@ func serveStatusResponse(conn net.Conn, protocolVersion VarInt, motd string) err
 		Version:     statusVersion{Name: "carbon-panel", Protocol: proto},
 		Players:     statusPlayers{Max: 20, Online: 0},
 		Description: statusDescription{Text: motd},
+		Favicon:     favicon,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to marshal status payload: %w", err)
