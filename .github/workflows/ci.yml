@@ -41,6 +41,28 @@ jobs:
       - name: Run Backend Test Suite
         run: make test
 
+  test-windows-compile:
+    name: Windows Compile Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # Compile every Go package, including OS-specific files, without
+      # attempting to execute the Windows test binaries on Linux.
+      - name: Compile Windows packages
+        run: go test -run '^$' -exec /bin/true ./...
+        env:
+          GOOS: windows
+          CGO_ENABLED: '0'
+
   lint-backend:
     name: Backend Lint & Vet
     runs-on: ubuntu-latest
