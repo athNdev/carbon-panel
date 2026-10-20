@@ -7,8 +7,10 @@ package upload
 
 import (
 	"errors"
+	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -152,6 +154,65 @@ func TestSession_WriteStreamRejectsInvalidRange(t *testing.T) {
 	if sess.Completed {
 		t.Fatal("rejected stream marked session completed")
 	}
+}
+
+func TestSession_WriteStreamSerializesConcurrentRequests(t *testing.T) {
+	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
+
+	sess, err := m.InitSession("stream.bin", 8, 8)
+	if err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+
+	release := make(chan struct{})
+	started := make(chan struct{})
+	reader := &blockingReader{started: started, release: release, data: []byte("12345678")}
+	firstDone := make(chan error, 1)
+	go func() {
+		_, _, err := m.WriteStream(sess.ID, reader, 0)
+		firstDone <- err
+	}()
+	<-started
+
+	secondDone := make(chan error, 1)
+	go func() {
+		_, _, err := m.WriteStream(sess.ID, strings.NewReader("abcdefgh"), 0)
+		secondDone <- err
+	}()
+	select {
+	case err := <-secondDone:
+		t.Fatalf("concurrent stream completed before first released: %v", err)
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	close(release)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first stream failed: %v", err)
+	}
+	if err := <-secondDone; !errors.Is(err, ErrSessionCompleted) {
+		t.Fatalf("second stream error = %v, want ErrSessionCompleted", err)
+	}
+}
+
+type blockingReader struct {
+	started chan<- struct{}
+	release <-chan struct{}
+	data    []byte
+	once    sync.Once
+}
+
+func (r *blockingReader) Read(p []byte) (int, error) {
+	r.once.Do(func() {
+		close(r.started)
+		<-r.release
+	})
+	if len(r.data) == 0 {
+		return 0, io.EOF
+	}
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	return n, nil
 }
 
 func TestCleanupSession_MoveSemantics(t *testing.T) {
