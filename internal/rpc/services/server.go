@@ -1018,12 +1018,12 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		server.ModLoader = storage.ModLoaderVanilla
 	}
 
-	// When using proxy, set the ports correctly
+	// When using proxy, remember the player-facing listener. The backend port is
+	// allocated after the node is known so two servers do not publish the same bind.
 	if server.ProxyHostname != "" && proxyListenerID != "" {
 		listener, err := s.store.GetProxyListener(ctx, proxyListenerID)
 		if err == nil && listener != nil {
 			server.ProxyPort = listener.Port
-			server.Port = 25565 // Internal container port for proxied servers
 		}
 	}
 
@@ -1055,6 +1055,28 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no Docker nodes available: register and enable a node in Settings before creating servers"))
 	}
 	server.NodeID = nodeID
+
+	backendReserved := false
+	if server.ProxyHostname != "" {
+		used := map[int]bool{}
+		if dockerCli := s.getDockerClient(server.NodeID); dockerCli != nil {
+			if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
+				used = allocated
+			}
+		}
+		gamePort, _, err := s.store.ReserveBackendPortPair(ctx, server.NodeID, server.ID, used)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no free backend port on node: %w", err))
+		}
+		server.Port = gamePort
+		backendReserved = true
+	}
+	keepLease := false
+	defer func() {
+		if backendReserved && !keepLease {
+			_ = s.store.ReleaseBackendPorts(context.WithoutCancel(ctx), server.ID)
+		}
+	}()
 
 	// Check port availability on host and target node for non-proxy servers
 	if server.ProxyHostname == "" && server.Port > 0 {
@@ -1103,6 +1125,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		s.log.Error("Failed to create server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server"))
 	}
+	keepLease = true
 	s.capacityMu.Unlock()
 
 	// Get the server config
