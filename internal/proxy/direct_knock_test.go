@@ -515,7 +515,7 @@ func TestDirectKnock_TransferIntent_Wakes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	if _, err := conn.Write(buildTestHandshakePacket(767, "127.0.0.1", uint16(port), 3)); err != nil {
 		t.Fatalf("write: %v", err)
 	}
@@ -546,7 +546,7 @@ func TestDirectKnock_TransferRejectedWhenDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	if _, err := conn.Write(buildTestHandshakePacket(767, "127.0.0.1", uint16(port), 3)); err != nil {
 		t.Fatalf("write: %v", err)
 	}
