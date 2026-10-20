@@ -30,6 +30,9 @@ func TestLoad_DefaultsWithoutFile(t *testing.T) {
 	if cfg.Proxy.AcceptsTransfers == nil || !*cfg.Proxy.AcceptsTransfers {
 		t.Errorf("default accepts_transfers = %v, want true", cfg.Proxy.AcceptsTransfers)
 	}
+	if cfg.Proxy.LoginRateLimitMS != 3000 {
+		t.Errorf("default login_ratelimit_ms = %d, want 3000", cfg.Proxy.LoginRateLimitMS)
+	}
 	if cfg.Module.PortRangeMin >= cfg.Module.PortRangeMax {
 		t.Errorf("default module range invalid: %d-%d", cfg.Module.PortRangeMin, cfg.Module.PortRangeMax)
 	}
@@ -315,5 +318,27 @@ func TestConfigValidateMethod(t *testing.T) {
 	cfgNegSnapRet.Storage.SnapshotRetentionDays = -1
 	if err := cfgNegSnapRet.Validate(); err == nil {
 		t.Fatal("expected error for negative storage.snapshot_retention_days")
+	}
+}
+
+func TestLoadLoginRateLimitDefault(t *testing.T) {
+	dir := writeConfig(t, "proxy:\n  enabled: true\n")
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Proxy.LoginRateLimitMS != 3000 {
+		t.Fatalf("login_ratelimit_ms = %d, want 3000", cfg.Proxy.LoginRateLimitMS)
+	}
+}
+
+func TestLoadLoginRateLimitZero(t *testing.T) {
+	dir := writeConfig(t, "proxy:\n  login_ratelimit_ms: 0\n")
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Proxy.LoginRateLimitMS != 0 {
+		t.Fatalf("login_ratelimit_ms = %d, want 0", cfg.Proxy.LoginRateLimitMS)
 	}
 }

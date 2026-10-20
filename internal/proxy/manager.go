@@ -226,6 +226,7 @@ func (m *Manager) Start() error {
 			ActivityHandler:  m.activityHandler,
 			SleepWakeHandler: m.sleepWakeHandler,
 			AcceptsTransfers: m.acceptsTransfers(),
+			LoginRateLimit:   m.loginRateLimit(),
 		})
 
 		m.proxies[listener.Port] = proxy
@@ -607,6 +608,13 @@ func (m *Manager) acceptsTransfers() *bool {
 	return m.config.AcceptsTransfers
 }
 
+func (m *Manager) loginRateLimit() time.Duration {
+	if m.config == nil || m.config.LoginRateLimitMS <= 0 {
+		return 0
+	}
+	return time.Duration(m.config.LoginRateLimitMS) * time.Millisecond
+}
+
 // AddListener creates and starts a proxy instance for a new listener
 func (m *Manager) AddListener(listener *db.ProxyListener) error {
 	m.mu.Lock()
@@ -631,6 +639,7 @@ func (m *Manager) AddListener(listener *db.ProxyListener) error {
 		ActivityHandler:  m.activityHandler,
 		SleepWakeHandler: m.sleepWakeHandler,
 		AcceptsTransfers: m.acceptsTransfers(),
+		LoginRateLimit:   m.loginRateLimit(),
 	})
 
 	// Start the proxy
@@ -745,6 +754,7 @@ func (m *Manager) addPortRouteUnlocked(routeID, hostname, containerIP string, ho
 			ListenAddr:       listenAddr,
 			Logger:           m.logger,
 			AcceptsTransfers: m.acceptsTransfers(),
+			LoginRateLimit:   m.loginRateLimit(),
 		}
 
 		// Create appropriate proxy type based on protocol
