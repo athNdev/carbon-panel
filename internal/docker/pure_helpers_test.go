@@ -51,6 +51,19 @@ func TestTranslateToHostPath(t *testing.T) {
 	}
 }
 
+func TestClientIsRemote(t *testing.T) {
+	for _, host := range []string{"tcp://10.0.0.8:2376", "ssh://minecraft@node", "https://node.example"} {
+		if (&Client{host: host}).IsRemote() != true {
+			t.Errorf("IsRemote(%q) = false, want true", host)
+		}
+	}
+	for _, host := range []string{"", "unix:///var/run/docker.sock", "npipe:////./pipe/docker_engine"} {
+		if (&Client{host: host}).IsRemote() {
+			t.Errorf("IsRemote(%q) = true, want false", host)
+		}
+	}
+}
+
 func TestExtractCurseForgeSlug(t *testing.T) {
 	cases := []struct{ in, want string }{
 		{"", ""},
