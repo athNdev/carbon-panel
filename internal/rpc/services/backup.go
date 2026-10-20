@@ -42,6 +42,28 @@ type BackupService struct {
 	enforcer         *rbac.Enforcer
 	restoringMu      sync.Mutex
 	restoringServers map[string]bool
+	// remoteDelete overrides the S3 delete in tests. Production leaves it nil.
+	remoteDelete func(ctx context.Context, key string) error
+}
+
+// deleteRemoteBackup removes the offsite object before the local archive and
+// the database row. With no remote key, or with S3 disabled and no test
+// override, it is a no-op.
+func (s *BackupService) deleteRemoteBackup(ctx context.Context, key string) error {
+	if key == "" {
+		return nil
+	}
+	if s.remoteDelete != nil {
+		return s.remoteDelete(ctx, key)
+	}
+	if !s3uploader.Enabled(s.s3cfg) {
+		return nil
+	}
+	up, err := s3uploader.NewUploader(s.s3cfg)
+	if err != nil {
+		return err
+	}
+	return up.Delete(ctx, key)
 }
 
 func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *docker.ClientPool, s3cfg appconfig.S3Config, log *logger.Logger) *BackupService {
@@ -158,18 +180,17 @@ func (s *BackupService) DeleteBackup(ctx context.Context, req *connect.Request[v
 	if rec.Status == "restoring" {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("backup is currently being restored"))
 	}
+	// Remote delete first. A transport or permission error must keep the row
+	// and the local archive so the operator can retry (MINE-183). A missing
+	// object is success: S3 DeleteObject is idempotent.
+	if err := s.deleteRemoteBackup(ctx, rec.RemoteKey); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("remote backup was kept: %w", err))
+	}
 	if rec.Path != "" {
 		if err := os.Remove(rec.Path); err != nil && !os.IsNotExist(err) {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete archive: %w", err))
 		}
 		_ = os.Remove(rec.Path + ".sha256")
-	}
-	if rec.RemoteKey != "" && s3uploader.Enabled(s.s3cfg) {
-		if up, err := s3uploader.NewUploader(s.s3cfg); err == nil {
-			if err := up.Delete(ctx, rec.RemoteKey); err != nil {
-				s.log.Warn("Failed to delete remote S3 backup %s: %v", rec.RemoteKey, err)
-			}
-		}
 	}
 	if err := s.store.DeleteBackupRecord(ctx, rec.ID); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete backup record"))
