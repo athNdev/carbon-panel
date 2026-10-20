@@ -7,7 +7,7 @@
 	import Field from '$lib/components/Field.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { pushToast } from '$lib/components/toast.svelte';
+	import { pushToast } from '$lib/components/toast.svelte.js';
 	import { call, orgClient } from '$lib/api/client';
 	import { can, roleLabel, ROLES, type Role } from '$lib/auth/permissions';
 	import { auth } from '$lib/auth/clerk.svelte';

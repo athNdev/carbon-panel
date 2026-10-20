@@ -3,7 +3,7 @@
 	import Tile from '$lib/components/Tile.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import Button from '$lib/components/Button.svelte';
-	import { pushToast } from '$lib/components/toast.svelte';
+	import { pushToast } from '$lib/components/toast.svelte.js';
 	import { call, orgClient, systemClient } from '$lib/api/client';
 	import { can } from '$lib/auth/permissions';
 	import { auth } from '$lib/auth/clerk.svelte';

@@ -9,7 +9,7 @@
 	import Field from '$lib/components/Field.svelte';
 	import Tabs from '$lib/components/Tabs.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { pushToast } from '$lib/components/toast.svelte';
+	import { pushToast } from '$lib/components/toast.svelte.js';
 	import { call, workloadClient, fileClient, addonClient, scheduleClient } from '$lib/api/client';
 	import { can } from '$lib/auth/permissions';
 	import { auth } from '$lib/auth/clerk.svelte';

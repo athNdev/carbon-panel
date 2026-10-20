@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getToasts, dismissToast } from './toast.svelte';
+	import { getToasts, dismissToast } from './toast.svelte.js';
 	import { cls } from '$lib/utils';
 
 	const toasts = getToasts();

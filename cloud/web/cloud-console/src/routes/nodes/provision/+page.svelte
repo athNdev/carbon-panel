@@ -5,7 +5,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Tag from '$lib/components/Tag.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { pushToast } from '$lib/components/toast.svelte';
+	import { pushToast } from '$lib/components/toast.svelte.js';
 	import { call, nodeTypeClient, provisionClient } from '$lib/api/client';
 	import { can } from '$lib/auth/permissions';
 	import { auth } from '$lib/auth/clerk.svelte';
