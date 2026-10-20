@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 /**
  * Human-readable file size. Guards against non-numeric, non-finite, and
  * negative input (which would flow into Math.log and render "NaN undefined").
