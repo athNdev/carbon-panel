@@ -14,18 +14,16 @@ func InitBuiltinTemplates(store *storage.Store) error {
 
 	templates := []storage.ModuleTemplate{
 		{
-			ID:             "builtin-geyser",
-			Name:           "Geyser",
-			Description:    "Allows Bedrock Edition players to join Java Edition servers. Requires Floodgate plugin on the server for seamless authentication.",
-			Type:           storage.ModuleTemplateTypeBuiltin,
-			DockerImage:    "athndev/carbon-panel-geyser:latest",
-			Category:       "proxy",
-			SupportsProxy:  true,
-			RequiresServer: true,
-			Icon:           "users",
-			Ports: []*v1.ModulePort{
-				{Name: "Bedrock", ContainerPort: 19132, HostPort: 0, Protocol: "udp", ProxyEnabled: true},
-			},
+			ID:                "builtin-geyser",
+			Name:              "Geyser",
+			Description:       "Allows Bedrock Edition players to join Java Edition servers. Requires Floodgate plugin on the server for seamless authentication.",
+			Type:              storage.ModuleTemplateTypeBuiltin,
+			DockerImage:       "athndev/carbon-panel-geyser:latest",
+			Category:          "proxy",
+			SupportsProxy:     true,
+			RequiresServer:    true,
+			Icon:              "users",
+			Ports:             []*v1.ModulePort{geyserBedrockPort()},
 			DefaultAccessUrls: []string{"http://{{host.hostname}}:{{module.ports.Bedrock.host_port}}"},
 			DefaultEnv: `{
 				"PUID": "{{host.uid}}",
@@ -200,4 +198,17 @@ func InitBuiltinTemplates(store *storage.Store) error {
 	}
 
 	return nil
+}
+
+// geyserBedrockPort is the UDP port Bedrock clients dial. It stays public
+// when the Java server is behind Gate, because the TCP proxy cannot carry it.
+func geyserBedrockPort() *v1.ModulePort {
+	return &v1.ModulePort{
+		Name:          "Bedrock",
+		ContainerPort: 19132,
+		HostPort:      0,
+		Protocol:      "udp",
+		ProxyEnabled:  true,
+		ExposePublic:  true,
+	}
 }

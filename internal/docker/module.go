@@ -12,11 +12,19 @@ import (
 	"github.com/athNdev/carbon-panel/internal/config"
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/files"
+	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 )
+
+// publishModuleHostPort reports whether Docker should publish the port on
+// 0.0.0.0. Proxy-only ports stay unpublished. Public ports, including Geyser
+// Bedrock UDP, are published even when proxy routing is also enabled.
+func publishModuleHostPort(port *v1.ModulePort) bool {
+	return port != nil && port.HostPort > 0 && (!port.ProxyEnabled || port.ExposePublic)
+}
 
 // ModuleVolumeMount represents a volume mount from module configuration
 type ModuleVolumeMount struct {
@@ -78,8 +86,11 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 		}
 		exposedPorts[modPort] = struct{}{}
 
-		// Bind host port when proxy is not enabled for this port
-		if port.HostPort > 0 && !port.ProxyEnabled {
+		// Proxy-routed ports are not published. A port marked public (Geyser
+		// Bedrock UDP) is published on every interface even when the game
+		// server itself is behind Gate. Other extra ports stay unpublished
+		// here; the game container binds those on loopback.
+		if publishModuleHostPort(port) {
 			portBindings[modPort] = []network.PortBinding{
 				{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: fmt.Sprintf("%d", port.HostPort)},
 			}

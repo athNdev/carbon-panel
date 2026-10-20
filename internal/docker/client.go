@@ -584,6 +584,41 @@ func validateServerPorts(server *models.Server) error {
 	return nil
 }
 
+// additionalPortHostIP is the address Docker publishes an extra port on.
+// A proxied server keeps extra ports on loopback unless the operator marks
+// the port public. An unproxied server stays on every interface, matching
+// the game port.
+func additionalPortHostIP(useProxy, exposePublic bool) string {
+	if !useProxy || exposePublic {
+		return "0.0.0.0"
+	}
+	return "127.0.0.1"
+}
+
+// additionalPortBindings is the host publish map for extra ports. Invalid
+// container ports are skipped; CreateContainer has already rejected them.
+func additionalPortBindings(ports []*v1.AdditionalPort, useProxy bool) network.PortMap {
+	out := network.PortMap{}
+	for _, port := range ports {
+		if port == nil {
+			continue
+		}
+		protocol := port.GetProtocol()
+		if protocol == "" {
+			protocol = "tcp"
+		}
+		key, err := network.ParsePort(fmt.Sprintf("%d/%s", port.GetContainerPort(), protocol))
+		if err != nil {
+			continue
+		}
+		out[key] = []network.PortBinding{{
+			HostIP:   netip.MustParseAddr(additionalPortHostIP(useProxy, port.GetExposePublic())),
+			HostPort: fmt.Sprintf("%d", port.GetHostPort()),
+		}}
+	}
+	return out
+}
+
 func (c *Client) CreateContainer(ctx context.Context, server *models.Server, serverConfig *models.ServerConfig) (string, error) {
 	// Validate container-side ports before touching the daemon: the new
 	// SDK's network.Port is built from uint16, so unchecked values would
@@ -719,19 +754,9 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 			_ = c.firewall.ApplyProxyPortIsolation(ctx, server.Port)
 		}
 	}
-	// Add additional port bindings
-	for _, port := range server.AdditionalPorts {
-		protocol := port.GetProtocol()
-		if protocol == "" {
-			protocol = "tcp"
-		}
-		portKey, ok := protoPort(int(port.GetContainerPort()), protocol)
-		if !ok {
-			continue
-		}
-		portBindings[portKey] = bindTCP("0.0.0.0", int(port.GetHostPort()))
-		c.log.Debug("Additional port mapping: %s (%d:%d/%s)", port.GetName(), port.GetHostPort(), port.GetContainerPort(), protocol)
-	}
+	// Add additional port bindings. Proxied servers stay on loopback unless
+	// the port is marked public (MINE-205).
+	maps.Copy(portBindings, additionalPortBindings(server.AdditionalPorts, useProxy))
 
 	// Handle path translation when Carbon Panel runs in a container
 	dataPath := TranslateToHostPath(server.DataPath)
