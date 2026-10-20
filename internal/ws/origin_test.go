@@ -24,6 +24,7 @@ func TestCheckSameOrigin_Unit(t *testing.T) {
 		xfHost     string
 		xfProto    string
 		tls        bool
+		trust      bool
 		wantOrigin bool
 	}{
 		{
@@ -82,11 +83,20 @@ func TestCheckSameOrigin_Unit(t *testing.T) {
 			wantOrigin: true,
 		},
 		{
+			name:       "X-Forwarded-Host ignored unless trust_proxy",
+			origin:     "https://panel.production.com",
+			host:       "10.0.1.5:8080",
+			xfHost:     "panel.production.com",
+			xfProto:    "https",
+			wantOrigin: false,
+		},
+		{
 			name:       "reverse proxy X-Forwarded-Host matching",
 			origin:     "https://panel.production.com",
 			host:       "10.0.1.5:8080",
 			xfHost:     "panel.production.com",
 			xfProto:    "https",
+			trust:      true,
 			wantOrigin: true,
 		},
 		{
@@ -103,6 +113,7 @@ func TestCheckSameOrigin_Unit(t *testing.T) {
 			host:       "10.0.1.5:8080",
 			xfHost:     "panel.production.com, proxy2.internal",
 			xfProto:    "https",
+			trust:      true,
 			wantOrigin: true,
 		},
 		{
@@ -130,11 +141,29 @@ func TestCheckSameOrigin_Unit(t *testing.T) {
 				req.TLS = &tls.ConnectionState{}
 			}
 
-			got := checkSameOrigin(req)
+			got := checkOrigin(req, originPolicy{trustProxy: tt.trust})
 			if got != tt.wantOrigin {
-				t.Errorf("checkSameOrigin() = %v, want %v", got, tt.wantOrigin)
+				t.Errorf("checkOrigin() = %v, want %v", got, tt.wantOrigin)
 			}
 		})
+	}
+}
+
+func TestCheckOriginAllowlist(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
+	req.Host = "10.0.1.5:8080"
+	req.Header.Set("Origin", "https://console.example.com")
+	policy := originPolicy{allow: []string{"https://console.example.com"}}
+	if !checkOrigin(req, policy) {
+		t.Fatal("allowlisted origin was rejected")
+	}
+	req.Header.Set("Origin", "https://other.example.com")
+	if checkOrigin(req, policy) {
+		t.Fatal("origin outside the allowlist was accepted")
+	}
+	req.Header.Del("Origin")
+	if !checkOrigin(req, policy) {
+		t.Fatal("empty origin must stay allowed")
 	}
 }
 
