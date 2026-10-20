@@ -27,6 +27,7 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 			PidsLimit: &pidsLimit,
 		},
 	}
+
 	config := &container.Config{}
 
 	if !slices.Contains(hostConfig.CapDrop, "ALL") {
@@ -65,6 +66,21 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 	}
 	if !slices.Contains(hostConfig.SecurityOpt, "apparmor:unconfined") {
 		t.Errorf("expected apparmor:unconfined in SecurityOpt")
+	}
+}
+
+func TestContainerHardening_Defaults(t *testing.T) {
+	hostConfig := &container.HostConfig{}
+	applyContainerHardening(hostConfig)
+
+	if !slices.Contains(hostConfig.CapDrop, "ALL") {
+		t.Fatal("default container must drop all Linux capabilities")
+	}
+	if !slices.Contains(hostConfig.SecurityOpt, "no-new-privileges:true") {
+		t.Fatal("default container must prevent privilege escalation")
+	}
+	if hostConfig.PidsLimit == nil || *hostConfig.PidsLimit != 512 {
+		t.Fatal("default container must limit process count to 512")
 	}
 }
 
