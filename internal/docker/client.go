@@ -1227,6 +1227,19 @@ func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error
 	return allocated, nil
 }
 
+// SetRestartPolicy updates a live container's restart policy. Deep sleep sets
+// "no" before stopping the JVM, and wake restores DefaultRestartPolicy.
+func (c *Client) SetRestartPolicy(ctx context.Context, containerID string, policy container.RestartPolicy) error {
+	if c == nil || c.docker == nil {
+		return fmt.Errorf("docker client is nil")
+	}
+	_, err := c.docker.ContainerUpdate(ctx, containerID, client.ContainerUpdateOptions{RestartPolicy: &policy})
+	if err != nil {
+		return fmt.Errorf("update restart policy: %w", err)
+	}
+	return nil
+}
+
 // StopContainer stops a container using the default save window.
 // Returns (containerFound, error). A missing container returns (false, nil).
 func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, error) {
