@@ -139,7 +139,7 @@ func NewHub(logStreamer *logger.LogStreamer, authManager *auth.Manager, enforcer
 		log:         log,
 		sender:      sender,
 		upgrader: websocket.Upgrader{
-			CheckOrigin: checkSameOrigin,
+			CheckOrigin: func(r *http.Request) bool { return checkOrigin(r, originPolicy{}) },
 		},
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
@@ -176,6 +176,16 @@ func (h *Hub) dockerFor(nodeID string) *docker.Client {
 // SetCheckOrigin overrides the WebSocket upgrader origin validation function.
 func (h *Hub) SetCheckOrigin(check func(r *http.Request) bool) {
 	h.upgrader.CheckOrigin = check
+}
+
+// SetOriginPolicy sets the browser origins that may open a console socket.
+// An empty allowlist keeps same-host checks. X-Forwarded-Host is ignored
+// unless trustProxy is set. A missing Origin header stays allowed for CLI clients.
+func (h *Hub) SetOriginPolicy(allow []string, trustProxy bool) {
+	policy := originPolicy{allow: append([]string(nil), allow...), trustProxy: trustProxy}
+	h.upgrader.CheckOrigin = func(r *http.Request) bool {
+		return checkOrigin(r, policy)
+	}
 }
 
 // sendRegister hands a client to the Run loop, reporting false rather than
@@ -892,10 +902,21 @@ func (c *Client) sendPong() {
 	})
 }
 
-// checkSameOrigin verifies that the request Origin matches the request Host
-// or an allowed reverse-proxy Host, preventing Cross-Site WebSocket Hijacking (CSWSH).
-// Non-browser clients omitting the Origin header are permitted.
+// originPolicy is the WebSocket browser-origin rule (MINE-208).
+type originPolicy struct {
+	allow      []string
+	trustProxy bool
+}
+
+// checkSameOrigin is the default policy: same host, no forwarded-host trust.
 func checkSameOrigin(r *http.Request) bool {
+	return checkOrigin(r, originPolicy{})
+}
+
+// checkOrigin verifies that the request Origin matches the request Host,
+// a trusted forwarded host, or an explicit allowlist entry.
+// Non-browser clients omitting the Origin header are permitted.
+func checkOrigin(r *http.Request, policy originPolicy) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true // Non-browser clients (CLI, curl, native tests) don't send Origin
@@ -911,25 +932,31 @@ func checkSameOrigin(r *http.Request) bool {
 		return false
 	}
 
+	if originListed(origin, u, policy.allow) {
+		return true
+	}
+
 	// Exact host:port match with request Host
 	if strings.EqualFold(u.Host, r.Host) {
 		return true
 	}
 
-	// Check against X-Forwarded-Host if behind a reverse proxy
-	if xfh := r.Header.Get("X-Forwarded-Host"); xfh != "" {
-		hosts := strings.Split(xfh, ",")
-		firstHost := strings.TrimSpace(hosts[0])
-		if strings.EqualFold(u.Host, firstHost) {
-			return true
-		}
-		originHost := u.Hostname()
-		if fHost, _, err := net.SplitHostPort(firstHost); err == nil {
-			if strings.EqualFold(originHost, fHost) {
+	// X-Forwarded-Host is attacker-controlled unless the operator trusts the proxy.
+	if policy.trustProxy {
+		if xfh := r.Header.Get("X-Forwarded-Host"); xfh != "" {
+			hosts := strings.Split(xfh, ",")
+			firstHost := strings.TrimSpace(hosts[0])
+			if strings.EqualFold(u.Host, firstHost) {
 				return true
 			}
-		} else if strings.EqualFold(originHost, firstHost) {
-			return true
+			originHost := u.Hostname()
+			if fHost, _, err := net.SplitHostPort(firstHost); err == nil {
+				if strings.EqualFold(originHost, fHost) {
+					return true
+				}
+			} else if strings.EqualFold(originHost, firstHost) {
+				return true
+			}
 		}
 	}
 
@@ -963,6 +990,19 @@ func checkSameOrigin(r *http.Request) bool {
 		return true
 	}
 
+	return false
+}
+
+func originListed(origin string, u *url.URL, allow []string) bool {
+	for _, entry := range allow {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if strings.EqualFold(entry, origin) || strings.EqualFold(entry, u.Host) || strings.EqualFold(entry, u.Hostname()) {
+			return true
+		}
+	}
 	return false
 }
 
