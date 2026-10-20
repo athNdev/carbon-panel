@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -23,7 +22,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
@@ -32,6 +30,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"github.com/athNdev/carbon-panel/pkg/upload"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -44,6 +43,15 @@ type ModService struct {
 	docker        *docker.Client
 	log           *logger.Logger
 	uploadManager *upload.Manager
+}
+
+func modInstallPath(modsDir, filename string) (string, error) {
+	if filename == "" || filename == "." || filename == ".." || filepath.IsAbs(filename) ||
+		filepath.VolumeName(filename) != "" || strings.ContainsAny(filename, `/\`) ||
+		filepath.Base(filename) != filename {
+		return "", fmt.Errorf("invalid mod filename %q", filename)
+	}
+	return filepath.Join(modsDir, filename), nil
 }
 
 // NewModService creates a new mod service
@@ -660,7 +668,11 @@ func (s *ModService) InstallFabricOptimizationStack(ctx context.Context, req *co
 		}
 
 		targetFile := v.Files[0]
-		targetPath := filepath.Join(modsDir, targetFile.Filename)
+		targetPath, err := modInstallPath(modsDir, targetFile.Filename)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("invalid filename for %s: %v", def.Name, err))
+			continue
+		}
 
 		// Remove existing older versions of this mod
 		if entries, err := os.ReadDir(modsDir); err == nil {
