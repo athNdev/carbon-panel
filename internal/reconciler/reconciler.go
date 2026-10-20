@@ -57,8 +57,6 @@ const (
 
 // Container exit codes we give special meaning to.
 const (
-	// exitCodeOOM is 128 + SIGKILL, Docker's OOM-kill signature.
-	exitCodeOOM = 137
 	// exitCodeSIGTERM is 128 + SIGTERM, reported for a graceful `docker stop`.
 	exitCodeSIGTERM = 143
 )
@@ -83,6 +81,7 @@ type Client interface {
 	ObserveContainer(ctx context.Context, containerID string) (*docker.ContainerState, error)
 	StartContainer(ctx context.Context, containerID string) error
 	RecreateContainer(ctx context.Context, oldContainerID string, server *db.Server, serverConfig *db.ServerConfig) (*docker.RecreateContainerResult, error)
+	StopContainerWithin(ctx context.Context, containerID string, window time.Duration) (bool, error)
 }
 
 // ClientResolver resolves a node's Docker client without falling back to the
@@ -501,6 +500,15 @@ func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error
 	}
 
 	selfHealed := false
+	if dec.action == actStop && server.ContainerID != "" {
+		window := docker.DefaultStopWindow
+		if cfg, cfgErr := r.store.GetServerConfig(ctx, server.ID); cfgErr == nil {
+			window = docker.StopWindow(cfg)
+		}
+		if _, err := cli.StopContainerWithin(ctx, server.ContainerID, window); err != nil && r.log != nil {
+			r.log.Error("reconciler: resume stop failed for server %s: %v", server.Name, err)
+		}
+	}
 	if dec.action == actRecreate {
 		if err := r.selfHealRecreate(ctx, cli, server); err != nil {
 			if r.log != nil {
@@ -697,6 +705,8 @@ const (
 	actNone reconcileAction = iota
 	// actRecreate means the container is missing and should be recreated.
 	actRecreate
+	// actStop resumes a stop that was persisted before the panel exited.
+	actStop
 )
 
 // decision is the outcome of the pure convergence policy.
@@ -759,9 +769,9 @@ func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool)
 	switch obs.Status {
 	case db.StatusRunning, db.StatusUnhealthy:
 		if desired == db.StatusStopping {
-			// A stop is in flight; let the RPC service own the transition
-			// instead of flapping the status back to running.
-			return decision{}
+			// The operator already asked for stopped. Resume that stop instead
+			// of adopting the still-running JVM as the desired state.
+			return decision{action: actStop}
 		}
 		if desired == db.StatusUnhealthy {
 			// Preserve the explicit unhealthy signal.
@@ -795,11 +805,11 @@ func decide(desired db.ServerStatus, obs observedState, detached, selfHeal bool)
 }
 
 // classifyExit maps a non-running container's exit information onto a panel
-// status. An OOM kill or a non-zero crash is surfaced as an error with an
-// explanatory reason; a clean exit (or the SIGTERM of a graceful `docker stop`)
-// is a normal stop.
+// status. OOM is recorded only when Docker set OOMKilled. Exit 137 after a
+// stop timeout is a real exit code, not an out-of-memory kill. A clean exit
+// (or the SIGTERM of a graceful `docker stop`) is a normal stop.
 func classifyExit(obs observedState) (db.ServerStatus, string) {
-	if obs.OOMKilled || obs.ExitCode == exitCodeOOM {
+	if obs.OOMKilled {
 		return db.StatusError, fmt.Sprintf("container was OOM-killed (exit code %d)", obs.ExitCode)
 	}
 	switch obs.ExitCode {

@@ -115,6 +115,7 @@ type fakeClient struct {
 	recreations    int
 	recreateErr    error
 	recreateResult *docker.RecreateContainerResult
+	stops          []string
 }
 
 func (c *fakeClient) ResolveContainer(_ context.Context, _ string) (*container.Summary, error) {
@@ -134,6 +135,11 @@ func (c *fakeClient) ObserveContainer(_ context.Context, _ string) (*docker.Cont
 func (c *fakeClient) StartContainer(_ context.Context, containerID string) error {
 	c.started = append(c.started, containerID)
 	return nil
+}
+
+func (c *fakeClient) StopContainerWithin(_ context.Context, containerID string, _ time.Duration) (bool, error) {
+	c.stops = append(c.stops, containerID)
+	return true, nil
 }
 
 func (c *fakeClient) RecreateContainer(_ context.Context, _ string, _ *db.Server, _ *db.ServerConfig) (*docker.RecreateContainerResult, error) {
@@ -239,7 +245,9 @@ func TestDecide(t *testing.T) {
 		{"running + desired running is a no-op", running, existsRunning, false, true, "", actNone, ""},
 		{"running + desired starting converges up", starting, existsRunning, false, true, running, actNone, ""},
 		{"running + desired stopped syncs to reality", stopped, existsRunning, false, true, running, actNone, ""},
-		{"running + desired stopping does not flap", stopping, existsRunning, false, true, "", actNone, ""},
+		{"running + desired stopping resumes the stop", stopping, existsRunning, false, true, "", actStop, ""},
+		{"SIGKILL without OOMKilled is not an OOM", running, observedState{Exists: true, ContainerID: "c1", Status: stopped, ExitCode: 137}, false, true, errStatus, actNone, "exited with code 137"},
+		{"requested stop plus SIGKILL is stopped", stopping, observedState{Exists: true, ContainerID: "c1", Status: stopped, ExitCode: 137}, false, true, stopped, actNone, ""},
 		{"exited clean + desired running reports stopped", running, existsExitedClean, false, true, stopped, actNone, ""},
 		{"exited 143 from docker stop is a clean stop", running, existsSigterm, false, true, stopped, actNone, ""},
 		{"OOM kill is flagged as error", running, existsOOM, false, true, errStatus, actNone, "OOM"},
@@ -277,7 +285,10 @@ func TestClassifyExit(t *testing.T) {
 		t.Fatalf("exit 143 => %q, want stopped", st)
 	}
 	if st, reason := classifyExit(observedState{ExitCode: 137, OOMKilled: true}); st != db.StatusError || !contains(reason, "OOM") {
-		t.Fatalf("exit 137 => %q/%q, want error mentioning OOM", st, reason)
+		t.Fatalf("OOMKilled => %q/%q, want error mentioning OOM", st, reason)
+	}
+	if st, reason := classifyExit(observedState{ExitCode: 137, OOMKilled: false}); st != db.StatusError || contains(reason, "OOM") {
+		t.Fatalf("exit 137 without OOMKilled => %q/%q, want a non-OOM error", st, reason)
 	}
 	if st, _ := classifyExit(observedState{ExitCode: 139}); st != db.StatusError {
 		t.Fatalf("exit 139 => %q, want error", st)
