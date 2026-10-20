@@ -127,6 +127,13 @@ func NewAPIClient(opts ...client.Opt) (*client.Client, error) {
 	return cli, nil
 }
 
+func applyContainerHardening(hostConfig *container.HostConfig) {
+	pidsLimit := int64(512)
+	hostConfig.CapDrop = []string{"ALL"}
+	hostConfig.SecurityOpt = []string{"no-new-privileges:true"}
+	hostConfig.PidsLimit = &pidsLimit
+}
+
 // DefaultRestartPolicy is the Docker restart policy applied to every
 // Carbon Panel container. "on-failure:5" lets the daemon re-attempt
 // crashed containers up to 5 times while honouring an explicit
@@ -856,7 +863,6 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		}
 	}
 
-	pidsLimit := int64(512)
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
 		Mounts: []mount.Mount{
@@ -879,13 +885,13 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 			// CalculateMemoryAllocation.
 			Memory:     containerLimitBytes,
 			MemorySwap: containerLimitBytes,
-			PidsLimit:  &pidsLimit,
 		},
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{"max-size": "10m", "max-file": "3"},
 		},
 	}
+	applyContainerHardening(hostConfig)
 
 	// Apply global DNS from config
 	if c.config.DNS != "" {
