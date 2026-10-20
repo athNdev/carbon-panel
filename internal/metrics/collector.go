@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package metrics
 
 import (
@@ -150,6 +149,9 @@ func (c *Collector) resolveDocker(nodeID string) *docker.Client {
 	if c.pool != nil {
 		if cli, err := c.pool.GetClientStrict(nodeID); err == nil && cli != nil {
 			return cli
+		}
+		if nodeID != "" && nodeID != "local" && nodeID != c.pool.GetDefaultNodeID() {
+			return nil
 		}
 	}
 	return c.docker
@@ -314,6 +316,11 @@ func (c *Collector) collectDockerStats() {
 		}
 
 		dockerCli := c.resolveDocker(server.NodeID)
+		if dockerCli == nil {
+			// A remote node must never silently fall back to the local
+			// daemon. Skip this sample until that node is reachable again.
+			continue
+		}
 
 		// Check if server is running
 		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
@@ -352,8 +359,13 @@ func (c *Collector) collectRCONData() {
 			continue
 		}
 
+		dockerCli := c.resolveDocker(server.NodeID)
+		if dockerCli == nil {
+			continue
+		}
+
 		// Check if server is running
-		status, err := c.resolveDocker(server.NodeID).GetContainerStatus(ctx, server.ContainerID)
+		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 		if err != nil || status != storage.StatusRunning {
 			continue
 		}

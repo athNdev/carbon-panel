@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package metrics
 
 import (
@@ -16,6 +15,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
@@ -106,6 +106,19 @@ func TestResolveDocker_NilPoolFallsBackToDefault(t *testing.T) {
 	c := NewCollectorWithPool(nil, nil, nil, nil, nil, nil, nil)
 	if got := c.resolveDocker("node-1"); got != nil {
 		t.Errorf("resolveDocker with no pool/client = %v, want nil", got)
+	}
+}
+
+func TestResolveDocker_DoesNotUseLocalForUnavailableRemote(t *testing.T) {
+	local := &docker.Client{}
+	pool := docker.NewClientPool(nil, local, logger.New())
+	c := NewCollectorWithPool(nil, local, pool, nil, nil, nil, nil)
+
+	if got := c.resolveDocker("remote-1"); got != nil {
+		t.Fatalf("resolveDocker unavailable remote = %p, want nil", got)
+	}
+	if got := c.resolveDocker("default"); got != local {
+		t.Fatalf("resolveDocker default = %p, want local client %p", got, local)
 	}
 }
 
