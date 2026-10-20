@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package files
 
 import (
@@ -329,7 +328,7 @@ func zipMethod(name string) uint16 {
 // basePath is the root directory used to calculate relative paths in the archive.
 // When compress is false all entries are stored uncompressed.
 // Returns the number of files archived.
-func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bool) (int, error) {
+func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bool, skip ...func(string) bool) (int, error) {
 	zw := zip.NewWriter(w)
 	defer zw.Close()
 
@@ -338,6 +337,11 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 			return zip.Store
 		}
 		return zipMethod(name)
+	}
+
+	var skipRel func(string) bool
+	if len(skip) > 0 {
+		skipRel = skip[0]
 	}
 
 	count := 0
@@ -358,6 +362,12 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 					return nil
 				}
 				rel, _ := filepath.Rel(basePath, path)
+				if skipRel != nil && skipRel(rel) {
+					if d.IsDir() {
+						return fs.SkipDir
+					}
+					return nil
+				}
 				if d.IsDir() {
 					// Add directory entry with trailing slash
 					_, err := zw.Create(rel + "/")
@@ -401,6 +411,9 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 			if !WithinReal(basePath, fullPath) {
 				return count, fmt.Errorf("invalid path: %s", p)
 			}
+			if skipRel != nil && skipRel(p) {
+				continue
+			}
 			header, err := zip.FileInfoHeader(info)
 			if err != nil {
 				return count, fmt.Errorf("failed to create header for %s: %w", p, err)
@@ -427,14 +440,14 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 }
 
 // CreateZipArchive creates a zip archive file on disk from the given paths.
-func CreateZipArchive(paths []string, basePath string, destPath string, compress bool) (int, error) {
+func CreateZipArchive(paths []string, basePath string, destPath string, compress bool, skip ...func(string) bool) (int, error) {
 	f, err := os.Create(destPath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create archive file: %w", err)
 	}
 	defer f.Close()
 
-	count, err := CreateZipToWriter(paths, basePath, f, compress)
+	count, err := CreateZipToWriter(paths, basePath, f, compress, skip...)
 	if err != nil {
 		os.Remove(destPath)
 		return 0, err
