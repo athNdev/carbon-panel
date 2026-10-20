@@ -7,7 +7,7 @@
 	import DataTable from '$lib/components/DataTable.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { pushToast } from '$lib/components/toast.svelte';
+	import { pushToast } from '$lib/components/toast.svelte.js';
 	import { call, nodeClient, workloadClient } from '$lib/api/client';
 	import { can } from '$lib/auth/permissions';
 	import { auth } from '$lib/auth/clerk.svelte';

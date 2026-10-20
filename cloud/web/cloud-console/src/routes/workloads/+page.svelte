@@ -7,7 +7,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { pushToast } from '$lib/components/toast.svelte';
+	import { pushToast } from '$lib/components/toast.svelte.js';
 	import { call, workloadClient, nodeClient } from '$lib/api/client';
 	import {
 		ListWorkloadsRequestSchema,
