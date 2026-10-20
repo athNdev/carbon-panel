@@ -302,7 +302,9 @@ func serve(configPath string, stderr io.Writer) error {
 
 	billingEnforcer := billing.NewQuotaEnforcer(billing.NewCatalog())
 	notifier := notify.NewDispatcher(nil)
+	notifier.UseDB(store.DB())
 	outbox := notify.NewOutbox(nil)
+	outbox.UseDB(store.DB())
 
 	reconciler := reconcile.New(reconcile.Options{
 		Store:    store,

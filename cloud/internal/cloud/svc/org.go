@@ -12,6 +12,7 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // OrgService implements OrgServiceHandler directly against db.Store.
@@ -257,32 +258,38 @@ func (s *OrgService) InviteMember(ctx context.Context, req *connect.Request[v1.I
 		Role:       role,
 		Status:     memberStatusInvited,
 	}
-	if err := q.Create(m).Error; err != nil {
+	err = q.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(m).Error; err != nil {
+			return err
+		}
+		txCtx := notify.ContextWithDB(ctx, tx)
+		if s.deps.Notifier != nil {
+			s.deps.Notifier.Dispatch(txCtx, notify.WebhookPayload{
+				EventID:   uuid.NewString(),
+				EventType: "org.invite.created",
+				OrgID:     principal.OrgID(ctx),
+				Timestamp: time.Now().Unix(),
+				Data: map[string]any{
+					"invitation_id": m.ID,
+					"email":         m.Email,
+					"role":          m.Role,
+				},
+			})
+		}
+		if s.deps.Outbox != nil {
+			s.deps.Outbox.EnqueueContext(
+				txCtx,
+				m.OrgID,
+				m.Email,
+				"Invitation to join organization",
+				fmt.Sprintf("You have been invited to join organization %s as a %s.", m.OrgID, m.Role),
+				fmt.Sprintf("<p>You have been invited to join organization <strong>%s</strong> as a <strong>%s</strong>.</p>", m.OrgID, m.Role),
+			)
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errOrgInvite)
-	}
-
-	if s.deps.Notifier != nil {
-		s.deps.Notifier.Dispatch(ctx, notify.WebhookPayload{
-			EventID:   uuid.NewString(),
-			EventType: "org.invite.created",
-			OrgID:     principal.OrgID(ctx),
-			Timestamp: time.Now().Unix(),
-			Data: map[string]any{
-				"invitation_id": m.ID,
-				"email":         m.Email,
-				"role":          m.Role,
-			},
-		})
-	}
-
-	if s.deps.Outbox != nil {
-		s.deps.Outbox.Enqueue(
-			m.OrgID,
-			m.Email,
-			"Invitation to join organization",
-			fmt.Sprintf("You have been invited to join organization %s as a %s.", m.OrgID, m.Role),
-			fmt.Sprintf("<p>You have been invited to join organization <strong>%s</strong> as a <strong>%s</strong>.</p>", m.OrgID, m.Role),
-		)
 	}
 
 	return connect.NewResponse(&v1.InviteMemberResponse{Invitation: invitedToProto(m)}), nil

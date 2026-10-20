@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
+	"gorm.io/gorm"
 )
 
 // EmailStatus represents delivery state of an outbox message.
@@ -74,6 +77,7 @@ type Outbox struct {
 	queue   []*EmailMessage
 	history []*EmailMessage
 	counter int
+	db      *gorm.DB
 }
 
 // NewOutbox initializes an email outbox.
@@ -88,6 +92,15 @@ func NewOutbox(sender EmailSender) *Outbox {
 
 // Enqueue adds an email to the pending outbox queue.
 func (o *Outbox) Enqueue(orgID, recipient, subject, bodyText, bodyHTML string) *EmailMessage {
+	return o.EnqueueContext(context.Background(), orgID, recipient, subject, bodyText, bodyHTML)
+}
+
+// EnqueueContext adds an email. A database on the outbox or a transaction in ctx
+// persists the row; otherwise the message stays in the process queue.
+func (o *Outbox) EnqueueContext(ctx context.Context, orgID, recipient, subject, bodyText, bodyHTML string) *EmailMessage {
+	if o.durable(ctx) {
+		return o.enqueueEmail(ctx, orgID, recipient, subject, bodyText, bodyHTML)
+	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
@@ -109,12 +122,23 @@ func (o *Outbox) Enqueue(orgID, recipient, subject, bodyText, bodyHTML string) *
 // PendingCount returns the number of unsent messages.
 func (o *Outbox) PendingCount() int {
 	o.mu.Lock()
+	gdb := o.db
+	o.mu.Unlock()
+	if gdb != nil {
+		var n int64
+		gdb.Model(&db.EmailOutbox{}).Where("status = ?", string(EmailStatusPending)).Count(&n)
+		return int(n)
+	}
+	o.mu.Lock()
 	defer o.mu.Unlock()
 	return len(o.queue)
 }
 
 // Flush processes all pending emails up to maxBatch, returning the count of successfully sent emails.
 func (o *Outbox) Flush(ctx context.Context, maxBatch int) (int, error) {
+	if o.db != nil {
+		return o.flushEmail(ctx, maxBatch)
+	}
 	o.mu.Lock()
 	if len(o.queue) == 0 {
 		o.mu.Unlock()
@@ -163,6 +187,9 @@ func (o *Outbox) Flush(ctx context.Context, maxBatch int) (int, error) {
 
 // History returns a copy of completed (sent or permanently failed) messages.
 func (o *Outbox) History() []*EmailMessage {
+	if o.db != nil {
+		return o.emailHistory()
+	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
