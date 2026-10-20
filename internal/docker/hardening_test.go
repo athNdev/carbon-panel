@@ -3,17 +3,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
 	"errors"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
 )
 
 func TestContainerHardening_ApplyOverrides(t *testing.T) {
@@ -76,6 +77,42 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 // ValidateDockerOverrides at the point they were submitted via
 // CreateServer/UpdateServer (internal/rpc/services/server.go). These tests
 // cover that gating function directly.
+
+func TestApplyServerRootfs_DefaultAndWritableOverride(t *testing.T) {
+	hostConfig := &container.HostConfig{
+		Mounts: []mount.Mount{{
+			Type:   mount.TypeBind,
+			Source: "/var/lib/carbon/srv",
+			Target: "/data",
+		}},
+	}
+	applyServerRootfs(hostConfig, nil)
+	if !hostConfig.ReadonlyRootfs {
+		t.Fatal("root filesystem must be read-only by default")
+	}
+	if hostConfig.Tmpfs["/tmp"] == "" {
+		t.Fatal("expected a /tmp tmpfs")
+	}
+	if hostConfig.Mounts[0].ReadOnly {
+		t.Fatal("/data must stay writable")
+	}
+
+	writable := &v1.DockerOverrides{Environment: map[string]string{writableRootfsEnv: "1"}}
+	applyServerRootfs(hostConfig, writable)
+	if hostConfig.ReadonlyRootfs {
+		t.Fatal("CARBON_WRITABLE_ROOTFS must turn off the read-only root")
+	}
+	if !IsPrivilegedDockerOverride(writable) {
+		t.Fatal("turning off the read-only root must require the elevated Docker permission")
+	}
+	config := &container.Config{}
+	ApplyOverrides(writable, config, hostConfig)
+	for _, env := range config.Env {
+		if strings.HasPrefix(env, writableRootfsEnv+"=") {
+			t.Fatalf("writable-root flag leaked into container env: %s", env)
+		}
+	}
+}
 
 func TestIsPrivilegedDockerOverride_BenignFieldsAreNotPrivileged(t *testing.T) {
 	benign := &v1.DockerOverrides{

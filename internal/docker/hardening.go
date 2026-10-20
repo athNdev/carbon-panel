@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -51,12 +50,27 @@ func isDangerousSecurityOpt(opt string) bool {
 	return ok && value == dangerousValue
 }
 
+// writableRootfsEnv removes the default read-only root. It is not passed
+// into the container. Images that write outside /data (unpacking into /opt
+// or /usr, for example) need this, and it requires the elevated Docker
+// permission because it weakens the default confinement.
+const writableRootfsEnv = "CARBON_WRITABLE_ROOTFS"
+
+func wantsWritableRootfs(overrides *v1.DockerOverrides) bool {
+	if overrides == nil {
+		return false
+	}
+	v := strings.TrimSpace(overrides.GetEnvironment()[writableRootfsEnv])
+	return v == "1" || strings.EqualFold(v, "true")
+}
+
 // IsPrivilegedDockerOverride reports whether the given overrides request any
 // genuinely dangerous, host-breakout-capable setting:
 //   - full --privileged mode
 //   - any added Linux capability (CapAdd)
 //   - a confinement-weakening SecurityOpt (apparmor:unconfined,
 //     seccomp:unconfined, label:disable, and their "=" spellings)
+//   - CARBON_WRITABLE_ROOTFS, which turns off the read-only root
 //
 // Benign fields (PidsLimit, CpusetCpus, ReadOnly, CapDrop,
 // "no-new-privileges:true", etc.) never make this return true.
@@ -68,6 +82,9 @@ func IsPrivilegedDockerOverride(overrides *v1.DockerOverrides) bool {
 		return true
 	}
 	if len(overrides.GetCapAdd()) > 0 {
+		return true
+	}
+	if wantsWritableRootfs(overrides) {
 		return true
 	}
 	for _, opt := range overrides.GetSecurityOpt() {
@@ -99,6 +116,9 @@ func PrivilegedOverrideFields(overrides *v1.DockerOverrides) map[string]any {
 	}
 	if len(dangerousSecOpts) > 0 {
 		fields["security_opt"] = dangerousSecOpts
+	}
+	if wantsWritableRootfs(overrides) {
+		fields["writable_rootfs"] = true
 	}
 	return fields
 }

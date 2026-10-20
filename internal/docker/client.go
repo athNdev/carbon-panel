@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -448,6 +447,9 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 	// Apply environment variable overrides
 	if len(overrides.GetEnvironment()) > 0 {
 		for key, value := range overrides.GetEnvironment() {
+			if key == writableRootfsEnv {
+				continue
+			}
 			config.Env = append(config.Env, fmt.Sprintf("%s=%s", key, value))
 		}
 	}
@@ -519,7 +521,11 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 
 	// Apply security settings
 	hostConfig.Privileged = overrides.GetPrivileged()
-	hostConfig.ReadonlyRootfs = overrides.GetReadOnly()
+	// A stored read_only=true keeps the root read-only. The zero value must
+	// not clear the Minecraft default applied by applyServerRootfs.
+	if overrides.GetReadOnly() {
+		hostConfig.ReadonlyRootfs = true
+	}
 	if len(overrides.GetSecurityOpt()) > 0 {
 		hostConfig.SecurityOpt = overrides.GetSecurityOpt()
 	}
@@ -563,6 +569,26 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 	// Apply DNS override
 	if len(overrides.GetDns()) > 0 {
 		hostConfig.DNS = parseDNSAddrs(overrides.GetDns())
+	}
+}
+
+// applyServerRootfs is the Minecraft container filesystem default.
+// The root is read-only and /tmp is a noexec tmpfs. The /data bind stays
+// writable, which is where the itzg image and the world live. Images that
+// must write outside /data (unpacking into /opt or /usr, for example) set
+// CARBON_WRITABLE_ROOTFS=1. That key is an elevated Docker override.
+func applyServerRootfs(hostConfig *container.HostConfig, overrides *v1.DockerOverrides) {
+	if hostConfig.Tmpfs == nil {
+		hostConfig.Tmpfs = map[string]string{}
+	}
+	if _, ok := hostConfig.Tmpfs["/tmp"]; !ok {
+		hostConfig.Tmpfs["/tmp"] = "rw,noexec,nosuid,size=64m"
+	}
+	hostConfig.ReadonlyRootfs = !wantsWritableRootfs(overrides)
+	for i := range hostConfig.Mounts {
+		if hostConfig.Mounts[i].Target == "/data" {
+			hostConfig.Mounts[i].ReadOnly = false
+		}
 	}
 }
 
@@ -858,6 +884,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		}
 	}
 	ApplyOverrides(server.DockerOverrides, config, hostConfig)
+	applyServerRootfs(hostConfig, server.DockerOverrides)
 
 	// Network configuration
 	networkConfig := &network.NetworkingConfig{}
