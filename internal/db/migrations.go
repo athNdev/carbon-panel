@@ -38,6 +38,7 @@ func allModels() []any {
 		&Node{},
 		&ServerSnapshot{},
 		&StagedConfigChange{},
+		&BackendPortLease{},
 	}
 }
 
