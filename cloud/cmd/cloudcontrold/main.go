@@ -31,6 +31,7 @@ import (
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/config"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/httpapi"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/keys"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/nodetype"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
@@ -346,15 +347,20 @@ func serve(configPath string, stderr io.Writer) error {
 	defer rateLimiter.Close()
 	httpapi.RateLimit = rateLimiter.Middleware
 
+	webhookCfg := auth.WebhookConfig{Tolerance: cfg.Clerk.WebhookTolerance}
+	if secret, err := secProvider.Get(ctx, keys.ClerkWebhookSecret); err == nil {
+		webhookCfg.Secret = secret
+	}
 	srv, err := httpapi.New(httpapi.Options{
-		Store:    store,
-		Services: services,
-		Verifier: verifier,
-		Engine:   engine,
-		Audits:   audits,
-		Metrics:  obs.NewMetrics(),
-		Logger:   logger,
-		Version:  version,
+		Store:        store,
+		Services:     services,
+		Verifier:     verifier,
+		Engine:       engine,
+		Audits:       audits,
+		Metrics:      obs.NewMetrics(),
+		Logger:       logger,
+		Version:      version,
+		ClerkWebhook: webhookCfg,
 	})
 	if err != nil {
 		return fmt.Errorf("httpapi: %w", err)

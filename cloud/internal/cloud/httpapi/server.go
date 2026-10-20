@@ -31,15 +31,16 @@ var RateLimit func(http.Handler) http.Handler
 // required; New fails otherwise. A nil Verifier disables Clerk session
 // JWTs (API keys still work when Store is set).
 type Options struct {
-	Store     *db.Store
-	Services  *svc.Services
-	Verifier  auth.Verifier
-	Engine    *rbac.Engine
-	Audits    audit.Store
-	Metrics   *obs.Metrics
-	Logger    *slog.Logger
-	Version   string
-	StaticDir string
+	Store        *db.Store
+	Services     *svc.Services
+	Verifier     auth.Verifier
+	Engine       *rbac.Engine
+	Audits       audit.Store
+	Metrics      *obs.Metrics
+	Logger       *slog.Logger
+	Version      string
+	StaticDir    string
+	ClerkWebhook auth.WebhookConfig
 }
 
 // Server serves health, readiness, metrics and all Connect-RPC services.

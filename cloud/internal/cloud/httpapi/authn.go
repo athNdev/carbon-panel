@@ -2,14 +2,15 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/audit"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/auth"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
-	"github.com/google/uuid"
 )
 
 // AuthOptions wires the authentication interceptor. A nil Verifier disables
@@ -18,7 +19,12 @@ type AuthOptions struct {
 	Verifier auth.Verifier
 	Store    *db.Store
 	Pepper   []byte
+	Audits   audit.Store
 }
+
+// errNotMember is a verified session with no recorded membership. It is
+// PermissionDenied, not a bad credential.
+var errNotMember = errors.New("membership required")
 
 // AuthInterceptor resolves bearer credentials into a principal.Principal
 // before rbac runs. It is the first link in the chain: requests without
@@ -91,6 +97,9 @@ func (i *authInterceptor) authenticate(ctx context.Context, header, nodeIDHeader
 		return principal.WithPrincipal(ctx, p), nil
 	}
 	p, err := i.bySession(ctx, raw, orgHeader)
+	if errors.Is(err, errNotMember) {
+		return nil, connect.NewError(connect.CodePermissionDenied, errAuthFailed)
+	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errAuthFailed)
 	}
@@ -154,110 +163,64 @@ func (i *authInterceptor) byAPIKey(ctx context.Context, secret string) (principa
 	return p, nil
 }
 
-// bySession verifies a Clerk session JWT and maps the caller onto the control-plane
-// org and permissions. Unknown Clerk orgs fall back to X-Carbon-Org, existing
-// user memberships, or the bootstrap default org so single-tenant and dev sessions
-// succeed smoothly.
-func (i *authInterceptor) bySession(ctx context.Context, raw, orgHeader string) (principal.Principal, error) {
+// bySession verifies a Clerk session JWT. A token with no org claim stays a
+// session principal so CreateOrg can bootstrap. A token that names an org is
+// accepted only when that org and an invited or active membership already
+// exist. It does not create members and it does not attach an unknown Clerk
+// org to the default slug.
+func (i *authInterceptor) bySession(ctx context.Context, raw, _ string) (principal.Principal, error) {
 	claims, err := i.opts.Verifier.Verify(ctx, raw)
 	if err != nil {
 		return principal.Principal{}, errAuthFailed
 	}
 	p := auth.SessionPrincipal(claims)
-	if i.opts.Store == nil {
+	if i.opts.Store == nil || strings.TrimSpace(claims.OrgID) == "" {
 		return p, nil
 	}
 
+	target := strings.TrimSpace(claims.OrgID)
 	var org db.Org
-	var foundOrg bool
-
-	targetOrg := strings.TrimSpace(claims.OrgID)
-	if targetOrg != "" {
-		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("clerk_org_id = ? OR id = ?", targetOrg, targetOrg).First(&org).Error; err == nil {
-			foundOrg = true
-		} else {
-			// Auto-link unlinked default organization if present
-			var defOrg db.Org
-			if err := i.opts.Store.Unscoped().WithContext(ctx).
-				Where("slug = ? AND (clerk_org_id IS NULL OR clerk_org_id = '')", "default").First(&defOrg).Error; err == nil {
-				clerkID := targetOrg
-				defOrg.ClerkOrgID = &clerkID
-				_ = i.opts.Store.Unscoped().WithContext(ctx).Save(&defOrg)
-				org = defOrg
-				foundOrg = true
-			}
-		}
+	if err := i.opts.Store.Unscoped().WithContext(ctx).
+		Where("clerk_org_id = ? OR id = ?", target, target).First(&org).Error; err != nil {
+		i.auditDeny(ctx, "", claims.Subject)
+		return principal.Principal{}, errNotMember
 	}
-
-	if !foundOrg && strings.TrimSpace(orgHeader) != "" {
-		h := strings.TrimSpace(orgHeader)
-		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("id = ? OR slug = ? OR clerk_org_id = ?", h, h, h).First(&org).Error; err == nil {
-			foundOrg = true
-		}
+	var member db.Member
+	err = i.opts.Store.Unscoped().WithContext(ctx).
+		Where("org_id = ? AND user_id = ? AND status IN ?", org.ID, claims.Subject, []string{"active", "invited"}).
+		First(&member).Error
+	if err != nil {
+		i.auditDeny(ctx, org.ID, claims.Subject)
+		return principal.Principal{}, errNotMember
 	}
-
-	if !foundOrg {
-		// Check if user has an existing membership in any org
-		var mem db.Member
-		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("user_id = ?", claims.Subject).First(&mem).Error; err == nil {
-			if err := i.opts.Store.Unscoped().WithContext(ctx).
-				Where("id = ?", mem.OrgID).First(&org).Error; err == nil {
-				foundOrg = true
-			}
-		}
+	if member.Status == "invited" {
+		_ = i.opts.Store.Unscoped().WithContext(ctx).Model(&member).Update("status", "active").Error
+		member.Status = "active"
 	}
-
-	if foundOrg {
-		p.OrgID = org.ID
+	p.OrgID = org.ID
+	if member.Role != "" {
+		p.Role = member.Role
 	}
-
-	if p.OrgID != "" {
-		var member db.Member
-		if err := i.opts.Store.Unscoped().WithContext(ctx).
-			Where("org_id = ? AND user_id = ?", p.OrgID, claims.Subject).
-			First(&member).Error; err == nil {
-			if member.Role != "" {
-				p.Role = member.Role
-			}
-			if member.Email != "" {
-				p.Email = member.Email
-			}
-		} else {
-			// Count existing non-bootstrap members in this organization:
-			var humanCount int64
-			_ = i.opts.Store.Unscoped().WithContext(ctx).Model(&db.Member{}).
-				Where("org_id = ? AND user_id != 'usr_bootstrap_owner'", p.OrgID).Count(&humanCount).Error
-
-			role := "operator"
-			if humanCount == 0 {
-				role = "owner"
-			} else if p.Role != "" {
-				role = p.Role
-			}
-
-			displayName := claims.Email
-			if displayName == "" {
-				displayName = claims.Subject
-			}
-			m := db.Member{
-				TenantBase:  db.TenantBase{ID: uuid.NewString(), OrgID: p.OrgID},
-				UserID:      claims.Subject,
-				Email:       claims.Email,
-				DisplayName: displayName,
-				Role:        role,
-				Status:      "active",
-			}
-			if err := i.opts.Store.Unscoped().WithContext(ctx).Create(&m).Error; err == nil {
-				p.Role = m.Role
-				if m.Email != "" {
-					p.Email = m.Email
-				}
-			}
-		}
+	if member.Email != "" {
+		p.Email = member.Email
 	}
-
 	return p, nil
+}
+
+func (i *authInterceptor) auditDeny(ctx context.Context, orgID, userID string) {
+	if i.opts.Audits == nil || orgID == "" {
+		return
+	}
+	actx := principal.WithPrincipal(ctx, principal.Principal{
+		Kind:   principal.KindSession,
+		UserID: userID,
+		OrgID:  orgID,
+	})
+	_ = i.opts.Audits.Append(actx, audit.Event{
+		OrgID:       orgID,
+		ActorKind:   string(principal.KindSession),
+		ActorUserID: userID,
+		Action:      "auth.membership_denied",
+		Result:      audit.ResultDenied,
+	})
 }

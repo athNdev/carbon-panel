@@ -18,8 +18,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /readyz", s.handleReadyz)
 	s.mux.Handle("GET /metrics", s.metrics.Handler())
 
+	s.mux.HandleFunc("POST /webhooks/clerk", s.handleClerkWebhook)
+
 	chain := connect.WithInterceptors(
-		AuthInterceptor(AuthOptions{Verifier: s.opts.Verifier, Store: s.opts.Store}),
+		AuthInterceptor(AuthOptions{Verifier: s.opts.Verifier, Store: s.opts.Store, Audits: s.opts.Audits}),
 		rbac.Interceptor(s.opts.Engine, rbac.Options{}),
 		audit.Interceptor(s.opts.Audits, audit.Options{}),
 	)

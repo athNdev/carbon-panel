@@ -207,11 +207,20 @@ func TestPersonalUserClerkSessionAuth(t *testing.T) {
 		t.Fatalf("create defOrg: %v", err)
 	}
 
+	if err := store.DB().Create(&db.Member{
+		TenantBase: db.TenantBase{ID: "mem-google", OrgID: defOrg.ID},
+		UserID:     "user_google_123",
+		Email:      "googleuser@example.com",
+		Role:       "owner",
+		Status:     "active",
+	}).Error; err != nil {
+		t.Fatalf("create member: %v", err)
+	}
 	mv := &mockVerifier{
 		claims: auth.Claims{
 			Subject: "user_google_123",
 			Email:   "googleuser@example.com",
-			OrgID:   "", // empty personal Clerk session
+			OrgID:   defOrg.ID,
 		},
 	}
 	chain := connect.WithInterceptors(
@@ -239,7 +248,6 @@ func TestPersonalUserClerkSessionAuth(t *testing.T) {
 	client := connect.NewClient[v1.ListNodesRequest, v1.ListNodesResponse](http.DefaultClient, ts.URL+"/cloud.v1.NodeService/ListNodes")
 	req := connect.NewRequest(&v1.ListNodesRequest{})
 	req.Header().Set("Authorization", "Bearer dummy-jwt")
-	req.Header().Set("X-Carbon-Org", "default")
 	res, err := client.CallUnary(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected call to succeed, got %v", err)
