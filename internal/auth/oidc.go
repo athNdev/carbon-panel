@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package auth
 
 import (
@@ -19,14 +18,15 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	"github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/google/uuid"
 	"github.com/tidwall/gjson"
 	"golang.org/x/oauth2"
 )
@@ -42,6 +42,12 @@ type OIDCHandler struct {
 	log          *logger.Logger
 }
 
+// oidcInsecureSkipVerify reports whether config skip_tls_verify may disable
+// IdP certificate checks. The config flag alone never does (MINE-197).
+func oidcInsecureSkipVerify(requested bool) bool {
+	return requested && os.Getenv("CARBON_ALLOW_INSECURE_OIDC_TLS") == "1"
+}
+
 func NewOIDCHandler(manager *Manager, store *db.Store, cfg *config.OIDCConfig, log *logger.Logger) (*OIDCHandler, error) {
 	if !cfg.Enabled {
 		return &OIDCHandler{
@@ -53,13 +59,15 @@ func NewOIDCHandler(manager *Manager, store *db.Store, cfg *config.OIDCConfig, l
 	}
 
 	var httpClient *http.Client
-	if cfg.SkipTLSVerify {
+	if oidcInsecureSkipVerify(cfg.SkipTLSVerify) {
 		httpClient = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 		}
-		log.Warn("OIDC: TLS verification disabled")
+		log.Warn("OIDC: TLS verification disabled because CARBON_ALLOW_INSECURE_OIDC_TLS=1")
+	} else if cfg.SkipTLSVerify && log != nil {
+		log.Warn("OIDC skip_tls_verify is set but ignored; set CARBON_ALLOW_INSECURE_OIDC_TLS=1 to honor it")
 	}
 
 	ctx := context.Background()
