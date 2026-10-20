@@ -34,6 +34,11 @@ database:
   max_connections: 25
   max_idle_conns: 5
   conn_max_lifetime: 300
+  # Daily VACUUM INTO snapshot under storage.data_dir/backups. "off" disables it.
+  # Restore: stop the panel, replace the database file with panel-YYYYMMDD.sqlite, start.
+  # There is no automatic restore. This is not Litestream.
+  panel_backup: daily
+  panel_backup_keep: 7
 
 # Docker configuration
 docker:

@@ -150,6 +150,12 @@ type DatabaseConfig struct {
 	MaxIdleConns    int    `mapstructure:"max_idle_conns" json:"max_idle_conns"`
 	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime" json:"conn_max_lifetime"`
 	AutoMigrate     bool   `mapstructure:"auto_migrate" json:"auto_migrate"`
+	// PanelBackup is "daily" or "off". Daily writes a VACUUM INTO snapshot of
+	// this database. It is not Litestream and it does not restore automatically.
+	PanelBackup string `mapstructure:"panel_backup" json:"panel_backup"`
+	// PanelBackupKeep is how many daily snapshots to retain. Older files are
+	// removed only after a new snapshot passes integrity_check.
+	PanelBackupKeep int `mapstructure:"panel_backup_keep" json:"panel_backup_keep"`
 }
 
 type MinecraftConfig struct {
@@ -242,6 +248,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.max_idle_conns", 5)
 	v.SetDefault("database.conn_max_lifetime", 300)
 	v.SetDefault("database.auto_migrate", true)
+	v.SetDefault("database.panel_backup", "daily")
+	v.SetDefault("database.panel_backup_keep", 7)
 
 	// Docker defaults
 	v.SetDefault("docker.sync_interval", 5)
