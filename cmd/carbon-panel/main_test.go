@@ -34,6 +34,7 @@ func TestShouldAutoStartOnBoot_StartsOrdinaryServers(t *testing.T) {
 		{"stopped with auto-start enabled", &storage.Server{AutoStart: true, Status: storage.StatusStopped}, true},
 		{"running with auto-start enabled", &storage.Server{AutoStart: true, Status: storage.StatusRunning}, true},
 		{"starting with auto-start enabled", &storage.Server{AutoStart: true, Status: storage.StatusStarting}, true},
+		{"creating is left to the in-flight create", &storage.Server{AutoStart: true, Status: storage.StatusCreating}, false},
 		{"auto-start disabled", &storage.Server{AutoStart: false, Status: storage.StatusStopped}, false},
 		{"detached servers are left alone", &storage.Server{AutoStart: true, Detached: true, Status: storage.StatusStopped}, false},
 		{"paused servers still auto-start", &storage.Server{AutoStart: true, Status: storage.StatusPaused}, true},

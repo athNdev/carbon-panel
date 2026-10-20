@@ -1752,7 +1752,10 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
 		}
-		server.Status = storage.StatusRunning
+		// Record starting so the reconciler emits SERVER_START once when it
+		// observes the container running. Unpause, create, and StartServer
+		// share that writer.
+		server.Status = storage.StatusStarting
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			resumeErr := fmt.Errorf("server resumed but status could not be saved: %w", err)
 			rollbackErr := s.rollbackPausedResume(ctx, dockerCli, server)
@@ -1761,7 +1764,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		if s.proxy != nil && server.ProxyHostname != "" {
 			_ = s.proxy.UpdateServerRoute(server)
 		}
-		return connect.NewResponse(&v1.StartServerResponse{Status: "running"}), nil
+		return connect.NewResponse(&v1.StartServerResponse{Status: "starting"}), nil
 	}
 
 	if needsStagedRecreate && server.ContainerID != "" {
@@ -1927,13 +1930,8 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server started but temporary config could not be cleared: %w", err))
 	}
 
-	// Emit the server-start event
-	if s.bus != nil {
-		s.bus.Emit(ctx, events.Event{
-			Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
-			ServerID: server.ID,
-		})
-	}
+	// SERVER_START is emitted by the reconciler when status becomes running,
+	// so create, unpause, and this RPC share one announcement.
 
 	// Audit trail (MINE-141): never break the op on audit failure.
 	s.auditPower(ctx, req.Peer().Addr, activity.EventServerStart, server.ID)
