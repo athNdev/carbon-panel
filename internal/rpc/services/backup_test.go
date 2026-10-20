@@ -318,3 +318,55 @@ func TestBackupService_RestoreBackup_ConcurrencyAndRestoringStatus(t *testing.T)
 		t.Fatalf("expected restore to succeed after release, got err=%v", err)
 	}
 }
+
+func TestDeleteBackupKeepsRecordWhenRemoteDeleteFails(t *testing.T) {
+	store := setupTestStore(t)
+	defer func() { _ = store.Close() }()
+	log := logger.New()
+	svc := NewBackupService(store, nil, nil, appconfig.S3Config{}, log)
+	enforcer, err := rbac.NewEnforcer(store.DB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := enforcer.SeedDefaultPolicies(false); err != nil {
+		t.Fatal(err)
+	}
+	svc.SetEnforcer(enforcer)
+	ctx := auth.WithUser(context.Background(), &auth.AuthenticatedUser{ID: "u-admin", Username: "admin", Roles: []string{"admin"}})
+
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "world.zip")
+	if err := os.WriteFile(archive, []byte("zip"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rec := newBackupRecord("b-remote", "srv-bak", archive)
+	rec.RemoteKey = "backups/world.zip"
+	if err := store.CreateBackupRecord(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	svc.remoteDelete = func(context.Context, string) error {
+		return os.ErrPermission
+	}
+
+	_, err = svc.DeleteBackup(ctx, connect.NewRequest(&v1.DeleteBackupRequest{Id: rec.ID}))
+	if connect.CodeOf(err) != connect.CodeUnavailable {
+		t.Fatalf("code = %v, err = %v", connect.CodeOf(err), err)
+	}
+	if _, statErr := os.Stat(archive); statErr != nil {
+		t.Fatalf("local archive removed on remote failure: %v", statErr)
+	}
+	if _, getErr := store.GetBackupRecord(ctx, rec.ID); getErr != nil {
+		t.Fatalf("record dropped on remote failure: %v", getErr)
+	}
+
+	svc.remoteDelete = func(context.Context, string) error { return nil }
+	if _, err := svc.DeleteBackup(ctx, connect.NewRequest(&v1.DeleteBackupRequest{Id: rec.ID})); err != nil {
+		t.Fatalf("retry after remote success: %v", err)
+	}
+	if _, statErr := os.Stat(archive); !os.IsNotExist(statErr) {
+		t.Fatalf("archive still present after successful remote delete: %v", statErr)
+	}
+	if _, getErr := store.GetBackupRecord(ctx, rec.ID); getErr == nil {
+		t.Fatal("record still present after successful delete")
+	}
+}
