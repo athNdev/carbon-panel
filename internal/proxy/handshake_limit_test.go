@@ -29,8 +29,11 @@ func TestHandshakeLimiterPerIP(t *testing.T) {
 
 func TestHandshakeLimiterDisabled(t *testing.T) {
 	lim := newHandshakeLimiter(0)
-	if !lim.allow("10.0.0.1") || !lim.allow("10.0.0.1") {
-		t.Fatal("a zero interval must not limit handshakes")
+	if !lim.allow("10.0.0.1") {
+		t.Fatal("a zero interval must allow the first handshake")
+	}
+	if !lim.allow("10.0.0.1") {
+		t.Fatal("a zero interval must allow the next handshake")
 	}
 }
 

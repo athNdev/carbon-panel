@@ -11,14 +11,14 @@ import (
 
 func TestHandshakeRateLimitSharesStatusAndLogin(t *testing.T) {
 	backend := acceptBackend(t)
-	defer backend.Close()
+	defer func() { _ = backend.Close() }()
 
 	proxy := NewMinecraftProxy(&Config{
 		ListenAddr:     "127.0.0.1:0",
 		LoginRateLimit: time.Hour,
 	})
 	require.NoError(t, proxy.Start())
-	defer proxy.Stop()
+	defer func() { _ = proxy.Stop() }()
 
 	proxy.AddRoute("srv", "play.example", "127.0.0.1", backend.Addr().(*net.TCPAddr).Port)
 	addr := proxy.listener.Addr().String()
@@ -35,14 +35,14 @@ func TestHandshakeRateLimitSharesStatusAndLogin(t *testing.T) {
 
 func TestHandshakeRateLimitExpires(t *testing.T) {
 	backend := acceptBackend(t)
-	defer backend.Close()
+	defer func() { _ = backend.Close() }()
 
 	proxy := NewMinecraftProxy(&Config{
 		ListenAddr:     "127.0.0.1:0",
 		LoginRateLimit: 40 * time.Millisecond,
 	})
 	require.NoError(t, proxy.Start())
-	defer proxy.Stop()
+	defer func() { _ = proxy.Stop() }()
 
 	proxy.AddRoute("srv", "play.example", "127.0.0.1", backend.Addr().(*net.TCPAddr).Port)
 	addr := proxy.listener.Addr().String()
@@ -74,7 +74,7 @@ func acceptBackend(t *testing.T) *countingBackend {
 			}
 			b.accepted.Add(1)
 			go func(c net.Conn) {
-				defer c.Close()
+				defer func() { _ = c.Close() }()
 				pkt, err := ReadHandshakePacket(c)
 				if err == nil && pkt != nil {
 					_ = WriteHandshakePacket(c, pkt)
