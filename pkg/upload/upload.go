@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package upload
 
 import (
@@ -32,6 +31,7 @@ var (
 	ErrInvalidChunkSize = errors.New("invalid chunk size")
 	ErrChunkTooLarge    = errors.New("chunk exceeds declared chunk size")
 	ErrUploadOverflow   = errors.New("chunk would exceed declared total size")
+	ErrInvalidOffset    = errors.New("invalid upload offset")
 )
 
 // Session represents an active upload session
@@ -241,6 +241,9 @@ func (m *Manager) WriteStream(sessionID string, r io.Reader, offset int64) (byte
 	if err != nil {
 		return 0, false, err
 	}
+	if offset < 0 || offset > session.TotalSize {
+		return 0, false, fmt.Errorf("%w: %d for total size %d", ErrInvalidOffset, offset, session.TotalSize)
+	}
 
 	// Validate state under lock
 	session.mu.Lock()
@@ -261,6 +264,10 @@ func (m *Manager) WriteStream(sessionID string, r io.Reader, offset int64) (byte
 	for {
 		n, readErr := r.Read(buf)
 		if n > 0 {
+			if pos+int64(n) > session.TotalSize {
+				return pos - offset, false, fmt.Errorf("%w: stream at offset %d exceeds total size %d",
+					ErrUploadOverflow, pos, session.TotalSize)
+			}
 			_, writeErr := file.WriteAt(buf[:n], pos)
 			if writeErr != nil {
 				return pos - offset, false, fmt.Errorf("failed to write: %w", writeErr)
