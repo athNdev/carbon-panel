@@ -27,6 +27,10 @@ server:
   write_timeout: 15
   idle_timeout: 60
   user_agent: "CarbonPanel/1.0 (github.com/athNdev/carbon-panel)"
+  # Trust X-Forwarded-Host for the WebSocket origin check only behind a proxy you control.
+  trust_proxy: false
+  # Extra browser origins allowed to open the console. Empty keeps same-host only.
+  # allowed_origins: ["https://panel.example.com"]
 
 # Database configuration
 database:
