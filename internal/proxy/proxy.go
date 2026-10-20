@@ -38,7 +38,7 @@ type Route struct {
 type WakeHandler func(ctx context.Context, serverID string) error
 
 // ActivityHandler defines a callback fired when a client shows real login
-// intent (handshake NextState=2) for a server. Status pings are excluded so
+// intent (handshake NextState 2 or 3) for a server. Status pings are excluded so
 // scanners and server-list refreshes can never hold a server awake (MINE-120).
 type ActivityHandler func(serverID string)
 
@@ -50,4 +50,8 @@ type Config struct {
 	WakeHandler      WakeHandler     // Callback to unpause hibernated container upon player connect (MINE-18)
 	ActivityHandler  ActivityHandler // Callback to reset idle tracking upon login intent (MINE-120)
 	SleepWakeHandler WakeHandler     // Callback to boot a deeply-asleep container upon login intent (MINE-121)
+	// AcceptsTransfers controls handshake NextState=3. Nil accepts transfers
+	// (Carbon's default). A pointer to false disconnects them before wake or dial.
+	// Velocity defaults the same switch to false; this panel is a hostname router.
+	AcceptsTransfers *bool
 }

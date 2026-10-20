@@ -88,3 +88,12 @@ func TestReadHandshakePacket_ExtendedForgeModpack(t *testing.T) {
 		t.Errorf("unexpected parsed packet: %+v", pkt)
 	}
 }
+
+func TestIsLoginIntent(t *testing.T) {
+	if isLoginIntent(1) {
+		t.Fatal("status is not login intent")
+	}
+	if !isLoginIntent(2) || !isLoginIntent(3) {
+		t.Fatal("login and transfer are login intent")
+	}
+}

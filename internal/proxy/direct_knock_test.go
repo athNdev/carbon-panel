@@ -495,3 +495,78 @@ func TestDirectKnock_LoginIntentWithLoginStartPacket(t *testing.T) {
 		t.Fatalf("expected disconnect message to mention Carbon and deep sleep, got: %s", msg)
 	}
 }
+
+func TestDirectKnock_TransferIntent_Wakes(t *testing.T) {
+	port := getFreePort(t)
+	var woke atomic.Bool
+	mgr := NewDirectKnockManager(func(ctx context.Context, serverID string) error {
+		if serverID == "srv-transfer" {
+			woke.Store(true)
+		}
+		return nil
+	}, logger.New())
+	srv := &db.Server{ID: "srv-transfer", Name: "Transfer", Port: port, Status: db.StatusDeepSleep}
+	if err := mgr.StartKnock(srv); err != nil {
+		t.Fatalf("StartKnock failed: %v", err)
+	}
+	defer mgr.StopAll()
+
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+	if _, err := conn.Write(buildTestHandshakePacket(767, "127.0.0.1", uint16(port), 3)); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && !woke.Load() {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !woke.Load() {
+		t.Fatal("transfer handshake must wake a direct-knock server")
+	}
+}
+
+func TestDirectKnock_TransferRejectedWhenDisabled(t *testing.T) {
+	port := getFreePort(t)
+	var woke atomic.Bool
+	mgr := NewDirectKnockManager(func(ctx context.Context, serverID string) error {
+		woke.Store(true)
+		return nil
+	}, logger.New())
+	mgr.SetAcceptsTransfers(false)
+	srv := &db.Server{ID: "srv-transfer-off", Name: "TransferOff", Port: port, Status: db.StatusDeepSleep}
+	if err := mgr.StartKnock(srv); err != nil {
+		t.Fatalf("StartKnock failed: %v", err)
+	}
+	defer mgr.StopAll()
+
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+	if _, err := conn.Write(buildTestHandshakePacket(767, "127.0.0.1", uint16(port), 3)); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	respLen, err := ReadVarInt(conn)
+	if err != nil {
+		t.Fatalf("read length: %v", err)
+	}
+	respData := make([]byte, respLen)
+	if _, err := io.ReadFull(conn, respData); err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if !strings.Contains(string(respData), "not accepted") {
+		t.Fatalf("expected transfer rejection, got %q", respData)
+	}
+	time.Sleep(150 * time.Millisecond)
+	if woke.Load() {
+		t.Fatal("disabled transfers must not wake")
+	}
+	if !mgr.HasKnock(srv.ID) {
+		t.Fatal("rejected transfer must leave the knock listener up")
+	}
+}
