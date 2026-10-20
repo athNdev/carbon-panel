@@ -2,18 +2,18 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"syscall"
+
+	"github.com/athNdev/carbon-panel/cmd/geyser/pin"
 )
 
 const (
 	geyserJar  = "/opt/geyser/Geyser.jar"
-	geyserURL  = "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/standalone"
 	dataDir    = "/data"
 	configFile = "/data/config.yml"
 )
@@ -30,10 +30,10 @@ func main() {
 		fatal("failed to chown data dir: %v", err)
 	}
 
-	// Download Geyser if not present
+	// Download the pinned Geyser jar if the image did not bake one in.
 	if _, err := os.Stat(geyserJar); os.IsNotExist(err) {
-		fmt.Println("Downloading latest Geyser standalone...")
-		if err := downloadGeyser(); err != nil {
+		fmt.Println("Downloading pinned Geyser standalone...")
+		if err := downloadGeyser(geyserJar); err != nil {
 			fatal("failed to download geyser: %v", err)
 		}
 	}
@@ -90,29 +90,8 @@ func main() {
 	}
 }
 
-func downloadGeyser() error {
-	if err := os.MkdirAll(filepath.Dir(geyserJar), 0755); err != nil {
-		return err
-	}
-
-	resp, err := http.Get(geyserURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	f, err := os.Create(geyserJar)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = io.Copy(f, resp.Body)
-	return err
+func downloadGeyser(dest string) error {
+	return pin.Fetch(http.DefaultClient, pin.URL, dest, pin.SHA256, pin.MaxBytes)
 }
 
 func generateConfig() error {
