@@ -3,11 +3,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -217,6 +217,7 @@ func TestThrottleLockoutThenExpiry(t *testing.T) {
 		if allowed, _ := th.Allow(key); !allowed {
 			t.Fatalf("attempt %d should be allowed before the threshold", i+1)
 		}
+
 		th.Failure(key)
 	}
 
@@ -231,5 +232,66 @@ func TestThrottleLockoutThenExpiry(t *testing.T) {
 	now = now.Add(16 * time.Minute)
 	if allowed, _ := th.Allow(key); !allowed {
 		t.Fatal("lockout must expire after the cooldown")
+	}
+}
+
+func TestTokenAndRecoveryKeyLifecycle(t *testing.T) {
+	m, store := newTestManager(t, &config.AuthConfig{
+		SessionTimeout: 3600,
+		JWTSecret:      "test-secret-value-0123456789",
+		Local:          config.LocalConfig{Enabled: true},
+	})
+	ctx := t.Context()
+
+	user, err := m.CreateLocalUser(ctx, "lifecycle", "", "Lifecycle!2345")
+	if err != nil {
+		t.Fatalf("CreateLocalUser: %v", err)
+	}
+	apiToken, record, err := m.GenerateAPIToken(ctx, user.ID, "test", nil)
+	if err != nil {
+		t.Fatalf("GenerateAPIToken: %v", err)
+	}
+	authenticated, err := m.ValidateAPIToken(ctx, apiToken)
+	if err != nil {
+		t.Fatalf("ValidateAPIToken: %v", err)
+	}
+	if authenticated.ID != user.ID {
+		t.Fatalf("API token resolved user %q, want %q", authenticated.ID, user.ID)
+	}
+	if _, err := m.ValidateAPIToken(ctx, "dp_unknown"); !errors.Is(err, ErrAPITokenNotFound) {
+		t.Fatalf("unknown API token error = %v, want ErrAPITokenNotFound", err)
+	}
+	expired := time.Now().Add(-time.Minute)
+	record.ExpiresAt = &expired
+	if err := store.DB().Save(record).Error; err != nil {
+		t.Fatalf("expire API token: %v", err)
+	}
+	if _, err := m.ValidateAPIToken(ctx, apiToken); !errors.Is(err, ErrAPITokenExpired) {
+		t.Fatalf("expired API token error = %v, want ErrAPITokenExpired", err)
+	}
+
+	_, _, sessionToken, _, err := m.Login(ctx, "lifecycle", "Lifecycle!2345")
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if _, err := m.ValidateSession(ctx, sessionToken); err != nil {
+		t.Fatalf("session before logout: %v", err)
+	}
+	if err := m.Logout(ctx, sessionToken); err != nil {
+		t.Fatalf("Logout: %v", err)
+	}
+	if _, err := m.ValidateSession(ctx, sessionToken); err == nil {
+		t.Fatal("session remained valid after logout")
+	}
+
+	recoveryKey := m.GetRecoveryKey()
+	if recoveryKey == "" {
+		t.Fatal("expected recovery key")
+	}
+	if err := m.UseRecoveryKey(ctx, recoveryKey); err != nil {
+		t.Fatalf("UseRecoveryKey: %v", err)
+	}
+	if err := m.UseRecoveryKey(ctx, recoveryKey); !errors.Is(err, ErrInvalidRecoveryKey) {
+		t.Fatalf("reused recovery key error = %v, want ErrInvalidRecoveryKey", err)
 	}
 }
