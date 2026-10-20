@@ -32,19 +32,29 @@ func (dk *directKnockListener) close() {
 // DirectKnockManager manages direct port TCP listeners for deeply-asleep servers
 // that do not have a proxy hostname (i.e. direct-port servers).
 type DirectKnockManager struct {
-	mu          sync.Mutex
-	knocks      map[string]*directKnockListener // serverID -> listener
-	wakeHandler WakeHandler
-	logger      *logger.Logger
+	mu               sync.Mutex
+	knocks           map[string]*directKnockListener // serverID -> listener
+	wakeHandler      WakeHandler
+	logger           *logger.Logger
+	acceptsTransfers bool
 }
 
 // NewDirectKnockManager creates a new DirectKnockManager.
 func NewDirectKnockManager(wakeHandler WakeHandler, log *logger.Logger) *DirectKnockManager {
 	return &DirectKnockManager{
-		knocks:      make(map[string]*directKnockListener),
-		wakeHandler: wakeHandler,
-		logger:      log,
+		knocks:           make(map[string]*directKnockListener),
+		wakeHandler:      wakeHandler,
+		logger:           log,
+		acceptsTransfers: true,
 	}
+}
+
+// SetAcceptsTransfers disables handshake NextState=3 when false.
+// The default is true (MINE-203). Velocity's accepts-transfers defaults to false.
+func (m *DirectKnockManager) SetAcceptsTransfers(accept bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.acceptsTransfers = accept
 }
 
 // SetWakeHandler updates the wake callback used when a client attempts to join.
@@ -122,7 +132,15 @@ func (m *DirectKnockManager) handleConn(conn net.Conn, dk *directKnockListener, 
 		return
 	}
 
-	if handshake.NextState == 2 {
+	m.mu.Lock()
+	acceptsTransfers := m.acceptsTransfers
+	m.mu.Unlock()
+	if handshake.NextState == 3 && !acceptsTransfers {
+		_ = sendLoginDisconnect(conn, "Transfers are not accepted by this server.")
+		return
+	}
+
+	if isLoginIntent(handshake.NextState) {
 		// Login intent: player wants to join!
 		if m.logger != nil {
 			m.logger.Info("Direct knock: login intent on port %d for server %s; closing listener and waking", dk.port, serverName)

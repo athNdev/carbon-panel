@@ -117,6 +117,10 @@ type ProxyConfig struct {
 	PortRangeMin int    `mapstructure:"port_range_min" json:"port_range_min"`
 	PortRangeMax int    `mapstructure:"port_range_max" json:"port_range_max"`
 	ValkeyURL    string `mapstructure:"valkey_url" json:"valkey_url"` // Valkey / Dragonfly Redis KV URL (e.g. redis://127.0.0.1:6379)
+	// AcceptsTransfers is handshake NextState=3. Nil and true both accept.
+	// Velocity defaults this to false; Carbon defaults to true because a
+	// rejected transfer is a player-visible outage on a hostname router (MINE-203).
+	AcceptsTransfers *bool `mapstructure:"accepts_transfers" json:"accepts_transfers"`
 }
 
 type ModuleConfig struct {
@@ -256,6 +260,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("proxy.listen_ports", []int{25565})
 	v.SetDefault("proxy.port_range_min", 25565)
 	v.SetDefault("proxy.port_range_max", 25665)
+	v.SetDefault("proxy.accepts_transfers", true)
 
 	// Module defaults
 	v.SetDefault("module.enabled", true)
