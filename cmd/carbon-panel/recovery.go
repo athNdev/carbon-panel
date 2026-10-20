@@ -60,6 +60,12 @@ func recoveryKeyPrintAllowed(explicit bool, lookup func(string) (string, bool)) 
 	return enabled
 }
 
+// announceExistingRecoveryKey logs the path of a key that was already stored.
+// It never prints the secret.
+func announceExistingRecoveryKey(w io.Writer, path string) {
+	fmt.Fprintf(w, "Recovery key unchanged at %s\n", path)
+}
+
 // announceRecoveryKey reports where the key lives, and only prints the secret
 // when allowPrint is true.
 func announceRecoveryKey(w io.Writer, key, path string, allowPrint bool) {
