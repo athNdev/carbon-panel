@@ -1074,19 +1074,28 @@ func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server,
 	}
 
 	dockerCli := s.dockerForNode(server.NodeID)
-	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
+	server.Status = storage.StatusStopping
+	if err := s.store.UpdateServer(ctx, server); err != nil {
+		return "", fmt.Errorf("failed to record stop: %w", err)
+	}
+	window := docker.DefaultStopWindow
+	if cfg, cfgErr := s.store.GetServerConfig(ctx, server.ID); cfgErr == nil {
+		window = docker.StopWindow(cfg)
+	}
+	found, err := dockerCli.StopContainerWithin(ctx, server.ContainerID, window)
 	if err != nil {
 		return "", fmt.Errorf("failed to stop: %w", err)
 	}
 	if !found {
 		server.ContainerID = ""
-		server.Status = storage.StatusStopped
-		s.store.UpdateServer(ctx, server)
+	}
+	server.Status = storage.StatusStopped
+	if err := s.store.UpdateServer(ctx, server); err != nil {
+		return "", fmt.Errorf("server stopped but status could not be saved: %w", err)
+	}
+	if !found {
 		return "container not found, marked as stopped", nil
 	}
-
-	server.Status = storage.StatusStopping
-	s.store.UpdateServer(ctx, server)
 
 	return "server stopped successfully", nil
 }

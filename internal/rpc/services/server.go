@@ -1780,12 +1780,12 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 				server.Status = storage.StatusError
 				_ = s.store.UpdateServer(ctx, server)
 				for _, rec := range appliedStaged {
-				if _, rbErr := s.store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil {
-					s.log.Error("Failed to auto-rollback staged config %s after start error: %v", rec.ID, rbErr)
-				} else {
-					s.log.Warn("Auto-rolled back staged config %s due to start failure", rec.ID)
+					if _, rbErr := s.store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil {
+						s.log.Error("Failed to auto-rollback staged config %s after start error: %v", rec.ID, rbErr)
+					} else {
+						s.log.Warn("Auto-rolled back staged config %s due to start failure", rec.ID)
+					}
 				}
-			}
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start recreated server: %w", err))
 			}
 		}
@@ -1986,7 +1986,33 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 		}
 	}
 
-	found, err := dockerCli.StopContainer(ctx, server.ContainerID)
+	window := docker.DefaultStopWindow
+	if cfg, cfgErr := s.store.GetServerConfig(ctx, server.ID); cfgErr == nil {
+		window = docker.StopWindow(cfg)
+	}
+
+	// Persist stopping before the save window so a panel restart resumes the
+	// stop instead of starting the JVM again.
+	server.Status = storage.StatusStopping
+	if err := s.store.UpdateServer(ctx, server); err != nil {
+		s.log.Error("Failed to persist stopping status: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to record stop: %w", err))
+	}
+
+	// Drop the player route before the save wait so the proxy is not held open.
+	if s.proxy != nil {
+		if server.ProxyHostname != "" {
+			if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
+				s.log.Error("Failed to remove proxy route: %v", err)
+			}
+		} else {
+			s.proxy.StopDirectKnock(server.ID)
+		}
+	}
+
+	stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), window+15*time.Second)
+	defer stopCancel()
+	found, err := dockerCli.StopContainerWithin(stopCtx, server.ContainerID, window)
 	if err != nil {
 		s.log.Error("Failed to stop container: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop server"))
@@ -2002,17 +2028,6 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		s.log.Error("Failed to update server status: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("server stopped but status could not be saved: %w", err))
-	}
-
-	// Remove proxy route or direct knock listener
-	if s.proxy != nil {
-		if server.ProxyHostname != "" {
-			if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
-				s.log.Error("Failed to remove proxy route: %v", err)
-			}
-		} else {
-			s.proxy.StopDirectKnock(server.ID)
-		}
 	}
 
 	// Emit the server-stop event
