@@ -16,7 +16,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -579,6 +581,17 @@ func (s *FileService) GetExtractionStatus(ctx context.Context, req *connect.Requ
 // bytes, and ContentLength may be absent or simply wrong.
 const maxRemoteDownloadBytes = 1024 * 1024 * 1024 // 1 GiB
 
+func remoteArchiveFilename(rawURL string) string {
+	parsedURL, err := url.Parse(rawURL)
+	if err == nil {
+		if name := path.Base(parsedURL.Path); name != "" && name != "." && name != ".." &&
+			!strings.HasSuffix(parsedURL.Path, "/") {
+			return name
+		}
+	}
+	return "downloaded_archive.zip"
+}
+
 // DownloadRemoteArchive downloads an archive from a remote URL (GitHub releases, S3, CDN) with progress, checksum validation, and optional auto-extraction
 func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Request[v1.DownloadRemoteArchiveRequest]) (*connect.Response[v1.DownloadRemoteArchiveResponse], error) {
 	msg := req.Msg
@@ -724,15 +737,12 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 			}
 		} else {
 			// Infer filename from URL
-			parts := strings.Split(rawURL, "/")
-			fileName := parts[len(parts)-1]
-			if idx := strings.Index(fileName, "?"); idx != -1 {
-				fileName = fileName[:idx]
-			}
-			if fileName == "" {
-				fileName = "downloaded_archive.zip"
-			}
+			fileName := remoteArchiveFilename(rawURL)
 			targetPath := filepath.Join(destPath, fileName)
+			if !files.WithinReal(server.DataPath, targetPath) {
+				op.fail("downloaded filename resolves outside the server data directory")
+				return
+			}
 			if _, err := tmpFile.Seek(0, 0); err != nil {
 				op.fail(fmt.Sprintf("failed to rewind downloaded archive: %v", err))
 				return

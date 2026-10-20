@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -24,6 +23,19 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
+
+func TestRemoteArchiveFilenameDoesNotEscapeDestination(t *testing.T) {
+	tests := map[string]string{
+		"https://example.test/releases/../../outside.zip?download=1": "outside.zip",
+		"https://example.test/releases/":                             "downloaded_archive.zip",
+		"://invalid":                                                 "downloaded_archive.zip",
+	}
+	for rawURL, want := range tests {
+		if got := remoteArchiveFilename(rawURL); got != want {
+			t.Errorf("remoteArchiveFilename(%q) = %q, want %q", rawURL, got, want)
+		}
+	}
+}
 
 func createTestZip(t *testing.T, filename, content string) ([]byte, string) {
 	buf := new(bytes.Buffer)
