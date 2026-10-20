@@ -286,6 +286,9 @@ type Client struct {
 	logStreamer ContainerLogStreamer
 	log         *logger.Logger
 	firewall    *FirewallManager
+	// gameStop overrides the rcon-cli stop used before Docker's timeout.
+	// Production leaves it nil.
+	gameStop func(ctx context.Context, containerID string) error
 }
 
 // Auto manage streams at the client level when set
@@ -1215,54 +1218,29 @@ func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error
 	return allocated, nil
 }
 
-// StopContainer stops a container. Returns (containerFound, error).
-// If container doesn't exist, returns (false, nil) so caller can clean up stale references.
+// StopContainer stops a container using the default save window.
+// Returns (containerFound, error). A missing container returns (false, nil).
 func (c *Client) StopContainer(ctx context.Context, containerID string) (bool, error) {
-	// Stop log streaming before stopping container
+	return c.StopContainerWithin(ctx, containerID, DefaultStopWindow)
+}
+
+// StopContainerWithin asks the JVM to stop, then waits window before SIGKILL.
+func (c *Client) StopContainerWithin(ctx context.Context, containerID string, window time.Duration) (bool, error) {
 	if c.logStreamer != nil {
 		c.logStreamer.StopStreaming(containerID)
 	}
 
-	// First try graceful stop with a short timeout
-	timeout := 5 // seconds
-	_, err := c.docker.ContainerStop(ctx, containerID, client.ContainerStopOptions{
-		Timeout: &timeout,
-	})
-
-	if err != nil {
-		// If container non-existent on stop
-		if errdefs.IsNotFound(err) {
-			c.log.Debug("Container %s not found, treating as already stopped", containerID)
-			return false, nil
-		}
-
-		// In Docker, a paused container cannot be stopped or killed directly (error: "container is paused").
-		// If the container is paused, unpause it first so stopping or killing succeeds.
-		if inspectResult, inspErr := c.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{}); inspErr == nil && inspectResult.Container.State != nil && inspectResult.Container.State.Paused {
-			c.log.Info("Container %s is paused; unpausing before stop/kill", containerID)
-			_ = c.UnpauseContainer(ctx, containerID)
-			if _, retryErr := c.docker.ContainerStop(ctx, containerID, client.ContainerStopOptions{Timeout: &timeout}); retryErr == nil {
-				return true, nil
-			}
-		}
-
-		// If graceful stop fails, force kill the container. Use a dedicated
-		// timeout context: the caller's context may already be cancelled or
-		// nearly expired, and a kill that inherits it would never be sent.
-		c.log.Warn("Graceful stop failed for container %s: %v, attempting force kill", containerID, err)
-		killCtx, killCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
-		defer killCancel()
-		_, killErr := c.docker.ContainerKill(killCtx, containerID, client.ContainerKillOptions{Signal: "KILL"})
-		if killErr != nil {
-			// If container non-existent on kill
-			if errdefs.IsNotFound(killErr) {
-				return false, nil
-			}
-			return false, fmt.Errorf("failed to stop container: graceful stop error: %v, force kill error: %v", err, killErr)
-		}
+	err := applyStopLadder(ctx, clientStopDriver{c: c}, containerID, window)
+	if err == nil {
+		return true, nil
 	}
-
-	return true, nil
+	if errors.Is(err, errContainerGone) {
+		if c.log != nil {
+			c.log.Debug("Container %s not found, treating as already stopped", containerID)
+		}
+		return false, nil
+	}
+	return false, fmt.Errorf("failed to stop container: %w", err)
 }
 
 func (c *Client) RemoveContainer(ctx context.Context, containerID string) error {
