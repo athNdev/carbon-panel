@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/pkg/mcstatus"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
@@ -472,13 +472,13 @@ func (r *DockerRunner) GetMetrics(ctx context.Context, workloadID string) (*v1.W
 	defer rconCancel()
 
 	if listOut, err := r.RunCommand(rconCtx, workloadID, "list"); err == nil && listOut != "" {
-		count, sample := minecraft.ParsePlayerListFromOutput(listOut)
+		count, sample := mcstatus.ParsePlayerListFromOutput(listOut)
 		playersOnline = int32(count)
 		playerSample = sample
 	}
 
 	if tpsOut, err := r.RunCommand(rconCtx, workloadID, "tps"); err == nil && tpsOut != "" {
-		if parsedTPS := minecraft.ParseTPSFromOutput(tpsOut); parsedTPS > 0 {
+		if parsedTPS := mcstatus.ParseTPSFromOutput(tpsOut); parsedTPS > 0 {
 			tps = parsedTPS
 		}
 	}

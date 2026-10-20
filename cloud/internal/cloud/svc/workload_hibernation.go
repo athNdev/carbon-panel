@@ -9,8 +9,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
-	"github.com/athNdev/carbon-panel/internal/proxy"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/cloud/v1"
+	"github.com/athNdev/carbon-panel/pkg/routing"
 	"github.com/google/uuid"
 )
 
@@ -270,14 +270,14 @@ func (s *WorkloadService) SyncIngressRoutes(ctx context.Context, req *connect.Re
 		valkeyAddr = os.Getenv("REDIS_ADDR")
 	}
 	if valkeyAddr != "" {
-		client := proxy.NewRespClient(valkeyAddr, os.Getenv("VALKEY_PASSWORD"))
+		client := routing.NewRespClient(valkeyAddr, os.Getenv("VALKEY_PASSWORD"))
 		defer func() { _ = client.Close() }()
 
 		syncCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()
 
 		for _, r := range routes {
-			_ = client.SetRoute(syncCtx, r.Hostname, &proxy.RouteInfo{
+			_ = client.SetRoute(syncCtx, r.Hostname, &routing.RouteInfo{
 				ServerID:    r.WorkloadId,
 				Hostname:    r.Hostname,
 				BackendHost: r.BackendHost,
