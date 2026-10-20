@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -52,6 +51,8 @@ type extractionOp struct {
 	FilesExtracted atomic.Int32
 	Error          string
 	CompletedAt    time.Time
+	ServerID       string
+	UserID         string
 }
 
 func (o *extractionOp) fail(msg string) {
@@ -522,9 +523,14 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 
-	// Start async extraction
+	// Start async extraction. Status reads fail closed unless this caller
+	// is the same user (MINE-186).
 	opID := uuid.New().String()
-	op := &extractionOp{State: "extracting"}
+	userID := ""
+	if user := auth.GetUserFromContext(ctx); user != nil {
+		userID = user.ID
+	}
+	op := &extractionOp{State: "extracting", ServerID: server.ID, UserID: userID}
 	s.extractions.Store(opID, op)
 
 	go func() {
@@ -550,6 +556,10 @@ func (s *FileService) GetExtractionStatus(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("extraction operation not found"))
 	}
 	op := val.(*extractionOp)
+	user := auth.GetUserFromContext(ctx)
+	if user == nil || op.UserID == "" || op.ServerID == "" || user.ID != op.UserID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("extraction status denied"))
+	}
 	state, errMsg, _ := op.snapshot()
 
 	return connect.NewResponse(&v1.GetExtractionStatusResponse{
