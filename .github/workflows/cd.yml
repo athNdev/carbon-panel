@@ -75,6 +75,8 @@ jobs:
           echo "Password character count: ${#PASS_CLEAN}"
           if [[ "$USER_CLEAN" =~ @ ]]; then
             echo "::error::DOCKER_HUB_USERNAME appears to be an email address. Docker Hub requires your personal Docker ID (username), not email!"
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
           if [ "$USER_CLEAN" = "athndev" ]; then
             echo "::warning::'athndev' is a Docker Hub Organization name, not a personal user account. In Docker Hub, 'docker login' requires the personal Docker ID (username) of an account with push permissions in 'athndev'."
@@ -114,6 +116,27 @@ jobs:
             echo "has_creds=true" >> "$GITHUB_OUTPUT"
             echo "login_ok=true" >> "$GITHUB_OUTPUT"
             echo "Docker CLI login succeeded."
+
+            # Fail fast if this account cannot push. A login can succeed
+            # while the push is later denied (insufficient_scope), which
+            # otherwise only shows up after the full multi-arch build.
+            echo "Checking push permission on athndev/carbon-panel..."
+            TOKEN=$(curl -s -u "$USER_CLEAN:$PASS_CLEAN" \
+              "https://auth.docker.io/token?service=registry.docker.io&scope=repository:athndev/carbon-panel:push,pull" \
+              | jq -r '.token // empty')
+            PAYLOAD=$(printf '%s' "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
+            while [ $(( ${#PAYLOAD} % 4 )) -ne 0 ]; do PAYLOAD="$PAYLOAD="; done
+            ACTIONS=$(printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null \
+              | jq -r '[.access[]? | select(.name == "athndev/carbon-panel") | .actions[]] | join(",")' 2>/dev/null || true)
+            echo "Granted actions on athndev/carbon-panel: ${ACTIONS:-none}"
+            case ",$ACTIONS," in
+              *,push,*) echo "Push permission confirmed." ;;
+              *)
+                echo "has_creds=false" >> "$GITHUB_OUTPUT"
+                echo "::error::Docker Hub login works but this account has no push access to athndev/carbon-panel. Use a Docker ID that is a member of the athndev organization with write access, and a PAT with Read & Write scope (not Read-only)."
+                exit 1
+                ;;
+            esac
           else
             LOGIN_STATUS=$?
             echo "has_creds=false" >> "$GITHUB_OUTPUT"
