@@ -299,6 +299,21 @@ type Client struct {
 	gameStop func(ctx context.Context, containerID string) error
 }
 
+// IsRemote reports whether this client talks to a Docker daemon whose
+// filesystem is not the panel process's filesystem. Remote daemons create bind
+// sources through Docker's mount handling; the panel must not create a same-
+// named directory locally and accidentally treat it as server storage.
+func (c *Client) IsRemote() bool {
+	if c == nil {
+		return false
+	}
+	host := strings.ToLower(strings.TrimSpace(c.host))
+	return strings.HasPrefix(host, "tcp://") ||
+		strings.HasPrefix(host, "ssh://") ||
+		strings.HasPrefix(host, "http://") ||
+		strings.HasPrefix(host, "https://")
+}
+
 // Auto manage streams at the client level when set
 func (c *Client) SetLogStreamer(ls ContainerLogStreamer) {
 	c.logStreamer = ls
@@ -799,8 +814,13 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	// Handle path translation when Carbon Panel runs in a container
 	dataPath := TranslateToHostPath(server.DataPath)
 
-	if err := os.MkdirAll(server.DataPath, 0755); err != nil {
-		return "", fmt.Errorf("failed to create server data directory: %w", err)
+	// A remote daemon owns the bind source path. Creating it in the panel
+	// process would only create an unrelated local directory with the same
+	// name; CreateMountpoint asks Docker to create it on the target node.
+	if !c.IsRemote() {
+		if err := os.MkdirAll(dataPath, 0755); err != nil {
+			return "", fmt.Errorf("failed to create server data directory: %w", err)
+		}
 	}
 
 	config := &container.Config{
