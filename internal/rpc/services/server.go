@@ -1752,10 +1752,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
 		}
-		// Record starting so the reconciler emits SERVER_START once when it
-		// observes the container running. Unpause, create, and StartServer
-		// share that writer.
-		server.Status = storage.StatusStarting
+		server.Status = storage.StatusRunning
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			resumeErr := fmt.Errorf("server resumed but status could not be saved: %w", err)
 			rollbackErr := s.rollbackPausedResume(ctx, dockerCli, server)
@@ -1764,7 +1761,15 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		if s.proxy != nil && server.ProxyHostname != "" {
 			_ = s.proxy.UpdateServerRoute(server)
 		}
-		return connect.NewResponse(&v1.StartServerResponse{Status: "starting"}), nil
+		// Unpause lands on running inside this RPC, so it announces here.
+		// Create and StartServer announce from the reconciler when it records running.
+		if s.bus != nil {
+			s.bus.Emit(ctx, events.Event{
+				Type:     v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_SERVER_START,
+				ServerID: server.ID,
+			})
+		}
+		return connect.NewResponse(&v1.StartServerResponse{Status: "running"}), nil
 	}
 
 	if needsStagedRecreate && server.ContainerID != "" {
