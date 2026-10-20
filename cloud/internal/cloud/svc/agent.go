@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/billing"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/db"
+	"github.com/athNdev/carbon-panel/cloud/internal/cloud/keys"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/node"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/notify"
 	"github.com/athNdev/carbon-panel/cloud/internal/cloud/principal"
@@ -107,10 +108,41 @@ func (s *AgentService) JoinNode(ctx context.Context, req *connect.Request[v1.Joi
 	}), nil
 }
 
-// RenewCredentials rotates a node client certificate. There is no CA lane
-// yet, so this is a typed not-implemented rather than a fake certificate.
+// RenewCredentials signs a node CSR with the control-plane CA. The private
+// key stays on the node: the response carries the certificate and CA only.
+// A missing CA fails closed and does not invent a certificate (MINE-174).
+// mTLS enforcement on the agent stream is a later slice.
 func (s *AgentService) RenewCredentials(ctx context.Context, req *connect.Request[v1.RenewCredentialsRequest]) (*connect.Response[v1.RenewCredentialsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errAgentCreds)
+	ca, err := s.loadNodeCA(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errAgentCAMissing)
+	}
+	certPEM, _, notAfter, err := ca.SignCSR(req.Msg.GetCsrPem(), 24*time.Hour)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	return connect.NewResponse(&v1.RenewCredentialsResponse{
+		Identity: &v1.NodeIdentity{
+			ClientCertPem: certPEM,
+			CaCertPem:     ca.CertPEM(),
+			ExpiresAtUnix: notAfter.Unix(),
+		},
+	}), nil
+}
+
+func (s *AgentService) loadNodeCA(ctx context.Context) (*keys.CA, error) {
+	if s.deps.Secrets == nil {
+		return nil, keys.ErrCAMissing
+	}
+	certPEM, err := s.deps.Secrets.Get(ctx, keys.NodeCACert)
+	if err != nil {
+		return nil, keys.ErrCAMissing
+	}
+	keyPEM, err := s.deps.Secrets.Get(ctx, keys.NodeCAKey)
+	if err != nil {
+		return nil, keys.ErrCAMissing
+	}
+	return keys.ParseCA(certPEM, keyPEM)
 }
 
 // Connect serves the agent bidi stream: hello→welcome, heartbeats applied

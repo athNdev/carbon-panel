@@ -76,6 +76,6 @@ var (
 	errWorkloadDelete   = errors.New("svc: could not delete workload")
 	errWorkloadEvents   = errors.New("svc: could not list workload events")
 
-	errAgentJoin  = errors.New("svc: node join failed")
-	errAgentCreds = errors.New("svc: credential renewal is not implemented by the control plane")
+	errAgentJoin      = errors.New("svc: node join failed")
+	errAgentCAMissing = errors.New("svc: control-plane CA is not configured")
 )
