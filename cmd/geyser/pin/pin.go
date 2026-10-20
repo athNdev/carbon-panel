@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -23,6 +24,14 @@ const (
 	SHA256   = "3e235b5112110665a53ed3b42c0b8d514021c50184c01380aa5b01d52ee1f636"
 	MaxBytes = 80 << 20
 	host     = "download.geysermc.org"
+)
+
+// Floodgate Spigot 2.2.5 build 141. Vars so tests can point Fetch at a
+// local server. Production values stay pinned (MINE-195).
+var (
+	FloodgateURL      = "https://download.geysermc.org/v2/projects/floodgate/versions/2.2.5/builds/141/downloads/spigot"
+	FloodgateSHA256   = "21570aff9ce17d6983928e8552777760e1ede5050026b04c686b0ae112e6fd7e"
+	FloodgateMaxBytes = int64(20 << 20)
 )
 
 // Fetch writes rawURL to dest when the body matches wantSHA and every
@@ -81,4 +90,44 @@ func Fetch(client *http.Client, rawURL, dest, wantSHA string, maxBytes int64) er
 		return fmt.Errorf("geyser checksum mismatch")
 	}
 	return os.Rename(tmpName, dest)
+}
+
+// RemoteAuthType defaults to floodgate. Offline auth lets a Bedrock client
+// claim any Java name, so it stays off unless allowOffline is true.
+func RemoteAuthType(raw, allowOffline string) (string, error) {
+	auth := strings.ToLower(strings.TrimSpace(raw))
+	if auth == "" {
+		auth = "floodgate"
+	}
+	switch auth {
+	case "floodgate", "online":
+		return auth, nil
+	case "offline":
+		if strings.TrimSpace(allowOffline) == "1" {
+			return "offline", nil
+		}
+		return "", fmt.Errorf("offline auth is refused unless GEYSER_ALLOW_OFFLINE_AUTH=1")
+	default:
+		return "", fmt.Errorf("unsupported REMOTE_AUTH_TYPE %q", auth)
+	}
+}
+
+// InstallFloodgate downloads the pinned Floodgate Spigot jar into pluginsDir
+// when that directory exists and the jar is not already there.
+func InstallFloodgate(pluginsDir string, client *http.Client) error {
+	if strings.TrimSpace(pluginsDir) == "" {
+		return nil
+	}
+	info, err := os.Stat(pluginsDir)
+	if err != nil || !info.IsDir() {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Join(pluginsDir, "floodgate"), 0o755); err != nil {
+		return err
+	}
+	dest := filepath.Join(pluginsDir, "floodgate-spigot.jar")
+	if _, err := os.Stat(dest); err == nil {
+		return nil
+	}
+	return Fetch(client, FloodgateURL, dest, FloodgateSHA256, FloodgateMaxBytes)
 }
