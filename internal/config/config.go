@@ -134,6 +134,8 @@ type ProxyConfig struct {
 	// Velocity defaults this to false; Carbon defaults to true because a
 	// rejected transfer is a player-visible outage on a hostname router (MINE-203).
 	AcceptsTransfers *bool `mapstructure:"accepts_transfers" json:"accepts_transfers"`
+	// LoginRateLimitMS is the per-IP gap between Gate handshakes. 0 disables.
+	LoginRateLimitMS int `mapstructure:"login_ratelimit_ms" json:"login_ratelimit_ms"`
 }
 
 type ModuleConfig struct {
@@ -274,6 +276,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("proxy.port_range_min", 25565)
 	v.SetDefault("proxy.port_range_max", 25665)
 	v.SetDefault("proxy.accepts_transfers", true)
+	v.SetDefault("proxy.login_ratelimit_ms", 3000)
 
 	// Module defaults
 	v.SetDefault("module.enabled", true)
