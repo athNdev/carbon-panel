@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // WebhookSubscription defines an endpoint configured to receive tenant events.
@@ -136,6 +138,7 @@ type Dispatcher struct {
 	subscriptions map[string]*WebhookSubscription // keyed by subscription ID
 	attempts      []DeliveryAttempt
 	deadLetters   []DeadLetter
+	db            *gorm.DB
 }
 
 // NewDispatcher initializes a webhook dispatcher.
@@ -164,7 +167,13 @@ func (d *Dispatcher) Unregister(id string) {
 }
 
 // Dispatch sends an event to all matching subscriptions for the event's org with a single attempt.
+// When a database is attached, the event is stored and delivered later by Relay so the RPC
+// does not call the tenant URL. A transaction on ctx (ContextWithDB) is used when present.
 func (d *Dispatcher) Dispatch(ctx context.Context, payload WebhookPayload) []DeliveryAttempt {
+	if d.durable(ctx) {
+		d.enqueueWebhook(ctx, payload)
+		return nil
+	}
 	return d.DispatchWithRetries(ctx, payload, 0, 0)
 }
 

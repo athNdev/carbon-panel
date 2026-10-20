@@ -87,6 +87,7 @@ type ReconcileResult struct {
 	DegradedWorkloads int
 	PurgedTokens      int64
 	FlushedEmails     int
+	FlushedWebhooks   int
 }
 
 // Run executes the reconciliation loop at the given interval until ctx is cancelled.
@@ -143,7 +144,21 @@ func (r *Reconciler) ReconcileOnce(ctx context.Context) (ReconcileResult, error)
 	}
 	res.FlushedEmails = flushed
 
+	webhooks, err := r.FlushWebhooks(ctx, DefaultFlushBatch)
+	if err != nil {
+		return res, fmt.Errorf("flush webhooks: %w", err)
+	}
+	res.FlushedWebhooks = webhooks
+
 	return res, nil
+}
+
+// FlushWebhooks delivers pending webhook rows. No-op when the dispatcher has no store.
+func (r *Reconciler) FlushWebhooks(ctx context.Context, maxBatch int) (int, error) {
+	if r.notifier == nil {
+		return 0, nil
+	}
+	return r.notifier.Relay(ctx, maxBatch)
 }
 
 // ReconcileNodes detects silent nodes whose heartbeats have expired, marks them offline,

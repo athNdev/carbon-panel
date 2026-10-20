@@ -62,6 +62,12 @@ func migrations() []*gormigrate.Migration {
 				return tx.AutoMigrate(&WorkloadSchedule{}, &ScheduleExecution{})
 			},
 		},
+		{
+			ID: "0006_notify_outbox",
+			Migrate: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&WebhookEvent{}, &WebhookAttempt{}, &EmailOutbox{})
+			},
+		},
 	}
 }
 
@@ -96,5 +102,8 @@ func tenantModels() []any {
 		&ScheduleExecution{},
 		&AuditEvent{},
 		&RoleBinding{},
+		&WebhookEvent{},
+		&WebhookAttempt{},
+		&EmailOutbox{},
 	}
 }

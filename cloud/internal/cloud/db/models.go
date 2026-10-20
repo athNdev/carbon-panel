@@ -353,3 +353,52 @@ func (e *ScheduleExecution) BeforeCreate(*gorm.DB) error {
 	}
 	return nil
 }
+
+// WebhookEvent is a durable outbound webhook waiting for the relay (MINE-199).
+type WebhookEvent struct {
+	TenantBase
+	EventType     string     `gorm:"size:128;not null;index"`
+	Payload       string     `gorm:"type:text;not null"`
+	Status        string     `gorm:"size:32;not null;index;default:pending"`
+	Attempts      int        `gorm:"not null;default:0"`
+	NextAttemptAt *time.Time `gorm:"index"`
+	LastError     string     `gorm:"type:text;not null;default:''"`
+}
+
+func (WebhookEvent) TableName() string { return "webhook_events" }
+
+// WebhookAttempt is one HTTP try against a tenant endpoint.
+type WebhookAttempt struct {
+	ID          string `gorm:"primaryKey;size:36"`
+	OrgID       string `gorm:"size:36;not null;index"`
+	EventID     string `gorm:"size:36;not null;index"`
+	StatusCode  int
+	Error       string `gorm:"type:text;not null;default:''"`
+	Success     bool
+	AttemptedAt time.Time
+}
+
+func (WebhookAttempt) TableName() string   { return "webhook_attempts" }
+func (WebhookAttempt) IsTenantOwned() bool { return true }
+func (a *WebhookAttempt) BeforeCreate(*gorm.DB) error {
+	if a.ID == "" {
+		a.ID = newID()
+	}
+	return nil
+}
+
+// EmailOutbox is a durable outbound email (MINE-199).
+type EmailOutbox struct {
+	TenantBase
+	Recipient     string `gorm:"not null"`
+	Subject       string `gorm:"not null"`
+	BodyText      string `gorm:"type:text;not null"`
+	BodyHTML      string `gorm:"type:text;not null;default:''"`
+	Status        string `gorm:"size:32;not null;index;default:pending"`
+	Attempts      int    `gorm:"not null;default:0"`
+	LastError     string `gorm:"type:text;not null;default:''"`
+	NextAttemptAt *time.Time
+	SentAt        *time.Time
+}
+
+func (EmailOutbox) TableName() string { return "email_outbox" }
