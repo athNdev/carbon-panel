@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -24,17 +23,19 @@ import (
 
 // MinecraftProxy handles Minecraft protocol proxying with handshake parsing for hostname-based routing
 type MinecraftProxy struct {
-	listener         net.Listener
-	routes           map[string]*Route
-	routesMutex      sync.RWMutex
-	logger           *logger.Logger
-	listenAddr       string
-	proxyProtocol    bool
-	wakeHandler      WakeHandler
-	activityHandler  ActivityHandler
-	sleepWakeHandler WakeHandler
-	acceptsTransfers bool
-	handshakes       *handshakeLimiter
+	listener          net.Listener
+	routes            map[string]*Route
+	routesMutex       sync.RWMutex
+	logger            *logger.Logger
+	listenAddr        string
+	proxyProtocol     bool
+	wakeHandler       WakeHandler
+	activityHandler   ActivityHandler
+	sleepWakeHandler  WakeHandler
+	acceptsTransfers  bool
+	handshakes        *handshakeLimiter
+	hibernatedMOTD    string
+	hibernatedFavicon string
 	// waking tracks hostnames with a recent boot attempt so pings during
 	// boot serve the loading MOTD instead of the asleep one (MINE-121).
 	waking       map[string]time.Time
@@ -56,18 +57,20 @@ func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 		acceptsTransfers = *cfg.AcceptsTransfers
 	}
 	return &MinecraftProxy{
-		routes:           make(map[string]*Route),
-		logger:           log,
-		listenAddr:       cfg.ListenAddr,
-		proxyProtocol:    cfg.ProxyProtocol,
-		wakeHandler:      cfg.WakeHandler,
-		activityHandler:  cfg.ActivityHandler,
-		sleepWakeHandler: cfg.SleepWakeHandler,
-		acceptsTransfers: acceptsTransfers,
-		handshakes:       newHandshakeLimiter(cfg.LoginRateLimit),
-		waking:           make(map[string]time.Time),
-		ctx:              ctx,
-		cancel:           cancel,
+		routes:            make(map[string]*Route),
+		logger:            log,
+		listenAddr:        cfg.ListenAddr,
+		proxyProtocol:     cfg.ProxyProtocol,
+		wakeHandler:       cfg.WakeHandler,
+		activityHandler:   cfg.ActivityHandler,
+		sleepWakeHandler:  cfg.SleepWakeHandler,
+		acceptsTransfers:  acceptsTransfers,
+		handshakes:        newHandshakeLimiter(cfg.LoginRateLimit),
+		hibernatedMOTD:    cfg.HibernatedMOTD,
+		hibernatedFavicon: cfg.HibernatedFavicon,
+		waking:            make(map[string]time.Time),
+		ctx:               ctx,
+		cancel:            cancel,
 	}
 }
 
@@ -318,12 +321,19 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 	// Wake hibernated server container only on real login intent (MINE-118).
 	// Status pings (NextState=1: server-list refreshes, scanners, bots) must
 	// never wake or dial a hibernated backend — waking on any handshake is
-	// the pause/knock wake loop from the DiscoPanel report. A pinged
-	// hibernated route simply closes; the client sees the server as
-	// unreachable, same as mc-router with an empty asleep MOTD.
+	// the pause/knock wake loop from the DiscoPanel report. A ping gets the
+	// cached sleeping MOTD and the connection ends without a backend dial
+	// (MINE-206).
 	if route.Hibernated {
 		if !isLoginIntent(handshake.NextState) {
-			p.logger.Debug("Ignoring status ping for hibernated server %s (host %s): staying asleep", route.ServerID, hostname)
+			p.logger.Debug("Serving sleeping MOTD for hibernated server %s (host %s): staying asleep", route.ServerID, hostname)
+			motd := p.hibernatedMOTD
+			if motd == "" {
+				motd = hibernatedMOTD
+			}
+			if err := serveStatusResponseWithFavicon(clientConn, handshake.ProtocolVersion, motd, p.hibernatedFavicon); err != nil {
+				p.logger.Debug("Failed to serve hibernated MOTD for host %s: %v", hostname, err)
+			}
 			return
 		}
 		if p.wakeHandler == nil {

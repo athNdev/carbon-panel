@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -68,4 +67,9 @@ type Config struct {
 	// on this listen port. Zero disables the limit. Status and login share it.
 	// Established play sessions are not interrupted (MINE-204).
 	LoginRateLimit time.Duration
+	// HibernatedMOTD is the server-list text for a freezer-paused route.
+	// Empty uses the default that tells the player a join will wake the server.
+	HibernatedMOTD string
+	// HibernatedFavicon is an optional data URL sent with that status response.
+	HibernatedFavicon string
 }
