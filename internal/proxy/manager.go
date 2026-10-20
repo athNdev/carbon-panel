@@ -17,11 +17,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	db "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/moby/moby/client"
 )
 
 // Manager handles the lifecycle of the proxy and manages routes
@@ -54,10 +54,13 @@ func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dock
 		proxies:         make(map[int]Proxier),
 		directKnocks:    NewDirectKnockManager(nil, logger),
 		store:           store,
-		config:         &cfg.Proxy,
-		logger:         logger,
-		networkName:    cfg.Docker.NetworkName,
+		config:          &cfg.Proxy,
+		logger:          logger,
+		networkName:     cfg.Docker.NetworkName,
 		serverHostnames: make(map[string]string),
+	}
+	if cfg.Proxy.AcceptsTransfers != nil {
+		m.directKnocks.SetAcceptsTransfers(*cfg.Proxy.AcceptsTransfers)
 	}
 
 	if cfg.Proxy.ValkeyURL != "" {
@@ -231,6 +234,7 @@ func (m *Manager) Start() error {
 			WakeHandler:      m.wakeHandler,
 			ActivityHandler:  m.activityHandler,
 			SleepWakeHandler: m.sleepWakeHandler,
+			AcceptsTransfers: m.acceptsTransfers(),
 		})
 
 		m.proxies[listener.Port] = proxy
@@ -605,6 +609,13 @@ func (m *Manager) IsRunning() bool {
 	return false
 }
 
+func (m *Manager) acceptsTransfers() *bool {
+	if m.config == nil {
+		return nil
+	}
+	return m.config.AcceptsTransfers
+}
+
 // AddListener creates and starts a proxy instance for a new listener
 func (m *Manager) AddListener(listener *db.ProxyListener) error {
 	m.mu.Lock()
@@ -628,6 +639,7 @@ func (m *Manager) AddListener(listener *db.ProxyListener) error {
 		WakeHandler:      m.wakeHandler,
 		ActivityHandler:  m.activityHandler,
 		SleepWakeHandler: m.sleepWakeHandler,
+		AcceptsTransfers: m.acceptsTransfers(),
 	})
 
 	// Start the proxy
@@ -739,8 +751,9 @@ func (m *Manager) addPortRouteUnlocked(routeID, hostname, containerIP string, ho
 	if !exists {
 		listenAddr := fmt.Sprintf(":%d", hostPort)
 		cfg := &Config{
-			ListenAddr: listenAddr,
-			Logger:     m.logger,
+			ListenAddr:       listenAddr,
+			Logger:           m.logger,
+			AcceptsTransfers: m.acceptsTransfers(),
 		}
 
 		// Create appropriate proxy type based on protocol
@@ -939,7 +952,6 @@ func (m *Manager) handleRemoteRoutingEvent(event *RoutingEvent) {
 		}
 	}
 }
-
 
 // Creates default proxy listener if proxy is enabled
 func (m *Manager) EnsureDefaultListener() (*db.ProxyListener, error) {

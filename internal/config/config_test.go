@@ -33,6 +33,9 @@ func TestLoad_DefaultsWithoutFile(t *testing.T) {
 	if cfg.Proxy.PortRangeMin >= cfg.Proxy.PortRangeMax {
 		t.Errorf("default proxy range invalid: %d-%d", cfg.Proxy.PortRangeMin, cfg.Proxy.PortRangeMax)
 	}
+	if cfg.Proxy.AcceptsTransfers == nil || !*cfg.Proxy.AcceptsTransfers {
+		t.Errorf("default accepts_transfers = %v, want true", cfg.Proxy.AcceptsTransfers)
+	}
 	if cfg.Module.PortRangeMin >= cfg.Module.PortRangeMax {
 		t.Errorf("default module range invalid: %d-%d", cfg.Module.PortRangeMin, cfg.Module.PortRangeMax)
 	}
@@ -59,6 +62,17 @@ func TestLoad_YAMLFile(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("listen port %d missing from %v", cfg.Proxy.ListenPort, cfg.Proxy.ListenPorts)
+	}
+}
+
+func TestLoad_AcceptsTransfersFalse(t *testing.T) {
+	dir := writeConfigYAML(t, "proxy:\n  accepts_transfers: false\n")
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if cfg.Proxy.AcceptsTransfers == nil || *cfg.Proxy.AcceptsTransfers {
+		t.Fatalf("accepts_transfers = %v, want false", cfg.Proxy.AcceptsTransfers)
 	}
 }
 
