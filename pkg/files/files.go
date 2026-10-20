@@ -328,9 +328,17 @@ func zipMethod(name string) uint16 {
 // basePath is the root directory used to calculate relative paths in the archive.
 // When compress is false all entries are stored uncompressed.
 // Returns the number of files archived.
-func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bool, skip ...func(string) bool) (int, error) {
+func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bool, skip ...func(string) bool) (count int, err error) {
 	zw := zip.NewWriter(w)
-	defer zw.Close()
+	defer func() {
+		if closeErr := zw.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to finalize zip archive: %w", closeErr)
+			} else {
+				err = fmt.Errorf("%w (archive close: %v)", err, closeErr)
+			}
+		}
+	}()
 
 	method := func(name string) uint16 {
 		if !compress {
@@ -344,7 +352,6 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 		skipRel = skip[0]
 	}
 
-	count := 0
 	for _, p := range paths {
 		fullPath := filepath.Join(basePath, p)
 		info, err := os.Stat(fullPath)
@@ -440,16 +447,24 @@ func CreateZipToWriter(paths []string, basePath string, w io.Writer, compress bo
 }
 
 // CreateZipArchive creates a zip archive file on disk from the given paths.
-func CreateZipArchive(paths []string, basePath string, destPath string, compress bool, skip ...func(string) bool) (int, error) {
+func CreateZipArchive(paths []string, basePath string, destPath string, compress bool, skip ...func(string) bool) (count int, err error) {
 	f, err := os.Create(destPath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create archive file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to close archive file: %w", closeErr)
+			}
+		}
+		if err != nil {
+			_ = os.Remove(destPath)
+		}
+	}()
 
-	count, err := CreateZipToWriter(paths, basePath, f, compress, skip...)
+	count, err = CreateZipToWriter(paths, basePath, f, compress, skip...)
 	if err != nil {
-		os.Remove(destPath)
 		return 0, err
 	}
 	return count, nil
