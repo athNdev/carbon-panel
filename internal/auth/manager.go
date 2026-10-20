@@ -18,6 +18,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +30,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var (
@@ -56,11 +59,12 @@ const (
 )
 
 type Manager struct {
-	store       *db.Store
-	enforcer    *rbac.Enforcer
-	config      *config.AuthConfig
-	jwtSecret   []byte
-	recoveryKey string
+	store              *db.Store
+	enforcer           *rbac.Enforcer
+	config             *config.AuthConfig
+	jwtSecret          []byte
+	recoveryKey        string
+	recoveryKeyCreated bool
 
 	// allowNoAuth mirrors config.AuthConfig.AllowNoAuth: when false (default)
 	// the panel refuses to operate without a provider instead of granting
@@ -69,6 +73,7 @@ type Manager struct {
 }
 
 const jwtSecretSettingKey = "jwt_secret"
+const recoveryKeySettingKey = "recovery_key"
 
 func NewManager(store *db.Store, enforcer *rbac.Enforcer, cfg *config.AuthConfig) (*Manager, error) {
 	ctx := context.Background()
@@ -98,19 +103,15 @@ func NewManager(store *db.Store, enforcer *rbac.Enforcer, cfg *config.AuthConfig
 		}
 	}
 
-	// Generate recovery key
-	recoveryBytes := make([]byte, 32)
-	if _, err := rand.Read(recoveryBytes); err != nil {
-		return nil, fmt.Errorf("failed to generate recovery key: %w", err)
-	}
-
 	m := &Manager{
 		store:       store,
 		enforcer:    enforcer,
 		config:      cfg,
 		jwtSecret:   secret,
-		recoveryKey: hex.EncodeToString(recoveryBytes),
 		allowNoAuth: cfg.AllowNoAuth,
+	}
+	if err := m.loadRecoveryKey(ctx); err != nil {
+		return nil, err
 	}
 
 	m.loadSettingOverrides(ctx)
@@ -539,12 +540,99 @@ func (m *Manager) GetRecoveryKey() string {
 	return m.recoveryKey
 }
 
+// RecoveryKeyCreated reports whether this process generated a new key.
+// Later starts adopt the stored key and must not print it again.
+func (m *Manager) RecoveryKeyCreated() bool {
+	return m.recoveryKeyCreated
+}
+
+// loadRecoveryKey prefers the system setting, then an existing recovery.key
+// file, and generates only when neither exists (MINE-209).
+func (m *Manager) loadRecoveryKey(ctx context.Context) error {
+	stored, err := m.store.GetSystemSetting(ctx, recoveryKeySettingKey)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("read recovery key setting: %w", err)
+	}
+	if err != nil {
+		stored = ""
+	}
+	stored = strings.TrimSpace(stored)
+	if stored != "" {
+		m.recoveryKey = stored
+		return m.syncRecoveryKeyFile(stored)
+	}
+	if m.config != nil && m.config.RecoveryKeyFile != "" {
+		raw, readErr := os.ReadFile(m.config.RecoveryKeyFile)
+		if readErr == nil {
+			if key := strings.TrimSpace(string(raw)); key != "" {
+				m.recoveryKey = key
+				if err := m.store.SetSystemSetting(ctx, recoveryKeySettingKey, key); err != nil {
+					return fmt.Errorf("persist recovery key from file: %w", err)
+				}
+				return nil
+			}
+		} else if !os.IsNotExist(readErr) {
+			return fmt.Errorf("read recovery key file: %w", readErr)
+		}
+	}
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return fmt.Errorf("generate recovery key: %w", err)
+	}
+	key := hex.EncodeToString(buf)
+	if err := m.store.SetSystemSetting(ctx, recoveryKeySettingKey, key); err != nil {
+		return fmt.Errorf("persist recovery key: %w", err)
+	}
+	if err := m.syncRecoveryKeyFile(key); err != nil {
+		return err
+	}
+	m.recoveryKey = key
+	m.recoveryKeyCreated = true
+	return nil
+}
+
+func (m *Manager) syncRecoveryKeyFile(key string) error {
+	if m.config == nil || m.config.RecoveryKeyFile == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(m.config.RecoveryKeyFile), 0o700); err != nil {
+		return fmt.Errorf("create recovery key dir: %w", err)
+	}
+	return os.WriteFile(m.config.RecoveryKeyFile, []byte(key), 0o600)
+}
+
+// RotateRecoveryKey replaces the break-glass key. The previous key stops working.
+func (m *Manager) RotateRecoveryKey(ctx context.Context) (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("generate recovery key: %w", err)
+	}
+	key := hex.EncodeToString(buf)
+	if err := m.store.SetSystemSetting(ctx, recoveryKeySettingKey, key); err != nil {
+		return "", fmt.Errorf("persist recovery key: %w", err)
+	}
+	if err := m.syncRecoveryKeyFile(key); err != nil {
+		return "", err
+	}
+	m.recoveryKey = key
+	m.recoveryKeyCreated = true
+	return key, nil
+}
+
 func (m *Manager) UseRecoveryKey(ctx context.Context, key string) error {
 	if m.recoveryKey == "" || subtle.ConstantTimeCompare([]byte(key), []byte(m.recoveryKey)) != 1 {
 		return ErrInvalidRecoveryKey
 	}
 	if err := m.store.ResetAllUsers(ctx); err != nil {
 		return fmt.Errorf("failed to reset users: %w", err)
+	}
+	if err := m.store.SetSystemSetting(ctx, recoveryKeySettingKey, ""); err != nil {
+		return fmt.Errorf("clear recovery key: %w", err)
+	}
+	if m.config != nil && m.config.RecoveryKeyFile != "" {
+		if err := os.Remove(m.config.RecoveryKeyFile); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove recovery key file: %w", err)
+		}
 	}
 	m.recoveryKey = ""
 	return nil

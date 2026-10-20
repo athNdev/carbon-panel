@@ -45,6 +45,10 @@ type AuthConfig struct {
 	// enabled. When false (default) every request is rejected instead of
 	// being granted admin, and startup fails with a clear error.
 	AllowNoAuth bool `mapstructure:"allow_no_auth" json:"allow_no_auth"`
+	// RecoveryKeyFile is the on-disk break-glass key. Empty skips the file
+	// and keeps the key only in the system setting. The panel sets this to
+	// data/recovery.key at startup (MINE-209).
+	RecoveryKeyFile string `mapstructure:"-" json:"-"`
 }
 
 type OIDCConfig struct {
