@@ -47,6 +47,7 @@ type Session struct {
 	ExpiresAt      time.Time
 	Completed      bool
 	mu             sync.Mutex
+	streamMu       sync.Mutex
 	file           *os.File
 }
 
@@ -241,6 +242,11 @@ func (m *Manager) WriteStream(sessionID string, r io.Reader, offset int64) (byte
 	if err != nil {
 		return 0, false, err
 	}
+	// A stream updates BytesReceived and may close the shared file when it
+	// completes. Serialize streams so concurrent requests cannot overwrite
+	// each other's ranges or race with that close.
+	session.streamMu.Lock()
+	defer session.streamMu.Unlock()
 	if offset < 0 || offset > session.TotalSize {
 		return 0, false, fmt.Errorf("%w: %d for total size %d", ErrInvalidOffset, offset, session.TotalSize)
 	}
