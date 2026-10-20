@@ -99,7 +99,7 @@ jobs:
             exit 1
           fi
 
-  # Race detector over concurrency-heavy packages (MINE-146, MINE-149).
+  # Race detector over concurrency-heavy OSS packages (MINE-146, MINE-149).
   # internal/rpc/... is included because the async remote-download/extraction
   # progress trackers live there and raced undetected until MINE-149.
   test-race:
