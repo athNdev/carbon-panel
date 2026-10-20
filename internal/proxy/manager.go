@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -457,6 +458,19 @@ func (m *Manager) ensureDownRoute(server *db.Server, hostname string, proxy Prox
 // resolveBackend determines the backend host and port for a server.
 // If the server belongs to a remote node (!node.IsLocal), it proxies directly to node.AdvertisedIP:server.Port.
 // If the server is on the local node, it proxies to the local bridge containerIP:25565.
+// dockerHostAddress strips a scheme and a port without cutting an IPv6 address
+// at the first colon. "tcp://[2001:db8::1]:2376" stays 2001:db8::1.
+func dockerHostAddress(raw string) string {
+	raw = strings.TrimSpace(raw)
+	raw = strings.TrimPrefix(raw, "tcp://")
+	raw = strings.TrimPrefix(raw, "http://")
+	raw = strings.TrimPrefix(raw, "https://")
+	if host, _, err := net.SplitHostPort(raw); err == nil {
+		return strings.Trim(host, "[]")
+	}
+	return strings.Trim(raw, "[]")
+}
+
 func isLocalDockerNode(node *db.Node) bool {
 	if node == nil {
 		return true
@@ -475,12 +489,7 @@ func (m *Manager) resolveBackend(server *db.Server) (string, int, error) {
 			if backendHost == "" {
 				backendHost = node.Host
 			}
-			backendHost = strings.TrimPrefix(backendHost, "tcp://")
-			backendHost = strings.TrimPrefix(backendHost, "http://")
-			backendHost = strings.TrimPrefix(backendHost, "https://")
-			if idx := strings.Index(backendHost, ":"); idx != -1 {
-				backendHost = backendHost[:idx]
-			}
+			backendHost = dockerHostAddress(backendHost)
 			backendPort := server.Port
 			if backendPort == 0 {
 				backendPort = 25565

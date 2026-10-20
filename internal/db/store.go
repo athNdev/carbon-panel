@@ -172,6 +172,10 @@ func (s *Store) DeleteServer(ctx context.Context, id string) error {
 			return err
 		}
 
+		if err := tx.Where("server_id = ?", id).Delete(&BackendPortLease{}).Error; err != nil {
+			return err
+		}
+
 		// Delete server
 		return tx.Delete(&Server{}, "id = ?", id).Error
 	})
