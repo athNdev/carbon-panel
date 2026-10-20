@@ -25,6 +25,7 @@ type MinecraftProxy struct {
 	activityHandler  ActivityHandler
 	sleepWakeHandler WakeHandler
 	acceptsTransfers bool
+	handshakes       *handshakeLimiter
 	// waking tracks hostnames with a recent boot attempt so pings during
 	// boot serve the loading MOTD instead of the asleep one (MINE-121).
 	waking       map[string]time.Time
@@ -54,6 +55,7 @@ func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 		activityHandler:  cfg.ActivityHandler,
 		sleepWakeHandler: cfg.SleepWakeHandler,
 		acceptsTransfers: acceptsTransfers,
+		handshakes:       newHandshakeLimiter(cfg.LoginRateLimit),
 		waking:           make(map[string]time.Time),
 		ctx:              ctx,
 		cancel:           cancel,
@@ -274,6 +276,17 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 			p.logger.Debug("%s", r)
 		}
 		p.routesMutex.RUnlock()
+		return
+	}
+
+	// Per-IP handshake budget is shared by status and login and is checked
+	// before activity, wake, or dial. A connection that already reached play
+	// is not revisited (MINE-204).
+	if !p.handshakes.allow(clientIP(clientConn.RemoteAddr())) {
+		p.logger.Debug("Handshake rate limit for %s", clientConn.RemoteAddr())
+		if isLoginIntent(handshake.NextState) {
+			_ = sendLoginDisconnect(clientConn, "Please reconnect in a moment.")
+		}
 		return
 	}
 

@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"time"
 
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
@@ -54,4 +55,8 @@ type Config struct {
 	// (Carbon's default). A pointer to false disconnects them before wake or dial.
 	// Velocity defaults the same switch to false; this panel is a hostname router.
 	AcceptsTransfers *bool
+	// LoginRateLimit is the minimum gap between handshakes from one client IP
+	// on this listen port. Zero disables the limit. Status and login share it.
+	// Established play sessions are not interrupted (MINE-204).
+	LoginRateLimit time.Duration
 }
