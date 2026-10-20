@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -33,12 +32,28 @@ type BackupTaskConfig struct {
 	RetentionDays int      `json:"retention_days"`
 	MaxBackups    int      `json:"max_backups"`
 	MinBackups    int      `json:"min_backups"`
+	// Exclude is extra globs on top of defaultBackupExcludes.
+	Exclude []string `json:"exclude"`
+	// StopForBackup stops a running or unhealthy server for the archive and
+	// starts it again afterwards, including when the archive fails. A failed
+	// restart is returned with the backup error so the server is not left
+	// stopped silently.
+	StopForBackup bool `json:"stop_for_backup"`
+}
+
+// defaultBackupExcludes drops lock files, rotated logs, map tiles, and
+// profiler temp files from every scheduled archive.
+var defaultBackupExcludes = []string{
+	"session.lock",
+	"logs/*.gz",
+	"dynmap/web/tiles",
+	"spark/tmp",
 }
 
 // Archives server data into the configured backup directory.
 // When the server is running, world saves are paused and flushed over RCON
 // first so the files on disk are consistent, then re-enabled afterwards.
-func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Server, task *storage.ScheduledTask) (string, error) {
+func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Server, task *storage.ScheduledTask) (output string, err error) {
 	var config BackupTaskConfig
 	if task.Config != "" {
 		if err := json.Unmarshal([]byte(task.Config), &config); err != nil {
@@ -74,8 +89,30 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	resumeSaves := s.pauseWorldSaves(ctx, server)
 	defer resumeSaves()
 
+	restart := false
+	if config.StopForBackup {
+		restart, err = s.stopServerForBackup(ctx, server)
+		if err != nil {
+			return "", err
+		}
+	}
+	if restart {
+		defer func() {
+			if startErr := s.startServerAfterBackup(ctx, server); startErr != nil {
+				if err != nil {
+					err = fmt.Errorf("%w; restart after backup failed: %v", err, startErr)
+					return
+				}
+				err = fmt.Errorf("backup written but restart failed: %w", startErr)
+			}
+		}()
+	}
+
 	start := time.Now()
-	count, err := files.CreateZipArchive(paths, server.DataPath, destPath, config.Compress)
+	excludes := append(append([]string{}, defaultBackupExcludes...), config.Exclude...)
+	count, err := files.CreateZipArchive(paths, server.DataPath, destPath, config.Compress, func(rel string) bool {
+		return files.PathExcluded(rel, excludes)
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create backup archive: %w", err)
 	}
@@ -122,7 +159,7 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 
 	pruned, pruneErr := s.pruneServerBackups(ctx, server, destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
 
-	output := fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)%s",
+	output = fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)%s",
 		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), remoteNote)
 	if len(missing) > 0 {
 		output += fmt.Sprintf("; skipped missing paths: %s", strings.Join(missing, ", "))
@@ -411,8 +448,8 @@ func (s *Scheduler) uploadBackupToS3(ctx context.Context, server *storage.Server
 		return "", err
 	}
 	rec.RemoteKey = key
-	if err := s.store.SetBackupRemoteKey(ctx, rec.ID, key); err != nil {
-		s.log.Error("Backup: failed to record S3 key for %s: %v", destPath, err)
+	if err := s.store.CommitBackupRemote(ctx, rec.ID, key, cfg.DeleteLocalCopy); err != nil {
+		return "", fmt.Errorf("s3 object %s stored but the backup row was not updated; local copy kept: %w", key, err)
 	}
 	if cfg.DeleteLocalCopy {
 		_ = os.Remove(destPath)
@@ -420,6 +457,42 @@ func (s *Scheduler) uploadBackupToS3(ctx context.Context, server *storage.Server
 		rec.Path = ""
 	}
 	return key, nil
+}
+
+// stopServerForBackup stops a running or unhealthy container. A stopped
+// server is left alone. The caller starts it again after the archive,
+// including on failure.
+func (s *Scheduler) stopServerForBackup(ctx context.Context, server *storage.Server) (bool, error) {
+	if server.ContainerID == "" {
+		return false, nil
+	}
+	dockerCli := s.dockerForNode(server.NodeID)
+	if dockerCli == nil {
+		return false, fmt.Errorf("stop_for_backup: docker is unavailable")
+	}
+	status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
+	if err != nil {
+		return false, fmt.Errorf("stop_for_backup: %w", err)
+	}
+	if status != storage.StatusRunning && status != storage.StatusUnhealthy {
+		return false, nil
+	}
+	if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
+		return false, fmt.Errorf("stop_for_backup: %w", err)
+	}
+	return true, nil
+}
+
+func (s *Scheduler) startServerAfterBackup(ctx context.Context, server *storage.Server) error {
+	dockerCli := s.dockerForNode(server.NodeID)
+	if dockerCli == nil || server.ContainerID == "" {
+		return fmt.Errorf("docker is unavailable")
+	}
+	if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
+		return err
+	}
+	server.Status = storage.StatusStarting
+	return s.store.UpdateServer(ctx, server)
 }
 
 // sha256File returns the hex SHA256 of a file.
