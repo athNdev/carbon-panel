@@ -37,7 +37,11 @@
 		onchange?.(ports);
 	}
 
-	function updatePort(index: number, field: keyof AdditionalPort, value: string | number | boolean) {
+	function updatePort(
+		index: number,
+		field: keyof AdditionalPort,
+		value: string | number | boolean
+	) {
 		ports[index] = {
 			...ports[index],
 			[field]: value
@@ -187,8 +191,7 @@
 								class="h-3.5 w-3.5"
 								checked={port.exposePublic}
 								{disabled}
-								onchange={(event) =>
-									updatePort(index, 'exposePublic', event.currentTarget.checked)}
+								onchange={(event) => updatePort(index, 'exposePublic', event.currentTarget.checked)}
 							/>
 							Public on the internet
 						</label>
