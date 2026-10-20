@@ -307,18 +307,14 @@ func main() {
 	rpcServer := rpc.NewServer(store, dockerClient, sender, cfg, proxyManager, taskScheduler, metricsCollector, moduleManager, eventBus, log, clientPool, placementEngine)
 	rpcServer.SetHibernationManager(hibernationMgr)
 
-	// Persist the recovery key and tell the operator where it is.
-	//
-	// The secret is deliberately NOT echoed by default: process output is
-	// routinely captured into container logs, journald or a log shipper, and
-	// the key bypasses authentication. See recovery.go.
-	if key := rpcServer.RecoveryKey(); key != "" {
-		keyPath, err := writeRecoveryKey(cfg.Storage.DataDir, key)
-		if err != nil {
-			log.Error("Failed to write recovery key file: %v", err)
-		} else {
-			announceRecoveryKey(os.Stderr, key, keyPath, recoveryKeyPrintAllowed(*printRecoveryKey, os.LookupEnv))
-		}
+	// The auth manager persists the recovery key. Announce the secret only
+	// when this process generated it; later starts log the path alone so a
+	// restart does not copy the key into the log stream (MINE-209).
+	keyPath := recoveryKeyPath(cfg.Storage.DataDir)
+	if rpcServer.RecoveryKeyCreated() {
+		announceRecoveryKey(os.Stderr, rpcServer.RecoveryKey(), keyPath, recoveryKeyPrintAllowed(*printRecoveryKey, os.LookupEnv))
+	} else if rpcServer.RecoveryKey() != "" {
+		announceExistingRecoveryKey(os.Stderr, keyPath)
 	}
 
 	// Auto-start servers that have auto_start enabled
