@@ -39,6 +39,9 @@ func TestLoad_DefaultsWithoutFile(t *testing.T) {
 	if cfg.Proxy.LoginRateLimitMS != 3000 {
 		t.Errorf("default login_ratelimit_ms = %d, want 3000", cfg.Proxy.LoginRateLimitMS)
 	}
+	if cfg.Database.PanelBackup != "daily" || cfg.Database.PanelBackupKeep != 7 {
+		t.Errorf("panel backup = %q keep %d, want daily/7", cfg.Database.PanelBackup, cfg.Database.PanelBackupKeep)
+	}
 	if cfg.Module.PortRangeMin >= cfg.Module.PortRangeMax {
 		t.Errorf("default module range invalid: %d-%d", cfg.Module.PortRangeMin, cfg.Module.PortRangeMax)
 	}

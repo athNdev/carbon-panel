@@ -282,6 +282,10 @@ func main() {
 	}
 	defer taskScheduler.Stop()
 
+	backupCtx, backupCancel := context.WithCancel(context.Background())
+	defer backupCancel()
+	startPanelDBBackup(backupCtx, store, cfg, log)
+
 	// Initialize builtin module templates
 	if err := module.InitBuiltinTemplates(store); err != nil {
 		log.Error("Failed to initialize builtin module templates: %v", err)
