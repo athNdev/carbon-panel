@@ -110,10 +110,22 @@ func TestBackupService_DeleteBackup_RemoteKeyHandled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Deletion succeeds locally even if remote S3 service is mocked/offline (fails soft with warning)
+	// A failed remote delete must not report success or drop the row.
+	svc.remoteDelete = func(context.Context, string) error { return os.ErrPermission }
+	if _, err := svc.DeleteBackup(ctx, connect.NewRequest(&v1.DeleteBackupRequest{Id: "b-remote"})); connect.CodeOf(err) != connect.CodeUnavailable {
+		t.Fatalf("expected unavailable, got %v", err)
+	}
+	if _, err := store.GetBackupRecord(ctx, "b-remote"); err != nil {
+		t.Fatalf("record should remain after remote failure: %v", err)
+	}
+	if _, err := os.Stat(archive); err != nil {
+		t.Fatalf("archive should remain after remote failure: %v", err)
+	}
+
+	svc.remoteDelete = func(context.Context, string) error { return nil }
 	resp, err := svc.DeleteBackup(ctx, connect.NewRequest(&v1.DeleteBackupRequest{Id: "b-remote"}))
 	if err != nil || !resp.Msg.Success {
-		t.Fatalf("expected delete to succeed, got %v", err)
+		t.Fatalf("expected delete to succeed after remote success, got %v", err)
 	}
 	if _, err := store.GetBackupRecord(ctx, "b-remote"); err == nil {
 		t.Fatalf("record should be deleted from store")
