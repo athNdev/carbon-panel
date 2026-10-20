@@ -50,7 +50,7 @@ func Fetch(client *http.Client, rawURL, dest, wantSHA string, maxBytes int64) er
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
