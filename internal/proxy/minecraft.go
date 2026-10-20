@@ -24,6 +24,7 @@ type MinecraftProxy struct {
 	wakeHandler      WakeHandler
 	activityHandler  ActivityHandler
 	sleepWakeHandler WakeHandler
+	acceptsTransfers bool
 	// waking tracks hostnames with a recent boot attempt so pings during
 	// boot serve the loading MOTD instead of the asleep one (MINE-121).
 	waking       map[string]time.Time
@@ -40,6 +41,10 @@ func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 	if log == nil {
 		log = logger.New()
 	}
+	acceptsTransfers := true
+	if cfg.AcceptsTransfers != nil {
+		acceptsTransfers = *cfg.AcceptsTransfers
+	}
 	return &MinecraftProxy{
 		routes:           make(map[string]*Route),
 		logger:           log,
@@ -48,6 +53,7 @@ func NewMinecraftProxy(cfg *Config) *MinecraftProxy {
 		wakeHandler:      cfg.WakeHandler,
 		activityHandler:  cfg.ActivityHandler,
 		sleepWakeHandler: cfg.SleepWakeHandler,
+		acceptsTransfers: acceptsTransfers,
 		waking:           make(map[string]time.Time),
 		ctx:              ctx,
 		cancel:           cancel,
@@ -271,10 +277,19 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
+	// Transfer (NextState 3) is login intent unless the operator disabled it.
+	// Reject before activity, wake, and dial (MINE-203).
+	if handshake.NextState == 3 && !p.acceptsTransfers {
+		p.logger.Debug("Rejecting transfer handshake for %s: accepts_transfers is false", hostname)
+		_ = sendLoginDisconnect(clientConn, "Transfers are not accepted by this server.")
+		return
+	}
+
 	// Login intent resets idle tracking (MINE-120). Status pings are
 	// deliberately excluded: server-list refreshes and scanners must neither
 	// wake hibernated servers (MINE-118) nor keep running ones from sleeping.
-	if handshake.NextState == 2 && p.activityHandler != nil {
+	// Transfer follows the same path as login (MINE-203).
+	if isLoginIntent(handshake.NextState) && p.activityHandler != nil {
 		p.activityHandler(route.ServerID)
 	}
 
@@ -285,7 +300,7 @@ func (p *MinecraftProxy) handleConnection(clientConn net.Conn) {
 	// hibernated route simply closes; the client sees the server as
 	// unreachable, same as mc-router with an empty asleep MOTD.
 	if route.Hibernated {
-		if handshake.NextState != 2 {
+		if !isLoginIntent(handshake.NextState) {
 			p.logger.Debug("Ignoring status ping for hibernated server %s (host %s): staying asleep", route.ServerID, hostname)
 			return
 		}
@@ -413,7 +428,7 @@ const loadingMOTDWindow = 90 * time.Second
 // touching Docker. Logins trigger a boot via SleepWakeHandler and are held
 // until the SLP health gate passes. Returns true when the caller may relay.
 func (p *MinecraftProxy) handleDownRoute(clientConn net.Conn, handshake *HandshakePacket, hostname string, route *Route) bool {
-	if handshake.NextState != 2 {
+	if !isLoginIntent(handshake.NextState) {
 		p.routesMutex.RLock()
 		since, booting := p.waking[hostname]
 		p.routesMutex.RUnlock()
