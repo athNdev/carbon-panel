@@ -314,6 +314,21 @@ func (h *OIDCHandler) findOrCreateOIDCUser(ctx context.Context, sub, username, e
 		now := time.Now()
 		user.LastLogin = &now
 		_ = h.store.UpdateUser(ctx, user)
+
+		// Bootstrap: a user with no roles can do nothing. Give returning
+		// users that somehow ended up role-less a sensible default so they
+		// are not permanently locked out (MINE: permission denied for all).
+		if names, _ := h.store.GetUserRoleNames(ctx, user.ID); len(names) == 0 {
+			if count, _ := h.store.CountUsers(ctx); count <= 1 {
+				_ = h.store.AssignRole(ctx, user.ID, "admin", "oidc")
+			} else {
+				if defaults, err := h.store.GetDefaultRoles(ctx); err == nil {
+					for _, role := range defaults {
+						_ = h.store.AssignRole(ctx, user.ID, role.Name, "oidc")
+					}
+				}
+			}
+		}
 		return user, nil
 	}
 
@@ -335,10 +350,16 @@ func (h *OIDCHandler) findOrCreateOIDCUser(ctx context.Context, sub, username, e
 		return nil, fmt.Errorf("failed to create OIDC user: %w", err)
 	}
 
-	// Assign default roles to new user
-	defaultRoles, _ := h.store.GetDefaultRoles(ctx)
-	for _, role := range defaultRoles {
-		_ = h.store.AssignRole(ctx, user.ID, role.Name, "oidc")
+	// Assign roles to new user: the first user becomes admin so a fresh
+	// (OIDC-only) deployment is not locked out of every privileged action.
+	userCount, _ := h.store.CountUsers(ctx)
+	if userCount <= 1 {
+		_ = h.store.AssignRole(ctx, user.ID, "admin", "oidc")
+	} else {
+		defaultRoles, _ := h.store.GetDefaultRoles(ctx)
+		for _, role := range defaultRoles {
+			_ = h.store.AssignRole(ctx, user.ID, role.Name, "oidc")
+		}
 	}
 
 	h.log.Info("OIDC: created new user %s", user.Username)
