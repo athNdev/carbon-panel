@@ -202,6 +202,8 @@ jobs:
 
       - name: buf breaking
         run: buf breaking --against '.git#branch=main'
+
+  test-frontend:
     name: Frontend Quality & Build Gate
     runs-on: ubuntu-latest
 
