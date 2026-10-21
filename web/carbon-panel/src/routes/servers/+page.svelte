@@ -40,6 +40,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let statusFilter = $state<'all' | 'running' | 'stopped' | 'issues'>('all');
 	let viewMode = $state<'table' | 'tiles'>('table');
 	let loading = $state(false);
+	let loadError = $state<string | null>(null);
 	let pendingDelete = $state<Server | null>(null);
 	let confirmOpen = $state(false);
 	// Cold direct loads render before the layout's fetch lands; hold the
@@ -49,14 +50,20 @@ one at https://mozilla.org/MPL/2.0/.
 
 	onMount(async () => {
 		if (hydrated) return;
+		await loadServers();
+	});
+
+	async function loadServers() {
+		loadError = null;
 		try {
 			await serversStore.fetchServers(false);
 		} catch (err) {
+			loadError = err instanceof Error ? err.message : 'Failed to load servers';
 			console.error('Failed to fetch servers:', err);
 		} finally {
 			hydrated = true;
 		}
-	});
+	}
 
 	$effect(() => {
 		filterServers();
@@ -368,6 +375,22 @@ one at https://mozilla.org/MPL/2.0/.
 					<div class="motion-skeleton hidden h-4 w-20 sm:block"></div>
 				</div>
 			{/each}
+		</div>
+
+		<!-- Empty State -->
+	{:else if loadError}
+		<div
+			class="rounded-none border border-[#da1e28] bg-[#262626] p-12 text-center"
+			role="alert"
+		>
+			<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Failed to load servers</h3>
+			<p class="mx-auto mb-6 max-w-md font-sans text-xs text-[#a8a8a8]">
+				{loadError}
+			</p>
+			<CarbonButton kind="secondary" size="sm" onclick={loadServers} class="justify-center">
+				<RefreshCcw class="h-4 w-4" />
+				<span>Retry</span>
+			</CarbonButton>
 		</div>
 
 		<!-- Empty State -->

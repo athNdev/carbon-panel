@@ -185,7 +185,23 @@ jobs:
       - name: buf lint
         run: buf lint
 
-  test-frontend:
+  proto-breaking:
+    name: Proto Breaking Change Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up buf
+        uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1
+        with:
+          version: '1.50.0'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: buf breaking
+        run: buf breaking --against '.git#branch=main'
     name: Frontend Quality & Build Gate
     runs-on: ubuntu-latest
 
