@@ -379,10 +379,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 		<!-- Empty State -->
 	{:else if loadError}
-		<div
-			class="rounded-none border border-[#da1e28] bg-[#262626] p-12 text-center"
-			role="alert"
-		>
+		<div class="rounded-none border border-[#da1e28] bg-[#262626] p-12 text-center" role="alert">
 			<h3 class="mb-1 text-base font-semibold text-[#f4f4f4]">Failed to load servers</h3>
 			<p class="mx-auto mb-6 max-w-md font-sans text-xs text-[#a8a8a8]">
 				{loadError}
@@ -735,7 +732,7 @@ one at https://mozilla.org/MPL/2.0/.
 						</div>
 
 						<!-- Stats Sharp Grid -->
-						<div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+						<div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
 							<div
 								class="flex items-center gap-2 rounded-none border border-[#393939] bg-[#161616] p-2"
 							>

@@ -562,7 +562,7 @@ one at https://mozilla.org/MPL/2.0/.
 	>
 		<div class="flex h-full">
 			<!-- Sidebar -->
-			<div class="flex w-full flex-col border-r md:w-64 bg-muted/30">
+			<div class="flex w-full flex-col border-r bg-muted/30 md:w-64">
 				<div class="border-b p-6">
 					<div class="flex items-center gap-3">
 						<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -708,7 +708,7 @@ one at https://mozilla.org/MPL/2.0/.
 	>
 		<div class="flex h-full">
 			<!-- Sidebar -->
-			<div class="flex w-full flex-col border-r md:w-64 bg-muted/30">
+			<div class="flex w-full flex-col border-r bg-muted/30 md:w-64">
 				<div class="border-b p-6">
 					<div class="flex items-center gap-3">
 						<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -860,7 +860,7 @@ one at https://mozilla.org/MPL/2.0/.
 	>
 		<div class="flex h-full">
 			<!-- Sidebar -->
-			<div class="flex w-full flex-col border-r md:w-64 bg-muted/30">
+			<div class="flex w-full flex-col border-r bg-muted/30 md:w-64">
 				<!-- Sidebar Header -->
 				<div class="border-b p-6">
 					<div class="flex items-center gap-3">

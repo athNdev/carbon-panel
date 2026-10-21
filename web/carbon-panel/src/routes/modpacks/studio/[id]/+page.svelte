@@ -1792,7 +1792,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					helperText="Direct download link. Packwiz will download and compute SHA256 hashes automatically."
 				/>
 
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 					<CarbonTextInput
 						label="Mod Name (Optional)"
 						placeholder="Custom Mod"
@@ -1805,7 +1805,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					/>
 				</div>
 
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 					<CarbonSelect label="Side" bind:value={urlModSide}>
 						<option value="both">Both (Client & Server)</option>
 						<option value="server">Server Only</option>

@@ -562,7 +562,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 						<CardContent class="space-y-4 pb-4">
 							<!-- Metrics Grid -->
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3 text-xs">
+							<div class="grid grid-cols-1 gap-2 rounded-lg bg-muted/40 p-3 text-xs md:grid-cols-2">
 								<div class="space-y-0.5">
 									<div class="flex items-center gap-1 text-muted-foreground">
 										<Server class="h-3.5 w-3.5" />

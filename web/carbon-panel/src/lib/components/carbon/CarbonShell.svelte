@@ -92,7 +92,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			| '/modpacks'
 			| '/modules'
 			| '/settings'
-			| '/docs/api';
+			| '/docs/api'
+			| '/changelog';
 		label: string;
 		icon: string;
 		badge?: boolean;
@@ -135,6 +136,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			href: '/docs/api',
 			label: 'API Reference',
 			icon: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'
+		},
+		{
+			href: '/changelog',
+			label: 'Changelog',
+			icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z'
 		}
 	];
 

@@ -162,7 +162,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		{:else}
 			<div class="flex flex-col gap-4 overflow-y-auto py-2 pr-1">
 				<!-- Header info -->
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:grid-cols-4">
+				<div class="grid grid-cols-1 gap-3 md:grid-cols-2 md:grid-cols-4">
 					<Card>
 						<CardContent class="p-3">
 							<div class="text-xs text-muted-foreground">Format</div>

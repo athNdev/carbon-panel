@@ -361,7 +361,7 @@ one at https://mozilla.org/MPL/2.0/.
 									{#if editingListener?.id === listener.id}
 										<!-- Edit Mode -->
 										<div class="space-y-3">
-											<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+											<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 												<div class="space-y-2">
 													<Label class="text-xs text-[#c6c6c6]">Name</Label>
 													<Input
@@ -508,7 +508,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<div class="border-t border-[#393939] pt-4">
 					<h4 class="mb-3 text-sm font-normal text-[#f4f4f4]">Add New Listener</h4>
 					<div class="space-y-3">
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+						<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 							<div class="space-y-2">
 								<Label class="text-xs text-[#c6c6c6]">Name</Label>
 								<Input
