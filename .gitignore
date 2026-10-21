@@ -461,3 +461,7 @@ result
 
 # Local Proxmox job tracker state (runtime artifact)
 proxmox-jobs.sqlite3*
+
+# MCP client configs — these embed the Plane API token; never commit them.
+.mcp.json
+.cline/mcp.json
