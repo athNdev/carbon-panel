@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
@@ -48,8 +47,20 @@ func NewSQLiteStore(cfg *config.Config) (*Store, error) {
 		return nil, fmt.Errorf("failed to get database handle: %w", err)
 	}
 
-	// Enable WAL mode, busy timeout, and normal synchronous for robust production concurrency
-	_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=NORMAL;")
+	// Enable WAL mode, busy timeout, and normal synchronous for robust production
+	// concurrency. Execute each pragma separately: database/sql drivers are not
+	// required to accept multiple statements in one Exec call, and ignoring the
+	// error would silently leave SQLite using its fragile defaults.
+	for _, pragma := range []string{
+		"PRAGMA journal_mode=WAL",
+		"PRAGMA busy_timeout=5000",
+		"PRAGMA synchronous=NORMAL",
+	} {
+		if _, err := sqlDB.Exec(pragma); err != nil {
+			_ = sqlDB.Close()
+			return nil, fmt.Errorf("failed to configure sqlite (%s): %w", pragma, err)
+		}
+	}
 
 	if cfg.Database.MaxConnections > 0 {
 		sqlDB.SetMaxOpenConns(cfg.Database.MaxConnections)
