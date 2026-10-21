@@ -405,7 +405,7 @@ one at https://mozilla.org/MPL/2.0/.
 	>
 		<div class="flex h-full">
 			<!-- Sidebar -->
-			<div class="flex w-64 flex-col border-r bg-muted/30">
+			<div class="flex w-full flex-col border-r md:w-64 bg-muted/30">
 				<!-- Sidebar Header -->
 				<div class="border-b p-6">
 					<div class="flex items-center gap-3">
@@ -508,7 +508,7 @@ one at https://mozilla.org/MPL/2.0/.
 								/>
 							</div>
 
-							<div class="grid grid-cols-2 gap-6">
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div class="space-y-3">
 									<Label for="category">Category</Label>
 									<Input
@@ -565,7 +565,7 @@ one at https://mozilla.org/MPL/2.0/.
 									</p>
 								</div>
 
-								<div class="grid grid-cols-2 gap-6 rounded-lg border bg-card p-6">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-lg border bg-card p-6">
 									<div class="space-y-3">
 										<Label for="healthCheckPath">Health Check Path</Label>
 										<Input
@@ -598,7 +598,7 @@ one at https://mozilla.org/MPL/2.0/.
 										Default UID/GID for the container process
 									</p>
 								</div>
-								<div class="grid grid-cols-2 gap-6 rounded-lg border bg-card p-6">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-lg border bg-card p-6">
 									<div class="space-y-3">
 										<Label for="defaultUid">Default UID</Label>
 										<Input
@@ -694,7 +694,7 @@ one at https://mozilla.org/MPL/2.0/.
 												/>
 											</div>
 
-											<div class="grid grid-cols-3 gap-4">
+											<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 												<div class="space-y-2">
 													<Label>Host Port</Label>
 													<Input
@@ -856,7 +856,7 @@ one at https://mozilla.org/MPL/2.0/.
 												</Button>
 											</div>
 
-											<div class="grid grid-cols-2 gap-4">
+											<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 												<div class="space-y-2">
 													<Label>Host Path</Label>
 													<Input
@@ -965,7 +965,7 @@ one at https://mozilla.org/MPL/2.0/.
 													</Button>
 												</div>
 
-												<div class="grid grid-cols-3 gap-4">
+												<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 													<div class="space-y-2">
 														<Label>Event</Label>
 														<Select
@@ -1088,7 +1088,7 @@ one at https://mozilla.org/MPL/2.0/.
 											Shell command to exec inside the container after start
 										</p>
 									</div>
-									<div class="grid grid-cols-2 gap-6">
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div class="space-y-2">
 											<Label>Delay (seconds)</Label>
 											<Input

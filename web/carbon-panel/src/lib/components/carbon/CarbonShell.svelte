@@ -295,7 +295,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 		<!-- Carbon Main Content Area -->
 		<main
-			class="ml-0 flex-1 overflow-y-auto p-6 transition-[margin] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] {sideNavExpanded
+			class="ml-0 flex-1 overflow-y-auto p-4 transition-[margin] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] md:p-6 {sideNavExpanded
 				? 'md:ml-64'
 				: 'md:ml-12'}"
 		>

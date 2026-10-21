@@ -889,7 +889,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<p class="mt-0.5 font-sans text-xs text-[#8d8d8d]">High-level cluster telemetry</p>
 						</div>
 					</div>
-					<div class="mt-4 grid grid-cols-2 gap-2">
+					<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
 						<div class="rounded-none border border-[#393939] bg-[#161616] p-3">
 							<p class="font-mono text-xs text-[#8d8d8d] uppercase">ACTIVE RATIO</p>
 							<p class="mt-1 font-mono text-xl font-bold text-[#24a148]">

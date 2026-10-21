@@ -712,7 +712,7 @@ one at https://mozilla.org/MPL/2.0/.
 						</div>
 
 						<!-- Stats Sharp Grid -->
-						<div class="mt-3 grid grid-cols-2 gap-2">
+						<div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
 							<div
 								class="flex items-center gap-2 rounded-none border border-[#393939] bg-[#161616] p-2"
 							>

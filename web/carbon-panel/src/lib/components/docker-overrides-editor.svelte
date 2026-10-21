@@ -434,7 +434,7 @@ one at https://mozilla.org/MPL/2.0/.
 									{#each overrides.volumes as volume, i (i)}
 										<div class="space-y-2 rounded border bg-background/50 p-2">
 											<div class="flex items-center gap-2">
-												<div class="grid flex-1 grid-cols-2 gap-2">
+												<div class="grid flex-1 grid-cols-1 md:grid-cols-2 gap-2">
 													<Input
 														value={volume.source}
 														onchange={(e) => updateVolumeField(i, 'source', e.currentTarget.value)}
@@ -510,7 +510,7 @@ one at https://mozilla.org/MPL/2.0/.
 					</div>
 
 					<!-- Resource Limits -->
-					<div class="grid grid-cols-3 gap-4">
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 						<div class="space-y-2">
 							<Label for="cpu-limit" class="text-sm">CPU Limit (cores)</Label>
 							<Input
@@ -567,7 +567,7 @@ one at https://mozilla.org/MPL/2.0/.
 					</div>
 
 					<!-- Network & Restart -->
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div class="space-y-2">
 							<Label for="network-mode" class="text-sm">Network Mode</Label>
 							<Input

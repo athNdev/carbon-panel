@@ -632,7 +632,7 @@ one at https://mozilla.org/MPL/2.0/.
 			<!-- Configuration View -->
 			<div class="flex h-full">
 				<!-- Sidebar -->
-				<div class="flex w-64 flex-col border-r bg-muted/30">
+				<div class="flex w-full flex-col border-r md:w-64 bg-muted/30">
 					<!-- Sidebar Header -->
 					<div class="border-b p-6">
 						{#if mode === 'create'}
@@ -767,7 +767,7 @@ one at https://mozilla.org/MPL/2.0/.
 								<!-- Resources -->
 								<div class="space-y-4">
 									<h3 class="text-base font-medium">Resource Limits</h3>
-									<div class="grid grid-cols-2 gap-6">
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div class="space-y-3">
 											<Label for="memory">Memory (MB)</Label>
 											<Input
@@ -799,7 +799,7 @@ one at https://mozilla.org/MPL/2.0/.
 								<!-- Container User -->
 								<div class="space-y-4">
 									<h3 class="text-base font-medium">Container User</h3>
-									<div class="grid grid-cols-2 gap-6">
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div class="space-y-3">
 											<Label for="uid">UID</Label>
 											<Input
@@ -931,7 +931,7 @@ one at https://mozilla.org/MPL/2.0/.
 													</Button>
 												</div>
 
-												<div class="grid grid-cols-4 gap-4">
+												<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 													<div class="space-y-2">
 														<Label>Name</Label>
 														<Input bind:value={port.name} placeholder="http" class="h-11" />
@@ -1111,7 +1111,7 @@ one at https://mozilla.org/MPL/2.0/.
 													</Button>
 												</div>
 
-												<div class="grid grid-cols-2 gap-4">
+												<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 													<div class="space-y-2">
 														<Label>Host Path</Label>
 														<Input
@@ -1270,7 +1270,7 @@ one at https://mozilla.org/MPL/2.0/.
 										</p>
 									</div>
 
-									<div class="grid grid-cols-3 gap-6 rounded-lg border bg-card p-6">
+									<div class="grid grid-cols-1 md:grid-cols-3 gap-6 rounded-lg border bg-card p-6">
 										<div class="space-y-2">
 											<Label>Interval (seconds)</Label>
 											<Input type="number" bind:value={healthCheckInterval} min={5} class="h-11" />
@@ -1310,7 +1310,7 @@ one at https://mozilla.org/MPL/2.0/.
 												Shell command to exec inside the container after start
 											</p>
 										</div>
-										<div class="grid grid-cols-2 gap-6">
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div class="space-y-2">
 												<Label>Delay (seconds)</Label>
 												<Input type="number" bind:value={initCommandDelay} min={0} class="h-11" />
@@ -1364,7 +1364,7 @@ one at https://mozilla.org/MPL/2.0/.
 														</Button>
 													</div>
 
-													<div class="grid grid-cols-3 gap-4">
+													<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 														<div class="space-y-2">
 															<Label>Event</Label>
 															<Select
