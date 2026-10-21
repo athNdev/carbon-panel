@@ -11,12 +11,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Server list now surfaces fetch failures with a retry action.
 - ConnectRPC `buf breaking` CI job.
 - Per-route error/empty/loading states (in progress).
+- Reusable `CarbonErrorState` and `CarbonEmptyState` components exported from `carbon/index.ts`.
+- Retryable error states for dashboard, ActiveModules, profile (API tokens), and settings (global settings).
+- Docker daemon reachability/config integration tests behind the `integration` build tag (`internal/docker/integration_test.go`).
+- In-app changelog page (`/changelog`) with OSS/Cloud edition toggle.
 
 ### Fixed
 
 - Surface unchecked packwiz import/export and proxy route-refresh write errors.
 - Make upload tests OS-independent (Windows temp-file locks, huge allocations).
 - Accessibility gaps (aria-invalid/describedby, modal focus trap, table scope, reduced motion, toast aria-live).
+- RBAC no longer denies every RPC for Clerk sessions whose org is not yet linked (cloud): falls back to the bootstrap default organization and auto-provisions membership.
 
 ## [3.0.0-beta.3] - 2026-10-21
 

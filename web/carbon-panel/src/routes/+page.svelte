@@ -32,22 +32,25 @@ one at https://mozilla.org/MPL/2.0/.
 	import { ServerStatus, type Server as ServerType } from '$lib/proto/carbonpanel/v1/common_pb';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
-	import { CarbonButton, CarbonTag } from '$lib/components/carbon';
+	import { CarbonButton, CarbonTag, CarbonErrorState } from '$lib/components/carbon';
 	import type { Timestamp } from '@bufbuild/protobuf/wkt';
 
 	// Dashboard data
 	let dashboardServers: ServerType[] = $state([]);
 	let isLoading = $state(true);
+	let loadError = $state<string | null>(null);
 	let isRefreshing = $state(false);
 	let currentTime = $state(new Date());
 
 	// Load dashboard data with full stats
 	async function loadDashboardData() {
+		loadError = null;
 		try {
 			const response = await rpcClient.server.listServers({ fullStats: true });
 			dashboardServers = response.servers;
 			serversStore.set(response.servers);
 		} catch (error) {
+			loadError = error instanceof Error ? error.message : 'Failed to load dashboard data';
 			console.error('Failed to load dashboard data:', error);
 		}
 	}
@@ -275,6 +278,10 @@ one at https://mozilla.org/MPL/2.0/.
 				</div>
 			{/each}
 		</div>
+	</div>
+{:else if loadError}
+	<div class="p-6">
+		<CarbonErrorState title="Failed to load dashboard" message={loadError} onretry={refreshDashboard} />
 	</div>
 {:else}
 	<div class="space-y-6 bg-[#161616] text-[#f4f4f4]">

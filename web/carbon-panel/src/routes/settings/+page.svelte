@@ -14,7 +14,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import ScrollToTop from '$lib/components/scroll-to-top.svelte';
 	import UserSettings from '$lib/components/user-settings.svelte';
 	import RoleSettings from '$lib/components/role-settings.svelte';
-	import { CarbonTabs, CarbonInlineLoading } from '$lib/components/carbon';
+	import { CarbonTabs, CarbonInlineLoading, CarbonErrorState } from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import { Settings } from '@lucide/svelte';
 	import type { ConfigCategory } from '$lib/proto/carbonpanel/v1/config_pb';
@@ -30,6 +30,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	let globalConfig = $state<ConfigCategory[]>([]);
 	let loading = $state(true);
+	let globalSettingsError = $state<string | null>(null);
 	let saving = $state(false);
 
 	let showSettings = $derived($canReadSettings);
@@ -86,10 +87,12 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function loadGlobalSettings() {
 		loading = true;
+		globalSettingsError = null;
 		try {
 			const response = await rpcClient.config.getGlobalSettings({});
 			globalConfig = response.categories;
 		} catch (error) {
+			globalSettingsError = error instanceof Error ? error.message : 'Failed to load global settings';
 			toast.error('Failed to load global settings');
 			console.error(error);
 		} finally {
@@ -151,6 +154,8 @@ one at https://mozilla.org/MPL/2.0/.
 					<div class="flex items-center justify-center border border-[#393939] bg-[#262626] p-16">
 						<CarbonInlineLoading description="Loading settings..." />
 					</div>
+				{:else if globalSettingsError}
+					<CarbonErrorState title="Failed to load settings" message={globalSettingsError} onretry={loadGlobalSettings} />
 				{:else}
 					<ServerConfiguration config={globalConfig} onSave={saveGlobalSettings} {saving} />
 				{/if}

@@ -14,7 +14,8 @@ one at https://mozilla.org/MPL/2.0/.
 		CarbonDataTable,
 		CarbonTag,
 		CarbonInlineLoading,
-		CarbonConfirm
+		CarbonConfirm,
+		CarbonErrorState
 	} from '$lib/components/carbon';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
@@ -38,6 +39,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	let modules = $state<Module[]>([]);
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
 	let actionLoading = $state<string | null>(null);
 
 	// Dialog state
@@ -60,14 +62,20 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function loadModules(silent = false) {
 		try {
-			if (!silent) loading = true;
+			if (!silent) {
+				loading = true;
+				loadError = null;
+			}
 			const response = await rpcClient.module.listModules(
 				{},
 				silent ? silentCallOptions : undefined
 			);
 			modules = response.modules;
-		} catch {
-			if (!silent) toast.error('Failed to load modules');
+		} catch (err) {
+			if (!silent) {
+				loadError = err instanceof Error ? err.message : 'Failed to load modules';
+				toast.error('Failed to load modules');
+			}
 		} finally {
 			if (!silent) loading = false;
 		}
@@ -229,7 +237,13 @@ one at https://mozilla.org/MPL/2.0/.
 		header={activeHeader}
 		class="rounded-none"
 	>
-		{#if loading && modules.length === 0}
+		{#if loadError && modules.length === 0}
+			<tr>
+				<td colspan="7" class="p-4">
+					<CarbonErrorState title="Failed to load modules" message={loadError} onretry={() => loadModules()} />
+				</td>
+			</tr>
+		{:else if loading && modules.length === 0}
 			<tr>
 				<td colspan="7" class="py-16 text-center">
 					<div class="flex items-center justify-center">

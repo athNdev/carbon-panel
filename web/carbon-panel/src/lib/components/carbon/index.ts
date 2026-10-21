@@ -19,3 +19,5 @@ export { default as CarbonSearch } from './CarbonSearch.svelte';
 export { default as CarbonAccordion } from './CarbonAccordion.svelte';
 export { default as CarbonAccordionItem } from './CarbonAccordionItem.svelte';
 export { default as CarbonStructuredList } from './CarbonStructuredList.svelte';
+export { default as CarbonErrorState } from './CarbonErrorState.svelte';
+export { default as CarbonEmptyState } from './CarbonEmptyState.svelte';

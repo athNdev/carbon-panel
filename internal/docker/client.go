@@ -460,6 +460,18 @@ func (c *Client) HostMemoryMB(ctx context.Context) (int64, error) {
 	return result.Info.MemTotal / (1024 * 1024), nil
 }
 
+// ApplyDiskQuota sets a container storage size limit when the storage driver
+// supports it (overlay2 size opt). diskMB <= 0 disables the limit.
+func ApplyDiskQuota(hostConfig *container.HostConfig, diskMB int64) {
+	if hostConfig == nil || diskMB <= 0 {
+		return
+	}
+	if hostConfig.StorageOpt == nil {
+		hostConfig.StorageOpt = map[string]string{}
+	}
+	hostConfig.StorageOpt["size"] = fmt.Sprintf("%dM", diskMB)
+}
+
 // ApplyOverrides applies DockerOverrides to container and host configs
 func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hostConfig *container.HostConfig) {
 	if overrides == nil {

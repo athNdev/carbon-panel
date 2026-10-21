@@ -19,7 +19,8 @@ one at https://mozilla.org/MPL/2.0/.
 		CarbonTextInput,
 		CarbonSelect,
 		CarbonInlineLoading,
-		CarbonConfirm
+		CarbonConfirm,
+		CarbonErrorState
 	} from '$lib/components/carbon';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -53,6 +54,7 @@ one at https://mozilla.org/MPL/2.0/.
 	// API Tokens state
 	let apiTokens = $state<ApiToken[]>([]);
 	let loadingTokens = $state(false);
+	let tokensError = $state<string | null>(null);
 	let showCreateTokenDialog = $state(false);
 	let creatingToken = $state(false);
 	let newTokenForm = $state({ name: '', expiresInDays: '' as string });
@@ -110,11 +112,12 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function loadTokens() {
 		loadingTokens = true;
+		tokensError = null;
 		try {
 			const resp = await rpcClient.auth.listAPITokens({}, silentCallOptions);
 			apiTokens = resp.apiTokens;
-		} catch {
-			// silently fail - tokens will show empty
+		} catch (err) {
+			tokensError = err instanceof Error ? err.message : 'Failed to load API tokens';
 		} finally {
 			loadingTokens = false;
 		}
@@ -504,6 +507,13 @@ one at https://mozilla.org/MPL/2.0/.
 							</div>
 						</td>
 					</tr>
+		{:else if tokensError}
+			<tr>
+				<td colspan="5" class="p-4">
+					<CarbonErrorState title="Failed to load API tokens" message={tokensError} onretry={loadTokens} />
+				</td>
+			</tr>
+
 				{:else if apiTokens.length === 0}
 					<tr>
 						<td colspan="5" class="py-12 text-center text-[#8d8d8d]">
