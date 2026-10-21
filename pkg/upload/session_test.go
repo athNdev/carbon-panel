@@ -19,6 +19,7 @@ import (
 
 func TestSession_ChunkWriteCompletes(t *testing.T) {
 	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
 
 	sess, err := m.InitSession("data.bin", 10, 4)
 	if err != nil {
@@ -64,6 +65,7 @@ func TestSession_ChunkWriteCompletes(t *testing.T) {
 
 func TestSession_Errors(t *testing.T) {
 	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
 
 	if _, err := m.GetSession("missing"); err == nil {
 		t.Error("unknown session fetched without error")
@@ -118,6 +120,7 @@ func TestSession_Errors(t *testing.T) {
 
 func TestSession_WriteStream(t *testing.T) {
 	m := NewManager(t.TempDir(), time.Hour, 0, logger.New())
+	defer m.Stop()
 
 	sess, err := m.InitSession("stream.bin", 8, 8)
 	if err != nil {

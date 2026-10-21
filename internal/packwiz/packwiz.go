@@ -693,7 +693,9 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 	}
 
 	// Create overrides dir
-	_, _ = zw.Create("overrides/")
+	if _, err := zw.Create("overrides/"); err != nil {
+		return err
+	}
 	return zw.Close()
 }
 
@@ -762,10 +764,14 @@ func (m *Manager) ExportCurseForge(packID string, w io.Writer) error {
 	modlistHTML := fmt.Sprintf("<ul>\n%s\n</ul>", strings.Join(modlistItems, "\n"))
 	ml, err := zw.Create("modlist.html")
 	if err == nil {
-		_, _ = ml.Write([]byte(modlistHTML))
+		if _, err := ml.Write([]byte(modlistHTML)); err != nil {
+			return err
+		}
 	}
 
-	_, _ = zw.Create("overrides/")
+	if _, err := zw.Create("overrides/"); err != nil {
+		return err
+	}
 	return zw.Close()
 }
 
@@ -1225,25 +1231,35 @@ func (m *Manager) ClonePack(packID, newName string) (*Pack, error) {
 	}
 
 	// Copy overrides
-	_ = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	if err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
 			return nil
 		}
 		rel, err := filepath.Rel(srcDir, path)
 		if err != nil {
-			return nil
+			return err
 		}
 		if rel == "pack.toml" || rel == "index.toml" || strings.HasPrefix(filepath.ToSlash(rel), "mods/") {
 			return nil
 		}
 		target := filepath.Join(destDir, rel)
-		_ = os.MkdirAll(filepath.Dir(target), 0755)
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
 		data, err := os.ReadFile(path)
-		if err == nil {
-			_ = os.WriteFile(target, data, 0644)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(target, data, 0644); err != nil {
+			return err
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()

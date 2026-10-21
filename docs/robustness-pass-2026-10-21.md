@@ -69,6 +69,18 @@ Method: go vet/test, bun check/test, Vite production build, targeted source scan
 | Add scheduler/Docker/snapshot integration tests | CI | High |
 | Add ConnectRPC breaking-change checks in CI | CI | Medium |
 
-## Limitation
+## Tracking
 
-Plane API is not reachable from this environment, so items above are captured here for manual creation in Plane project MINE. No Plane IDs were created or modified.
+GitHub issues created in `athNdev/carbon-panel` for the suggested Plane items:
+- #211 Close remaining accessibility gaps (focus, badges, forms, motion)
+- #212 Surface and handle unchecked packwiz/proxy write errors
+- #213 Add ConnectRPC breaking-change checks in CI
+- #214 Add scheduler/Docker/snapshot integration tests
+- #215 Add per-route error/empty/loading states to web UI
+- #216 Audit Connect error handling and retry affordances
+- #217 Make upload tests OS-independent and avoid huge allocations
+
+## Progress in this pass
+
+- Fixed unchecked packwiz/proxy write errors (#212): override extraction now returns errors, export override directory creation and modlist write are checked, ClonePack propagates filesystem errors, deep-sleep proxy route refresh logs failures.
+- Made upload tests OS-independent (#217): added `defer m.Stop()` to release temp-file handles on Windows and reduced the unlimited-size test from 1 TiB to 1 MiB to avoid disk-space failures. Upload package tests now pass on Windows.

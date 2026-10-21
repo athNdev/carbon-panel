@@ -242,8 +242,13 @@ func main() {
 	// holds joining clients through boot, and relays once the SLP health
 	// gate passes; the reconciler treats deepsleep as stable (see decide).
 	deepSleepMgr := docker.NewDeepSleepManager(dockerClient, store, sender, func(serverID string) {
-		if srv, err := store.GetServer(ctx, serverID); err == nil {
-			_ = proxyManager.UpdateServerRoute(srv)
+		srv, err := store.GetServer(ctx, serverID)
+		if err != nil {
+			log.Error("Failed to get server %s for proxy route update: %v", serverID, err)
+			return
+		}
+		if err := proxyManager.UpdateServerRoute(srv); err != nil {
+			log.Error("Failed to update proxy route for server %s: %v", serverID, err)
 		}
 	}, log)
 	deepSleepMgr.SetControllerResolver(func(nodeID string) docker.SleepController {

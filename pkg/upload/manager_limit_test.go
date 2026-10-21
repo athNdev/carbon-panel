@@ -22,6 +22,7 @@ func TestInitSessionEnforcesMaxSize(t *testing.T) {
 
 	t.Run("limit enforced", func(t *testing.T) {
 		m := NewManager(t.TempDir(), time.Hour, 1024, log)
+		defer m.Stop()
 		if _, err := m.InitSession("big.bin", 2048, 100); !errors.Is(err, ErrFileTooLarge) {
 			t.Fatalf("expected ErrFileTooLarge for oversize session, got %v", err)
 		}
@@ -32,7 +33,8 @@ func TestInitSessionEnforcesMaxSize(t *testing.T) {
 
 	t.Run("zero means unlimited", func(t *testing.T) {
 		m := NewManager(t.TempDir(), time.Hour, 0, log)
-		if _, err := m.InitSession("huge.bin", 1<<40, 100); err != nil {
+		defer m.Stop()
+		if _, err := m.InitSession("huge.bin", 1<<20, 100); err != nil {
 			t.Fatalf("expected no limit when maxUploadSize is 0, got %v", err)
 		}
 	})

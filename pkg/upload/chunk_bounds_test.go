@@ -34,6 +34,7 @@ func TestInitSessionRejectsInvalidSizes(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := NewManager(t.TempDir(), time.Hour, 0, log)
+			defer m.Stop()
 			// Must return an error, not panic.
 			sess, err := m.InitSession("f.bin", tc.totalSize, tc.chunkSize)
 			if !errors.Is(err, tc.wantErr) {
@@ -58,6 +59,7 @@ func TestWriteChunkRejectsOutOfBoundsChunks(t *testing.T) {
 
 	t.Run("chunk larger than declared chunk size", func(t *testing.T) {
 		m := NewManager(t.TempDir(), time.Hour, 0, log)
+		defer m.Stop()
 		sess, err := m.InitSession("f.bin", 256, 64)
 		if err != nil {
 			t.Fatalf("InitSession: %v", err)
@@ -75,6 +77,7 @@ func TestWriteChunkRejectsOutOfBoundsChunks(t *testing.T) {
 
 	t.Run("chunk index at or past end of file", func(t *testing.T) {
 		m := NewManager(t.TempDir(), time.Hour, 0, log)
+		defer m.Stop()
 		sess, err := m.InitSession("f.bin", 256, 64)
 		if err != nil {
 			t.Fatalf("InitSession: %v", err)
@@ -97,6 +100,7 @@ func TestWriteChunkRejectsOutOfBoundsChunks(t *testing.T) {
 		// TotalSize deliberately not a multiple of ChunkSize so the last
 		// legal index cannot hold a full chunk.
 		m := NewManager(t.TempDir(), time.Hour, 0, log)
+		defer m.Stop()
 		sess, err := m.InitSession("f.bin", 100, 64)
 		if err != nil {
 			t.Fatalf("InitSession: %v", err)
@@ -124,6 +128,7 @@ func TestWriteChunkRejectsOutOfBoundsChunks(t *testing.T) {
 
 	t.Run("replayed chunk is idempotent and does not double count", func(t *testing.T) {
 		m := NewManager(t.TempDir(), time.Hour, 0, log)
+		defer m.Stop()
 		sess, err := m.InitSession("f.bin", 256, 64)
 		if err != nil {
 			t.Fatalf("InitSession: %v", err)
@@ -145,6 +150,7 @@ func TestWriteChunkRejectsOutOfBoundsChunks(t *testing.T) {
 
 	t.Run("in-bounds full upload still completes", func(t *testing.T) {
 		m := NewManager(t.TempDir(), time.Hour, 0, log)
+		defer m.Stop()
 		sess, err := m.InitSession("f.bin", 256, 64)
 		if err != nil {
 			t.Fatalf("InitSession: %v", err)

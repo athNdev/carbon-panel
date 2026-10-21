@@ -175,7 +175,11 @@ func (m *Manager) ImportMrpack(r io.ReaderAt, size int64, opts ImportOptions) (*
 				frc.Close()
 				continue
 			}
-			_, _ = io.Copy(out, io.LimitReader(frc, maxExtractedOverrideFileSize))
+			if _, err := io.Copy(out, io.LimitReader(frc, maxExtractedOverrideFileSize)); err != nil {
+				frc.Close()
+				out.Close()
+				return nil, fmt.Errorf("failed to extract override %s: %w", f.Name, err)
+			}
 			frc.Close()
 			out.Close()
 		}
@@ -425,7 +429,11 @@ func (m *Manager) ImportCurseForge(r io.ReaderAt, size int64, opts ImportOptions
 				frc.Close()
 				continue
 			}
-			_, _ = io.Copy(out, io.LimitReader(frc, maxExtractedOverrideFileSize))
+			if _, err := io.Copy(out, io.LimitReader(frc, maxExtractedOverrideFileSize)); err != nil {
+				frc.Close()
+				out.Close()
+				return nil, fmt.Errorf("failed to extract override %s: %w", f.Name, err)
+			}
 			frc.Close()
 			out.Close()
 		}
@@ -571,7 +579,11 @@ func (m *Manager) ImportPackwizZip(r io.ReaderAt, size int64, opts ImportOptions
 			rc.Close()
 			continue
 		}
-		_, _ = io.Copy(out, rc)
+		if _, err := io.Copy(out, rc); err != nil {
+			rc.Close()
+			out.Close()
+			return nil, fmt.Errorf("failed to extract %s: %w", f.Name, err)
+		}
 		rc.Close()
 		out.Close()
 	}
