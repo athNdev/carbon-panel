@@ -195,9 +195,7 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch base branch for Buf
-        run: |
-          git fetch origin main
-          git branch -f main FETCH_HEAD
+        run: git fetch origin main
 
       - name: Set up buf
         uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1
@@ -206,7 +204,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: buf breaking
-        run: buf breaking --against '.git#branch=main'
+        run: buf breaking --against '.git#branch=origin/main'
 
   test-frontend:
     name: Frontend Quality & Build Gate
