@@ -757,7 +757,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								<Input
 									id="det-ip-{d.host}"
 									class="h-8 text-xs"
-									placeholder="e.g. 192.168.0.118"
+								placeholder="e.g. 192.168.1.10"
 									bind:value={d.advertisedIp}
 									disabled={addingDaemonHost !== null}
 								/>
@@ -795,7 +795,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				<Label for="node-name">Node Name *</Label>
 				<Input
 					id="node-name"
-					placeholder="e.g. prox3-worker"
+					placeholder="e.g. worker-1"
 					bind:value={newNode.name}
 					disabled={isSaving}
 				/>

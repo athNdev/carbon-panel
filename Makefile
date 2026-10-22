@@ -10,8 +10,6 @@
 .PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs
 
 DATA_DIR := ./data
-DOCKER_DATA_DIR := /tmp/carbon-panel
-DB_FILE := $(DATA_DIR)/carbon-panel.db
 FRONTEND_DIR := web/carbon-panel
 CARBONPANEL_BIN := build/carbon-panel
 BUF_IMAGE := bufbuild/buf:latest
@@ -26,27 +24,16 @@ BUF_RUN := docker run --rm \
 run:
 	@bash scripts/dev.sh
 
-restore:
-	@echo "Restoring seeded db for dev"
-	@mkdir -p $(DATA_DIR)
-	cp dev/carbon-panel.db data/carbon-panel.db || echo "No saved dev state, starting new db"
-
-dev: clean restore run
+dev: run
 
 # Build and run with OIDC provider (Keycloak)
-dev-auth-%: clean
-	docker compose -f oidc/$*/docker-compose.yaml down -v --remove-orphans
-	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/carbon-panel
+dev-auth-%:
 	@echo "Building and running with OIDC provider..."
-	docker compose -f oidc/$*/docker-compose.yaml build --no-cache
-	docker compose -f oidc/$*/docker-compose.yaml up
+	docker compose -f oidc/$*/docker-compose.yaml up --build
 
-dev-docker: clean
-	docker compose down -v --remove-orphans
-	@docker run --rm -v /tmp:/tmp alpine rm -rf /tmp/carbon-panel
+dev-docker:
 	@echo "Building and running with base compose..."
-	docker compose build --no-cache
-	docker compose up
+	docker compose up --build
 
 dev-docs:
 	cd docs/carbon-panel && npm run dev
@@ -107,22 +94,10 @@ module-%: gen
 
 # Clean development data
 clean:
-	@echo "Cleaning development data..."
-	@if [ -d "$(DATA_DIR)" ]; then \
-		echo "Removing data directory..."; \
-		rm -rf $(DATA_DIR); \
-	fi
-	@if [ -d "$(DOCKER_DATA_DIR)" ]; then \
-		echo "Removing docker data directory..."; \
-		docker run --rm -v $(DOCKER_DATA_DIR):/tmp alpine sh -c 'rm -rf /tmp/*'; \
-	fi
+	@echo "Removing generated build outputs only; server data and Docker volumes are preserved."
 	@if [ -f "$(CARBONPANEL_BIN)" ]; then \
 		echo "Removing backend binary..."; \
 		rm -f $(CARBONPANEL_BIN); \
-	fi
-	@if [ -f "carbon-panel.db" ]; then \
-		echo "Removing old database file..."; \
-		rm -f carbon-panel.db; \
 	fi
 	@echo "Clean complete!"
 
