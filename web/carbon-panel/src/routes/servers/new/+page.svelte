@@ -456,7 +456,7 @@ one at https://mozilla.org/MPL/2.0/.
 							>
 								{step.title}
 							</p>
-							<p class="mt-0.5 font-sans text-xs text-[#8d8d8d] break-words">
+							<p class="mt-0.5 font-sans text-xs break-words text-[#8d8d8d]">
 								{step.subtitle}
 							</p>
 						</div>
