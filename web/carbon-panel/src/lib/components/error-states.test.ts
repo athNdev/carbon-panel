@@ -4,13 +4,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const routes = [
-	'../../routes/+page.svelte',
-	'../../routes/modules/ActiveModules.svelte',
-	'../../routes/profile/+page.svelte',
-	'../../routes/settings/+page.svelte'
-];
-
 test('robustness: dashboard exposes load error state and retry', () => {
 	const p = path.resolve(import.meta.dirname, '../../routes/+page.svelte');
 	const c = fs.readFileSync(p, 'utf-8');
