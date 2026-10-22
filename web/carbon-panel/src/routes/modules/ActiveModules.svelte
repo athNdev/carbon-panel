@@ -240,7 +240,11 @@ one at https://mozilla.org/MPL/2.0/.
 		{#if loadError && modules.length === 0}
 			<tr>
 				<td colspan="7" class="p-4">
-					<CarbonErrorState title="Failed to load modules" message={loadError} onretry={() => loadModules()} />
+					<CarbonErrorState
+						title="Failed to load modules"
+						message={loadError}
+						onretry={() => loadModules()}
+					/>
 				</td>
 			</tr>
 		{:else if loading && modules.length === 0}

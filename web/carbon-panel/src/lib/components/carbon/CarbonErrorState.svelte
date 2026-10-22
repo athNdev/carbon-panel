@@ -36,7 +36,9 @@
 	class="flex flex-col items-center justify-center gap-4 border border-[#393939] bg-[#262626] p-12 text-center {className}"
 	role="alert"
 >
-	<div class="flex h-12 w-12 items-center justify-center border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]">
+	<div
+		class="flex h-12 w-12 items-center justify-center border border-[#da1e28]/40 bg-[#da1e28]/10 text-[#ff8389]"
+	>
 		<AlertTriangle class="h-6 w-6" />
 	</div>
 	<div class="space-y-1">

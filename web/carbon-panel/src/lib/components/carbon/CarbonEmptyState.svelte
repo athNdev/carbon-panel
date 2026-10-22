@@ -26,7 +26,9 @@
 <div
 	class="flex flex-col items-center justify-center gap-4 border border-[#393939] bg-[#262626] p-12 text-center {className}"
 >
-	<div class="flex h-12 w-12 items-center justify-center border border-[#393939] bg-[#161616] text-[#8d8d8d]">
+	<div
+		class="flex h-12 w-12 items-center justify-center border border-[#393939] bg-[#161616] text-[#8d8d8d]"
+	>
 		{#if icon}
 			{@render icon()}
 		{:else}

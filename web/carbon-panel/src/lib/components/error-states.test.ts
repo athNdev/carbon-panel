@@ -16,7 +16,10 @@ test('robustness: dashboard exposes load error state and retry', () => {
 	const c = fs.readFileSync(p, 'utf-8');
 	assert.ok(c.includes('loadError'), 'dashboard should track loadError');
 	assert.ok(c.includes('CarbonErrorState'), 'dashboard should render CarbonErrorState');
-	assert.ok(c.includes('onretry={refreshDashboard}'), 'dashboard should retry via refreshDashboard');
+	assert.ok(
+		c.includes('onretry={refreshDashboard}'),
+		'dashboard should retry via refreshDashboard'
+	);
 });
 
 test('robustness: ActiveModules exposes load error state and retry', () => {
@@ -24,7 +27,10 @@ test('robustness: ActiveModules exposes load error state and retry', () => {
 	const c = fs.readFileSync(p, 'utf-8');
 	assert.ok(c.includes('loadError'), 'ActiveModules should track loadError');
 	assert.ok(c.includes('CarbonErrorState'), 'ActiveModules should render CarbonErrorState');
-	assert.ok(c.includes('onretry={() => loadModules()}'), 'ActiveModules should retry via loadModules');
+	assert.ok(
+		c.includes('onretry={() => loadModules()}'),
+		'ActiveModules should retry via loadModules'
+	);
 });
 
 test('robustness: profile tracks API token load errors and retry', () => {
@@ -40,5 +46,8 @@ test('robustness: settings tracks global settings load errors and retry', () => 
 	const c = fs.readFileSync(p, 'utf-8');
 	assert.ok(c.includes('globalSettingsError'), 'settings should track globalSettingsError');
 	assert.ok(c.includes('CarbonErrorState'), 'settings should render CarbonErrorState');
-	assert.ok(c.includes('onretry={loadGlobalSettings}'), 'settings should retry via loadGlobalSettings');
+	assert.ok(
+		c.includes('onretry={loadGlobalSettings}'),
+		'settings should retry via loadGlobalSettings'
+	);
 });
