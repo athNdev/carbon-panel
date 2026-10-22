@@ -420,6 +420,7 @@ one at https://mozilla.org/MPL/2.0/.
 				{#each steps as step (step.id)}
 					<button
 						type="button"
+						aria-current={currentStep === step.id ? 'step' : undefined}
 						onclick={() => goToStep(step.id)}
 						class="relative flex cursor-pointer items-center gap-3 rounded-none border p-3 text-left transition-colors select-none {currentStep ===
 						step.id
@@ -446,7 +447,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 						<div class="min-w-0 flex-1">
 							<p
-								class="truncate text-xs font-semibold tracking-wide uppercase {currentStep ===
+								class="text-[10px] leading-tight font-semibold tracking-wide break-words uppercase {currentStep ===
 								step.id
 									? 'text-[#f4f4f4]'
 									: currentStep > step.id
@@ -455,7 +456,7 @@ one at https://mozilla.org/MPL/2.0/.
 							>
 								{step.title}
 							</p>
-							<p class="mt-0.5 truncate font-sans text-xs text-[#8d8d8d]">
+							<p class="mt-0.5 font-sans text-xs break-words text-[#8d8d8d]">
 								{step.subtitle}
 							</p>
 						</div>
