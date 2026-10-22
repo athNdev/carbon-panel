@@ -31,6 +31,7 @@ one at https://mozilla.org/MPL/2.0/.
 	} from '@lucide/svelte';
 	import { ServerStatus, type Server as ServerType } from '$lib/proto/carbonpanel/v1/common_pb';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { formatRpcError } from '$lib/api/rpc-error';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { CarbonButton, CarbonTag, CarbonErrorState } from '$lib/components/carbon';
 	import type { Timestamp } from '@bufbuild/protobuf/wkt';
@@ -50,7 +51,7 @@ one at https://mozilla.org/MPL/2.0/.
 			dashboardServers = response.servers;
 			serversStore.set(response.servers);
 		} catch (error) {
-			loadError = error instanceof Error ? error.message : 'Failed to load dashboard data';
+			loadError = formatRpcError(error, 'Could not load dashboard data. Try again.');
 			console.error('Failed to load dashboard data:', error);
 		}
 	}

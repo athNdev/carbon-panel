@@ -12,6 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { resolve } from '$app/paths';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { formatRpcError } from '$lib/api/rpc-error';
 	import { toast } from 'svelte-sonner';
 	import {
 		Plus,
@@ -58,7 +59,7 @@ one at https://mozilla.org/MPL/2.0/.
 		try {
 			await serversStore.fetchServers(false);
 		} catch (err) {
-			loadError = err instanceof Error ? err.message : 'Failed to load servers';
+			loadError = formatRpcError(err, 'Could not load servers. Try again.');
 			console.error('Failed to fetch servers:', err);
 		} finally {
 			hydrated = true;

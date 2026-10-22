@@ -17,6 +17,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { authStore } from '$lib/stores/auth';
 import { toast } from 'svelte-sonner';
 import { loadingStore } from '$lib/stores/loading.svelte';
+import { formatRpcError } from './rpc-error';
 
 // Rpc state
 let loggingOut = false;
@@ -57,6 +58,8 @@ export function wasRpcErrorToasted(error: unknown): boolean {
 	);
 }
 
+const recentErrorToasts = new Set<string>();
+
 // Login auth interception
 const authInterceptor: Interceptor = (next) => async (req) => {
 	// Auth headers
@@ -95,16 +98,23 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 			throw error;
 		}
 
+		const message = formatRpcError(error, 'The request failed. Please try again.');
+		const displayError =
+			error instanceof ConnectError
+				? new ConnectError(message, error.code, error.metadata, [], error)
+				: new Error(message, { cause: error });
+
 		if (!isSilent && !onLoginPage) {
-			const message = error instanceof Error ? error.message : 'An error occurred';
-			toast.error(message);
+			if (!recentErrorToasts.has(message)) {
+				recentErrorToasts.add(message);
+				toast.error(message);
+				setTimeout(() => recentErrorToasts.delete(message), 3000);
+			}
 			// Tag the error so a caller that also reports failures does not show
 			// the same problem twice.
-			if (typeof error === 'object' && error !== null) {
-				(error as { __rpcToasted?: boolean }).__rpcToasted = true;
-			}
+			(displayError as Error & { __rpcToasted?: boolean }).__rpcToasted = true;
 		}
-		throw error;
+		throw displayError;
 	} finally {
 		if (showLoading) {
 			loadingStore.stop(operationId);
