@@ -448,10 +448,6 @@ dev/bug-analysis/
 .direnv/
 result
 
-# carbon-panel Tier 0 (qmd) — index artifacts are local-only, sync via scripts/memory-sync.sh
-.qmd/index.sqlite
-.qmd/*.sqlite*
-
 # Secret / key material. The local OIDC dev stack generates its cert with
 # oidc/authelia/gen-dev-tls.sh; never commit a private key.
 *.key
@@ -459,9 +455,6 @@ result
 *.p12
 *.pfx
 
-# Local Proxmox job tracker state (runtime artifact)
-proxmox-jobs.sqlite3*
-
-# MCP client configs — these embed the Plane API token; never commit them.
+# Local MCP client configuration can contain credentials.
 .mcp.json
 .cline/mcp.json
