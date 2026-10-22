@@ -57,7 +57,7 @@ func TestGetServer_UnavailableRemoteDoesNotReadLocalDocker(t *testing.T) {
 	defer func() { _ = localClient.Close() }()
 
 	pool := docker.NewClientPool(store, localClient, logger.New())
-	defer pool.Close()
+	defer func() { _ = pool.Close() }()
 	pool.SetFallbackEnabled(true)
 
 	server := &storage.Server{
@@ -136,7 +136,7 @@ func TestRestoreBackup_UnavailableRemoteDoesNotUseLocalDocker(t *testing.T) {
 	defer func() { _ = localClient.Close() }()
 
 	pool := docker.NewClientPool(store, localClient, logger.New())
-	defer pool.Close()
+	defer func() { _ = pool.Close() }()
 	pool.SetFallbackEnabled(true)
 
 	dataPath := t.TempDir()
@@ -226,7 +226,7 @@ func TestRestoreBackup_UnknownDockerStatusDoesNotExtractArchive(t *testing.T) {
 		t.Fatalf("CreateNode: %v", err)
 	}
 	pool := docker.NewClientPool(store, nil, logger.New())
-	defer pool.Close()
+	defer func() { _ = pool.Close() }()
 
 	dataPath := t.TempDir()
 	server := &storage.Server{

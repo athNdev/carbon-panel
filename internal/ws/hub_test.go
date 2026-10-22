@@ -105,7 +105,7 @@ func TestHandleCommandDoesNotInspectLocalDockerForUnavailableRemote(t *testing.T
 	if err != nil {
 		t.Fatalf("NewSQLiteStore: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	if err := store.CreateServer(context.Background(), &storage.Server{
 		ID: "remote-server", Name: "Remote", ModLoader: storage.ModLoaderVanilla,
 		MCVersion: "1.21", NodeID: "unavailable-remote", ContainerID: "same-container-id",
@@ -124,7 +124,7 @@ func TestHandleCommandDoesNotInspectLocalDockerForUnavailableRemote(t *testing.T
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
-	defer localDocker.Close()
+	defer func() { _ = localDocker.Close() }()
 	// Ignore the Docker API version negotiation performed during construction.
 	inspectRequests.Store(0)
 

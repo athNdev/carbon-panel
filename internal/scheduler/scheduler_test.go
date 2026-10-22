@@ -107,7 +107,7 @@ func TestExecuteScriptTask_UnavailableNodeDoesNotUseLocalDocker(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			store := setupTestStore(t)
-			defer store.Close()
+			defer func() { _ = store.Close() }()
 
 			var localCalls atomic.Int64
 			localDaemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -121,7 +121,7 @@ func TestExecuteScriptTask_UnavailableNodeDoesNotUseLocalDocker(t *testing.T) {
 			if err != nil {
 				t.Fatalf("create local sentinel Docker client: %v", err)
 			}
-			defer localDocker.Close()
+			defer func() { _ = localDocker.Close() }()
 			localCalls.Store(0) // Ignore the constructor ping; count only caller operations.
 
 			s := NewScheduler(store, localDocker, nil, nil, nil, logger.New())
