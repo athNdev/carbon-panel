@@ -130,8 +130,15 @@ func NewAPIClient(opts ...client.Opt) (*client.Client, error) {
 func applyContainerHardening(hostConfig *container.HostConfig) {
 	pidsLimit := int64(512)
 	hostConfig.CapDrop = []string{"ALL"}
+	// The itzg entrypoint starts as root to prepare /data, then uses gosu to
+	// drop to minecraft. Keep only the capabilities that bootstrap requires.
+	hostConfig.CapAdd = minecraftBootstrapCapabilities()
 	hostConfig.SecurityOpt = []string{"no-new-privileges:true"}
 	hostConfig.PidsLimit = &pidsLimit
+}
+
+func minecraftBootstrapCapabilities() []string {
+	return []string{"CHOWN", "SETGID", "SETUID"}
 }
 
 // DefaultRestartPolicy is the Docker restart policy applied to every
@@ -481,7 +488,7 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 	// Apply environment variable overrides
 	if len(overrides.GetEnvironment()) > 0 {
 		for key, value := range overrides.GetEnvironment() {
-			if key == writableRootfsEnv {
+			if key == writableRootfsEnv || strings.EqualFold(key, skipNsswitchConfEnv) {
 				continue
 			}
 			config.Env = append(config.Env, fmt.Sprintf("%s=%s", key, value))
@@ -530,7 +537,7 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 
 	// Apply capabilities
 	if len(overrides.GetCapAdd()) > 0 {
-		hostConfig.CapAdd = overrides.GetCapAdd()
+		hostConfig.CapAdd = append(append([]string(nil), overrides.GetCapAdd()...), minecraftBootstrapCapabilities()...)
 	}
 	if len(overrides.GetCapDrop()) > 0 {
 		hostConfig.CapDrop = overrides.GetCapDrop()
@@ -611,7 +618,7 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 // writable, which is where the itzg image and the world live. Images that
 // must write outside /data (unpacking into /opt or /usr, for example) set
 // CARBON_WRITABLE_ROOTFS=1. That key is an elevated Docker override.
-func applyServerRootfs(hostConfig *container.HostConfig, overrides *v1.DockerOverrides) {
+func applyServerRootfs(hostConfig *container.HostConfig, config *container.Config, overrides *v1.DockerOverrides) {
 	if hostConfig.Tmpfs == nil {
 		hostConfig.Tmpfs = map[string]string{}
 	}
@@ -619,6 +626,16 @@ func applyServerRootfs(hostConfig *container.HostConfig, overrides *v1.DockerOve
 		hostConfig.Tmpfs["/tmp"] = "rw,noexec,nosuid,size=64m"
 	}
 	hostConfig.ReadonlyRootfs = !wantsWritableRootfs(overrides)
+	// The itzg image normally rewrites /etc/nsswitch.conf during startup.
+	// That file is on the read-only container root, and the image provides an
+	// explicit switch to skip this optional rewrite.
+	filteredEnv := config.Env[:0]
+	for _, env := range config.Env {
+		if !strings.HasPrefix(strings.ToUpper(env), skipNsswitchConfEnv+"=") {
+			filteredEnv = append(filteredEnv, env)
+		}
+	}
+	config.Env = append(filteredEnv, skipNsswitchConfEnv+"=TRUE")
 	for i := range hostConfig.Mounts {
 		if hostConfig.Mounts[i].Target == "/data" {
 			hostConfig.Mounts[i].ReadOnly = false
@@ -922,7 +939,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		}
 	}
 	ApplyOverrides(server.DockerOverrides, config, hostConfig)
-	applyServerRootfs(hostConfig, server.DockerOverrides)
+	applyServerRootfs(hostConfig, config, server.DockerOverrides)
 
 	// Network configuration
 	networkConfig := &network.NetworkingConfig{}
