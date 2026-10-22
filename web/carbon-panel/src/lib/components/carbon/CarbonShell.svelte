@@ -228,7 +228,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		<!-- IBM Carbon SideNav: off-canvas overlay on narrow screens, rail/panel on md+ -->
 		<aside
 			id="carbon-sidenav"
-			class="fixed top-12 bottom-0 left-0 z-40 w-64 overflow-x-hidden overflow-y-auto border-r border-[#393939] bg-[#161616] transition-[width,transform] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] {sideNavExpanded
+			class="scrollbar-stable fixed top-12 bottom-0 left-0 z-40 w-64 overflow-x-hidden overflow-y-auto border-r border-[#393939] bg-[#161616] transition-[width,transform] duration-[160ms] ease-[var(--ease-out-quart)] {sideNavExpanded
 				? 'translate-x-0'
 				: '-translate-x-full'} {sideNavExpanded ? 'md:w-64' : 'md:w-12'} md:translate-x-0"
 		>
@@ -301,7 +301,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 		<!-- Carbon Main Content Area -->
 		<main
-			class="ml-0 flex-1 overflow-y-auto p-4 transition-[margin] duration-[var(--motion-slow)] ease-[var(--ease-in-out-standard)] md:p-6 {sideNavExpanded
+			class="scrollbar-stable ml-0 flex-1 overflow-y-auto p-4 transition-[margin] duration-[160ms] ease-[var(--ease-out-quart)] md:p-6 {sideNavExpanded
 				? 'md:ml-64'
 				: 'md:ml-12'}"
 		>

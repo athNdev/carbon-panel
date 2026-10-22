@@ -19,6 +19,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { serversStore } from '$lib/stores/servers';
 	import { authStore } from '$lib/stores/auth';
 	import { onMount, onDestroy } from 'svelte';
+	import { onNavigate } from '$app/navigation';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import GlobalLoading from '$lib/components/global-loading.svelte';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -28,6 +29,25 @@ one at https://mozilla.org/MPL/2.0/.
 	let loading = $state(true);
 
 	let statusPollingInterval: ReturnType<typeof setInterval> | null = null;
+
+	// Animate only client-side route changes. Resolve after SvelteKit updates the
+	// DOM so the browser captures the correct new view; avoid animation for users
+	// who request reduced motion.
+	onNavigate(() => {
+		if (
+			!document.startViewTransition ||
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		) {
+			return;
+		}
+
+		let finishTransition!: () => void;
+		const updated = new Promise<void>((resolve) => {
+			finishTransition = resolve;
+		});
+		document.startViewTransition(() => updated);
+		return () => finishTransition();
+	});
 
 	function stopStatusPolling() {
 		if (statusPollingInterval) {
