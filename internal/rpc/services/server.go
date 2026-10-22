@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -81,15 +80,11 @@ type ServerService struct {
 }
 
 func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
-	if s.pool != nil {
-		if cli, err := s.pool.GetClient(nodeID); err == nil && cli != nil {
-			return cli
-		}
-		if nodeID != "" && nodeID != "local" && nodeID != s.pool.GetDefaultNodeID() {
-			return nil
-		}
+	cli, err := s.getDockerClientStrict(nodeID)
+	if err != nil {
+		return nil
 	}
-	return s.docker
+	return cli
 }
 
 func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, error) {
@@ -97,7 +92,18 @@ func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, er
 		return s.pool.GetClientStrict(nodeID)
 	}
 	if s.docker != nil {
-		return s.docker, nil
+		// A standalone Docker client is the local daemon. Reuse it for an
+		// explicit node only when the store confirms that node is local.
+		if nodeID == "" || nodeID == "local" || nodeID == "default" {
+			return s.docker, nil
+		}
+		if s.store != nil {
+			node, err := s.store.GetNode(context.Background(), nodeID)
+			if err == nil && node != nil && node.IsLocal {
+				return s.docker, nil
+			}
+		}
+		return nil, fmt.Errorf("no docker client available for node %s", nodeID)
 	}
 	return nil, fmt.Errorf("no docker client available")
 }
@@ -2620,12 +2626,54 @@ func (s *ServerService) ClearServerLogs(ctx context.Context, req *connect.Reques
 }
 
 // isHostPortBound checks if a port is already bound by an OS process in the local network namespace.
+//
+// On some platforms (notably Windows) a socket bound to a specific address (for
+// example 127.0.0.1) does not conflict with a bind to the wildcard address, so
+// a single bind attempt is not reliable. Probe a set of common local addresses
+// and treat the port as bound if any of them cannot be acquired.
 func isHostPortBound(port int) bool {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		return true
+	candidates := []string{"127.0.0.1", "0.0.0.0", "::1", "::"}
+
+	// Also probe every address assigned to a local interface so that ports bound
+	// only to a specific (non-loopback) IP are detected.
+	if ifaces, err := net.Interfaces(); err == nil {
+		for _, iface := range ifaces {
+			addrs, _ := iface.Addrs()
+			for _, a := range addrs {
+				var ip net.IP
+				switch v := a.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				if ip != nil {
+					candidates = append(candidates, ip.String())
+				}
+			}
+		}
 	}
-	_ = ln.Close()
+
+	seen := make(map[string]bool)
+	for _, addr := range candidates {
+		if seen[addr] {
+			continue
+		}
+		seen[addr] = true
+
+		ln, err := net.Listen("tcp", net.JoinHostPort(addr, strconv.Itoa(port)))
+		if err == nil {
+			_ = ln.Close()
+			continue
+		}
+		// Only treat address-in-use failures as "bound"; ignore unrelated
+		// errors (e.g. disabled IPv6, permission) so they don't produce
+		// false positives.
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "in use") || strings.Contains(msg, "only one usage") {
+			return true
+		}
+	}
 	return false
 }
 

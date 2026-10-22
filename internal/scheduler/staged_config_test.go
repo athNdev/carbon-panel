@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -204,7 +203,7 @@ func TestSchedulerWakePathsRejectOvercommittedNode(t *testing.T) {
 	t.Cleanup(func() { _ = store.Close() })
 	if err := store.CreateNode(ctx, &storage.Node{
 		ID: "small-node", Name: "Small Node", Host: "tcp://127.0.0.1:2375",
-		Enabled: true, Status: storage.NodeStatusOnline,
+		Enabled: true, Status: storage.NodeStatusOnline, IsLocal: true,
 	}); err != nil {
 		t.Fatalf("CreateNode: %v", err)
 	}

@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"net"
 	"net/http"
@@ -1424,8 +1423,19 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	if oldContainerID != "" {
 		status, err := c.GetContainerStatus(ctx, oldContainerID)
 		if err != nil {
-			// Container may not exist, that's ok - continue with creation
-			c.log.Debug("Container %s not found during recreation: %v", oldContainerID, err)
+			if !errdefs.IsNotFound(err) {
+				// An unavailable or timed-out inspect is not evidence that the
+				// old container is absent. Keep its identity and do not send a
+				// destructive remove based on an unknown observation.
+				result.NewContainerID = oldContainerID
+				return result, fmt.Errorf("failed to inspect old container before recreation: %w", err)
+			}
+			c.log.Debug("Container %s is already absent during recreation: %v", oldContainerID, err)
+		} else if status == models.StatusError {
+			// A successful response without a usable state is still an unknown
+			// observation. Preserve the known identity and require reconciliation.
+			result.NewContainerID = oldContainerID
+			return result, fmt.Errorf("failed to determine old container state before recreation: status is unknown")
 		} else if status == models.StatusRunning || status == models.StatusUnhealthy || status == models.StatusPaused {
 			// A paused container cannot be removed reliably until StopContainer
 			// unpauses it. Preserve paused intent as not-running: its replacement
@@ -1674,11 +1684,11 @@ func (c *Client) pullImage(ctx context.Context, imageName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
 	}
-	defer reader.Close()
-
-	// Read the output to ensure the pull completes
-	_, err = io.Copy(io.Discard, reader)
-	if err != nil {
+	// Docker reports some pull failures as JSON messages in an otherwise
+	// successful HTTP response. The SDK's Wait consumes and decodes those
+	// messages, returning embedded daemon errors, transport errors, and
+	// context cancellation while still draining successful progress streams.
+	if err = reader.Wait(ctx); err != nil {
 		return fmt.Errorf("failed to complete image pull for %s: %w", imageName, err)
 	}
 

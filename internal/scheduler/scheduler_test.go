@@ -3,18 +3,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 )
 
 func setupTestStore(t *testing.T) *storage.Store {
@@ -93,6 +96,49 @@ func TestScheduler_InFlightTaskDeduplication(t *testing.T) {
 	}
 	if len(executions) != 0 {
 		t.Errorf("expected 0 executions for in-flight task, got %d", len(executions))
+	}
+}
+
+func TestExecuteScriptTask_UnavailableNodeDoesNotUseLocalDocker(t *testing.T) {
+	for _, withPool := range []bool{true, false} {
+		name := "without_pool"
+		if withPool {
+			name = "with_pool"
+		}
+		t.Run(name, func(t *testing.T) {
+			store := setupTestStore(t)
+			defer store.Close()
+
+			var localCalls atomic.Int64
+			localDaemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				localCalls.Add(1)
+				w.Header().Set("Api-Version", "1.41")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("{}"))
+			}))
+			defer localDaemon.Close()
+			localDocker, err := docker.NewClient(localDaemon.URL, logger.New())
+			if err != nil {
+				t.Fatalf("create local sentinel Docker client: %v", err)
+			}
+			defer localDocker.Close()
+			localCalls.Store(0) // Ignore the constructor ping; count only caller operations.
+
+			s := NewScheduler(store, localDocker, nil, nil, nil, logger.New())
+			if withPool {
+				s.SetClientPool(docker.NewClientPool(store, localDocker, logger.New()))
+			}
+			server := &storage.Server{ID: "script-remote", NodeID: "unavailable-remote", ContainerID: "remote-cid"}
+			task := &storage.ScheduledTask{Config: `{"script_path":"/bin/true"}`}
+
+			_, err = s.executeScriptTask(context.Background(), server, task)
+			if err == nil {
+				t.Fatal("expected unavailable-node error")
+			}
+			if got := localCalls.Load(); got != 0 {
+				t.Fatalf("local Docker requests = %d, want 0", got)
+			}
+		})
 	}
 }
 

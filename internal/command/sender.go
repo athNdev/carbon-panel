@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package command
 
 import (
@@ -17,12 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	rcon "github.com/athNdev/carbon-panel/internal/rcon"
+	"github.com/moby/moby/client"
 )
 
 type DockerExecutor interface {
@@ -48,13 +47,34 @@ func NewSender(store *storage.Store, cfg *config.Config, dockerExec DockerExecut
 // resolveExecutor returns the DockerExecutor for the given nodeID, preferring a
 // strict node-specific client from the pool over the single default executor so
 // commands are not silently sent to the wrong (local) daemon for a remote node.
-func (s *Sender) resolveExecutor(nodeID string) DockerExecutor {
+func (s *Sender) resolveExecutor(nodeID string) (DockerExecutor, error) {
+	// Servers without a node assignment retain the legacy local execution path.
+	if nodeID == "" {
+		return s.docker, nil
+	}
 	if s.pool != nil {
-		if cli, err := s.pool.GetClientStrict(nodeID); err == nil && cli != nil {
-			return cli
+		cli, err := s.pool.GetClientStrict(nodeID)
+		if err != nil {
+			if nodeID == "default" || nodeID == "local" {
+				return s.docker, nil
+			}
+			return nil, fmt.Errorf("docker executor unavailable for node %q: %w", nodeID, err)
+		}
+		if cli == nil {
+			return nil, fmt.Errorf("docker executor unavailable for node %q", nodeID)
+		}
+		return cli, nil
+	}
+	if nodeID == "default" || nodeID == "local" {
+		return s.docker, nil
+	}
+	if s.store != nil {
+		node, err := s.store.GetNode(context.Background(), nodeID)
+		if err == nil && node != nil && node.IsLocal {
+			return s.docker, nil
 		}
 	}
-	return s.docker
+	return nil, fmt.Errorf("docker executor unavailable for node %q: client pool is not configured", nodeID)
 }
 
 func (s *Sender) SendCommand(ctx context.Context, serverID string, command string) (string, error) {
@@ -67,7 +87,10 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 		return "", fmt.Errorf("server container not found")
 	}
 
-	executor := s.resolveExecutor(server.NodeID)
+	executor, err := s.resolveExecutor(server.NodeID)
+	if err != nil {
+		return "", err
+	}
 
 	// old docker exec command
 	dockerExec := func(cause error) (string, error) {
@@ -108,19 +131,19 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 	var rconPort int
 	if s.config != nil && s.config.Minecraft.GlobalConfig != nil {
 		if v, ok := s.config.Minecraft.GlobalConfig["rconPort"]; ok && v != nil {
-		switch t := v.(type) {
-		case int:
-			rconPort = t
-		case int64:
-			rconPort = int(t)
-		case float64:
-			rconPort = int(t)
-		case string:
-			if p, err := strconv.Atoi(t); err == nil {
-				rconPort = p
+			switch t := v.(type) {
+			case int:
+				rconPort = t
+			case int64:
+				rconPort = int(t)
+			case float64:
+				rconPort = int(t)
+			case string:
+				if p, err := strconv.Atoi(t); err == nil {
+					rconPort = p
+				}
 			}
 		}
-	}
 	}
 	if serverCfg != nil && serverCfg.RCONPort != nil {
 		rconPort = *serverCfg.RCONPort
@@ -129,12 +152,12 @@ func (s *Sender) SendCommand(ctx context.Context, serverID string, command strin
 	var rconPassword string
 	if s.config != nil && s.config.Minecraft.GlobalConfig != nil {
 		if v, ok := s.config.Minecraft.GlobalConfig["rconPassword"]; ok && v != nil {
-		if p, ok := v.(string); ok {
-			rconPassword = p
-		} else {
-			rconPassword = fmt.Sprint(v)
+			if p, ok := v.(string); ok {
+				rconPassword = p
+			} else {
+				rconPassword = fmt.Sprint(v)
+			}
 		}
-	}
 	}
 	if serverCfg != nil && serverCfg.RCONPassword != nil {
 		rconPassword = *serverCfg.RCONPassword
