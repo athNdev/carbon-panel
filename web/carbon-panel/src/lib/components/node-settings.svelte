@@ -757,7 +757,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								<Input
 									id="det-ip-{d.host}"
 									class="h-8 text-xs"
-								placeholder="e.g. 192.168.1.10"
+									placeholder="e.g. 192.168.1.10"
 									bind:value={d.advertisedIp}
 									disabled={addingDaemonHost !== null}
 								/>
