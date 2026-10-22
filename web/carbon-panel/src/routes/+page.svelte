@@ -281,7 +281,11 @@ one at https://mozilla.org/MPL/2.0/.
 	</div>
 {:else if loadError}
 	<div class="p-6">
-		<CarbonErrorState title="Failed to load dashboard" message={loadError} onretry={refreshDashboard} />
+		<CarbonErrorState
+			title="Failed to load dashboard"
+			message={loadError}
+			onretry={refreshDashboard}
+		/>
 	</div>
 {:else}
 	<div class="space-y-6 bg-[#161616] text-[#f4f4f4]">

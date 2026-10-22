@@ -194,6 +194,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch base branch for Buf
+        run: git fetch origin main:refs/heads/main
+
       - name: Set up buf
         uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1
         with:

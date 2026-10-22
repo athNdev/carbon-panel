@@ -92,7 +92,8 @@ one at https://mozilla.org/MPL/2.0/.
 			const response = await rpcClient.config.getGlobalSettings({});
 			globalConfig = response.categories;
 		} catch (error) {
-			globalSettingsError = error instanceof Error ? error.message : 'Failed to load global settings';
+			globalSettingsError =
+				error instanceof Error ? error.message : 'Failed to load global settings';
 			toast.error('Failed to load global settings');
 			console.error(error);
 		} finally {
@@ -155,7 +156,11 @@ one at https://mozilla.org/MPL/2.0/.
 						<CarbonInlineLoading description="Loading settings..." />
 					</div>
 				{:else if globalSettingsError}
-					<CarbonErrorState title="Failed to load settings" message={globalSettingsError} onretry={loadGlobalSettings} />
+					<CarbonErrorState
+						title="Failed to load settings"
+						message={globalSettingsError}
+						onretry={loadGlobalSettings}
+					/>
 				{:else}
 					<ServerConfiguration config={globalConfig} onSave={saveGlobalSettings} {saving} />
 				{/if}

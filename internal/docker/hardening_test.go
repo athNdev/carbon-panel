@@ -58,6 +58,11 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 	if !slices.Contains(hostConfig.CapAdd, "SYS_NICE") {
 		t.Errorf("expected SYS_NICE in CapAdd")
 	}
+	for _, cap := range minecraftBootstrapCapabilities() {
+		if !slices.Contains(hostConfig.CapAdd, cap) {
+			t.Errorf("Docker capability override must retain Minecraft bootstrap capability %s", cap)
+		}
+	}
 	if *hostConfig.Resources.PidsLimit != 1024 {
 		t.Errorf("expected PidsLimit overridden to 1024")
 	}
@@ -75,6 +80,11 @@ func TestContainerHardening_Defaults(t *testing.T) {
 
 	if !slices.Contains(hostConfig.CapDrop, "ALL") {
 		t.Fatal("default container must drop all Linux capabilities")
+	}
+	for _, cap := range minecraftBootstrapCapabilities() {
+		if !slices.Contains(hostConfig.CapAdd, cap) {
+			t.Fatalf("default container must retain %s for Minecraft image bootstrap", cap)
+		}
 	}
 	if !slices.Contains(hostConfig.SecurityOpt, "no-new-privileges:true") {
 		t.Fatal("default container must prevent privilege escalation")
@@ -102,7 +112,8 @@ func TestApplyServerRootfs_DefaultAndWritableOverride(t *testing.T) {
 			Target: "/data",
 		}},
 	}
-	applyServerRootfs(hostConfig, nil)
+	config := &container.Config{Env: []string{skipNsswitchConfEnv + "=false"}}
+	applyServerRootfs(hostConfig, config, nil)
 	if !hostConfig.ReadonlyRootfs {
 		t.Fatal("root filesystem must be read-only by default")
 	}
@@ -112,20 +123,28 @@ func TestApplyServerRootfs_DefaultAndWritableOverride(t *testing.T) {
 	if hostConfig.Mounts[0].ReadOnly {
 		t.Fatal("/data must stay writable")
 	}
+	if !slices.Contains(config.Env, skipNsswitchConfEnv+"=TRUE") {
+		t.Fatal("Minecraft startup must skip rewriting nsswitch.conf on the read-only rootfs")
+	}
 
-	writable := &v1.DockerOverrides{Environment: map[string]string{writableRootfsEnv: "1"}}
-	applyServerRootfs(hostConfig, writable)
+	writable := &v1.DockerOverrides{Environment: map[string]string{
+		writableRootfsEnv:   "1",
+		skipNsswitchConfEnv: "false",
+	}}
+	applyServerRootfs(hostConfig, config, writable)
 	if hostConfig.ReadonlyRootfs {
 		t.Fatal("CARBON_WRITABLE_ROOTFS must turn off the read-only root")
 	}
 	if !IsPrivilegedDockerOverride(writable) {
 		t.Fatal("turning off the read-only root must require the elevated Docker permission")
 	}
-	config := &container.Config{}
 	ApplyOverrides(writable, config, hostConfig)
 	for _, env := range config.Env {
 		if strings.HasPrefix(env, writableRootfsEnv+"=") {
 			t.Fatalf("writable-root flag leaked into container env: %s", env)
+		}
+		if strings.HasPrefix(strings.ToUpper(env), skipNsswitchConfEnv+"=") && env != skipNsswitchConfEnv+"=TRUE" {
+			t.Fatalf("read-only rootfs startup setting must not be overridden: %s", env)
 		}
 	}
 }

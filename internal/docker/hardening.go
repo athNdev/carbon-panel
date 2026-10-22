@@ -56,6 +56,10 @@ func isDangerousSecurityOpt(opt string) bool {
 // permission because it weakens the default confinement.
 const writableRootfsEnv = "CARBON_WRITABLE_ROOTFS"
 
+// skipNsswitchConfEnv tells the itzg Minecraft image not to rewrite
+// /etc/nsswitch.conf, which is part of Carbon Panel's read-only rootfs.
+const skipNsswitchConfEnv = "SKIP_NSSWITCH_CONF"
+
 func wantsWritableRootfs(overrides *v1.DockerOverrides) bool {
 	if overrides == nil {
 		return false
