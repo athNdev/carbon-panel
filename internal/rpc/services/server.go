@@ -1279,8 +1279,12 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			}
 			return
 		}
-		containerID, err := dockerCli.CreateContainer(bgCtx, server, serverConfig)
-		if err != nil {
+		var containerID string
+		if err := s.runJournaledMutation(bgCtx, server, "create", func() error {
+			var createErr error
+			containerID, createErr = dockerCli.CreateContainer(bgCtx, server, serverConfig)
+			return createErr
+		}); err != nil {
 			s.log.Error("Failed to create container: %v", err)
 			if updateErr := s.store.UpdateServerStatus(bgCtx, server.ID, storage.StatusError); updateErr != nil {
 				s.log.Error("Failed to update server status to error: %v", updateErr)
@@ -1307,7 +1311,9 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 		// Start the container immediately if requested
 		if startImmediately {
-			if err := dockerCli.StartContainer(bgCtx, containerID); err != nil {
+			if err := s.runJournaledMutation(bgCtx, server, "start", func() error {
+				return dockerCli.StartContainer(bgCtx, containerID)
+			}); err != nil {
 				s.log.Error("Failed to start container: %v", err)
 				server.Status = storage.StatusError
 				if updateErr := s.store.UpdateServerStatus(bgCtx, server.ID, storage.StatusError); updateErr != nil {
@@ -1714,10 +1720,15 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	// Stop and remove the server container before deleting its database row or
 	// data directory. A failed removal must not orphan a live container.
 	if server.ContainerID != "" {
-		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
-			s.log.Warn("Failed to stop container %s during deletion; removal will still be attempted: %v", server.ContainerID, err)
-		}
-		if err := dockerCli.RemoveContainer(ctx, server.ContainerID); err != nil && !errdefs.IsNotFound(err) {
+		if err := s.runJournaledMutation(ctx, server, "delete", func() error {
+			if _, stopErr := dockerCli.StopContainer(ctx, server.ContainerID); stopErr != nil {
+				s.log.Warn("Failed to stop container %s during deletion; removal will still be attempted: %v", server.ContainerID, stopErr)
+			}
+			if rmErr := dockerCli.RemoveContainer(ctx, server.ContainerID); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+				return rmErr
+			}
+			return nil
+		}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server container %s: %w", server.ContainerID, err))
 		}
 	}
@@ -2218,7 +2229,9 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container recreated but its ID could not be saved: %w", err))
 		}
 		if !result.WasRunning {
-			if err := dockerCli.StartContainer(ctx, result.NewContainerID); err != nil {
+			if err := s.runJournaledMutation(ctx, server, "restart_start", func() error {
+				return dockerCli.StartContainer(ctx, result.NewContainerID)
+			}); err != nil {
 				server.Status = storage.StatusError
 				_ = s.store.UpdateServer(ctx, server)
 				for _, rec := range appliedStaged {
@@ -2260,8 +2273,12 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 		// Create container
 		s.prepareServerConfig(ctx, server, serverConfig)
-		containerID, err := dockerCli.CreateContainer(ctx, server, serverConfig)
-		if err != nil {
+		var containerID string
+		if err := s.runJournaledMutation(ctx, server, "create", func() error {
+			var createErr error
+			containerID, createErr = dockerCli.CreateContainer(ctx, server, serverConfig)
+			return createErr
+		}); err != nil {
 			s.log.Error("Failed to create container: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server container"))
 		}
@@ -2274,7 +2291,9 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		}
 
 		// Now start the container
-		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
+		if err := s.runJournaledMutation(ctx, server, "start", func() error {
+			return dockerCli.StartContainer(ctx, server.ContainerID)
+		}); err != nil {
 			s.log.Error("Failed to start container: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start server"))
 		}
@@ -2316,7 +2335,9 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	}
 
 	// Restart container
-	if err := dockerCli.RestartContainer(ctx, server.ContainerID, 2*time.Second); err != nil {
+	if err := s.runJournaledMutation(ctx, server, "restart", func() error {
+		return dockerCli.RestartContainer(ctx, server.ContainerID, 2*time.Second)
+	}); err != nil {
 		s.log.Warn("Failed to restart container directly (%v), attempting recreation", err)
 		serverConfig, cfgErr := s.store.GetServerConfig(ctx, server.ID)
 		if cfgErr == nil {
