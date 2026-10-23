@@ -1,5 +1,20 @@
 # Decision brief — D01 and D03–D14
 
+> **Outcome, 2026-10-23.** The four business decisions were answered by the
+> product owner and are now recorded as accepted in the Cloud decision register
+> (`docs/plans/hosted-minecraft-instance-catalog.md` §11) and in
+> `docs/adr/0010-managed-hosting-commercial-policy.md`. D11 and D12 were
+> delegated with concrete direction (industry standard; Australian entity with
+> Stripe) and fixed to specific values there so they cannot drift.
+>
+> A new accepted direction, **D15**, was added the same day: storage-heavy
+> instance profiles with thin-provisioned disk, so deep sleep and freeze can
+> carry many servers on small RAM/vCPU while disk remains the scarce dimension.
+>
+> Still open: **D14** (billing anchor) has an implementation default but no
+> product answer, and the eight engineering defaults below are not product
+> acceptance.
+
 Scope: these are the only open product decisions blocking MINE-231 beyond the
 nonpayable development checkout. C01 (one fixed Carbon product, modular
 deployment) and D02 (dedicated and shared hosting in the first release) are
