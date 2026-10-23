@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -27,9 +26,7 @@ func TestScenario1_IdleDetectionAndTransition(t *testing.T) {
 	mgr := NewDeepSleepManager(controller, store, commander, nil, nil)
 	require.NoError(t, mgr.CheckIdleServers(ctx))
 
-	mgr.trackerMu.Lock()
-	mgr.idleTracker["srv-sleep"] = time.Now().Add(-2 * time.Minute)
-	mgr.trackerMu.Unlock()
+	mgr.idle.markIdleSince("srv-sleep", time.Now().Add(-2*time.Minute))
 
 	require.NoError(t, mgr.CheckIdleServers(ctx))
 
@@ -274,9 +271,7 @@ func TestScenario8_PlayerActivity_PostponesSleep(t *testing.T) {
 		return 1
 	})
 
-	mgr.trackerMu.Lock()
-	mgr.idleTracker["srv-sleep"] = time.Now().Add(-10 * time.Minute)
-	mgr.trackerMu.Unlock()
+	mgr.idle.markIdleSince("srv-sleep", time.Now().Add(-10*time.Minute))
 
 	require.NoError(t, mgr.CheckIdleServers(ctx))
 

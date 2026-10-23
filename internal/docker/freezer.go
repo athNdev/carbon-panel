@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -69,21 +68,11 @@ type HibernationManager struct {
 	freezer       ContainerFreezer
 	store         FreezerStore
 	logger        *logger.Logger
-	idleTracker   map[string]time.Time
-	trackerMu     sync.RWMutex
+	idle          *idleTracker
 	wakeCallbacks []func(serverID string)
 	mu            sync.Mutex
 	ctx           context.Context
 	cancel        context.CancelFunc
-	// playerCount, when set, is the source of truth for online players
-	// (MINE-120). Server rows from the store always report PlayersOnline==0
-	// (gorm:"-"), so without a provider every server looks idle. Production
-	// wires this to the metrics collector.
-	playerCount func(serverID string) int
-	// inflight guards against concurrent hibernate/wake transitions for the
-	// same server (e.g. a wake racing the idle loop's hibernate).
-	inflight   map[string]struct{}
-	inflightMu sync.Mutex
 
 	hibernatedTotal uint64
 	wokenTotal      uint64
@@ -92,61 +81,27 @@ type HibernationManager struct {
 // NewHibernationManager creates a new HibernationManager
 func NewHibernationManager(freezer ContainerFreezer, store FreezerStore, log *logger.Logger) *HibernationManager {
 	return &HibernationManager{
-		freezer:     freezer,
-		store:       store,
-		logger:      log,
-		idleTracker: make(map[string]time.Time),
-		inflight:    make(map[string]struct{}),
+		freezer: freezer,
+		store:   store,
+		logger:  log,
+		idle:    newIdleTracker(),
 	}
 }
 
 // SetPlayerCountProvider configures the online-player source of truth used
 // by CheckIdleServers instead of the (never persisted) row field (MINE-120).
 func (m *HibernationManager) SetPlayerCountProvider(provider func(serverID string) int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.playerCount = provider
-}
-
-// onlinePlayers returns the authoritative online-player count for a server.
-func (m *HibernationManager) onlinePlayers(srv *db.Server) int {
-	m.mu.Lock()
-	provider := m.playerCount
-	m.mu.Unlock()
-	if provider != nil {
-		return provider(srv.ID)
-	}
-	return srv.PlayersOnline
+	m.idle.SetPlayerCountProvider(provider)
 }
 
 // tryBeginTransition single-flights hibernate/wake per server: returns false
 // (and logs) if a transition for serverID is already running.
 func (m *HibernationManager) tryBeginTransition(serverID, op string) bool {
-	if !TryBeginServerTransition(serverID) {
-		if m.logger != nil {
-			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
-		}
-		return false
-	}
-	m.inflightMu.Lock()
-	if _, busy := m.inflight[serverID]; busy {
-		m.inflightMu.Unlock()
-		EndServerTransition(serverID)
-		if m.logger != nil {
-			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
-		}
-		return false
-	}
-	m.inflight[serverID] = struct{}{}
-	m.inflightMu.Unlock()
-	return true
+	return m.idle.tryBegin(serverID, op, m.logger)
 }
 
 func (m *HibernationManager) endTransition(serverID string) {
-	m.inflightMu.Lock()
-	delete(m.inflight, serverID)
-	m.inflightMu.Unlock()
-	EndServerTransition(serverID)
+	m.idle.end(serverID)
 }
 
 // RegisterWakeCallback registers a callback fired when a server is woken
@@ -202,9 +157,7 @@ func (m *HibernationManager) Stop() {
 
 // RecordActivity marks a server as recently active, resetting its idle countdown
 func (m *HibernationManager) RecordActivity(serverID string) {
-	m.trackerMu.Lock()
-	defer m.trackerMu.Unlock()
-	delete(m.idleTracker, serverID)
+	m.idle.RecordActivity(serverID)
 }
 
 // CheckIdleServers evaluates all active servers and hibernates idle ones
@@ -218,52 +171,14 @@ func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
 		return fmt.Errorf("failed to list servers: %w", err)
 	}
 
-	now := time.Now()
-
-	for _, srv := range servers {
-		if !srv.AutoHibernate || srv.Status != db.StatusRunning || srv.ContainerID == "" {
-			m.trackerMu.Lock()
-			delete(m.idleTracker, srv.ID)
-			m.trackerMu.Unlock()
-			continue
-		}
-
-		// Only hibernate if no players are online (authoritative count,
-		// not the never-persisted row field — see SetPlayerCountProvider).
-		if m.onlinePlayers(srv) > 0 {
-			m.trackerMu.Lock()
-			delete(m.idleTracker, srv.ID)
-			m.trackerMu.Unlock()
-			continue
-		}
-
-		timeoutMinutes := srv.IdleTimeoutMinutes
-		if timeoutMinutes <= 0 {
-			timeoutMinutes = 10
-		}
-		idleDuration := time.Duration(timeoutMinutes) * time.Minute
-
-		m.trackerMu.Lock()
-		idleSince, tracked := m.idleTracker[srv.ID]
-		if !tracked {
-			m.idleTracker[srv.ID] = now
-			m.trackerMu.Unlock()
-			continue
-		}
-		m.trackerMu.Unlock()
-
-		if now.Sub(idleSince) >= idleDuration {
-			if m.logger != nil {
-				m.logger.Info("Server %s (%s) idle for %v, hibernating container %s via cgroup freezer...",
-					srv.Name, srv.ID, now.Sub(idleSince), srv.ContainerID)
-			}
-			if err := m.HibernateServer(ctx, srv.ID); err != nil {
-				if m.logger != nil {
-					m.logger.Error("Failed to hibernate server %s: %v", srv.Name, err)
-				}
-			}
-		}
-	}
+	m.idle.sweep(ctx, servers, idleMode{
+		DefaultTimeoutMinutes: 10,
+		Eligible:              func(s *db.Server) bool { return s.AutoHibernate },
+		TimeoutMinutes:        func(s *db.Server) int { return s.IdleTimeoutMinutes },
+		Sleep:                 m.HibernateServer,
+		IdleLogFormat:         "Server %s (%s) idle for %v, hibernating container %s via cgroup freezer...",
+		ErrorLogFormat:        "Failed to hibernate server %s: %v",
+	}, m.logger)
 
 	return nil
 }
@@ -312,9 +227,7 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 		)
 	}
 
-	m.trackerMu.Lock()
-	delete(m.idleTracker, serverID)
-	m.trackerMu.Unlock()
+	m.idle.RecordActivity(serverID)
 
 	if m.logger != nil {
 		m.logger.Info("Successfully hibernated server %s (%s)", srv.Name, serverID)
@@ -389,9 +302,7 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 		return fmt.Errorf("failed to update server status to running: %w", err)
 	}
 
-	m.trackerMu.Lock()
-	delete(m.idleTracker, serverID)
-	m.trackerMu.Unlock()
+	m.idle.RecordActivity(serverID)
 
 	if m.logger != nil {
 		m.logger.Info("Successfully woke server %s (%s) from hibernation in %v", srv.Name, serverID, time.Since(start))
