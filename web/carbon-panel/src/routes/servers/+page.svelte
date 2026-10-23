@@ -264,6 +264,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<Search class="pointer-events-none absolute left-3 h-4 w-4 text-[#8d8d8d]" />
 				<input
 					type="search"
+					aria-label="Search servers"
 					placeholder="Search by name, description, version, loader, or port..."
 					bind:value={searchQuery}
 					onkeydown={(e) => e.key === 'Escape' && (searchQuery = '')}
