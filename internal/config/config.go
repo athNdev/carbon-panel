@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package config
 
 import (
@@ -97,6 +96,10 @@ type DockerConfig struct {
 	EnableRateLimit bool              `mapstructure:"enable_rate_limit" json:"enable_rate_limit"`
 	RateLimitPerMin int               `mapstructure:"rate_limit_per_min" json:"rate_limit_per_min"`
 	RateLimitBurst  int               `mapstructure:"rate_limit_burst" json:"rate_limit_burst"`
+	// ReconcilePurgeOrphans removes containers that this installation provably
+	// created but the database no longer knows about. Disabled by default:
+	// orphaned, legacy and foreign containers are quarantined and left running.
+	ReconcilePurgeOrphans bool `mapstructure:"reconcile_purge_orphans" json:"reconcile_purge_orphans"`
 }
 
 type StorageConfig struct {

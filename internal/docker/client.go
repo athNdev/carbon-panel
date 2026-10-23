@@ -296,6 +296,10 @@ type ClientConfig struct {
 	RateLimitPerMin int
 	RateLimitBurst  int
 	ProxyEnabled    bool
+	// InstallationID identifies this controller installation. It is written to
+	// every managed container so reconciliation and name-conflict handling can
+	// distinguish this panel from another installation sharing a daemon.
+	InstallationID string
 }
 
 type ContainerLogStreamer interface {
@@ -886,6 +890,10 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 			"willfarrell.autoheal":                  "false",
 		},
 	}
+	// Stamp the installation identity so startup reconciliation and name-conflict
+	// handling can tell this panel's containers apart from another installation
+	// sharing the same Docker daemon.
+	c.applyInstallationLabel(config.Labels)
 
 	// Apply dynamic memory headroom & OOM-kill (exit 137) guard (MINE-4)
 	alloc := utils.CalculateMemoryAllocation(server.Memory)
@@ -1097,11 +1105,18 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 
 	if conflictID := parseConflictingContainerID(err); conflictID != "" {
 		inspectResult, inspectErr := c.docker.ContainerInspect(ctx, conflictID, client.ContainerInspectOptions{})
-		if inspectErr == nil && inspectResult.Container.State != nil && isAliveContainerState(inspectResult.Container.State.Status) {
-			c.log.Info("Adopting conflicting container %s directly from conflict error for %s", conflictID, containerName)
-			return conflictID, nil
-		}
 		if inspectErr == nil {
+			var labels map[string]string
+			if inspectResult.Container.Config != nil {
+				labels = inspectResult.Container.Config.Labels
+			}
+			if ownErr := c.validateConflictOwnership(conflictID, labels, config.Labels); ownErr != nil {
+				return "", ownErr
+			}
+			if inspectResult.Container.State != nil && isAliveContainerState(inspectResult.Container.State.Status) {
+				c.log.Info("Adopting conflicting container %s directly from conflict error for %s", conflictID, containerName)
+				return conflictID, nil
+			}
 			// An exited or dead container still owns the name. Adopting it
 			// would skip the config this create was about to apply (MINE-104).
 			c.log.Warn("Removing stale conflicting container %s for %s so create can apply the new config", conflictID, containerName)
@@ -1114,7 +1129,10 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	if existing, resolveErr := resolve(); resolveErr == nil {
 		// A 409 means the name is taken. If what holds the name is a live
 		// container, adopt it rather than force-removing a running server out
-		// from under it (MINE-104).
+		// from under it (MINE-104) — but only when it is provably ours.
+		if ownErr := c.validateConflictOwnership(existing.ID, existing.Labels, config.Labels); ownErr != nil {
+			return "", ownErr
+		}
 		if isAliveContainerState(existing.State) {
 			c.log.Info("Adopting conflicting container %s (name=%s, state=%s) instead of failing", existing.ID, containerName, existing.State)
 			return existing.ID, nil
@@ -1135,6 +1153,9 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	if retryErr != nil {
 		if isConflictError(retryErr) {
 			if existing, resolveErr := resolve(); resolveErr == nil && existing.ID != "" && isAliveContainerState(existing.State) {
+				if ownErr := c.validateConflictOwnership(existing.ID, existing.Labels, config.Labels); ownErr != nil {
+					return "", ownErr
+				}
 				c.log.Info("Adopting container %s after retry conflict on %s", existing.ID, containerName)
 				return existing.ID, nil
 			}
@@ -1159,6 +1180,10 @@ var ErrContainerNotResolved = fmt.Errorf("no matching docker container found")
 //     in case the container exists but was created before labels were consistently applied,
 //     or the label was somehow stripped/lost.
 //
+// When an installation identity is configured the label lookup is scoped to it, so a stale
+// database restored from another installation cannot resolve (and operate on) that
+// installation's container. Legacy containers remain reachable through the name fallback.
+//
 // Returns ErrContainerNotResolved (wrapped) if neither strategy finds a container. Any other
 // error is a transient/unexpected Docker API failure and should NOT be treated as "not found".
 func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*container.Summary, error) {
@@ -1172,6 +1197,7 @@ func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*contai
 	// Strategy 1: label match
 	filterArgs := make(client.Filters)
 	filterArgs.Add("label", fmt.Sprintf("carbon-panel.server.id=%s", serverID))
+	filterArgs = c.filterByInstallation(filterArgs)
 
 	listResult, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
@@ -1211,6 +1237,7 @@ func (c *Client) ResolveModuleContainer(ctx context.Context, moduleID string) (*
 	// Strategy 1: label match
 	filterArgs := make(client.Filters)
 	filterArgs.Add("label", fmt.Sprintf("carbon-panel.module.id=%s", moduleID))
+	filterArgs = c.filterByInstallation(filterArgs)
 
 	listResult, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
