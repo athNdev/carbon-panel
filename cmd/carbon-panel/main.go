@@ -252,12 +252,16 @@ func main() {
 		}
 	}, log)
 	deepSleepMgr.SetControllerResolver(func(nodeID string) docker.SleepController {
-		if nodeID != "" {
-			if cli, err := clientPool.GetClient(nodeID); err == nil && cli != nil {
-				return cli
-			}
+		if nodeID == "" {
+			return dockerClient
 		}
-		return dockerClient
+		// Fail closed: an unknown remote node must not fall back to the local
+		// daemon, otherwise sleep/wake would act on the wrong host's containers.
+		cli, err := clientPool.GetClientStrict(nodeID)
+		if err != nil || cli == nil {
+			return nil
+		}
+		return cli
 	})
 	deepSleepMgr.SetWakePreparer(taskScheduler.PrepareDeepSleepWake)
 	deepSleepMgr.SetPlayerCountProvider(func(serverID string) int {

@@ -133,14 +133,24 @@ func (s *BackupService) authorizeServerBackup(ctx context.Context, serverID stri
 
 func (s *BackupService) dockerFor(nodeID string) *docker.Client {
 	if s.pool != nil {
-		if cli, err := s.pool.GetClient(nodeID); err == nil && cli != nil {
-			return cli
-		}
-		if nodeID != "" && nodeID != "local" && nodeID != s.pool.GetDefaultNodeID() {
+		cli, err := s.pool.GetClientStrict(nodeID)
+		if err != nil {
 			return nil
 		}
+		return cli
 	}
-	return s.docker
+	if s.docker == nil {
+		return nil
+	}
+	if nodeID == "" || nodeID == "local" || nodeID == "default" {
+		return s.docker
+	}
+	if s.store != nil {
+		if node, err := s.store.GetNode(context.Background(), nodeID); err == nil && node != nil && node.IsLocal {
+			return s.docker
+		}
+	}
+	return nil
 }
 
 func dbBackupToProto(b *storage.BackupRecord) *v1.BackupRecord {
@@ -242,6 +252,13 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
+	if err := requireLocalRestoreStorage(ctx, s.store, server.NodeID); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, err)
+	}
+	if !docker.TryBeginServerTransition(server.ID) {
+		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	}
+	defer docker.EndServerTransition(server.ID)
 
 	s.restoringMu.Lock()
 	if s.restoringServers == nil {
@@ -322,17 +339,34 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	}
 
 	dockerCli := s.dockerFor(server.NodeID)
-	if server.NodeID != "" && server.NodeID != "local" && dockerCli == nil {
+	if server.ContainerID != "" && dockerCli == nil {
 		done("failed")
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable for restore", server.NodeID))
 	}
 	wasRunning := false
 	if server.ContainerID != "" && dockerCli != nil {
-		if status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID); err == nil && (status == storage.StatusRunning || status == storage.StatusUnhealthy) {
+		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
+		if err != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot verify server is stopped before restore: %w", err))
+		}
+		if status == storage.StatusError {
+			done("failed")
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot verify server state before restore"))
+		}
+		if status == storage.StatusRunning || status == storage.StatusUnhealthy || status == storage.StatusStarting || status == storage.StatusPaused {
 			wasRunning = true
 			if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
 				done("failed")
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop server: %w", err))
+			}
+			status, err = dockerCli.GetContainerStatus(ctx, server.ContainerID)
+			if err != nil || status != storage.StatusStopped {
+				done("failed")
+				if err != nil {
+					return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot confirm server stopped before restore: %w", err))
+				}
+				return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("server state is %q after stop; refusing to restore", status))
 			}
 		}
 	}
@@ -352,4 +386,27 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	}
 	done("complete")
 	return connect.NewResponse(&v1.RestoreBackupResponse{Success: true, Message: "backup restored"}), nil
+}
+
+// requireLocalRestoreStorage prevents a controller-local archive extraction
+// from being mistaken for a restore on a remote Docker host. Remote storage
+// adapters must be wired before this restriction can be relaxed.
+func requireLocalRestoreStorage(ctx context.Context, store *storage.Store, nodeID string) error {
+	// Preserve the explicit legacy aliases accepted by getDockerClientStrict.
+	// They designate the configured local daemon, whose storage is the
+	// controller's DataPath on the standalone/local deployment path.
+	if nodeID == "local" || nodeID == "default" {
+		return nil
+	}
+	if store == nil || nodeID == "" {
+		return fmt.Errorf("cannot identify owning storage for node %q; restore refused", nodeID)
+	}
+	node, err := store.GetNode(ctx, nodeID)
+	if err != nil {
+		return fmt.Errorf("cannot identify owning storage for node %q: %w", nodeID, err)
+	}
+	if !node.IsLocal {
+		return fmt.Errorf("backup restore for remote node %q is unavailable until node-aware storage is configured", nodeID)
+	}
+	return nil
 }

@@ -3,11 +3,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -66,24 +67,35 @@ func newDockerPrivilegeTestService(t *testing.T) (*ServerService, *rbac.Enforcer
 		Host:    "tcp://127.0.0.1:2375",
 		Enabled: true,
 		Status:  db.NodeStatusOnline,
+		IsLocal: true,
 	}); err != nil {
 		t.Fatalf("failed to seed test node: %v", err)
 	}
 
-	// CreateServer/UpdateServer kick off container creation on a detached
-	// background goroutine that this test never waits on. A nil *docker.Client
-	// would nil-pointer-panic inside that goroutine (crashing the whole test
-	// binary) the moment it dereferences any field, so give it a real Client
-	// pointed at a host nothing is listening on: its calls fail fast with a
-	// connection error, which the goroutine already handles gracefully by
-	// logging and marking the server as errored.
-	dockerCli, err := docker.NewClient("tcp://127.0.0.1:1", log)
+	// Keep a real Docker API endpoint available so the port preflight can
+	// distinguish an empty allocation set from an unavailable daemon.
+	dockerAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/containers/json") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte("[]"))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(dockerAPI.Close)
+	dockerHost := "tcp://" + strings.TrimPrefix(dockerAPI.URL, "http://")
+	dockerCli, err := docker.NewClient(dockerHost, log)
 	if err != nil {
 		t.Fatalf("failed to create docker client stub: %v", err)
 	}
 
 	svc := NewServerService(store, dockerCli, nil, cfg, nil, nil, nil, nil, nil, log, nil, nil, enforcer)
 	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 16 * 1024, nil }
+	// Service tests must not open wildcard listeners. Windows Firewall treats
+	// temporary non-loopback listeners in services.test.exe as an inbound app.
+	svc.hostPortBound = func(port int) bool {
+		return isHostPortBoundWith(port, loopbackOnlyPortListener)
+	}
 	return svc, enforcer
 }
 

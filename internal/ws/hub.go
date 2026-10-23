@@ -166,19 +166,45 @@ func (h *Hub) SetPool(pool *docker.ClientPool) {
 }
 
 // dockerFor returns the Docker client responsible for the given nodeID.
-// If the pool is configured, GetClientStrict is attempted; if nodeID is empty or
-// resolution fails, it falls back to the default Docker client.
-func (h *Hub) dockerFor(nodeID string) *docker.Client {
+// Explicit node IDs must resolve through the pool; using the local daemon as a
+// fallback could inspect or command a different server with the same container ID.
+func (h *Hub) dockerFor(nodeID string) (*docker.Client, error) {
 	h.poolMu.RLock()
 	pool := h.pool
 	h.poolMu.RUnlock()
 
-	if pool != nil && nodeID != "" {
-		if cli, err := pool.GetClientStrict(nodeID); err == nil && cli != nil {
-			return cli
+	if pool != nil {
+		cli, err := pool.GetClientStrict(nodeID)
+		if err != nil {
+			return nil, err
 		}
+		if cli == nil {
+			return nil, errors.New("node has no Docker client")
+		}
+		return cli, nil
 	}
-	return h.docker
+
+	// Without a pool, legacy aliases identify the configured daemon directly.
+	if nodeID == "" || nodeID == "local" || nodeID == "default" {
+		if h.docker == nil {
+			return nil, errors.New("local Docker client unavailable")
+		}
+		return h.docker, nil
+	}
+	if h.store != nil {
+		node, err := h.store.GetNode(context.Background(), nodeID)
+		if err != nil {
+			return nil, fmt.Errorf("resolve node %q: %w", nodeID, err)
+		}
+		if node.IsLocal {
+			if h.docker == nil {
+				return nil, errors.New("local Docker client unavailable")
+			}
+			return h.docker, nil
+		}
+		return nil, fmt.Errorf("node %q is remote but no Docker client pool is configured", nodeID)
+	}
+	return nil, fmt.Errorf("node %q cannot be resolved without a Docker client pool", nodeID)
 }
 
 // SetCheckOrigin overrides the WebSocket upgrader origin validation function.
@@ -678,8 +704,8 @@ func (c *Client) handleCommand(msg *v1.CommandMessage) {
 	}
 
 	// Check server status
-	dockerCli := c.hub.dockerFor(server.NodeID)
-	if dockerCli == nil {
+	dockerCli, err := c.hub.dockerFor(server.NodeID)
+	if err != nil || dockerCli == nil {
 		c.sendCommandResult(msg.ServerId, false, "", "node unavailable")
 		return
 	}

@@ -104,17 +104,27 @@ func (m *DeepSleepManager) SetControllerResolver(resolver SleepControllerResolve
 	m.controllerResolver = resolver
 }
 
-func (m *DeepSleepManager) getController(nodeID string) SleepController {
+// getController resolves the sleep controller for nodeID. A remote node must be
+// served by the resolver: returning the default controller would start or stop
+// a container on the wrong host. Only the local/default node may fall back to
+// the default controller.
+func (m *DeepSleepManager) getController(nodeID string) (SleepController, error) {
 	m.mu.Lock()
 	resolver := m.controllerResolver
 	defaultCtrl := m.controller
 	m.mu.Unlock()
 	if resolver != nil {
 		if ctrl := resolver(nodeID); ctrl != nil {
-			return ctrl
+			return ctrl, nil
 		}
 	}
-	return defaultCtrl
+	if nodeID == "" || nodeID == "local" || nodeID == "default" {
+		if defaultCtrl == nil {
+			return nil, fmt.Errorf("no docker controller available for node %q", nodeID)
+		}
+		return defaultCtrl, nil
+	}
+	return nil, fmt.Errorf("no docker controller available for node %q", nodeID)
 }
 
 // SetPlayerCountProvider configures the online-player source of truth (same
@@ -291,12 +301,12 @@ func (m *DeepSleepManager) rollbackSleep(ctx context.Context, serverID, containe
 			nodeID = srv.NodeID
 		}
 	}
-	ctrl := m.getController(nodeID)
+	ctrl, ctrlErr := m.getController(nodeID)
 
 	target := db.StatusError
 	var observeErr error
-	if ctrl == nil {
-		observeErr = fmt.Errorf("no docker controller available for server %s on node %q during deep-sleep rollback", serverID, nodeID)
+	if ctrlErr != nil {
+		observeErr = fmt.Errorf("no docker controller available for server %s on node %q during deep-sleep rollback: %w", serverID, nodeID, ctrlErr)
 	} else {
 		status, err := ctrl.GetContainerStatus(rollbackCtx, containerID)
 		if err != nil {
@@ -413,9 +423,9 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		return fmt.Errorf("cannot deep-sleep server %s in status %s", serverID, srv.Status)
 	}
 
-	ctrl := m.getController(srv.NodeID)
-	if ctrl == nil {
-		return fmt.Errorf("no docker controller available for server %s on node %s", serverID, srv.NodeID)
+	ctrl, err := m.getController(srv.NodeID)
+	if err != nil {
+		return fmt.Errorf("cannot deep-sleep server %s on node %q: %w", serverID, srv.NodeID, err)
 	}
 
 	// 1. Pre-set status to db.StatusDeepSleep and refresh routes before stopping the container.
@@ -567,10 +577,10 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		return fmt.Errorf("server %s has no container", serverID)
 	}
 
-	ctrl := m.getController(srv.NodeID)
-	if ctrl == nil {
+	ctrl, err := m.getController(srv.NodeID)
+	if err != nil {
 		m.rollbackWake(ctx, serverID)
-		return fmt.Errorf("no docker controller available for server %s on node %s", serverID, srv.NodeID)
+		return fmt.Errorf("cannot wake server %s on node %q: %w", serverID, srv.NodeID, err)
 	}
 
 	if err := ctrl.SetRestartPolicy(ctx, srv.ContainerID, DefaultRestartPolicy); err != nil {

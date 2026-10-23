@@ -621,6 +621,7 @@ func (s *ModuleService) CreateModule(ctx context.Context, req *connect.Request[v
 		Name:                  msg.Name,
 		ServerID:              msg.ServerId,
 		TemplateID:            msg.TemplateId,
+		NodeID:                server.NodeID,
 		Status:                storage.ModuleStatusStopped,
 		Config:                msg.Config,
 		EnvOverrides:          msg.EnvOverrides,

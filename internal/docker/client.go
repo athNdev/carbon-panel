@@ -14,12 +14,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"net"
 	"net/http"
 	"net/netip"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -181,21 +181,25 @@ var dockerCache = &dockerImagesCache{}
 
 // Converts a container-internal path to a host path.
 // When CARBONPANEL_HOST_DATA_PATH is not set (running on host), it returns the path unchanged.
-func TranslateToHostPath(path string) string {
+func TranslateToHostPath(containerPath string) string {
 	hostDataPath := os.Getenv("CARBONPANEL_HOST_DATA_PATH")
 	if hostDataPath == "" {
-		return path
+		return containerPath
 	}
 	containerDataDir := os.Getenv("CARBONPANEL_DATA_DIR")
 	if containerDataDir == "" {
 		containerDataDir = "/app/data"
 	}
-	relPath, err := filepath.Rel(containerDataDir, path)
-	if err != nil || strings.HasPrefix(relPath, "..") {
+	containerDataDir = filepath.ToSlash(containerDataDir)
+	dockerContainerPath := filepath.ToSlash(containerPath)
+	containerDataDir = pathpkg.Clean(containerDataDir)
+	dockerContainerPath = pathpkg.Clean(dockerContainerPath)
+	if dockerContainerPath != containerDataDir && !strings.HasPrefix(dockerContainerPath, strings.TrimSuffix(containerDataDir, "/")+"/") {
 		// Path is not under the container data dir, return as-is
-		return path
+		return containerPath
 	}
-	return filepath.Join(hostDataPath, relPath)
+	relPath := strings.TrimPrefix(strings.TrimPrefix(dockerContainerPath, containerDataDir), "/")
+	return filepath.Join(hostDataPath, filepath.FromSlash(relPath))
 }
 
 // Fetches the docker images manifest from itzg
@@ -1424,8 +1428,19 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	if oldContainerID != "" {
 		status, err := c.GetContainerStatus(ctx, oldContainerID)
 		if err != nil {
-			// Container may not exist, that's ok - continue with creation
-			c.log.Debug("Container %s not found during recreation: %v", oldContainerID, err)
+			if !errdefs.IsNotFound(err) {
+				// An unavailable or timed-out inspect is not evidence that the
+				// old container is absent. Keep its identity and do not send a
+				// destructive remove based on an unknown observation.
+				result.NewContainerID = oldContainerID
+				return result, fmt.Errorf("failed to inspect old container before recreation: %w", err)
+			}
+			c.log.Debug("Container %s is already absent during recreation: %v", oldContainerID, err)
+		} else if status == models.StatusError {
+			// A successful response without a usable state is still an unknown
+			// observation. Preserve the known identity and require reconciliation.
+			result.NewContainerID = oldContainerID
+			return result, fmt.Errorf("failed to determine old container state before recreation: status is unknown")
 		} else if status == models.StatusRunning || status == models.StatusUnhealthy || status == models.StatusPaused {
 			// A paused container cannot be removed reliably until StopContainer
 			// unpauses it. Preserve paused intent as not-running: its replacement
@@ -1674,11 +1689,11 @@ func (c *Client) pullImage(ctx context.Context, imageName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
 	}
-	defer reader.Close()
-
-	// Read the output to ensure the pull completes
-	_, err = io.Copy(io.Discard, reader)
-	if err != nil {
+	// Docker reports some pull failures as JSON messages in an otherwise
+	// successful HTTP response. The SDK's Wait consumes and decodes those
+	// messages, returning embedded daemon errors, transport errors, and
+	// context cancellation while still draining successful progress streams.
+	if err = reader.Wait(ctx); err != nil {
 		return fmt.Errorf("failed to complete image pull for %s: %w", imageName, err)
 	}
 
