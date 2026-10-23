@@ -224,9 +224,18 @@ func main() {
 	// wake/activity. Only acts on servers with AutoHibernate enabled; the
 	// player count comes from the metrics collector (the DB row field is
 	// never persisted), and login intent via the proxy resets idle timing
-	// while status pings never do. Remote-node containers fail safe: pause
-	// via the local daemon errors before any status change.
+	// while status pings never do. Pause/unpause runs on the server's own
+	// node through the locator, not on the controller's local daemon.
 	hibernationMgr := docker.NewHibernationManager(dockerClient, store, log)
+	freezerLocator := docker.NewLocator(clientPool, dockerClient, store)
+	hibernationMgr.SetFreezerResolver(func(nodeID string) docker.ContainerFreezer {
+		freezer, err := freezerLocator.For(context.Background(), nodeID)
+		if err != nil {
+			log.Warn("No docker freezer for node %q: %v", nodeID, err)
+			return nil
+		}
+		return freezer
+	})
 	hibernationMgr.SetPlayerCountProvider(func(serverID string) int {
 		if m := metricsCollector.GetMetrics(serverID); m != nil {
 			return m.PlayersOnline

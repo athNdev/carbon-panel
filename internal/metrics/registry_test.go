@@ -104,8 +104,8 @@ func TestRegistry_UpdateGetRemove(t *testing.T) {
 
 func TestResolveDocker_NilPoolFallsBackToDefault(t *testing.T) {
 	c := NewCollectorWithPool(nil, nil, nil, nil, nil, nil, nil)
-	if got := c.resolveDocker("node-1"); got != nil {
-		t.Errorf("resolveDocker with no pool/client = %v, want nil", got)
+	if got, err := c.resolveDocker("node-1"); got != nil || err == nil {
+		t.Errorf("resolveDocker with no pool/client = %v, %v; want nil error", got, err)
 	}
 }
 
@@ -114,11 +114,11 @@ func TestResolveDocker_DoesNotUseLocalForUnavailableRemote(t *testing.T) {
 	pool := docker.NewClientPool(nil, local, logger.New())
 	c := NewCollectorWithPool(nil, local, pool, nil, nil, nil, nil)
 
-	if got := c.resolveDocker("remote-1"); got != nil {
-		t.Fatalf("resolveDocker unavailable remote = %p, want nil", got)
+	if got, err := c.resolveDocker("remote-1"); got != nil || err == nil {
+		t.Fatalf("resolveDocker unavailable remote = %p, %v; want an error", got, err)
 	}
-	if got := c.resolveDocker("default"); got != local {
-		t.Fatalf("resolveDocker default = %p, want local client %p", got, local)
+	if got, err := c.resolveDocker("default"); err != nil || got != local {
+		t.Fatalf("resolveDocker default = %p, %v; want local client %p", got, err, local)
 	}
 }
 
