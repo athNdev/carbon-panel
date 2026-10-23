@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package snapshot
 
 import (
@@ -14,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -117,8 +116,8 @@ func TestSnapshot_Rollback_LifecycleConcurrencyGuard(t *testing.T) {
 	require.NoError(t, err)
 
 	// Simulate concurrent transition lock held by another process
-	acquired := docker.TryBeginServerTransition(server.ID)
-	require.True(t, acquired, "failed to acquire initial server transition lock")
+	transition, acquireErr := docker.TryBeginServerTransition(server.ID)
+	require.NoError(t, acquireErr, "failed to acquire initial server transition lock")
 
 	// Attempt rollback: must fail because transition is in progress
 	err = engine.Rollback(ctx, server, snap.ID)
@@ -126,7 +125,7 @@ func TestSnapshot_Rollback_LifecycleConcurrencyGuard(t *testing.T) {
 	assert.Contains(t, err.Error(), "currently undergoing another transition")
 
 	// Release lock and rollback must now succeed
-	docker.EndServerTransition(server.ID)
+	transition.Release()
 	err = engine.Rollback(ctx, server, snap.ID)
 	require.NoError(t, err)
 }

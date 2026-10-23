@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -92,10 +91,11 @@ func (s *ConfigService) GetServerConfig(ctx context.Context, req *connect.Reques
 
 // Updates server config
 func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Request[v1.UpdateServerConfigRequest]) (*connect.Response[v1.UpdateServerConfigResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.ServerId) {
-		return nil, connect.NewError(connect.CodeAborted, errors.New("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.ServerId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.ServerId)
+	defer transition.Release()
 
 	msg := req.Msg
 

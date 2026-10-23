@@ -82,7 +82,7 @@ type HibernationManager struct {
 	playerCount func(serverID string) int
 	// inflight guards against concurrent hibernate/wake transitions for the
 	// same server (e.g. a wake racing the idle loop's hibernate).
-	inflight   map[string]struct{}
+	inflight   map[string]*Transition
 	inflightMu sync.Mutex
 
 	hibernatedTotal uint64
@@ -96,7 +96,7 @@ func NewHibernationManager(freezer ContainerFreezer, store FreezerStore, log *lo
 		store:       store,
 		logger:      log,
 		idleTracker: make(map[string]time.Time),
-		inflight:    make(map[string]struct{}),
+		inflight:    make(map[string]*Transition),
 	}
 }
 
@@ -155,31 +155,33 @@ func (m *HibernationManager) onlinePlayers(srv *db.Server) int {
 // tryBeginTransition single-flights hibernate/wake per server: returns false
 // (and logs) if a transition for serverID is already running.
 func (m *HibernationManager) tryBeginTransition(serverID, op string) bool {
-	if !TryBeginServerTransition(serverID) {
+	transition, err := TryBeginServerTransition(serverID)
+	if err != nil {
 		if m.logger != nil {
-			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
+			m.logger.Debug("Skipping %s for server %s: %v", op, serverID, err)
 		}
 		return false
 	}
 	m.inflightMu.Lock()
 	if _, busy := m.inflight[serverID]; busy {
 		m.inflightMu.Unlock()
-		EndServerTransition(serverID)
+		transition.Release()
 		if m.logger != nil {
 			m.logger.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
 		}
 		return false
 	}
-	m.inflight[serverID] = struct{}{}
+	m.inflight[serverID] = transition
 	m.inflightMu.Unlock()
 	return true
 }
 
 func (m *HibernationManager) endTransition(serverID string) {
 	m.inflightMu.Lock()
+	transition := m.inflight[serverID]
 	delete(m.inflight, serverID)
 	m.inflightMu.Unlock()
-	EndServerTransition(serverID)
+	transition.Release()
 }
 
 // RegisterWakeCallback registers a callback fired when a server is woken
