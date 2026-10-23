@@ -242,6 +242,7 @@ one at https://mozilla.org/MPL/2.0/.
 						<Button
 							variant="outline"
 							size="icon"
+							aria-label="Copy connection address to clipboard"
 							onclick={() => copyToClipboard(getConnectionString())}
 						>
 							<Copy class="h-4 w-4" />
