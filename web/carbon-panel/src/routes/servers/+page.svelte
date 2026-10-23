@@ -458,10 +458,7 @@ one at https://mozilla.org/MPL/2.0/.
 				<!-- Sharp Alternating/Hover Rows #353535 -->
 				<tbody class="motion-stagger divide-y divide-[#393939] bg-[#262626] text-[#f4f4f4]">
 					{#each filteredServers as server (server.id)}
-						<tr
-							class="group cursor-pointer transition-colors hover:bg-[#353535]"
-							onclick={() => window.location.assign(resolve(`/servers/${server.id}`))}
-						>
+						<tr class="group transition-colors hover:bg-[#353535]">
 							<!-- Status Cell -->
 							<td class="px-4 py-3.5 whitespace-nowrap">
 								<CarbonTag type={getStatusTagType(server.status)} size="sm">
@@ -481,7 +478,6 @@ one at https://mozilla.org/MPL/2.0/.
 										<a
 											href={resolve(`/servers/${server.id}`)}
 											class="block truncate text-sm font-medium text-[#f4f4f4] hover:text-[#78a9ff] hover:underline"
-											onclick={(e) => e.stopPropagation()}
 										>
 											{server.name}
 										</a>
@@ -549,10 +545,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</td>
 
 							<!-- Actions -->
-							<td
-								class="px-4 py-3.5 text-right whitespace-nowrap"
-								onclick={(e) => e.stopPropagation()}
-							>
+							<td class="px-4 py-3.5 text-right whitespace-nowrap">
 								<div class="inline-flex items-center border border-[#393939] bg-[#161616]">
 									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR || server.status === ServerStatus.DEEPSLEEP || server.status === ServerStatus.PAUSED}
 										<button

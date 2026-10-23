@@ -787,11 +787,17 @@ one at https://mozilla.org/MPL/2.0/.
 			<CarbonTabs
 				tabs={subViewTabs}
 				bind:selectedTab={activeTab}
+				idPrefix="server-detail-tabs"
 				class="sticky top-0 z-20 overflow-x-auto bg-[#161616]"
 			/>
 
 			<!-- Tab Content Areas -->
-			<div class="motion-fade-in min-h-0 flex-1">
+			<div
+				id={`server-detail-tabs-panel-${activeTab}`}
+				role="tabpanel"
+				aria-labelledby={`server-detail-tabs-tab-${activeTab}`}
+				class="motion-fade-in min-h-0 flex-1"
+			>
 				<!--
 						A throw while a tab panel renders must never be able to wedge the
 						whole content area. Without this boundary, Svelte's effect flush

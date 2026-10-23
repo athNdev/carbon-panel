@@ -27,7 +27,23 @@ one at https://mozilla.org/MPL/2.0/.
 
 	let { ports = $bindable([]), disabled = false, usedPorts = {}, onchange }: Props = $props();
 
-	let portErrors = $state<Record<number, string>>({});
+	let nextRowId = 0;
+
+	function createRowId() {
+		return `additional-port-${nextRowId++}`;
+	}
+
+	// Rows are keyed by identity so removing one cannot shift an error onto a
+	// different port.
+	let rowIds = $state<string[]>(ports.map(() => createRowId()));
+	let portErrors = $state<Record<string, string>>({});
+
+	$effect(() => {
+		if (rowIds.length !== ports.length) {
+			rowIds = ports.map((_, index) => rowIds[index] ?? createRowId());
+			validatePorts();
+		}
+	});
 
 	function addPort() {
 		const newPort = create(AdditionalPortSchema, {
@@ -37,13 +53,14 @@ one at https://mozilla.org/MPL/2.0/.
 			protocol: 'tcp'
 		});
 		ports = [...ports, newPort];
+		rowIds = [...rowIds, createRowId()];
 		onchange?.(ports);
 	}
 
 	function removePort(index: number) {
 		ports = ports.filter((_, i) => i !== index);
-		// Clear any errors for this port
-		delete portErrors[index];
+		rowIds = rowIds.filter((_, i) => i !== index);
+		validatePorts();
 		onchange?.(ports);
 	}
 
@@ -57,27 +74,45 @@ one at https://mozilla.org/MPL/2.0/.
 			[field]: value
 		};
 
-		// Validate port if it's a hostPort change
-		if (field === 'hostPort') {
-			const port = Number(value);
-			if (port && usedPorts[port]) {
-				portErrors[index] = `Port ${port} is already in use`;
-			} else if (port < 1 || port > 65535) {
-				portErrors[index] = 'Port must be between 1 and 65535';
-			} else {
-				// Check for duplicates within additional ports
-				const hasDuplicate = ports.some(
-					(p, i) => i !== index && p.hostPort === port && p.protocol === ports[index].protocol
-				);
-				if (hasDuplicate) {
-					portErrors[index] = `Duplicate port ${port}/${ports[index].protocol}`;
-				} else {
-					delete portErrors[index];
-				}
-			}
+		// A port's uniqueness depends on both its number and protocol, so either
+		// change can create (or clear) a duplicate.
+		if (field === 'hostPort' || field === 'protocol') {
+			validatePorts();
 		}
 
 		onchange?.(ports);
+	}
+
+	function errorFor(index: number): string | undefined {
+		const id = rowIds[index];
+		return id ? portErrors[id] : undefined;
+	}
+
+	function validatePorts() {
+		const errors: Record<string, string> = {};
+		ports.forEach((_, index) => {
+			const id = rowIds[index];
+			const error = validatePort(index);
+			if (id && error) errors[id] = error;
+		});
+		portErrors = errors;
+	}
+
+	function validatePort(index: number): string | undefined {
+		const port = ports[index];
+		const hostPort = Number(port.hostPort);
+		if (hostPort && usedPorts[hostPort]) {
+			return `Port ${hostPort} is already in use`;
+		}
+		if (hostPort < 1 || hostPort > 65535) {
+			return 'Port must be between 1 and 65535';
+		}
+		// Check for duplicates within additional ports
+		const hasDuplicate = ports.some(
+			(other, otherIndex) =>
+				otherIndex !== index && other.hostPort === hostPort && other.protocol === port.protocol
+		);
+		return hasDuplicate ? `Duplicate port ${hostPort}/${port.protocol}` : undefined;
 	}
 
 	// Find next available port
@@ -119,7 +154,9 @@ one at https://mozilla.org/MPL/2.0/.
 		<div class="rounded-lg border bg-muted/10 p-3">
 			<div class="space-y-3">
 				<!-- Headers -->
-				<div class="grid grid-cols-12 gap-2 px-1 text-xs font-medium text-muted-foreground">
+				<div
+					class="hidden grid-cols-12 gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid"
+				>
 					<div class="col-span-4">Name</div>
 					<div class="col-span-2">Container Port</div>
 					<div class="col-span-2">Host Port</div>
@@ -128,51 +165,58 @@ one at https://mozilla.org/MPL/2.0/.
 				</div>
 
 				<!-- Port entries -->
-				{#each ports as port, index (index)}
+				{#each ports as port, index (rowIds[index] ?? index)}
+					{@const portError = errorFor(index)}
 					<div class="space-y-2">
-						<div class="grid grid-cols-12 items-center gap-2">
-							<div class="col-span-4">
+						<div class="grid grid-cols-1 items-center gap-2 sm:grid-cols-12">
+							<div class="col-span-1 sm:col-span-4">
 								<Input
 									type="text"
 									placeholder="e.g., BlueMap Web"
+									aria-label={`Name for additional port ${index + 1}`}
 									bind:value={port.name}
 									{disabled}
 									onchange={() => updatePort(index, 'name', port.name)}
 									class="h-8 text-xs"
 								/>
 							</div>
-							<div class="col-span-2">
+							<div class="col-span-1 sm:col-span-2">
 								<Input
 									type="number"
 									min="1"
 									max="65535"
 									placeholder="8100"
+									aria-label={`Container port for additional port ${index + 1}`}
 									bind:value={port.containerPort}
 									{disabled}
 									onchange={() => updatePort(index, 'containerPort', port.containerPort)}
 									class="h-8 text-xs"
 								/>
 							</div>
-							<div class="col-span-2">
+							<div class="col-span-1 sm:col-span-2">
 								<Input
 									type="number"
 									min="1"
 									max="65535"
 									placeholder="8100"
+									aria-label={`Host port for additional port ${index + 1}`}
 									bind:value={port.hostPort}
 									{disabled}
 									onchange={() => updatePort(index, 'hostPort', port.hostPort)}
-									class="h-8 text-xs {portErrors[index] ? 'border-destructive' : ''}"
+									class="h-8 text-xs {portError ? 'border-destructive' : ''}"
 								/>
 							</div>
-							<div class="col-span-2">
+							<div class="col-span-1 sm:col-span-2">
 								<Select
 									type="single"
 									value={port.protocol}
 									onValueChange={(v) => updatePort(index, 'protocol', v)}
 									{disabled}
 								>
-									<SelectTrigger class="h-8 text-xs">
+									<SelectTrigger
+										class="h-8 text-xs"
+										aria-label={`Protocol for additional port ${index + 1}`}
+									>
 										<span>{port.protocol.toUpperCase()}</span>
 									</SelectTrigger>
 									<SelectContent>
@@ -181,11 +225,12 @@ one at https://mozilla.org/MPL/2.0/.
 									</SelectContent>
 								</Select>
 							</div>
-							<div class="col-span-2 flex justify-end">
+							<div class="col-span-1 flex justify-end sm:col-span-2">
 								<Button
 									type="button"
 									variant="ghost"
 									size="icon"
+									aria-label={`Remove additional port ${index + 1}`}
 									onclick={() => removePort(index)}
 									{disabled}
 									class="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
@@ -199,6 +244,7 @@ one at https://mozilla.org/MPL/2.0/.
 							<input
 								type="checkbox"
 								class="h-3.5 w-3.5"
+								aria-label={`Expose additional port ${index + 1} publicly`}
 								checked={port.exposePublic}
 								{disabled}
 								onchange={(event) => updatePort(index, 'exposePublic', event.currentTarget.checked)}
@@ -206,10 +252,10 @@ one at https://mozilla.org/MPL/2.0/.
 							Public on the internet
 						</label>
 
-						{#if portErrors[index]}
+						{#if portError}
 							<div class="flex items-center gap-2 pl-1 text-destructive">
 								<AlertCircle class="h-3 w-3" />
-								<span class="text-xs">{portErrors[index]}</span>
+								<span class="text-xs">{portError}</span>
 							</div>
 						{/if}
 					</div>

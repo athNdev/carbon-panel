@@ -18,6 +18,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		tabs: TabItem[];
 		selectedTab?: string;
 		class?: string;
+		/** Prefix for tab/panel element IDs; enables aria-controls wiring. */
+		idPrefix?: string;
 		onselect?: (id: string) => void;
 	}
 
@@ -25,6 +27,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		tabs = [],
 		selectedTab = $bindable(tabs[0]?.id || ''),
 		class: className = '',
+		idPrefix,
 		onselect
 	}: Props = $props();
 
@@ -89,6 +92,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		<button
 			type="button"
 			role="tab"
+			id={idPrefix ? `${idPrefix}-tab-${tab.id}` : undefined}
+			aria-controls={idPrefix ? `${idPrefix}-panel-${tab.id}` : undefined}
 			aria-selected={selectedTab === tab.id}
 			tabindex={selectedTab === tab.id ? 0 : -1}
 			data-tab
