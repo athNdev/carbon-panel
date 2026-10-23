@@ -458,3 +458,6 @@ result
 # Local MCP client configuration can contain credentials.
 .mcp.json
 .cline/mcp.json
+
+# The root knowledge MCP configuration is committed and contains no credentials.
+!/.mcp.json

@@ -41,3 +41,23 @@ closest practical integration seam.
 - Keep generated files reproducible from the checked-in source and pinned tool
   versions where feasible.
 - Never commit secrets, local databases, server worlds, or build artifacts.
+
+## Context knowledge base
+
+The repository keeps durable, agent-facing context in `knowledge/`. It is a
+versioned knowledge base, not task state and not a second documentation site.
+
+- Start at `knowledge/index.md` and search before reading:
+  `make knowledge-search q="remote node docker client"`.
+- Before editing a path, check whether a concept governs it by searching its
+  `code_refs` in `knowledge/`.
+- When behavior changes, update or create the governing concept in the same
+  commit as the code change.
+- Keep concepts short and link to the authoritative `docs/` page, ADR or issue.
+  Durable facts only; no task state, secrets, private endpoints or workstation
+  paths.
+- Before finishing: `go run ./cmd/knowledge-lint -root . -fix`, then run it
+  again without `-fix` (or `make knowledge-index && make knowledge-lint`).
+- In a conflict, merge concept bodies semantically and union list fields. Never
+  hand-merge generated `index.md`; run `make knowledge-index`. Re-verify any
+  `Invariant` whose review was invalidated.

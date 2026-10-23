@@ -7,7 +7,7 @@
 # one at https://mozilla.org/MPL/2.0/.
 
 
-.PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs
+.PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs knowledge knowledge-lint knowledge-index knowledge-search knowledge-mcp knowledge-mcp-git
 
 DATA_DIR := ./data
 FRONTEND_DIR := web/carbon-panel
@@ -143,6 +143,30 @@ check:
 	@echo "Type checking frontend..."
 	cd $(FRONTEND_DIR) && bun run check
 
+# Validate the knowledge base
+knowledge: knowledge-lint
+
+knowledge-lint:
+	@echo "Linting knowledge base..."
+	go run ./cmd/knowledge-lint -root .
+
+knowledge-index:
+	go run ./cmd/knowledge-lint -root . -fix
+
+knowledge-search:
+	@if [ -z "$(q)" ]; then echo 'usage: make knowledge-search q="..."'; exit 2; fi
+	@if command -v rg >/dev/null 2>&1; then \
+		rg -n --heading --glob '!index.md' --glob '!README.md' "$(q)" knowledge; \
+	else \
+		grep -Rni --exclude=index.md --exclude=README.md "$(q)" knowledge; \
+	fi
+
+knowledge-mcp:
+	npx -y @modelcontextprotocol/server-filesystem@2.0.0 knowledge
+
+knowledge-mcp-git:
+	npx -y @cyanheads/git-mcp-server@2.15.3
+
 proto:
 	@echo "Generating protocol buffer code (using Docker)..."
 	$(BUF_RUN) generate
@@ -193,6 +217,9 @@ help:
 	@echo "  make fmt            - Format code"
 	@echo "  make lint           - Lint code"
 	@echo "  make check          - Type check frontend"
+	@echo "  make knowledge-lint   - Validate the knowledge base"
+	@echo "  make knowledge-index  - Regenerate knowledge indexes"
+	@echo "  make knowledge-search - Search the knowledge base (q=...)"
 	@echo "  make gen            - Clean and regenerate proto code (via Docker)"
 	@echo "  make proto          - Generate Go and TypeScript code from proto files (via Docker)"
 	@echo "  make proto-clean    - Remove all generated proto files"
