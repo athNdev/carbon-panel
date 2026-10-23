@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -143,18 +142,41 @@ func (s *Scheduler) SetClientPool(pool *docker.ClientPool) {
 	s.clientPool = pool
 }
 
-func (s *Scheduler) dockerForNode(nodeID string) *docker.Client {
+func (s *Scheduler) dockerForNode(nodeID string) (*docker.Client, error) {
 	s.mu.RLock()
 	pool := s.clientPool
 	defaultCli := s.docker
 	s.mu.RUnlock()
+	// An empty assignment is the legacy local-node case; explicit node IDs must
+	// resolve strictly so an unavailable remote node cannot target the default.
+	if nodeID == "" {
+		return defaultCli, nil
+	}
 
 	if pool != nil {
-		if cli, err := pool.GetClient(nodeID); err == nil && cli != nil {
-			return cli
+		cli, err := pool.GetClientStrict(nodeID)
+		if err != nil {
+			if nodeID == "default" || nodeID == "local" {
+				return defaultCli, nil
+			}
+			return nil, fmt.Errorf("docker client unavailable for node %q: %w", nodeID, err)
+		}
+		if cli == nil {
+			return nil, fmt.Errorf("docker client unavailable for node %q", nodeID)
+		}
+		return cli, nil
+	}
+	if nodeID == "default" || nodeID == "local" {
+		return defaultCli, nil
+	}
+	// A standalone client represents the local daemon. Resolve an explicit ID
+	// through persisted node metadata before allowing it to use that client.
+	if s.store != nil {
+		if node, err := s.store.GetNode(context.Background(), nodeID); err == nil && node != nil && node.IsLocal {
+			return defaultCli, nil
 		}
 	}
-	return defaultCli
+	return nil, fmt.Errorf("docker client unavailable for node %q: client pool is not configured", nodeID)
 }
 
 // Start begins the scheduler loop
@@ -748,7 +770,10 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
 	}
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return "", err
+	}
 	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
 		if err != nil {
 			return "", err
@@ -798,7 +823,10 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
 	}
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return "", err
+	}
 	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
 		if err != nil {
 			return "", err
@@ -835,7 +863,10 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	if err := s.checkNodeMemoryCapacity(ctx, server); err != nil {
 		return err
 	}
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return err
+	}
 	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
 		return err
 	}
@@ -873,7 +904,10 @@ func (s *Scheduler) checkNodeMemoryCapacity(ctx context.Context, server *storage
 	if server == nil {
 		return fmt.Errorf("server is nil")
 	}
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return err
+	}
 	if s.store == nil || dockerCli == nil {
 		return fmt.Errorf("cannot verify node memory capacity without a store and Docker client")
 	}
@@ -1040,7 +1074,10 @@ func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Se
 	if err := s.checkNodeMemoryCapacity(ctx, server); err != nil {
 		return err
 	}
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return err
+	}
 	handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, false, false)
 	if err != nil {
 		return err
@@ -1082,7 +1119,10 @@ func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server,
 		return "", fmt.Errorf("server has no container")
 	}
 
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return "", err
+	}
 	server.Status = storage.StatusStopping
 	if err := s.store.UpdateServer(ctx, server); err != nil {
 		return "", fmt.Errorf("failed to record stop: %w", err)
@@ -1129,7 +1169,14 @@ func (s *Scheduler) executeScriptTask(ctx context.Context, server *storage.Serve
 	}
 
 	execCmd := []string{config.ScriptPath}
-	return s.dockerForNode(server.NodeID).Exec(ctx, server.ContainerID, append(execCmd, config.Args...))
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return "", err
+	}
+	if dockerCli == nil {
+		return "", fmt.Errorf("docker client unavailable for node %q", server.NodeID)
+	}
+	return dockerCli.Exec(ctx, server.ContainerID, append(execCmd, config.Args...))
 }
 
 // CalculateNextRun calculates the next run time for a task based on its schedule

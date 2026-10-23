@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 // Merged in the MINE-172 integration: this file existed independently on
 // both lines of development, so the union of both test sets is kept.
 
@@ -105,8 +104,66 @@ func TestResolveExecutor_DefaultWithoutPool(t *testing.T) {
 	exec := &fakeExecutor{}
 	s := NewSender(newSenderTestStore(t), &config.Config{}, exec, nil)
 
-	if got := s.resolveExecutor("any-node"); got != DockerExecutor(exec) {
+	if got, err := s.resolveExecutor(""); err != nil || got != DockerExecutor(exec) {
 		t.Error("nil pool must resolve to the default executor")
+	}
+}
+
+func TestResolveExecutor_PersistedLocalNodeWithoutPool(t *testing.T) {
+	store := newSenderTestStore(t)
+	if err := store.DB().Create(&storage.Node{
+		ID: "local-node", Name: "local", Host: "unix:///var/run/docker.sock", IsLocal: true,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	exec := &fakeExecutor{}
+	s := NewSender(store, &config.Config{}, exec, nil)
+
+	got, err := s.resolveExecutor("local-node")
+	if err != nil || got != DockerExecutor(exec) {
+		t.Fatalf("resolveExecutor() = (%T, %v), want configured local executor", got, err)
+	}
+}
+
+func TestSendCommand_RemoteNodeWithoutPoolDoesNotUseLocalExecutor(t *testing.T) {
+	store := newSenderTestStore(t)
+	if err := store.DB().Create(&storage.Server{
+		ID: "srv-no-pool", Name: "remote", DataPath: t.TempDir(),
+		ContainerID: "remote-cid", NodeID: "remote-node-no-pool",
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	local := &fakeExecutor{output: "must-not-run"}
+	s := NewSender(store, &config.Config{}, local, nil)
+
+	_, err := s.SendCommand(context.Background(), "srv-no-pool", "list")
+	if err == nil || !strings.Contains(err.Error(), "unavailable") {
+		t.Fatalf("error = %v, want unavailable node error", err)
+	}
+	if local.calls != 0 {
+		t.Fatalf("local executor calls = %d, want 0", local.calls)
+	}
+}
+
+func TestSendCommand_UnavailableNodeDoesNotUseLocalExecutor(t *testing.T) {
+	store := newSenderTestStore(t)
+	ctx := context.Background()
+	if err := store.DB().Create(&storage.Server{
+		ID: "srv-unavailable-node", Name: "remote", DataPath: t.TempDir(),
+		ContainerID: "remote-cid", NodeID: "remote-node-unavailable",
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	local := &fakeExecutor{output: "must-not-run"}
+	pool := docker.NewClientPool(store, nil, logger.New())
+	s := NewSender(store, &config.Config{}, local, pool)
+
+	_, err := s.SendCommand(ctx, "srv-unavailable-node", "list")
+	if err == nil || !strings.Contains(err.Error(), "unavailable") {
+		t.Fatalf("error = %v, want unavailable node error", err)
+	}
+	if local.calls != 0 {
+		t.Fatalf("local executor calls = %d, want 0", local.calls)
 	}
 }
 
@@ -263,7 +320,7 @@ func TestSendCommandExecErrorPropagates(t *testing.T) {
 func TestResolveExecutorFallback(t *testing.T) {
 	exec := &fakeExecutor{}
 	s := NewSender(nil, &config.Config{}, exec, nil)
-	if got := s.resolveExecutor("node-1"); got != DockerExecutor(exec) {
+	if got, err := s.resolveExecutor("local"); err != nil || got != DockerExecutor(exec) {
 		t.Fatal("nil pool must resolve the default executor")
 	}
 }
@@ -311,7 +368,7 @@ func TestSendCommand_NilConfigHandledGracefully(t *testing.T) {
 	}
 }
 
-func TestSendCommandRemoteNodeExecutesDirectly(t *testing.T) {
+func TestSendCommandRemoteNodeWithoutPoolFailsClosed(t *testing.T) {
 	store := testStore(t)
 	// Create a remote node
 	node := &storage.Node{
@@ -339,14 +396,11 @@ func TestSendCommandRemoteNodeExecutesDirectly(t *testing.T) {
 	exec := &fakeExecutor{output: "remote-exec-success"}
 	s := testSender(store, exec, nil)
 
-	out, err := s.SendCommand(context.Background(), "s-remote", "say hi")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	_, err := s.SendCommand(context.Background(), "s-remote", "say hi")
+	if err == nil || !strings.Contains(err.Error(), "unavailable") {
+		t.Fatalf("error = %v, want unavailable-node error", err)
 	}
-	if out != "remote-exec-success" {
-		t.Fatalf("expected 'remote-exec-success', got %q", out)
-	}
-	if exec.calls != 1 || exec.lastID != "c-remote" {
-		t.Fatalf("expected 1 call to container c-remote, got %d calls to %q", exec.calls, exec.lastID)
+	if exec.calls != 0 {
+		t.Fatalf("local executor calls = %d, want 0", exec.calls)
 	}
 }

@@ -14,12 +14,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"net"
 	"net/http"
 	"net/netip"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -181,21 +181,25 @@ var dockerCache = &dockerImagesCache{}
 
 // Converts a container-internal path to a host path.
 // When CARBONPANEL_HOST_DATA_PATH is not set (running on host), it returns the path unchanged.
-func TranslateToHostPath(path string) string {
+func TranslateToHostPath(containerPath string) string {
 	hostDataPath := os.Getenv("CARBONPANEL_HOST_DATA_PATH")
 	if hostDataPath == "" {
-		return path
+		return containerPath
 	}
 	containerDataDir := os.Getenv("CARBONPANEL_DATA_DIR")
 	if containerDataDir == "" {
 		containerDataDir = "/app/data"
 	}
-	relPath, err := filepath.Rel(containerDataDir, path)
-	if err != nil || strings.HasPrefix(relPath, "..") {
+	containerDataDir = filepath.ToSlash(containerDataDir)
+	dockerContainerPath := filepath.ToSlash(containerPath)
+	containerDataDir = pathpkg.Clean(containerDataDir)
+	dockerContainerPath = pathpkg.Clean(dockerContainerPath)
+	if dockerContainerPath != containerDataDir && !strings.HasPrefix(dockerContainerPath, strings.TrimSuffix(containerDataDir, "/")+"/") {
 		// Path is not under the container data dir, return as-is
-		return path
+		return containerPath
 	}
-	return filepath.Join(hostDataPath, relPath)
+	relPath := strings.TrimPrefix(strings.TrimPrefix(dockerContainerPath, containerDataDir), "/")
+	return filepath.Join(hostDataPath, filepath.FromSlash(relPath))
 }
 
 // Fetches the docker images manifest from itzg
@@ -292,6 +296,10 @@ type ClientConfig struct {
 	RateLimitPerMin int
 	RateLimitBurst  int
 	ProxyEnabled    bool
+	// InstallationID identifies this controller installation. It is written to
+	// every managed container so reconciliation and name-conflict handling can
+	// distinguish this panel from another installation sharing a daemon.
+	InstallationID string
 }
 
 type ContainerLogStreamer interface {
@@ -882,6 +890,10 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 			"willfarrell.autoheal":                  "false",
 		},
 	}
+	// Stamp the installation identity so startup reconciliation and name-conflict
+	// handling can tell this panel's containers apart from another installation
+	// sharing the same Docker daemon.
+	c.applyInstallationLabel(config.Labels)
 
 	// Apply dynamic memory headroom & OOM-kill (exit 137) guard (MINE-4)
 	alloc := utils.CalculateMemoryAllocation(server.Memory)
@@ -1093,11 +1105,18 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 
 	if conflictID := parseConflictingContainerID(err); conflictID != "" {
 		inspectResult, inspectErr := c.docker.ContainerInspect(ctx, conflictID, client.ContainerInspectOptions{})
-		if inspectErr == nil && inspectResult.Container.State != nil && isAliveContainerState(inspectResult.Container.State.Status) {
-			c.log.Info("Adopting conflicting container %s directly from conflict error for %s", conflictID, containerName)
-			return conflictID, nil
-		}
 		if inspectErr == nil {
+			var labels map[string]string
+			if inspectResult.Container.Config != nil {
+				labels = inspectResult.Container.Config.Labels
+			}
+			if ownErr := c.validateConflictOwnership(conflictID, labels, config.Labels); ownErr != nil {
+				return "", ownErr
+			}
+			if inspectResult.Container.State != nil && isAliveContainerState(inspectResult.Container.State.Status) {
+				c.log.Info("Adopting conflicting container %s directly from conflict error for %s", conflictID, containerName)
+				return conflictID, nil
+			}
 			// An exited or dead container still owns the name. Adopting it
 			// would skip the config this create was about to apply (MINE-104).
 			c.log.Warn("Removing stale conflicting container %s for %s so create can apply the new config", conflictID, containerName)
@@ -1110,7 +1129,10 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	if existing, resolveErr := resolve(); resolveErr == nil {
 		// A 409 means the name is taken. If what holds the name is a live
 		// container, adopt it rather than force-removing a running server out
-		// from under it (MINE-104).
+		// from under it (MINE-104) — but only when it is provably ours.
+		if ownErr := c.validateConflictOwnership(existing.ID, existing.Labels, config.Labels); ownErr != nil {
+			return "", ownErr
+		}
 		if isAliveContainerState(existing.State) {
 			c.log.Info("Adopting conflicting container %s (name=%s, state=%s) instead of failing", existing.ID, containerName, existing.State)
 			return existing.ID, nil
@@ -1131,6 +1153,9 @@ func (c *Client) createContainerWithConflictRetry(ctx context.Context, config *c
 	if retryErr != nil {
 		if isConflictError(retryErr) {
 			if existing, resolveErr := resolve(); resolveErr == nil && existing.ID != "" && isAliveContainerState(existing.State) {
+				if ownErr := c.validateConflictOwnership(existing.ID, existing.Labels, config.Labels); ownErr != nil {
+					return "", ownErr
+				}
 				c.log.Info("Adopting container %s after retry conflict on %s", existing.ID, containerName)
 				return existing.ID, nil
 			}
@@ -1155,6 +1180,10 @@ var ErrContainerNotResolved = fmt.Errorf("no matching docker container found")
 //     in case the container exists but was created before labels were consistently applied,
 //     or the label was somehow stripped/lost.
 //
+// When an installation identity is configured the label lookup is scoped to it, so a stale
+// database restored from another installation cannot resolve (and operate on) that
+// installation's container. Legacy containers remain reachable through the name fallback.
+//
 // Returns ErrContainerNotResolved (wrapped) if neither strategy finds a container. Any other
 // error is a transient/unexpected Docker API failure and should NOT be treated as "not found".
 func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*container.Summary, error) {
@@ -1168,6 +1197,7 @@ func (c *Client) ResolveContainer(ctx context.Context, serverID string) (*contai
 	// Strategy 1: label match
 	filterArgs := make(client.Filters)
 	filterArgs.Add("label", fmt.Sprintf("carbon-panel.server.id=%s", serverID))
+	filterArgs = c.filterByInstallation(filterArgs)
 
 	listResult, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
@@ -1207,6 +1237,7 @@ func (c *Client) ResolveModuleContainer(ctx context.Context, moduleID string) (*
 	// Strategy 1: label match
 	filterArgs := make(client.Filters)
 	filterArgs.Add("label", fmt.Sprintf("carbon-panel.module.id=%s", moduleID))
+	filterArgs = c.filterByInstallation(filterArgs)
 
 	listResult, err := c.docker.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
@@ -1424,8 +1455,19 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	if oldContainerID != "" {
 		status, err := c.GetContainerStatus(ctx, oldContainerID)
 		if err != nil {
-			// Container may not exist, that's ok - continue with creation
-			c.log.Debug("Container %s not found during recreation: %v", oldContainerID, err)
+			if !errdefs.IsNotFound(err) {
+				// An unavailable or timed-out inspect is not evidence that the
+				// old container is absent. Keep its identity and do not send a
+				// destructive remove based on an unknown observation.
+				result.NewContainerID = oldContainerID
+				return result, fmt.Errorf("failed to inspect old container before recreation: %w", err)
+			}
+			c.log.Debug("Container %s is already absent during recreation: %v", oldContainerID, err)
+		} else if status == models.StatusError {
+			// A successful response without a usable state is still an unknown
+			// observation. Preserve the known identity and require reconciliation.
+			result.NewContainerID = oldContainerID
+			return result, fmt.Errorf("failed to determine old container state before recreation: status is unknown")
 		} else if status == models.StatusRunning || status == models.StatusUnhealthy || status == models.StatusPaused {
 			// A paused container cannot be removed reliably until StopContainer
 			// unpauses it. Preserve paused intent as not-running: its replacement
@@ -1674,11 +1716,11 @@ func (c *Client) pullImage(ctx context.Context, imageName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
 	}
-	defer reader.Close()
-
-	// Read the output to ensure the pull completes
-	_, err = io.Copy(io.Discard, reader)
-	if err != nil {
+	// Docker reports some pull failures as JSON messages in an otherwise
+	// successful HTTP response. The SDK's Wait consumes and decodes those
+	// messages, returning embedded daemon errors, transport errors, and
+	// context cancellation while still draining successful progress streams.
+	if err = reader.Wait(ctx); err != nil {
 		return fmt.Errorf("failed to complete image pull for %s: %w", imageName, err)
 	}
 

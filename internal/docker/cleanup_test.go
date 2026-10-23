@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -15,79 +14,140 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
-// TestDecideReconcile exercises the pure adopt/orphan/skip decision in isolation, since this is
-// the logic that ultimately decides whether a container survives startup reconciliation.
-func TestDecideReconcile(t *testing.T) {
+// TestPlanReconcile exercises the pure adopt/orphan/quarantine/foreign/skip decision in
+// isolation, since this is the logic that ultimately decides whether a container survives
+// startup reconciliation.
+func TestPlanReconcile(t *testing.T) {
+	const ours = "installation-a"
+
 	tests := []struct {
 		name           string
 		cont           managedContainer
+		ourID          string
 		dbRecordExists bool
 		dbContainerID  string
+		purgeOrphans   bool
 		want           reconcileAction
 	}{
 		{
-			name:           "matching server container is left alone",
-			cont:           managedContainer{ID: "abc123", ServerID: "srv-1"},
+			name:           "matching owned server container is left alone",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-1", InstallationID: ours},
+			ourID:          ours,
 			dbRecordExists: true,
 			dbContainerID:  "abc123",
 			want:           actionNone,
 		},
 		{
-			name:           "server record with stale ContainerID is adopted, not purged",
-			cont:           managedContainer{ID: "abc123", ServerID: "srv-1"},
+			name:           "owned server record with stale ContainerID is adopted, not purged",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-1", InstallationID: ours},
+			ourID:          ours,
 			dbRecordExists: true,
 			dbContainerID:  "old-stale-id",
 			want:           actionAdopt,
 		},
 		{
-			name:           "server record with empty ContainerID (crash mid-create) is adopted",
-			cont:           managedContainer{ID: "abc123", ServerID: "srv-1"},
+			name:           "owned server record with empty ContainerID (crash mid-create) is adopted",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-1", InstallationID: ours},
+			ourID:          ours,
 			dbRecordExists: true,
 			dbContainerID:  "",
 			want:           actionAdopt,
 		},
 		{
-			name:           "no DB record at all is a genuine orphan",
-			cont:           managedContainer{ID: "abc123", ServerID: "srv-missing"},
+			name:           "owned orphan stays quarantined when purge is disabled",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-missing", InstallationID: ours},
+			ourID:          ours,
 			dbRecordExists: false,
-			dbContainerID:  "",
+			purgeOrphans:   false,
+			want:           actionQuarantine,
+		},
+		{
+			name:           "owned orphan is eligible for purge only when explicitly enabled",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-missing", InstallationID: ours},
+			ourID:          ours,
+			dbRecordExists: false,
+			purgeOrphans:   true,
+			want:           actionOrphan,
+		},
+		{
+			name:           "legacy container matching a DB record is adopted (non-destructive)",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-1"},
+			ourID:          ours,
+			dbRecordExists: true,
+			dbContainerID:  "stale",
+			want:           actionAdopt,
+		},
+		{
+			name:           "legacy orphan is never purged, even with purge enabled",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-missing"},
+			ourID:          ours,
+			dbRecordExists: false,
+			purgeOrphans:   true,
+			want:           actionQuarantine,
+		},
+		{
+			name:           "foreign container matching a DB record is untouched",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-1", InstallationID: "installation-b"},
+			ourID:          ours,
+			dbRecordExists: true,
+			dbContainerID:  "abc123",
+			want:           actionForeign,
+		},
+		{
+			name:           "foreign orphan is never purged, even with purge enabled",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-missing", InstallationID: "installation-b"},
+			ourID:          ours,
+			dbRecordExists: false,
+			purgeOrphans:   true,
+			want:           actionForeign,
+		},
+		{
+			name:           "labeled container is foreign when this process has no identity",
+			cont:           managedContainer{ID: "abc123", ServerID: "srv-1", InstallationID: "installation-b"},
+			ourID:          "",
+			dbRecordExists: true,
+			dbContainerID:  "abc123",
+			want:           actionForeign,
+		},
+		{
+			name:           "owned module orphan with purge enabled is purged",
+			cont:           managedContainer{ID: "def456", ModuleID: "mod-missing", InstallationID: ours},
+			ourID:          ours,
+			dbRecordExists: false,
+			purgeOrphans:   true,
 			want:           actionOrphan,
 		},
 		{
 			name:           "matching module container is left alone",
-			cont:           managedContainer{ID: "def456", ModuleID: "mod-1"},
+			cont:           managedContainer{ID: "def456", ModuleID: "mod-1", InstallationID: ours},
+			ourID:          ours,
 			dbRecordExists: true,
 			dbContainerID:  "def456",
 			want:           actionNone,
 		},
 		{
 			name:           "module record with drifted ContainerID is adopted",
-			cont:           managedContainer{ID: "def456", ModuleID: "mod-1"},
+			cont:           managedContainer{ID: "def456", ModuleID: "mod-1", InstallationID: ours},
+			ourID:          ours,
 			dbRecordExists: true,
 			dbContainerID:  "other-id",
 			want:           actionAdopt,
 		},
 		{
-			name:           "orphan module container with no DB record",
-			cont:           managedContainer{ID: "def456", ModuleID: "mod-missing"},
-			dbRecordExists: false,
-			dbContainerID:  "",
-			want:           actionOrphan,
-		},
-		{
 			name:           "managed container without a recognizable id label is skipped, never orphaned",
 			cont:           managedContainer{ID: "ghi789"},
+			ourID:          ours,
 			dbRecordExists: false,
-			dbContainerID:  "",
+			purgeOrphans:   true,
 			want:           actionSkip,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := decideReconcile(tt.cont, tt.dbRecordExists, tt.dbContainerID)
+			got := planReconcile(tt.cont, tt.ourID, tt.dbRecordExists, tt.dbContainerID, tt.purgeOrphans)
 			if got != tt.want {
-				t.Errorf("decideReconcile(%+v, %v, %q) = %v, want %v", tt.cont, tt.dbRecordExists, tt.dbContainerID, got, tt.want)
+				t.Errorf("planReconcile(%+v, %q, %v, %q, %v) = %v, want %v", tt.cont, tt.ourID, tt.dbRecordExists, tt.dbContainerID, tt.purgeOrphans, got, tt.want)
 			}
 		})
 	}
@@ -132,7 +192,7 @@ func TestReconcileAndCleanupContainers_AbortsOnListServersError(t *testing.T) {
 	store := &mockReconcileStore{serversErr: errors.New("db is on fire")}
 	log := logger.New()
 
-	err := ReconcileAndCleanupContainers(context.Background(), store, nil, log)
+	err := ReconcileAndCleanupContainers(context.Background(), store, nil, log, ReconcileOptions{})
 	if err == nil {
 		t.Fatal("expected ReconcileAndCleanupContainers to return an error when ListServers fails, got nil")
 	}
@@ -147,7 +207,7 @@ func TestReconcileAndCleanupContainers_AbortsOnListModulesError(t *testing.T) {
 	store := &mockReconcileStore{modulesErr: errors.New("db is on fire")}
 	log := logger.New()
 
-	err := ReconcileAndCleanupContainers(context.Background(), store, nil, log)
+	err := ReconcileAndCleanupContainers(context.Background(), store, nil, log, ReconcileOptions{})
 	if err == nil {
 		t.Fatal("expected ReconcileAndCleanupContainers to return an error when ListModules fails, got nil")
 	}

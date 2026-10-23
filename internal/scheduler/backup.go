@@ -477,7 +477,10 @@ func (s *Scheduler) stopServerForBackup(ctx context.Context, server *storage.Ser
 	if server.ContainerID == "" {
 		return false, nil
 	}
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return false, fmt.Errorf("stop_for_backup: %w", err)
+	}
 	if dockerCli == nil {
 		return false, fmt.Errorf("stop_for_backup: docker is unavailable")
 	}
@@ -495,7 +498,10 @@ func (s *Scheduler) stopServerForBackup(ctx context.Context, server *storage.Ser
 }
 
 func (s *Scheduler) startServerAfterBackup(ctx context.Context, server *storage.Server) error {
-	dockerCli := s.dockerForNode(server.NodeID)
+	dockerCli, err := s.dockerForNode(server.NodeID)
+	if err != nil {
+		return fmt.Errorf("docker is unavailable: %w", err)
+	}
 	if dockerCli == nil || server.ContainerID == "" {
 		return fmt.Errorf("docker is unavailable")
 	}

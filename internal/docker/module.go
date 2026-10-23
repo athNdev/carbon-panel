@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -182,6 +181,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 			"willfarrell.autoheal":                  "false",
 		},
 	}
+	c.applyInstallationLabel(config.Labels)
 
 	// Set uid + gid
 	uid, gid := alias.Substitute(module.UID, aliasCtx), alias.Substitute(module.GID, aliasCtx)

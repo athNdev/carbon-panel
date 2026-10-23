@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package main
 
 import (
@@ -114,6 +113,16 @@ func main() {
 
 	ctx := context.Background()
 
+	// Load or create this controller installation's stable identity. It scopes
+	// container ownership: another panel sharing the same Docker daemon is
+	// recognised as foreign and never adopted or purged, while restarts and
+	// database restores of this installation keep ownership of their containers.
+	installationID, err := docker.LoadOrCreateInstallationID(cfg.Storage.DataDir)
+	if err != nil {
+		log.Fatal("Failed to initialize controller installation identity: %v", err)
+	}
+	log.Info("Controller installation identity: %s", installationID)
+
 	// Initialize Docker client with configuration
 	dockerClient, err := docker.NewClient(cfg.Docker.Host, log, docker.ClientConfig{
 		APIVersion:      cfg.Docker.Version,
@@ -126,6 +135,7 @@ func main() {
 		RateLimitPerMin: cfg.Docker.RateLimitPerMin,
 		RateLimitBurst:  cfg.Docker.RateLimitBurst,
 		ProxyEnabled:    cfg.Proxy.Enabled,
+		InstallationID:  installationID,
 	})
 	if err != nil {
 		log.Fatal("Failed to initialize Docker client: %v", err)
@@ -139,11 +149,15 @@ func main() {
 
 	// Reconcile and clean up containers on startup. This is a two-phase, adopt-then-purge
 	// process: containers that match a live DB record (even with a drifted/empty ContainerID)
-	// are adopted (DB updated to match reality) and never touched further; only containers with
-	// no matching DB record at all are treated as genuine orphans and removed. If the DB can't
+	// are adopted (DB updated to match reality) and never touched further. Containers created
+	// by another installation are ignored. Orphans owned by this installation are quarantined
+	// (reported, left running) unless docker.reconcile_purge_orphans is explicitly enabled;
+	// before any removal their ownership is revalidated against the daemon. If the DB can't
 	// be read, ReconcileAndCleanupContainers aborts before any deletion happens.
 	log.Info("Reconciling containers with database state...")
-	if err := docker.ReconcileAndCleanupContainers(ctx, store, dockerClient, log); err != nil {
+	if err := docker.ReconcileAndCleanupContainers(ctx, store, dockerClient, log, docker.ReconcileOptions{
+		PurgeOrphans: cfg.Docker.ReconcilePurgeOrphans,
+	}); err != nil {
 		log.Error("Failed to reconcile/cleanup containers: %v", err)
 	}
 
@@ -252,12 +266,16 @@ func main() {
 		}
 	}, log)
 	deepSleepMgr.SetControllerResolver(func(nodeID string) docker.SleepController {
-		if nodeID != "" {
-			if cli, err := clientPool.GetClient(nodeID); err == nil && cli != nil {
-				return cli
-			}
+		if nodeID == "" {
+			return dockerClient
 		}
-		return dockerClient
+		// Fail closed: an unknown remote node must not fall back to the local
+		// daemon, otherwise sleep/wake would act on the wrong host's containers.
+		cli, err := clientPool.GetClientStrict(nodeID)
+		if err != nil || cli == nil {
+			return nil
+		}
+		return cli
 	})
 	deepSleepMgr.SetWakePreparer(taskScheduler.PrepareDeepSleepWake)
 	deepSleepMgr.SetPlayerCountProvider(func(serverID string) int {

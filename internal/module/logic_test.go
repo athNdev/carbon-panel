@@ -384,9 +384,35 @@ func TestAllocateModulePortExcluding(t *testing.T) {
 }
 
 func TestResolveDockerFallback(t *testing.T) {
-	m, _ := testManager(t)
-	if got := m.resolveDocker("any"); got != nil {
-		t.Fatalf("no docker source: %v", got)
+	m, store := testManager(t)
+	local := &docker.Client{}
+	pool := docker.NewClientPool(store, local, logger.New())
+	m.docker = local
+	m.pool = pool
+
+	// An unresolvable remote node must fail instead of silently returning the
+	// local client, which would run module lifecycle operations on the wrong host.
+	got, err := m.resolveDocker("missing-remote-node")
+	if err == nil {
+		t.Fatal("unresolvable remote node must return an error")
+	}
+	if got == local {
+		t.Fatalf("resolveDocker fell back to the local client %p", local)
+	}
+	if got != nil {
+		t.Fatalf("resolveDocker returned %p on resolution failure, want nil", got)
+	}
+	if !strings.Contains(err.Error(), "missing-remote-node") {
+		t.Fatalf("error %q must name the node", err)
+	}
+
+	// Local/default identifiers keep resolving to the local client so single-node
+	// installs are unaffected.
+	for _, nodeID := range []string{"", "local", "default"} {
+		cli, err := m.resolveDocker(nodeID)
+		if err != nil || cli != local {
+			t.Fatalf("resolveDocker(%q) = %p, %v; want local client %p", nodeID, cli, err, local)
+		}
 	}
 }
 

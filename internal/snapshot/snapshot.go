@@ -85,13 +85,31 @@ func NewEngineWithPool(store *storage.Store, dockerClient *docker.Client, pool *
 // strict node-specific client from the pool over the single default client so
 // rollback operations for a remote node's server are not silently applied to
 // the local Docker daemon.
-func (e *Engine) resolveDocker(nodeID string) *docker.Client {
+//
+// An unresolvable remote node is an error: rollback mutates a server's data and
+// container state, so guessing the daemon is not safe.
+func (e *Engine) resolveDocker(nodeID string) (*docker.Client, error) {
+	defaultNodeID := "default"
 	if e.pool != nil {
-		if cli, err := e.pool.GetClientStrict(nodeID); err == nil && cli != nil {
-			return cli
+		defaultNodeID = e.pool.GetDefaultNodeID()
+		cli, err := e.pool.GetClientStrict(nodeID)
+		if err == nil && cli != nil {
+			return cli, nil
 		}
+		if err != nil && !isLocalNodeID(nodeID, defaultNodeID) {
+			return nil, fmt.Errorf("cannot resolve Docker client for node %q: %w", nodeID, err)
+		}
+	} else if !isLocalNodeID(nodeID, defaultNodeID) {
+		return nil, fmt.Errorf("cannot resolve Docker client for node %q: no Docker client pool is configured", nodeID)
 	}
-	return e.docker
+	return e.docker, nil
+}
+
+// isLocalNodeID reports whether nodeID addresses the controller's local Docker
+// daemon. The empty ID and the well-known "local" alias are accepted by
+// ClientPool.GetClientStrict alongside the configured default node ID.
+func isLocalNodeID(nodeID, defaultNodeID string) bool {
+	return nodeID == "" || nodeID == "local" || nodeID == defaultNodeID
 }
 
 // CreatePreUpdateSnapshot creates an atomic volume snapshot before updating modpacks or configs
@@ -244,7 +262,12 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	defer docker.EndServerTransition(server.ID)
 
 	wasRunning := server.Status == storage.StatusRunning || server.Status == storage.StatusStarting
-	dockerCli := e.resolveDocker(server.NodeID)
+	dockerCli, err := e.resolveDocker(server.NodeID)
+	if err != nil {
+		// Abort before stopping the container or touching files: the snapshot must
+		// not be applied while the server's node cannot be reached.
+		return fmt.Errorf("cannot safely rollback: %w", err)
+	}
 
 	// Stop container if running - abort rollback if container fails to stop to avoid data corruption (DEP-2)
 	if wasRunning && server.ContainerID != "" {
