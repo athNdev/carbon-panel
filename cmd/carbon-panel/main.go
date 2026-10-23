@@ -26,6 +26,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/reconciler"
 	"github.com/athNdev/carbon-panel/internal/rpc"
@@ -141,6 +142,15 @@ func main() {
 		log.Fatal("Failed to initialize Docker client: %v", err)
 	}
 	defer dockerClient.Close()
+
+	// Resolve operations interrupted by a crash or restart before reconciliation:
+	// each one is observed against the daemon so an unknown Docker outcome is never
+	// treated as if the mutation never happened.
+	if summary, recErr := operation.RecoverInterrupted(ctx, store, operation.NewDockerObserver(dockerClient), log); recErr != nil {
+		log.Error("Failed to recover interrupted server operations: %v", recErr)
+	} else if summary.Scanned > 0 {
+		log.Warn("Interrupted server operations: %d scanned, %d recovered, %d require review", summary.Scanned, summary.Recovered, summary.NeedsReview)
+	}
 
 	// Ensure Docker network exists
 	if err := dockerClient.EnsureNetwork(); err != nil {

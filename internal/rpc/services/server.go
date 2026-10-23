@@ -1799,7 +1799,9 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	// replacement. For staged replacement, keep it frozen until config loading
 	// succeeds and RecreateContainer owns the stop/remove transition.
 	if server.Status == storage.StatusPaused && server.ContainerID != "" && !needsStagedRecreate {
-		if err := dockerCli.UnpauseContainer(ctx, server.ContainerID); err != nil {
+		if err := s.runJournaledMutation(ctx, server, "start_unpause", func() error {
+			return dockerCli.UnpauseContainer(ctx, server.ContainerID)
+		}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
 		}
 		server.Status = storage.StatusRunning
@@ -1912,7 +1914,9 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	if !stagedContainerStarted {
 
 		// Start container
-		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
+		if err := s.runJournaledMutation(ctx, server, "start", func() error {
+			return dockerCli.StartContainer(ctx, server.ContainerID)
+		}); err != nil {
 			s.log.Error("Failed to start container, attempting to recreate: %v", err)
 
 			// Get server config for container creation
@@ -2088,9 +2092,17 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 
 	stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), window+15*time.Second)
 	defer stopCancel()
-	found, err := dockerCli.StopContainerWithin(stopCtx, server.ContainerID, window)
-	if err != nil {
-		s.log.Error("Failed to stop container: %v", err)
+	var (
+		found   bool
+		stopErr error
+	)
+	stopErr = s.runJournaledMutation(ctx, server, "stop", func() error {
+		var err error
+		found, err = dockerCli.StopContainerWithin(stopCtx, server.ContainerID, window)
+		return err
+	})
+	if stopErr != nil {
+		s.log.Error("Failed to stop container: %v", stopErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop server"))
 	}
 
