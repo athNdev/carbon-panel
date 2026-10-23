@@ -734,10 +734,11 @@ func (s *Scheduler) executeCommandTask(ctx context.Context, server *storage.Serv
 }
 
 func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
-	if !docker.TryBeginServerTransition(server.ID) {
-		return "", fmt.Errorf("server lifecycle transition already in progress")
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return "", err
 	}
-	defer docker.EndServerTransition(server.ID)
+	defer transition.Release()
 
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
@@ -787,10 +788,11 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 }
 
 func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
-	if !docker.TryBeginServerTransition(server.ID) {
-		return "", fmt.Errorf("server lifecycle transition already in progress")
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return "", err
 	}
-	defer docker.EndServerTransition(server.ID)
+	defer transition.Release()
 
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
@@ -825,10 +827,11 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	if server == nil || server.ID == "" {
 		return fmt.Errorf("server ID is required")
 	}
-	if !docker.TryBeginServerTransition(server.ID) {
-		return fmt.Errorf("server lifecycle transition already in progress")
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return err
 	}
-	defer docker.EndServerTransition(server.ID)
+	defer transition.Release()
 	if server.ContainerID == "" {
 		return fmt.Errorf("server has no container")
 	}
