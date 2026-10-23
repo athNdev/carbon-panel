@@ -12,7 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { onMount } from 'svelte';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
-	import { CarbonConfirm } from '$lib/components/carbon';
+	import { CarbonConfirm, CarbonErrorState } from '$lib/components/carbon';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
@@ -73,6 +73,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	let loading = $state(true);
 	let tasks = $state<ScheduledTask[]>([]);
+	let loadError = $state<string | null>(null);
 	let initialized = $state(false);
 	// svelte-ignore state_referenced_locally
 	let previousServerId = $state(server.id);
@@ -361,10 +362,12 @@ one at https://mozilla.org/MPL/2.0/.
 	async function loadTasks() {
 		try {
 			loading = true;
+			loadError = null;
 			const request = create(ListTasksRequestSchema, { serverId: server.id });
 			const response = await rpcClient.task.listTasks(request);
 			tasks = response.tasks;
-		} catch (_e) {
+		} catch (error) {
+			loadError = error instanceof Error ? error.message : 'Failed to load tasks';
 			toast.error('Failed to load tasks');
 		} finally {
 			loading = false;
@@ -914,7 +917,9 @@ one at https://mozilla.org/MPL/2.0/.
 		</div>
 
 		<!-- Tasks List -->
-		{#if tasks.length === 0}
+		{#if loadError && tasks.length === 0}
+			<CarbonErrorState title="Failed to load tasks" message={loadError} onretry={loadTasks} />
+		{:else if tasks.length === 0}
 			<Card>
 				<CardContent class="py-8">
 					<div class="space-y-4 text-center">

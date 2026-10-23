@@ -55,33 +55,19 @@ one at https://mozilla.org/MPL/2.0/.
 
 	let queryTab = $derived(page.url.searchParams.get('tab'));
 
-	// Pick the first visible tab as default or read from URL
+	// Pick the requested tab only when it is visible, otherwise fall back to the first visible tab.
 	let activeTab = $state('');
 	$effect(() => {
-		if (
-			queryTab &&
-			[
-				'server-config',
-				'api-keys',
-				'routing',
-				'nodes',
-				'auth',
-				'logs',
-				'support',
-				'users',
-				'roles'
-			].includes(queryTab)
-		) {
+		if (queryTab && settingsTabs.some((tab) => tab.id === queryTab)) {
 			activeTab = queryTab;
 		} else if (
 			typeof window !== 'undefined' &&
+			showSettings &&
 			(window.location.hash === '#cfApiKey' || window.location.hash === '#api-keys')
 		) {
 			activeTab = 'api-keys';
-		} else if (!activeTab) {
-			if (showSettings) activeTab = 'server-config';
-			else if (showUsers) activeTab = 'users';
-			else if (showRoles) activeTab = 'roles';
+		} else if (!settingsTabs.some((tab) => tab.id === activeTab)) {
+			activeTab = settingsTabs[0]?.id ?? '';
 		}
 	});
 

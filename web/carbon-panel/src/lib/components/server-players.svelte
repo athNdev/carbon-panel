@@ -13,6 +13,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	import { SendCommandRequestSchema } from '$lib/proto/carbonpanel/v1/server_pb';
 	import { GetFileRequestSchema } from '$lib/proto/carbonpanel/v1/file_pb';
 	import { toast } from 'svelte-sonner';
+	import { CarbonErrorState } from '$lib/components/carbon';
 
 	let { server, active = false }: { server: Server; active?: boolean } = $props();
 
@@ -20,6 +21,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	let onlineCount = $state(0);
 	let banned = $state<string[]>([]);
 	let loading = $state(false);
+	let loadError = $state<string | null>(null);
 	let search = $state('');
 	let acting = $state<string | null>(null);
 
@@ -27,12 +29,14 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 	async function loadPlayers() {
 		loading = true;
+		loadError = null;
 		try {
 			const request = create(ListServerPlayersRequestSchema, { serverId: server.id });
 			const response = await rpcClient.server.listServerPlayers(request);
 			players = response.players;
 			onlineCount = response.onlineCount;
 		} catch (error) {
+			loadError = error instanceof Error ? error.message : 'Failed to load players';
 			toast.error(
 				'Failed to load players: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
@@ -116,7 +120,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			class="mb-4 h-9 w-full max-w-xs rounded-none border border-[#393939] bg-[#161616] px-3 text-xs text-[#f4f4f4]"
 		/>
 
-		{#if filtered.length === 0}
+		{#if loadError && players.length === 0}
+			<CarbonErrorState
+				title="Failed to load players"
+				message={loadError}
+				onretry={loadPlayers}
+			/>
+		{:else if filtered.length === 0}
 			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading ? 'Loading players…' : 'No players online.'}
 			</p>

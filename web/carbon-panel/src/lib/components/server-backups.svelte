@@ -17,12 +17,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		type BackupRecord
 	} from '$lib/proto/carbonpanel/v1/backup_pb';
 	import { toast } from 'svelte-sonner';
-	import { CarbonConfirm } from '$lib/components/carbon';
+	import { CarbonConfirm, CarbonErrorState } from '$lib/components/carbon';
 
 	let { server, active = false }: { server: Server; active?: boolean } = $props();
 
 	let backups = $state<BackupRecord[]>([]);
 	let loading = $state(false);
+	let loadError = $state<string | null>(null);
 	let acting = $state<string | null>(null);
 
 	let pendingDelete = $state<BackupRecord | null>(null);
@@ -33,11 +34,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 	async function loadBackups() {
 		loading = true;
+		loadError = null;
 		try {
 			const request = create(ListBackupsRequestSchema, { serverId: server.id, limit: 100 });
 			const response = await rpcClient.backup.listBackups(request);
 			backups = response.backups;
 		} catch (error) {
+			loadError = error instanceof Error ? error.message : 'Failed to load backups';
 			toast.error(
 				'Failed to load backups: ' + (error instanceof Error ? error.message : 'Unknown error')
 			);
@@ -163,7 +166,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			Scheduled and on-demand archives with restore and sticky locks
 		</p>
 
-		{#if backups.length === 0}
+		{#if loadError && backups.length === 0}
+			<CarbonErrorState
+				title="Failed to load backups"
+				message={loadError}
+				onretry={loadBackups}
+			/>
+		{:else if backups.length === 0}
 			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading ? 'Loading backups…' : 'No backups yet. Create one from a scheduled backup task.'}
 			</p>
