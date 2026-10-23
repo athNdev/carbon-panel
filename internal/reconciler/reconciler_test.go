@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package reconciler
 
 import (
@@ -371,10 +370,11 @@ func TestReconcileSkipsServerWithLifecycleTransitionInFlight(t *testing.T) {
 	}
 	r := newTestReconciler(t, store, cli, &fakeProxy{}, &fakeBus{})
 
-	if !docker.TryBeginServerTransition(server.ID) {
-		t.Fatal("failed to claim lifecycle transition")
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		t.Fatalf("failed to claim lifecycle transition: %v", err)
 	}
-	defer docker.EndServerTransition(server.ID)
+	defer transition.Release()
 
 	if err := r.ReconcileServer(context.Background(), server.ID); err != nil {
 		t.Fatalf("ReconcileServer: %v", err)

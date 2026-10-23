@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -76,7 +75,7 @@ type DeepSleepManager struct {
 	mu                 sync.Mutex
 	playerCount        func(serverID string) int
 	wakePreparer       WakePreparer
-	inflight           map[string]struct{}
+	inflight           map[string]*Transition
 	inflightMu         sync.Mutex
 	ctx                context.Context
 	cancel             context.CancelFunc
@@ -92,7 +91,7 @@ func NewDeepSleepManager(controller SleepController, store SleeperStore, command
 		refresher:   refresher,
 		logger:      log,
 		idleTracker: make(map[string]time.Time),
-		inflight:    make(map[string]struct{}),
+		inflight:    make(map[string]*Transition),
 	}
 }
 
@@ -153,31 +152,33 @@ func (m *DeepSleepManager) onlinePlayers(srv *db.Server) int {
 }
 
 func (m *DeepSleepManager) tryBeginTransition(serverID, op string) bool {
-	if !TryBeginServerTransition(serverID) {
+	transition, err := TryBeginServerTransition(serverID)
+	if err != nil {
 		if m.logger != nil {
-			m.logger.Debug("Deep sleep: skipping %s for server %s: transition already in flight", op, serverID)
+			m.logger.Debug("Deep sleep: skipping %s for server %s: %v", op, serverID, err)
 		}
 		return false
 	}
 	m.inflightMu.Lock()
 	if _, busy := m.inflight[serverID]; busy {
 		m.inflightMu.Unlock()
-		EndServerTransition(serverID)
+		transition.Release()
 		if m.logger != nil {
 			m.logger.Debug("Deep sleep: skipping %s for server %s: transition already in flight", op, serverID)
 		}
 		return false
 	}
-	m.inflight[serverID] = struct{}{}
+	m.inflight[serverID] = transition
 	m.inflightMu.Unlock()
 	return true
 }
 
 func (m *DeepSleepManager) endTransition(serverID string) {
 	m.inflightMu.Lock()
+	transition := m.inflight[serverID]
 	delete(m.inflight, serverID)
 	m.inflightMu.Unlock()
-	EndServerTransition(serverID)
+	transition.Release()
 }
 
 // IsTransitioning returns whether the server is currently transitioning (sleeping or waking).

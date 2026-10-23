@@ -3,50 +3,97 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
 
 func TestServerTransitionsAreExclusivePerServer(t *testing.T) {
-	if !TryBeginServerTransition("srv-a") {
-		t.Fatal("first transition should acquire the server")
+	first, err := TryBeginServerTransition("srv-a")
+	if err != nil {
+		t.Fatalf("first transition should acquire the server: %v", err)
 	}
-	if TryBeginServerTransition("srv-a") {
-		t.Fatal("concurrent transition should be rejected")
+	if _, err := TryBeginServerTransition("srv-a"); !errors.Is(err, ErrTransitionInFlight) {
+		t.Fatalf("concurrent transition error = %v, want ErrTransitionInFlight", err)
 	}
 	if !ServerTransitionInFlight("srv-a") {
 		t.Fatal("server should be reported as transitioning")
 	}
-	if !TryBeginServerTransition("srv-b") {
-		t.Fatal("different server should transition independently")
+	second, err := TryBeginServerTransition("srv-b")
+	if err != nil {
+		t.Fatalf("different server should transition independently: %v", err)
 	}
-	EndServerTransition("srv-a")
+	first.Release()
 	if ServerTransitionInFlight("srv-a") {
 		t.Fatal("released server should no longer be transitioning")
 	}
-	if !TryBeginServerTransition("srv-a") {
-		t.Fatal("released server should be acquirable again")
+	if _, err := TryBeginServerTransition("srv-a"); err != nil {
+		t.Fatalf("released server should be acquirable again: %v", err)
 	}
-	EndServerTransition("srv-a")
-	EndServerTransition("srv-b")
+	second.Release()
 }
 
 func TestTryBeginServerTransitionRejectsEmptyID(t *testing.T) {
-	if TryBeginServerTransition("") {
-		t.Fatal("empty server ID must not acquire a transition")
+	if _, err := TryBeginServerTransition(""); !errors.Is(err, ErrTransitionServerID) {
+		t.Fatalf("empty server ID error = %v, want ErrTransitionServerID", err)
+	}
+	if ServerTransitionInFlight("") {
+		t.Fatal("empty server ID must not register a transition")
+	}
+}
+
+func TestTransitionReleaseIsIdempotent(t *testing.T) {
+	transition, err := TryBeginServerTransition("srv-idempotent")
+	if err != nil {
+		t.Fatalf("transition should be acquired: %v", err)
+	}
+	transition.Release()
+	transition.Release()
+	if ServerTransitionInFlight("srv-idempotent") {
+		t.Fatal("released server should no longer be transitioning")
+	}
+	if _, err := TryBeginServerTransition("srv-idempotent"); err != nil {
+		t.Fatalf("server should be acquirable after repeated release: %v", err)
+	}
+}
+
+// TestStaleReleaseKeepsLaterOwner pins the ownership rule: a handle that has
+// already been released must not clear a claim taken by a later operation.
+func TestStaleReleaseKeepsLaterOwner(t *testing.T) {
+	stale, err := TryBeginServerTransition("srv-stale")
+	if err != nil {
+		t.Fatalf("first transition should be acquired: %v", err)
+	}
+	stale.Release()
+
+	owner, err := TryBeginServerTransition("srv-stale")
+	if err != nil {
+		t.Fatalf("released server should be acquirable: %v", err)
+	}
+	stale.Release()
+
+	if !ServerTransitionInFlight("srv-stale") {
+		t.Fatal("stale release cleared the current owner's transition")
+	}
+	if _, err := TryBeginServerTransition("srv-stale"); !errors.Is(err, ErrTransitionInFlight) {
+		t.Fatalf("current owner was evicted: error = %v", err)
+	}
+	owner.Release()
+	if ServerTransitionInFlight("srv-stale") {
+		t.Fatal("current owner release should clear the transition")
 	}
 }
 
 func TestWaitForServerTransitionWaitsUntilReleased(t *testing.T) {
-	if !TryBeginServerTransition("srv-wait") {
-		t.Fatal("transition should be acquired")
+	transition, err := TryBeginServerTransition("srv-wait")
+	if err != nil {
+		t.Fatalf("transition should be acquired: %v", err)
 	}
-	defer EndServerTransition("srv-wait")
+	defer transition.Release()
 
 	done := make(chan error, 1)
 	go func() { done <- WaitForServerTransition(context.Background(), "srv-wait") }()
@@ -56,7 +103,7 @@ func TestWaitForServerTransitionWaitsUntilReleased(t *testing.T) {
 	case <-time.After(20 * time.Millisecond):
 	}
 
-	EndServerTransition("srv-wait")
+	transition.Release()
 	select {
 	case err := <-done:
 		if err != nil {
@@ -68,10 +115,11 @@ func TestWaitForServerTransitionWaitsUntilReleased(t *testing.T) {
 }
 
 func TestWaitForServerTransitionHonorsContext(t *testing.T) {
-	if !TryBeginServerTransition("srv-cancel") {
-		t.Fatal("transition should be acquired")
+	transition, err := TryBeginServerTransition("srv-cancel")
+	if err != nil {
+		t.Fatalf("transition should be acquired: %v", err)
 	}
-	defer EndServerTransition("srv-cancel")
+	defer transition.Release()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

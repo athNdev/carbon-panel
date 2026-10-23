@@ -1125,13 +1125,14 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	// The creation task continues after this RPC returns. Claim the same
 	// lifecycle transition used by start/stop/update/delete so those operations
 	// cannot race container creation or its final database writes.
-	if !docker.TryBeginServerTransition(server.ID) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
 	transitionHeld := true
 	defer func() {
 		if transitionHeld {
-			docker.EndServerTransition(server.ID)
+			transition.Release()
 		}
 	}()
 
@@ -1247,8 +1248,8 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	// be overwritten by a stale full-row Save from this goroutine.
 	createServer := *server
 	startImmediately := msg.StartImmediately
-	go func(server *storage.Server, startImmediately bool) {
-		defer docker.EndServerTransition(server.ID)
+	go func(server *storage.Server, startImmediately bool, transition *docker.Transition) {
+		defer transition.Release()
 		bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 		defer cancel()
 		s.log.Info("Starting async Docker container creation for server %s", server.ID)
@@ -1329,7 +1330,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			}
 			s.log.Info("Server %s created but not started immediately", server.ID)
 		}
-	}(&createServer, startImmediately)
+	}(&createServer, startImmediately, transition)
 	transitionHeld = false // ownership transferred to the asynchronous task
 
 	peerIP := req.Peer().Addr
@@ -1346,10 +1347,11 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 // UpdateServer updates a server
 func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v1.UpdateServerRequest]) (*connect.Response[v1.UpdateServerResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.Id) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.Id)
+	defer transition.Release()
 
 	msg := req.Msg
 
@@ -1660,10 +1662,11 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 
 // DeleteServer deletes a server
 func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v1.DeleteServerRequest]) (*connect.Response[v1.DeleteServerResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.Id) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.Id)
+	defer transition.Release()
 
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
@@ -1736,10 +1739,11 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 // StartServer starts a server
 func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.Id) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.Id)
+	defer transition.Release()
 
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
@@ -2010,10 +2014,11 @@ func (s *ServerService) rollbackPausedResume(ctx context.Context, dockerCli *doc
 
 // StopServer stops a server
 func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.Id) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.Id)
+	defer transition.Release()
 
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
@@ -2107,10 +2112,11 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 
 // RestartServer restarts a server
 func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[v1.RestartServerRequest]) (*connect.Response[v1.RestartServerResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.Id) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.Id)
+	defer transition.Release()
 
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
@@ -2361,10 +2367,11 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 // Destroys and recreates a server container from scratch - brute force reset
 func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request[v1.RecreateServerRequest]) (*connect.Response[v1.RecreateServerResponse], error) {
-	if !docker.TryBeginServerTransition(req.Msg.Id) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(req.Msg.Id)
+	defer transition.Release()
 
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
