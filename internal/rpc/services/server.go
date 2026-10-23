@@ -89,24 +89,7 @@ func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
 }
 
 func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, error) {
-	if s.pool != nil {
-		return s.pool.GetClientStrict(nodeID)
-	}
-	if s.docker != nil {
-		// A standalone Docker client is the local daemon. Reuse it for an
-		// explicit node only when the store confirms that node is local.
-		if nodeID == "" || nodeID == "local" || nodeID == "default" {
-			return s.docker, nil
-		}
-		if s.store != nil {
-			node, err := s.store.GetNode(context.Background(), nodeID)
-			if err == nil && node != nil && node.IsLocal {
-				return s.docker, nil
-			}
-		}
-		return nil, fmt.Errorf("no docker client available for node %s", nodeID)
-	}
-	return nil, fmt.Errorf("no docker client available")
+	return docker.NewLocator(s.pool, s.docker, s.store).For(context.Background(), nodeID)
 }
 
 // checkNodeHostPort checks Docker allocations on the selected daemon and uses
