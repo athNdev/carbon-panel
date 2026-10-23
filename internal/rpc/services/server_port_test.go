@@ -3,17 +3,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
@@ -93,6 +96,81 @@ func TestCreateServer_RejectsHostBoundPort(t *testing.T) {
 	}
 	if connErr.Code() != connect.CodeInvalidArgument {
 		t.Errorf("expected CodeInvalidArgument, got %v (%v)", connErr.Code(), connErr)
+	}
+}
+
+func TestCheckNodeHostPortDoesNotUseControllerSocketForRemoteNode(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	remoteAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/containers/json") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte("[]"))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(remoteAPI.Close)
+	dockerHost := "tcp://" + strings.TrimPrefix(remoteAPI.URL, "http://")
+	remoteClient, err := docker.NewClient(dockerHost, svc.log)
+	if err != nil {
+		t.Fatalf("create remote Docker test client: %v", err)
+	}
+	if err := svc.store.CreateNode(context.Background(), &db.Node{
+		ID: "remote-port-node", Name: "Remote Port Node", Host: dockerHost,
+		Enabled: true, Status: db.NodeStatusOnline,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	pool := docker.NewClientPool(svc.store, svc.docker, nil)
+	pool.RegisterClient("remote-port-node", remoteClient)
+	svc.pool = pool
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := svc.checkNodeHostPort(context.Background(), "remote-port-node", port); err != nil {
+		t.Fatalf("controller-local listener must not conflict with a remote node port: %v", err)
+	}
+}
+
+func TestCheckNodeHostPortFailsClosedWhenRemoteQueryFails(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	remoteAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_ping") {
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/containers/json") {
+			http.Error(w, `{"message":"daemon unavailable"}`, http.StatusServiceUnavailable)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(remoteAPI.Close)
+	dockerHost := "tcp://" + strings.TrimPrefix(remoteAPI.URL, "http://")
+	remoteClient, err := docker.NewClient(dockerHost, nil)
+	if err != nil {
+		t.Fatalf("create remote Docker test client: %v", err)
+	}
+	if err := svc.store.CreateNode(context.Background(), &db.Node{
+		ID: "remote-unavailable", Name: "Remote Unavailable", Host: dockerHost,
+		Enabled: true, Status: db.NodeStatusOnline,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	pool := docker.NewClientPool(svc.store, svc.docker, nil)
+	pool.RegisterClient("remote-unavailable", remoteClient)
+	svc.pool = pool
+
+	err = svc.checkNodeHostPort(context.Background(), "remote-unavailable", 25589)
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeUnavailable {
+		t.Fatalf("checkNodeHostPort error = %T %v, want CodeUnavailable", err, err)
 	}
 }
 
@@ -196,6 +274,41 @@ func TestCreateServer_AutoPlacementSkipsNodeWithoutPhysicalMemoryCapacity(t *tes
 	}); err != nil {
 		t.Fatalf("failed to seed existing reservation: %v", err)
 	}
+	remoteAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/containers/json") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte("[]"))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(remoteAPI.Close)
+	dockerHost := "tcp://" + strings.TrimPrefix(remoteAPI.URL, "http://")
+	for _, nodeID := range []string{"a-small-node", "z-large-node"} {
+		if err := svc.store.UpdateNode(context.Background(), func() *db.Node {
+			n, getErr := svc.store.GetNode(context.Background(), nodeID)
+			if getErr != nil {
+				t.Fatalf("load node %s: %v", nodeID, getErr)
+			}
+			n.Host = dockerHost
+			return n
+		}()); err != nil {
+			t.Fatalf("update node %s: %v", nodeID, err)
+		}
+	}
+	remoteClientA, err := docker.NewClient(dockerHost, svc.log)
+	if err != nil {
+		t.Fatalf("create placement Docker fixture: %v", err)
+	}
+	remoteClientZ, err := docker.NewClient(dockerHost, svc.log)
+	if err != nil {
+		t.Fatalf("create second placement Docker fixture: %v", err)
+	}
+	pool := docker.NewClientPool(svc.store, svc.docker, svc.log)
+	pool.RegisterClient("a-small-node", remoteClientA)
+	pool.RegisterClient("z-large-node", remoteClientZ)
+	svc.pool = pool
+	t.Cleanup(func() { _ = pool.Close() })
 	svc.hostMemoryMB = func(_ context.Context, nodeID string) (int64, error) {
 		if nodeID == "a-small-node" {
 			return 4096, nil

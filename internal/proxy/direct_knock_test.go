@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -74,11 +73,25 @@ func getFreePort(t *testing.T) int {
 	return port
 }
 
+// Tests exercise the actual StartKnock lifecycle with a loopback-only bind.
+// Production keeps the wildcard listener needed for LAN/public wake traffic.
+func newTestDirectKnockManager(wakeHandler WakeHandler, log *logger.Logger) *DirectKnockManager {
+	mgr := NewDirectKnockManager(wakeHandler, log)
+	mgr.listen = func(network, address string) (net.Listener, error) {
+		_, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		return net.Listen(network, net.JoinHostPort("127.0.0.1", port))
+	}
+	return mgr
+}
+
 // Test 1: Direct knock listener starts and stops, binding the port
 func TestDirectKnock_StartStop(t *testing.T) {
 	port := getFreePort(t)
 	log := logger.New()
-	mgr := NewDirectKnockManager(nil, log)
+	mgr := newTestDirectKnockManager(nil, log)
 
 	srv := &db.Server{
 		ID:     "srv-start-stop",
@@ -124,7 +137,7 @@ func TestDirectKnock_StartStop(t *testing.T) {
 func TestDirectKnock_SLPPing(t *testing.T) {
 	port := getFreePort(t)
 	log := logger.New()
-	mgr := NewDirectKnockManager(nil, log)
+	mgr := newTestDirectKnockManager(nil, log)
 
 	srv := &db.Server{
 		ID:     "srv-slp-ping",
@@ -203,7 +216,7 @@ func TestDirectKnock_SLPPing(t *testing.T) {
 func TestDirectKnock_LoginIntent_ReleasesPortAndDisconnects(t *testing.T) {
 	port := getFreePort(t)
 	log := logger.New()
-	mgr := NewDirectKnockManager(nil, log)
+	mgr := newTestDirectKnockManager(nil, log)
 
 	srv := &db.Server{
 		ID:     "srv-login-intent",
@@ -289,7 +302,7 @@ func TestDirectKnock_LoginIntent_TriggersWakeHandler(t *testing.T) {
 		return nil
 	}
 
-	mgr := NewDirectKnockManager(wakeHandler, log)
+	mgr := newTestDirectKnockManager(wakeHandler, log)
 
 	srv := &db.Server{
 		ID:     "srv-wake-handler-test",
@@ -336,7 +349,7 @@ func TestDirectKnock_StopAll(t *testing.T) {
 	port1 := getFreePort(t)
 	port2 := getFreePort(t)
 	log := logger.New()
-	mgr := NewDirectKnockManager(nil, log)
+	mgr := newTestDirectKnockManager(nil, log)
 
 	_ = mgr.StartKnock(&db.Server{ID: "srv-1", Port: port1, Status: db.StatusDeepSleep})
 	_ = mgr.StartKnock(&db.Server{ID: "srv-2", Port: port2, Status: db.StatusDeepSleep})
@@ -356,7 +369,7 @@ func TestDirectKnock_StopAll(t *testing.T) {
 func TestDirectKnock_SLPPingAndPongRoundTrip(t *testing.T) {
 	port := getFreePort(t)
 	log := logger.New()
-	mgr := NewDirectKnockManager(nil, log)
+	mgr := newTestDirectKnockManager(nil, log)
 
 	srv := &db.Server{
 		ID:     "srv-slp-pingpong",
@@ -432,7 +445,7 @@ func TestDirectKnock_SLPPingAndPongRoundTrip(t *testing.T) {
 func TestDirectKnock_LoginIntentWithLoginStartPacket(t *testing.T) {
 	port := getFreePort(t)
 	log := logger.New()
-	mgr := NewDirectKnockManager(nil, log)
+	mgr := newTestDirectKnockManager(nil, log)
 
 	srv := &db.Server{
 		ID:     "srv-login-start-test",
@@ -505,7 +518,7 @@ func TestDirectKnock_LoginIntentWithLoginStartPacket(t *testing.T) {
 func TestDirectKnock_TransferIntent_Wakes(t *testing.T) {
 	port := getFreePort(t)
 	var woke atomic.Bool
-	mgr := NewDirectKnockManager(func(ctx context.Context, serverID string) error {
+	mgr := newTestDirectKnockManager(func(ctx context.Context, serverID string) error {
 		if serverID == "srv-transfer" {
 			woke.Store(true)
 		}
@@ -537,7 +550,7 @@ func TestDirectKnock_TransferIntent_Wakes(t *testing.T) {
 func TestDirectKnock_TransferRejectedWhenDisabled(t *testing.T) {
 	port := getFreePort(t)
 	var woke atomic.Bool
-	mgr := NewDirectKnockManager(func(ctx context.Context, serverID string) error {
+	mgr := newTestDirectKnockManager(func(ctx context.Context, serverID string) error {
 		woke.Store(true)
 		return nil
 	}, logger.New())

@@ -108,6 +108,39 @@ func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, er
 	return nil, fmt.Errorf("no docker client available")
 }
 
+// checkNodeHostPort checks Docker allocations on the selected daemon and uses
+// the controller socket table only when that daemon is the local node.
+func (s *ServerService) checkNodeHostPort(ctx context.Context, nodeID string, port int) error {
+	if port < 1 || port > 65535 {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid host port %d", port))
+	}
+	if s.store == nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot identify host for port %d", port))
+	}
+	node, err := s.store.GetNode(ctx, nodeID)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot identify Docker node %q for port %d: %w", nodeID, port, err))
+	}
+	cli, err := s.getDockerClientStrict(nodeID)
+	if err != nil || cli == nil {
+		if err == nil {
+			err = fmt.Errorf("no Docker client available")
+		}
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check port %d on Docker node %s: %w", port, node.Name, err))
+	}
+	allocated, err := cli.GetAllocatedHostPorts(ctx)
+	if err != nil {
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated ports on Docker node %s: %w", node.Name, err))
+	}
+	if allocated[port] {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on Docker node %s", port, node.Name))
+	}
+	if node.IsLocal && isHostPortBound(port) {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the local host", port))
+	}
+	return nil
+}
+
 func (s *ServerService) getHostMemoryMB(ctx context.Context, nodeID string) (int64, error) {
 	if s.hostMemoryMB != nil {
 		return s.hostMemoryMB(ctx, nodeID)
@@ -1065,11 +1098,18 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	backendReserved := false
 	if server.ProxyHostname != "" {
 		used := map[int]bool{}
-		if dockerCli := s.getDockerClient(server.NodeID); dockerCli != nil {
-			if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
-				used = allocated
+		dockerCli, err := s.getDockerClientStrict(server.NodeID)
+		if err != nil || dockerCli == nil {
+			if err == nil {
+				err = fmt.Errorf("no Docker client available")
 			}
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated backend ports on node %s: %w", server.NodeID, err))
 		}
+		allocated, err := dockerCli.GetAllocatedHostPorts(ctx)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated backend ports on node %s: %w", server.NodeID, err))
+		}
+		used = allocated
 		gamePort, _, err := s.store.ReserveBackendPortPair(ctx, server.NodeID, server.ID, used)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no free backend port on node: %w", err))
@@ -1086,14 +1126,8 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 	// Check port availability on host and target node for non-proxy servers
 	if server.ProxyHostname == "" && server.Port > 0 {
-		dockerCli := s.getDockerClient(server.NodeID)
-		if dockerCli != nil {
-			if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil && allocated[server.Port] {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", server.Port))
-			}
-		}
-		if isHostPortBound(server.Port) {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", server.Port))
+		if err := s.checkNodeHostPort(ctx, server.NodeID, server.Port); err != nil {
+			return nil, err
 		}
 	}
 
@@ -1377,15 +1411,8 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port is already in use by the proxy server"))
 		}
 
-		dockerCli := s.getDockerClient(server.NodeID)
-		if dockerCli != nil {
-			if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil && allocated[newPort] {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", newPort))
-			}
-		}
-
-		if isHostPortBound(newPort) {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the host", newPort))
+		if err := s.checkNodeHostPort(ctx, server.NodeID, newPort); err != nil {
+			return nil, err
 		}
 
 		server.Port = newPort
@@ -2703,15 +2730,19 @@ func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.R
 	}
 
 	// Mark ports allocated on the Docker daemon as used
-	dockerCli := s.getDockerClient("")
-	if dockerCli != nil {
-		if allocated, err := dockerCli.GetAllocatedHostPorts(ctx); err == nil {
-			for port := range allocated {
-				usedPortsMap[int32(port)] = true
-			}
-		} else {
-			s.log.Warn("Failed to query docker host ports for availability: %v", err)
+	dockerCli, err := s.getDockerClientStrict("")
+	if err != nil || dockerCli == nil {
+		if err == nil {
+			err = fmt.Errorf("no default Docker client available")
 		}
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check default Docker host ports for availability: %w", err))
+	}
+	allocated, err := dockerCli.GetAllocatedHostPorts(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check default Docker host ports for availability: %w", err))
+	}
+	for port := range allocated {
+		usedPortsMap[int32(port)] = true
 	}
 
 	// Find the next available port starting from 25565

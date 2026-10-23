@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -180,21 +181,25 @@ var dockerCache = &dockerImagesCache{}
 
 // Converts a container-internal path to a host path.
 // When CARBONPANEL_HOST_DATA_PATH is not set (running on host), it returns the path unchanged.
-func TranslateToHostPath(path string) string {
+func TranslateToHostPath(containerPath string) string {
 	hostDataPath := os.Getenv("CARBONPANEL_HOST_DATA_PATH")
 	if hostDataPath == "" {
-		return path
+		return containerPath
 	}
 	containerDataDir := os.Getenv("CARBONPANEL_DATA_DIR")
 	if containerDataDir == "" {
 		containerDataDir = "/app/data"
 	}
-	relPath, err := filepath.Rel(containerDataDir, path)
-	if err != nil || strings.HasPrefix(relPath, "..") {
+	containerDataDir = filepath.ToSlash(containerDataDir)
+	dockerContainerPath := filepath.ToSlash(containerPath)
+	containerDataDir = pathpkg.Clean(containerDataDir)
+	dockerContainerPath = pathpkg.Clean(dockerContainerPath)
+	if dockerContainerPath != containerDataDir && !strings.HasPrefix(dockerContainerPath, strings.TrimSuffix(containerDataDir, "/")+"/") {
 		// Path is not under the container data dir, return as-is
-		return path
+		return containerPath
 	}
-	return filepath.Join(hostDataPath, relPath)
+	relPath := strings.TrimPrefix(strings.TrimPrefix(dockerContainerPath, containerDataDir), "/")
+	return filepath.Join(hostDataPath, filepath.FromSlash(relPath))
 }
 
 // Fetches the docker images manifest from itzg

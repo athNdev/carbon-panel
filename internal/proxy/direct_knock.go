@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -43,6 +42,7 @@ type DirectKnockManager struct {
 	wakeHandler      WakeHandler
 	logger           *logger.Logger
 	acceptsTransfers bool
+	listen           func(network, address string) (net.Listener, error)
 }
 
 // NewDirectKnockManager creates a new DirectKnockManager.
@@ -52,6 +52,7 @@ func NewDirectKnockManager(wakeHandler WakeHandler, log *logger.Logger) *DirectK
 		wakeHandler:      wakeHandler,
 		logger:           log,
 		acceptsTransfers: true,
+		listen:           net.Listen,
 	}
 }
 
@@ -89,7 +90,7 @@ func (m *DirectKnockManager) StartKnock(server *db.Server) error {
 	}
 
 	addr := fmt.Sprintf(":%d", server.Port)
-	listener, err := net.Listen("tcp", addr)
+	listener, err := m.listen("tcp", addr)
 	if err != nil {
 		if m.logger != nil {
 			m.logger.Warn("Direct knock: failed to bind port %d for server %s: %v", server.Port, server.Name, err)

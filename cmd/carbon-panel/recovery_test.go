@@ -3,13 +3,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package main
 
 import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -29,8 +29,12 @@ func TestWriteRecoveryKeyPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat: %v", err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Fatalf("perm = %04o, want 0600", perm)
+	// Windows FileMode does not expose POSIX owner/group/other permission
+	// bits; its inherited ACL requires a Windows-specific security check.
+	if runtime.GOOS != "windows" {
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Fatalf("perm = %04o, want 0600", perm)
+		}
 	}
 
 	got, err := os.ReadFile(path)

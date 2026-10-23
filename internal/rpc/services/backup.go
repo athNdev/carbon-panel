@@ -252,6 +252,9 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
+	if err := requireLocalRestoreStorage(ctx, s.store, server.NodeID); err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, err)
+	}
 	if !docker.TryBeginServerTransition(server.ID) {
 		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
 	}
@@ -383,4 +386,27 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	}
 	done("complete")
 	return connect.NewResponse(&v1.RestoreBackupResponse{Success: true, Message: "backup restored"}), nil
+}
+
+// requireLocalRestoreStorage prevents a controller-local archive extraction
+// from being mistaken for a restore on a remote Docker host. Remote storage
+// adapters must be wired before this restriction can be relaxed.
+func requireLocalRestoreStorage(ctx context.Context, store *storage.Store, nodeID string) error {
+	// Preserve the explicit legacy aliases accepted by getDockerClientStrict.
+	// They designate the configured local daemon, whose storage is the
+	// controller's DataPath on the standalone/local deployment path.
+	if nodeID == "local" || nodeID == "default" {
+		return nil
+	}
+	if store == nil || nodeID == "" {
+		return fmt.Errorf("cannot identify owning storage for node %q; restore refused", nodeID)
+	}
+	node, err := store.GetNode(ctx, nodeID)
+	if err != nil {
+		return fmt.Errorf("cannot identify owning storage for node %q: %w", nodeID, err)
+	}
+	if !node.IsLocal {
+		return fmt.Errorf("backup restore for remote node %q is unavailable until node-aware storage is configured", nodeID)
+	}
+	return nil
 }

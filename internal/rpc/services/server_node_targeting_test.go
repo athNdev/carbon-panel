@@ -218,19 +218,17 @@ func TestRestoreBackup_UnknownDockerStatusDoesNotExtractArchive(t *testing.T) {
 	}))
 	defer remoteAPI.Close()
 
-	const remoteNodeID = "remote-worker"
-	if err := store.CreateNode(ctx, &storage.Node{
-		ID: remoteNodeID, Name: remoteNodeID,
-		Host: strings.Replace(remoteAPI.URL, "http://", "tcp://", 1), Enabled: true,
-	}); err != nil {
-		t.Fatalf("CreateNode: %v", err)
+	localClient, err := docker.NewClient(strings.Replace(remoteAPI.URL, "http://", "tcp://", 1), logger.New())
+	if err != nil {
+		t.Fatalf("NewClient(test daemon): %v", err)
 	}
-	pool := docker.NewClientPool(store, nil, logger.New())
+	defer func() { _ = localClient.Close() }()
+	pool := docker.NewClientPool(store, localClient, logger.New())
 	defer func() { _ = pool.Close() }()
 
 	dataPath := t.TempDir()
 	server := &storage.Server{
-		ID: "remote-server-unknown-status", Name: "Remote server", NodeID: remoteNodeID,
+		ID: "local-server-unknown-status", Name: "Local server", NodeID: "local",
 		ContainerID: "sentinel", Status: storage.StatusRunning, DataPath: dataPath,
 	}
 	if err := store.CreateServer(ctx, server); err != nil {

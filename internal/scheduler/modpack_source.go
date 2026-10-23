@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -126,12 +125,12 @@ func resolveModpackSourceDir(cacheDir, subfolder string) (string, error) {
 	if cacheDir == "" {
 		return "", fmt.Errorf("%w: empty cache directory", ErrInvalidModpackSource)
 	}
-	if filepath.IsAbs(subfolder) {
+	if filepath.IsAbs(subfolder) || strings.HasPrefix(subfolder, "/") || strings.HasPrefix(subfolder, "\\") || isWindowsAbsolutePath(subfolder) {
 		return "", fmt.Errorf("%w: target subfolder %q must be relative", ErrInvalidModpackSource, subfolder)
 	}
 	// Reject a traversal segment outright rather than relying on confinement
 	// alone, so the error message names the actual cause.
-	for _, seg := range strings.FieldsFunc(subfolder, func(r rune) bool { return r == '/' || r == os.PathSeparator }) {
+	for _, seg := range strings.FieldsFunc(subfolder, func(r rune) bool { return r == '/' || r == '\\' || r == os.PathSeparator }) {
 		if seg == ".." {
 			return "", fmt.Errorf("%w: target subfolder %q must not contain '..'", ErrInvalidModpackSource, subfolder)
 		}
@@ -146,6 +145,10 @@ func resolveModpackSourceDir(cacheDir, subfolder string) (string, error) {
 		return "", fmt.Errorf("%w: target subfolder %q escapes the modpack cache", ErrInvalidModpackSource, subfolder)
 	}
 	return srcDir, nil
+}
+
+func isWindowsAbsolutePath(value string) bool {
+	return len(value) >= 3 && ((value[0] >= 'a' && value[0] <= 'z') || (value[0] >= 'A' && value[0] <= 'Z')) && value[1] == ':' && (value[2] == '/' || value[2] == '\\')
 }
 
 // cloneFn is the single point at which the scheduler shells out to
