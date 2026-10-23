@@ -9,7 +9,7 @@ Last updated: 2026-10-23 19:45 local
 
 | Path | Branch | HEAD | Upstream | Working tree |
 | --- | --- | --- | --- | --- |
-| `C:\research_learning_new\carbonpanel` | `codex/oss-docker-resilience` | `20bd1915` | in sync | clean |
+| `C:\research_learning_new\carbonpanel` | `codex/oss-docker-resilience` | last code commit `20bd1915` | in sync | clean |
 | `C:\research_learning_new\carbon-cloud-managed` | `codex/cloud-managed-minecraft` | `f804c68f` | in sync | clean |
 | `C:\research_learning_new\carbon-cloud` | `codex/cloud-reliability-hardening` | `b9783fbe` | n/a | 8 modified, design docs untracked (superseded clone) |
 
