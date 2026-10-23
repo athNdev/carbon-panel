@@ -91,6 +91,11 @@ func newDockerPrivilegeTestService(t *testing.T) (*ServerService, *rbac.Enforcer
 
 	svc := NewServerService(store, dockerCli, nil, cfg, nil, nil, nil, nil, nil, log, nil, nil, enforcer)
 	svc.hostMemoryMB = func(context.Context, string) (int64, error) { return 16 * 1024, nil }
+	// Service tests must not open wildcard listeners. Windows Firewall treats
+	// temporary non-loopback listeners in services.test.exe as an inbound app.
+	svc.hostPortBound = func(port int) bool {
+		return isHostPortBoundWith(port, loopbackOnlyPortListener)
+	}
 	return svc, enforcer
 }
 

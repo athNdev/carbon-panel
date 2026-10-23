@@ -65,6 +65,7 @@ type ServerService struct {
 	store            *storage.Store
 	docker           *docker.Client
 	hostMemoryMB     func(context.Context, string) (int64, error)
+	hostPortBound    func(int) bool
 	capacityMu       sync.Mutex
 	pool             *docker.ClientPool
 	placementEngine  *docker.PlacementEngine
@@ -135,10 +136,17 @@ func (s *ServerService) checkNodeHostPort(ctx context.Context, nodeID string, po
 	if allocated[port] {
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on Docker node %s", port, node.Name))
 	}
-	if node.IsLocal && isHostPortBound(port) {
+	if node.IsLocal && s.isHostPortBound(port) {
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the local host", port))
 	}
 	return nil
+}
+
+func (s *ServerService) isHostPortBound(port int) bool {
+	if s.hostPortBound != nil {
+		return s.hostPortBound(port)
+	}
+	return isHostPortBound(port)
 }
 
 func (s *ServerService) getHostMemoryMB(ctx context.Context, nodeID string) (int64, error) {
@@ -2659,6 +2667,10 @@ func (s *ServerService) ClearServerLogs(ctx context.Context, req *connect.Reques
 // a single bind attempt is not reliable. Probe a set of common local addresses
 // and treat the port as bound if any of them cannot be acquired.
 func isHostPortBound(port int) bool {
+	return isHostPortBoundWith(port, net.Listen)
+}
+
+func isHostPortBoundWith(port int, listen func(string, string) (net.Listener, error)) bool {
 	candidates := []string{"127.0.0.1", "0.0.0.0", "::1", "::"}
 
 	// Also probe every address assigned to a local interface so that ports bound
@@ -2688,7 +2700,7 @@ func isHostPortBound(port int) bool {
 		}
 		seen[addr] = true
 
-		ln, err := net.Listen("tcp", net.JoinHostPort(addr, strconv.Itoa(port)))
+		ln, err := listen("tcp", net.JoinHostPort(addr, strconv.Itoa(port)))
 		if err == nil {
 			_ = ln.Close()
 			continue
@@ -2747,7 +2759,7 @@ func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.R
 
 	// Find the next available port starting from 25565
 	var nextPort int32 = 25565
-	for usedPortsMap[nextPort] || isHostPortBound(int(nextPort)) {
+	for usedPortsMap[nextPort] || s.isHostPortBound(int(nextPort)) {
 		usedPortsMap[nextPort] = true
 		nextPort++
 		// Safety check to avoid infinite loop

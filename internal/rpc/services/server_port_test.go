@@ -20,7 +20,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
-func TestIsHostPortBound(t *testing.T) {
+func TestIsHostPortBoundWithLoopbackProbe(t *testing.T) {
 	// Find a free TCP port by listening on port 0
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -30,15 +30,39 @@ func TestIsHostPortBound(t *testing.T) {
 
 	port := ln.Addr().(*net.TCPAddr).Port
 
-	// While ln is open, isHostPortBound(port) should be true
-	if !isHostPortBound(port) {
+	// While the loopback listener is open, the injected loopback probe should find it.
+	if !isHostPortBoundWith(port, loopbackOnlyPortListener) {
 		t.Errorf("expected isHostPortBound(%d) to be true while listener is active", port)
 	}
 
 	// Close listener and check again
 	ln.Close()
-	if isHostPortBound(port) {
+	if isHostPortBoundWith(port, loopbackOnlyPortListener) {
 		t.Errorf("expected isHostPortBound(%d) to be false after listener closed", port)
+	}
+}
+
+func loopbackOnlyPortListener(network, address string) (net.Listener, error) {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	ip := net.ParseIP(host)
+	if ip == nil || !ip.IsLoopback() {
+		return nil, fmt.Errorf("test port probe refuses non-loopback address %q", host)
+	}
+	return net.Listen(network, address)
+}
+
+func TestLoopbackOnlyPortListenerRejectsNonLoopbackAddresses(t *testing.T) {
+	for _, address := range []string{"0.0.0.0:25565", "[::]:25565", "192.0.2.10:25565"} {
+		t.Run(address, func(t *testing.T) {
+			listener, err := loopbackOnlyPortListener("tcp", address)
+			if err == nil {
+				_ = listener.Close()
+				t.Fatalf("listener accepted non-loopback address %q", address)
+			}
+		})
 	}
 }
 
@@ -60,7 +84,7 @@ func TestGetNextAvailablePort_SkipsHostBoundPorts(t *testing.T) {
 	}
 
 	// If 25565 is bound, GetNextAvailablePort should return at least 25566
-	if isHostPortBound(25565) && resp.Msg.Port == 25565 {
+	if isHostPortBoundWith(25565, loopbackOnlyPortListener) && resp.Msg.Port == 25565 {
 		t.Errorf("expected GetNextAvailablePort to skip bound port 25565, got %d", resp.Msg.Port)
 	}
 }
