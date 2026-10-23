@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -40,13 +39,13 @@ func wrapStatusPersistError(err error) error {
 	return fmt.Errorf("failed to persist error status after rollback failure: %w", err)
 }
 
-func (m *HibernationManager) restoreRunningContainer(ctx context.Context, serverID, containerID string) error {
+func (m *HibernationManager) restoreRunningContainer(ctx context.Context, freezer ContainerFreezer, serverID, containerID string) error {
 	rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 
-	rollbackErr := m.freezer.UnpauseContainer(rollbackCtx, containerID)
+	rollbackErr := freezer.UnpauseContainer(rollbackCtx, containerID)
 	if rollbackErr == nil {
-		status, statusErr := m.freezer.GetContainerStatus(rollbackCtx, containerID)
+		status, statusErr := freezer.GetContainerStatus(rollbackCtx, containerID)
 		if statusErr != nil {
 			rollbackErr = fmt.Errorf("could not verify container after unpause: %w", statusErr)
 		} else if status != db.StatusRunning {
@@ -66,15 +65,16 @@ func (m *HibernationManager) restoreRunningContainer(ctx context.Context, server
 
 // HibernationManager manages cgroup freezer sleep/wake lifecycle for idle Minecraft servers
 type HibernationManager struct {
-	freezer       ContainerFreezer
-	store         FreezerStore
-	logger        *logger.Logger
-	idleTracker   map[string]time.Time
-	trackerMu     sync.RWMutex
-	wakeCallbacks []func(serverID string)
-	mu            sync.Mutex
-	ctx           context.Context
-	cancel        context.CancelFunc
+	freezer         ContainerFreezer
+	freezerResolver func(nodeID string) ContainerFreezer
+	store           FreezerStore
+	logger          *logger.Logger
+	idleTracker     map[string]time.Time
+	trackerMu       sync.RWMutex
+	wakeCallbacks   []func(serverID string)
+	mu              sync.Mutex
+	ctx             context.Context
+	cancel          context.CancelFunc
 	// playerCount, when set, is the source of truth for online players
 	// (MINE-120). Server rows from the store always report PlayersOnline==0
 	// (gorm:"-"), so without a provider every server looks idle. Production
@@ -98,6 +98,39 @@ func NewHibernationManager(freezer ContainerFreezer, store FreezerStore, log *lo
 		idleTracker: make(map[string]time.Time),
 		inflight:    make(map[string]struct{}),
 	}
+}
+
+// SetFreezerResolver installs a node-aware freezer resolver. The resolver is
+// authoritative for explicit node IDs; the configured freezer remains the local
+// fallback for empty/local/default aliases.
+func (m *HibernationManager) SetFreezerResolver(resolver func(nodeID string) ContainerFreezer) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.freezerResolver = resolver
+}
+
+func (m *HibernationManager) hasFreezerSource() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.freezer != nil || m.freezerResolver != nil
+}
+
+func (m *HibernationManager) freezerFor(nodeID string) (ContainerFreezer, error) {
+	m.mu.Lock()
+	resolver := m.freezerResolver
+	local := m.freezer
+	m.mu.Unlock()
+	if resolver != nil {
+		if freezer := resolver(nodeID); freezer != nil {
+			return freezer, nil
+		}
+	}
+	if nodeID == "" || nodeID == "local" || nodeID == "default" {
+		if local != nil {
+			return local, nil
+		}
+	}
+	return nil, fmt.Errorf("no docker freezer available for node %q", nodeID)
 }
 
 // SetPlayerCountProvider configures the online-player source of truth used
@@ -209,7 +242,7 @@ func (m *HibernationManager) RecordActivity(serverID string) {
 
 // CheckIdleServers evaluates all active servers and hibernates idle ones
 func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
-	if m.store == nil || m.freezer == nil {
+	if m.store == nil || !m.hasFreezerSource() {
 		return nil
 	}
 
@@ -288,27 +321,32 @@ func (m *HibernationManager) HibernateServer(ctx context.Context, serverID strin
 		return fmt.Errorf("cannot hibernate server %s in status %s", serverID, srv.Status)
 	}
 
-	if err := m.freezer.PauseContainer(ctx, srv.ContainerID); err != nil {
+	freezer, err := m.freezerFor(srv.NodeID)
+	if err != nil {
+		return err
+	}
+
+	if err := freezer.PauseContainer(ctx, srv.ContainerID); err != nil {
 		return fmt.Errorf("cgroup freeze failed for server %s: %w", serverID, err)
 	}
-	status, statusErr := m.freezer.GetContainerStatus(ctx, srv.ContainerID)
+	status, statusErr := freezer.GetContainerStatus(ctx, srv.ContainerID)
 	if statusErr != nil {
 		return errors.Join(
 			fmt.Errorf("failed to verify frozen container for server %s: %w", serverID, statusErr),
-			m.restoreRunningContainer(ctx, serverID, srv.ContainerID),
+			m.restoreRunningContainer(ctx, freezer, serverID, srv.ContainerID),
 		)
 	}
 	if status != db.StatusPaused {
 		return errors.Join(
 			fmt.Errorf("container for server %s did not enter paused state (status %s)", serverID, status),
-			m.restoreRunningContainer(ctx, serverID, srv.ContainerID),
+			m.restoreRunningContainer(ctx, freezer, serverID, srv.ContainerID),
 		)
 	}
 
 	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusPaused); err != nil {
 		return errors.Join(
 			fmt.Errorf("failed to update server status to paused: %w", err),
-			m.restoreRunningContainer(ctx, serverID, srv.ContainerID),
+			m.restoreRunningContainer(ctx, freezer, serverID, srv.ContainerID),
 		)
 	}
 
@@ -349,11 +387,16 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 		return fmt.Errorf("cannot wake server %s with non-paused status %s", serverID, srv.Status)
 	}
 
+	freezer, err := m.freezerFor(srv.NodeID)
+	if err != nil {
+		return err
+	}
+
 	start := time.Now()
-	if err := m.freezer.UnpauseContainer(ctx, srv.ContainerID); err != nil {
+	if err := freezer.UnpauseContainer(ctx, srv.ContainerID); err != nil {
 		failCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		st, statusErr := m.freezer.GetContainerStatus(failCtx, srv.ContainerID)
+		st, statusErr := freezer.GetContainerStatus(failCtx, srv.ContainerID)
 		persistStatus := db.StatusError
 		if statusErr == nil && st != db.StatusPaused {
 			persistStatus = st
@@ -369,9 +412,9 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 	if err := m.store.UpdateServerStatus(ctx, serverID, db.StatusRunning); err != nil {
 		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		rollbackErr := m.freezer.PauseContainer(rollbackCtx, srv.ContainerID)
+		rollbackErr := freezer.PauseContainer(rollbackCtx, srv.ContainerID)
 		if rollbackErr == nil {
-			status, statusErr := m.freezer.GetContainerStatus(rollbackCtx, srv.ContainerID)
+			status, statusErr := freezer.GetContainerStatus(rollbackCtx, srv.ContainerID)
 			if statusErr != nil {
 				rollbackErr = fmt.Errorf("could not verify container after re-pause: %w", statusErr)
 			} else if status != db.StatusPaused {

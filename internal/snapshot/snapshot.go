@@ -3,11 +3,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package snapshot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/command"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 )
 
 // Engine manages volume snapshots, pre-update backups, and rollbacks for servers (MINE-23)
@@ -89,27 +89,12 @@ func NewEngineWithPool(store *storage.Store, dockerClient *docker.Client, pool *
 // An unresolvable remote node is an error: rollback mutates a server's data and
 // container state, so guessing the daemon is not safe.
 func (e *Engine) resolveDocker(nodeID string) (*docker.Client, error) {
-	defaultNodeID := "default"
-	if e.pool != nil {
-		defaultNodeID = e.pool.GetDefaultNodeID()
-		cli, err := e.pool.GetClientStrict(nodeID)
-		if err == nil && cli != nil {
-			return cli, nil
-		}
-		if err != nil && !isLocalNodeID(nodeID, defaultNodeID) {
-			return nil, fmt.Errorf("cannot resolve Docker client for node %q: %w", nodeID, err)
-		}
-	} else if !isLocalNodeID(nodeID, defaultNodeID) {
-		return nil, fmt.Errorf("cannot resolve Docker client for node %q: no Docker client pool is configured", nodeID)
+	cli, err := docker.NewLocator(e.pool, e.docker, e.store).For(context.Background(), nodeID)
+	if errors.Is(err, docker.ErrNoClient) {
+		// Preserve the caller's explicit "docker client is unavailable" path.
+		return nil, nil
 	}
-	return e.docker, nil
-}
-
-// isLocalNodeID reports whether nodeID addresses the controller's local Docker
-// daemon. The empty ID and the well-known "local" alias are accepted by
-// ClientPool.GetClientStrict alongside the configured default node ID.
-func isLocalNodeID(nodeID, defaultNodeID string) bool {
-	return nodeID == "" || nodeID == "local" || nodeID == defaultNodeID
+	return cli, err
 }
 
 // CreatePreUpdateSnapshot creates an atomic volume snapshot before updating modpacks or configs

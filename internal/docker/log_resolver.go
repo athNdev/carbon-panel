@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -49,13 +48,9 @@ func (r *ContainerLogClientResolver) ResolveLogClient(ctx context.Context, conta
 		return nil, nil
 	}
 
-	cli, err := r.pool.GetClientStrict(server.NodeID)
+	cli, err := NewLocator(r.pool, nil, nil).For(ctx, server.NodeID)
 	if err != nil {
 		return nil, err
 	}
-	if cli == nil {
-		return nil, nil
-	}
-
 	return cli.GetDockerClient(), nil
 }

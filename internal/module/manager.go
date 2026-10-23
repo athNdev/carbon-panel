@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package module
 
 import (
@@ -123,40 +122,14 @@ func sleepCtx(ctx context.Context, d time.Duration) bool {
 // An unresolvable remote node is an error: silently using the local daemon would
 // start, stop, or delete containers on the wrong host.
 func (m *Manager) resolveDocker(nodeID string) (*docker.Client, error) {
-	defaultNodeID := "default"
-	if m.pool != nil {
-		defaultNodeID = m.pool.GetDefaultNodeID()
-		cli, err := m.pool.GetClientStrict(nodeID)
-		if err == nil && cli != nil {
-			return cli, nil
-		}
-		if err != nil && !isLocalNodeID(nodeID, defaultNodeID) {
-			return nil, fmt.Errorf("cannot resolve Docker client for node %q: %w", nodeID, err)
-		}
-	} else if !isLocalNodeID(nodeID, defaultNodeID) {
-		return nil, fmt.Errorf("cannot resolve Docker client for node %q: no Docker client pool is configured", nodeID)
-	}
-	if m.docker == nil {
-		return nil, fmt.Errorf("no Docker client available for node %q", nodeID)
-	}
-	return m.docker, nil
-}
-
-// isLocalNodeID reports whether nodeID addresses the controller's local Docker
-// daemon. The empty ID and the well-known "local" alias are accepted by
-// ClientPool.GetClientStrict alongside the configured default node ID.
-func isLocalNodeID(nodeID, defaultNodeID string) bool {
-	return nodeID == "" || nodeID == "local" || nodeID == defaultNodeID
+	return docker.NewLocator(m.pool, m.docker, m.store).For(context.Background(), nodeID)
 }
 
 // isLocalNode reports whether nodeID addresses the local Docker daemon for this
 // manager's pool.
 func (m *Manager) isLocalNode(nodeID string) bool {
-	defaultNodeID := "default"
-	if m.pool != nil {
-		defaultNodeID = m.pool.GetDefaultNodeID()
-	}
-	return isLocalNodeID(nodeID, defaultNodeID)
+	ok, err := docker.NewLocator(m.pool, m.docker, m.store).IsLocal(context.Background(), nodeID)
+	return err == nil && ok
 }
 
 // SetLogStreamer sets the log streamer for module containers

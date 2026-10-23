@@ -172,39 +172,7 @@ func (h *Hub) dockerFor(nodeID string) (*docker.Client, error) {
 	h.poolMu.RLock()
 	pool := h.pool
 	h.poolMu.RUnlock()
-
-	if pool != nil {
-		cli, err := pool.GetClientStrict(nodeID)
-		if err != nil {
-			return nil, err
-		}
-		if cli == nil {
-			return nil, errors.New("node has no Docker client")
-		}
-		return cli, nil
-	}
-
-	// Without a pool, legacy aliases identify the configured daemon directly.
-	if nodeID == "" || nodeID == "local" || nodeID == "default" {
-		if h.docker == nil {
-			return nil, errors.New("local Docker client unavailable")
-		}
-		return h.docker, nil
-	}
-	if h.store != nil {
-		node, err := h.store.GetNode(context.Background(), nodeID)
-		if err != nil {
-			return nil, fmt.Errorf("resolve node %q: %w", nodeID, err)
-		}
-		if node.IsLocal {
-			if h.docker == nil {
-				return nil, errors.New("local Docker client unavailable")
-			}
-			return h.docker, nil
-		}
-		return nil, fmt.Errorf("node %q is remote but no Docker client pool is configured", nodeID)
-	}
-	return nil, fmt.Errorf("node %q cannot be resolved without a Docker client pool", nodeID)
+	return docker.NewLocator(pool, h.docker, h.store).For(context.Background(), nodeID)
 }
 
 // SetCheckOrigin overrides the WebSocket upgrader origin validation function.
