@@ -179,7 +179,7 @@ func (p *Proxy) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		dropConnection(w)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if rule != nil && (rule.Kind == DropAfter || rule.Kind == DelayAfter) {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		if rule.Kind == DelayAfter {

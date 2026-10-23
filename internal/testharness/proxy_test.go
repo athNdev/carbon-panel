@@ -33,7 +33,7 @@ func TestDropBeforeDoesNotReachDaemon(t *testing.T) {
 	resp, err := (&http.Client{}).Post(proxy.URL()+"/v1.56/containers/create", "application/json", strings.NewReader(`{}`))
 	if err == nil {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		t.Fatal("request unexpectedly received a response")
 	}
@@ -52,7 +52,7 @@ func TestDropAfterMutationHasAmbiguousOutcome(t *testing.T) {
 	resp, err := (&http.Client{}).Post(proxy.URL()+"/v1.56/containers/create", "application/json", strings.NewReader(`{}`))
 	if err == nil {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		t.Fatal("response loss should be observable by caller")
 	}
@@ -68,7 +68,7 @@ func TestDelayBeforeHonorsCallerTimeoutBeforeForward(t *testing.T) {
 	resp, err := client.Get(proxy.URL() + "/v1.56/info")
 	if err == nil {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		t.Fatal("expected client timeout")
 	}
@@ -85,7 +85,7 @@ func TestDelayAfterMutationTimeoutIsAmbiguous(t *testing.T) {
 	resp, err := client.Post(proxy.URL()+"/v1.56/containers/create", "application/json", strings.NewReader(`{}`))
 	if err == nil {
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		t.Fatal("expected client timeout")
 	}
@@ -103,7 +103,7 @@ func TestPullErrorStreamAppendsDockerErrorFrame(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestDisconnectOnceAllowsReconnect(t *testing.T) {
 	first, err := client.Get(proxy.URL() + "/v1.56/events")
 	if err == nil {
 		if first != nil {
-			first.Body.Close()
+			_ = first.Body.Close()
 		}
 		t.Fatal("first events stream should be disconnected")
 	}
@@ -138,7 +138,7 @@ func TestDisconnectOnceAllowsReconnect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconnect failed: %v", err)
 	}
-	defer second.Body.Close()
+	defer func() { _ = second.Body.Close() }()
 	body, _ := io.ReadAll(second.Body)
 	if !strings.Contains(string(body), `"status":"ok"`) {
 		t.Fatalf("reconnected stream body = %s", body)

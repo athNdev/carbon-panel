@@ -126,16 +126,16 @@ func NewLocal(identity Identity, authorizedRoot, journalDir string) (*Local, err
 	}
 	info, err := r.Stat(dataName)
 	if err != nil {
-		r.Close()
+		_ = r.Close()
 		return nil, err
 	}
 	if !info.IsDir() {
-		r.Close()
+		_ = r.Close()
 		return nil, errors.New("worldstore: authorized root must be a directory")
 	}
 	l := &Local{root: r, dataName: dataName, identity: identity, journalDir: jd}
 	if err := l.Recover(); err != nil {
-		r.Close()
+		_ = r.Close()
 		return nil, err
 	}
 	return l, nil
@@ -162,7 +162,7 @@ func (l *Local) List(id Identity) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	var entries []Entry
 	err = fs.WalkDir(w.FS(), ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -222,7 +222,7 @@ func (l *Local) Read(id Identity, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	if err := rejectSymlinkComponents(w, p); err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (l *Local) Read(id Identity, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	b, err := io.ReadAll(io.LimitReader(f, maxFileBytes+1))
 	if err == nil && int64(len(b)) > maxFileBytes {
 		return nil, errors.New("worldstore: file exceeds read limit")
@@ -253,7 +253,7 @@ func (l *Local) Upload(id Identity, path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	parent := filepath.ToSlash(filepath.Dir(filepath.FromSlash(p)))
 	if parent != "." {
 		if err := w.MkdirAll(parent, 0700); err != nil {

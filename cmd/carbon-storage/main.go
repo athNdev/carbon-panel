@@ -48,19 +48,27 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	defer store.Close()
+	defer func() {
+		if cerr := store.Close(); cerr != nil {
+			fmt.Fprintln(os.Stderr, cerr)
+		}
+	}()
 	if err := serve(os.Stdin, os.Stdout, store); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func serve(input io.Reader, output io.Writer, store *worldstore.Local) error {
+func serve(input io.Reader, output io.Writer, store *worldstore.Local) (err error) {
 	scanner := bufio.NewScanner(input)
 	// ZIP payloads are bounded at 512 MiB; JSON base64 adds roughly one third.
 	scanner.Buffer(make([]byte, 64*1024), 700<<20)
 	w := bufio.NewWriter(output)
-	defer w.Flush()
+	defer func() {
+		if ferr := w.Flush(); ferr != nil && err == nil {
+			err = ferr
+		}
+	}()
 	enc := json.NewEncoder(w)
 	for scanner.Scan() {
 		var req request

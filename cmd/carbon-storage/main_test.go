@@ -23,7 +23,7 @@ func TestJSONLWorkerBindsIdentityAndHandlesUploadRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	id = s.Identity()
 
 	var input bytes.Buffer

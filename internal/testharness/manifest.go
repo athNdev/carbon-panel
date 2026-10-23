@@ -83,11 +83,11 @@ func inspectDaemon(ctx context.Context, alias, endpoint string) (Daemon, error) 
 	if strings.TrimSpace(endpoint) == "" {
 		return Daemon{}, errors.New("endpoint is empty")
 	}
-	cli, err := client.NewClientWithOpts(client.WithHost(endpoint), client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.WithHost(endpoint))
 	if err != nil {
 		return Daemon{}, fmt.Errorf("create Docker client: %w", err)
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 	info, err := cli.Info(ctx, client.InfoOptions{})
 	if err != nil {
 		return Daemon{}, err
@@ -126,7 +126,7 @@ func WriteManifest(path string, manifest *Manifest) error {
 		return err
 	}
 	name := tmp.Name()
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 	if err = tmp.Chmod(0o600); err == nil {
 		_, err = tmp.Write(data)
 	}
@@ -205,7 +205,7 @@ func Cleanup(ctx context.Context, manifest *Manifest, endpoints map[string]strin
 		if endpoint == "" {
 			return fmt.Errorf("endpoint for %s is required to clean manifest run %q", alias, manifest.RunID)
 		}
-		cli, err := client.NewClientWithOpts(client.WithHost(endpoint), client.WithAPIVersionNegotiation())
+		cli, err := client.New(client.WithHost(endpoint))
 		if err != nil {
 			return fmt.Errorf("connect %s: %w", alias, err)
 		}

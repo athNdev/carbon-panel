@@ -121,11 +121,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		/>
 
 		{#if loadError && players.length === 0}
-			<CarbonErrorState
-				title="Failed to load players"
-				message={loadError}
-				onretry={loadPlayers}
-			/>
+			<CarbonErrorState title="Failed to load players" message={loadError} onretry={loadPlayers} />
 		{:else if filtered.length === 0}
 			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading ? 'Loading players…' : 'No players online.'}

@@ -167,11 +167,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		</p>
 
 		{#if loadError && backups.length === 0}
-			<CarbonErrorState
-				title="Failed to load backups"
-				message={loadError}
-				onretry={loadBackups}
-			/>
+			<CarbonErrorState title="Failed to load backups" message={loadError} onretry={loadBackups} />
 		{:else if backups.length === 0}
 			<p class="py-8 text-center font-mono text-xs text-[#a8a8a8]">
 				{loading ? 'Loading backups…' : 'No backups yet. Create one from a scheduled backup task.'}
