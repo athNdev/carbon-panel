@@ -7,7 +7,7 @@
 # one at https://mozilla.org/MPL/2.0/.
 
 
-.PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs knowledge knowledge-lint knowledge-index knowledge-search knowledge-mcp knowledge-mcp-git
+.PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs knowledge knowledge-lint knowledge-index knowledge-search knowledge-mcp knowledge-mcp-git knowledge-mcp-smoke
 
 DATA_DIR := ./data
 FRONTEND_DIR := web/carbon-panel
@@ -167,6 +167,9 @@ knowledge-mcp:
 knowledge-mcp-git:
 	npx -y @cyanheads/git-mcp-server@2.15.3
 
+knowledge-mcp-smoke:
+	node scripts/mcp-smoke.mjs
+
 proto:
 	@echo "Generating protocol buffer code (using Docker)..."
 	$(BUF_RUN) generate
@@ -220,6 +223,7 @@ help:
 	@echo "  make knowledge-lint   - Validate the knowledge base"
 	@echo "  make knowledge-index  - Regenerate knowledge indexes"
 	@echo "  make knowledge-search - Search the knowledge base (q=...)"
+	@echo "  make knowledge-mcp-smoke - Exercise the pinned MCP servers"
 	@echo "  make gen            - Clean and regenerate proto code (via Docker)"
 	@echo "  make proto          - Generate Go and TypeScript code from proto files (via Docker)"
 	@echo "  make proto-clean    - Remove all generated proto files"

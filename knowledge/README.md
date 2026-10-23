@@ -71,6 +71,23 @@ Rules:
 A subagent writes only inside its assigned section. Shared concepts
 (`overview`, `glossary`, `invariants`) are supervisor-owned.
 
+## Retrieval smoke test
+
+`knowledge/queries.yaml` fixes ten questions and their expected concept. The
+linter scores each question against IDs, titles, descriptions and bodies and
+fails if the expected concept is not in the top three. Add a query when a new
+subsystem becomes load-bearing.
+
+## MCP protocol smoke test
+
+```sh
+node scripts/mcp-smoke.mjs
+```
+
+It starts the pinned filesystem and git servers in temporary directories,
+exercises read/write/edit/search and status/add/commit/log, and does not touch
+the repository. It needs Node 24+ and network access on the first run.
+
 ## Conflict resolution
 
 Conflicts are expected and are resolved in git, not in a service.

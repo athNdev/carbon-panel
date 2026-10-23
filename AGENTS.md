@@ -58,6 +58,7 @@ versioned knowledge base, not task state and not a second documentation site.
   paths.
 - Before finishing: `go run ./cmd/knowledge-lint -root . -fix`, then run it
   again without `-fix` (or `make knowledge-index && make knowledge-lint`).
+  The lint also runs the fixed retrieval questions in `knowledge/queries.yaml`.
 - In a conflict, merge concept bodies semantically and union list fields. Never
   hand-merge generated `index.md`; run `make knowledge-index`. Re-verify any
   `Invariant` whose review was invalidated.

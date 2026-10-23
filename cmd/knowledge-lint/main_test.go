@@ -252,3 +252,24 @@ Duplicate title.
 		t.Fatalf("expected a duplicate title warning, got %v", r.Warnings)
 	}
 }
+
+func TestQueriesPass(t *testing.T) {
+	root := baseBundle(t)
+	writeFile(t, root, "knowledge/queries.yaml", "- query: runtime model\n  expect: architecture/runtime\n")
+	r := lint(root, true)
+	if len(r.Errors) != 0 {
+		t.Fatalf("expected a passing query, got %v", r.Errors)
+	}
+	if r.QueriesChecked != 1 || r.QueriesPassed != 1 {
+		t.Fatalf("expected 1/1 queries, got %d/%d", r.QueriesPassed, r.QueriesChecked)
+	}
+}
+
+func TestUnknownQueryExpect(t *testing.T) {
+	root := baseBundle(t)
+	writeFile(t, root, "knowledge/queries.yaml", "- query: runtime\n  expect: does/not-exist\n")
+	r := lint(root, true)
+	if !hasSubstring(r.Errors, "does not exist") {
+		t.Fatalf("expected an unknown concept error, got %v", r.Errors)
+	}
+}

@@ -47,9 +47,13 @@ make proto-lint
 # Knowledge
 
 ```sh
-make knowledge-index
-make knowledge-lint
+go run ./cmd/knowledge-lint -root . -fix
+go run ./cmd/knowledge-lint -root .
+node scripts/mcp-smoke.mjs
 ```
+
+The linter runs the fixed queries in `knowledge/queries.yaml`. The MCP smoke
+needs Node 24+ and network access on the first run.
 
 # Local note
 

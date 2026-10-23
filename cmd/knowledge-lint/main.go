@@ -88,8 +88,23 @@ type report struct {
 	Root           string   `json:"root"`
 	Concepts       int      `json:"concepts"`
 	IndexesWritten int      `json:"indexes_written"`
+	QueriesChecked int      `json:"queries_checked"`
+	QueriesPassed  int      `json:"queries_passed"`
+	QueriesTop1    int      `json:"queries_top1"`
 	Errors         []string `json:"errors"`
 	Warnings       []string `json:"warnings"`
+}
+
+type queryCase struct {
+	Query  string `yaml:"query"`
+	Expect string `yaml:"expect"`
+}
+
+type queryResult struct {
+	Query  string
+	Expect string
+	Rank   int
+	Top    []string
 }
 
 type dirInfo struct {
@@ -147,6 +162,36 @@ func lint(root string, fix bool) report {
 	r.Errors = append(r.Errors, checkLinks(absRoot, concepts)...)
 	r.Errors = append(r.Errors, checkIndexes(absRoot, kroot, concepts, fix, &r)...)
 	r.Warnings = append(r.Warnings, duplicateTitles(concepts)...)
+
+	queries, queryErr := loadQueries(kroot)
+	if queryErr != nil {
+		r.Errors = append(r.Errors, queryErr.Error())
+	} else if len(queries) > 0 {
+		known := map[string]bool{}
+		for _, c := range concepts {
+			known[c.ID] = true
+		}
+		valid := make([]queryCase, 0, len(queries))
+		for _, query := range queries {
+			if !known[query.Expect] {
+				r.Errors = append(r.Errors, fmt.Sprintf("query %q: expected concept %s does not exist", query.Query, query.Expect))
+				continue
+			}
+			valid = append(valid, query)
+		}
+		results := runQueries(concepts, valid)
+		r.QueriesChecked = len(results)
+		for _, result := range results {
+			if result.Rank == 1 {
+				r.QueriesTop1++
+			}
+			if result.Rank > 0 && result.Rank <= 3 {
+				r.QueriesPassed++
+				continue
+			}
+			r.Errors = append(r.Errors, fmt.Sprintf("query %q: expected %s in top 3, got %v", result.Query, result.Expect, result.Top))
+		}
+	}
 
 	sort.Strings(r.Errors)
 	sort.Strings(r.Warnings)
@@ -593,6 +638,123 @@ func duplicateTitles(concepts []*concept) []string {
 	return warnings
 }
 
+func loadQueries(kroot string) ([]queryCase, error) {
+	b, err := os.ReadFile(filepath.Join(kroot, "queries.yaml"))
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("queries.yaml: %w", err)
+	}
+	var queries []queryCase
+	if err := yaml.Unmarshal(b, &queries); err != nil {
+		return nil, fmt.Errorf("queries.yaml: %w", err)
+	}
+	for i, query := range queries {
+		if strings.TrimSpace(query.Query) == "" {
+			return nil, fmt.Errorf("queries.yaml: entry %d has no query", i+1)
+		}
+		if strings.TrimSpace(query.Expect) == "" {
+			return nil, fmt.Errorf("queries.yaml: entry %d has no expect", i+1)
+		}
+	}
+	return queries, nil
+}
+
+func runQueries(concepts []*concept, queries []queryCase) []queryResult {
+	results := make([]queryResult, 0, len(queries))
+	for _, query := range queries {
+		tokens := tokenize(query.Query)
+		type scored struct {
+			id    string
+			score int
+		}
+		ranked := make([]scored, 0, len(concepts))
+		for _, c := range concepts {
+			ranked = append(ranked, scored{id: c.ID, score: scoreConcept(c, tokens)})
+		}
+		sort.SliceStable(ranked, func(i, j int) bool {
+			if ranked[i].score == ranked[j].score {
+				return ranked[i].id < ranked[j].id
+			}
+			return ranked[i].score > ranked[j].score
+		})
+		top := make([]string, 0, 3)
+		rank := 0
+		for i, candidate := range ranked {
+			if i >= 3 {
+				break
+			}
+			top = append(top, candidate.id)
+			if candidate.id == query.Expect && rank == 0 {
+				rank = i + 1
+			}
+		}
+		results = append(results, queryResult{Query: query.Query, Expect: query.Expect, Rank: rank, Top: top})
+	}
+	return results
+}
+
+func scoreConcept(c *concept, tokens []string) int {
+	title := tokenSet(c.Meta.Title)
+	desc := tokenSet(c.Meta.Description)
+	id := tokenSet(c.ID)
+	body := tokenSet(c.Body)
+	refs := tokenSet(strings.Join(c.Meta.CodeRefs, " "))
+	score := 0
+	for _, token := range tokens {
+		if title[token] {
+			score += 6
+		}
+		if id[token] {
+			score += 4
+		}
+		if desc[token] {
+			score += 3
+		}
+		if refs[token] {
+			score += 2
+		}
+		if body[token] {
+			score++
+		}
+	}
+	return score
+}
+
+var queryStopwords = map[string]bool{
+	"a": true, "an": true, "and": true, "are": true, "as": true, "at": true,
+	"be": true, "by": true, "can": true, "do": true, "does": true, "for": true,
+	"from": true, "how": true, "i": true, "if": true, "in": true, "is": true,
+	"it": true, "of": true, "on": true, "or": true, "should": true, "that": true,
+	"the": true, "this": true, "to": true, "use": true, "using": true, "what": true,
+	"when": true, "where": true, "which": true, "why": true, "with": true,
+}
+
+func tokenize(s string) []string {
+	fields := strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+	out := make([]string, 0, len(fields))
+	seen := map[string]bool{}
+	for _, field := range fields {
+		if len(field) < 2 || queryStopwords[field] || seen[field] {
+			continue
+		}
+		seen[field] = true
+		out = append(out, field)
+	}
+	return out
+}
+
+func tokenSet(s string) map[string]bool {
+	set := map[string]bool{}
+	for _, token := range tokenize(s) {
+		set[token] = true
+	}
+	return set
+}
+
 func displayDir(rel string) string {
 	if rel == "" {
 		return knowledgeDir
@@ -627,6 +789,9 @@ func printReport(r report) {
 	}
 	if r.IndexesWritten > 0 {
 		fmt.Printf("wrote %d index file(s)\n", r.IndexesWritten)
+	}
+	if r.QueriesChecked > 0 {
+		fmt.Printf("queries: %d/%d pass, %d top-1\n", r.QueriesPassed, r.QueriesChecked, r.QueriesTop1)
 	}
 	if len(r.Errors) == 0 {
 		fmt.Printf("OK: %d concept(s), indexes current\n", r.Concepts)
