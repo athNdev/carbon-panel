@@ -9,7 +9,7 @@ Last updated: 2026-10-23 19:45 local
 
 | Path | Branch | HEAD | Upstream | Working tree |
 | --- | --- | --- | --- | --- |
-| `C:\research_learning_new\carbonpanel` | `codex/oss-docker-resilience` | `725508e2` | in sync | clean |
+| `C:\research_learning_new\carbonpanel` | `codex/oss-docker-resilience` | `20bd1915` | in sync | clean |
 | `C:\research_learning_new\carbon-cloud-managed` | `codex/cloud-managed-minecraft` | `f804c68f` | in sync | clean |
 | `C:\research_learning_new\carbon-cloud` | `codex/cloud-reliability-hardening` | `b9783fbe` | n/a | 8 modified, design docs untracked (superseded clone) |
 
@@ -38,6 +38,23 @@ Cloud (`carbon-cloud-managed`): compress pin plus a `govulncheck` step scoped to
 the node agent, the UI fixes for MINE-285 to 291, and a `go 1.26.10` minimum so
 the standard-library advisory GO-2026-6809 is out of range.
 
+Also landed on the OSS branch: MINE-250 fail-closed node resolution. Module,
+snapshot and deep-sleep helpers previously returned the controller's local Docker
+client when a remote node could not be resolved; they now return an error, and a
+module created for a remote server records that server's node ID.
+
+## Known gaps (not defects to rush)
+
+- `internal/db/server_operation.go` is schema-only: the journal type exists and
+  migrates, but nothing creates or advances an operation yet.
+- `internal/worldstore` and `cmd/carbon-storage` have no production caller; the
+  binary is not built by any Dockerfile or release target.
+- `internal/docker/freezer.go` (hibernation) still targets the local client
+  unconditionally and needs a resolver before it can be fixed the same way.
+- `internal/module/hooks.go:execInModule` uses the manager's client directly.
+- Remote file/minecraft/backup archive paths still read the controller
+  filesystem; only restore refuses. That is MINE-255.
+
 ## Verification ledger
 
 | Date | Scope | Command | Result |
@@ -48,6 +65,7 @@ the standard-library advisory GO-2026-6809 is out of range.
 | 10-23 | Cloud backend | `go build/vet`, `go test ./internal/cloud/...` | pass, 25 pkgs |
 | 10-23 | Cloud console | `bun run check`, `bun test` | 0 errors, 25 pass |
 | 10-23 | CI | PR #225 and #29 | all checks green |
+| 10-23 | MINE-250 fail-closed | `go build/vet`, targeted tests, golangci-lint | pass, 0 issues |
 
 Local `prettier --check .` fails repo-wide on this Windows checkout because
 `core.autocrlf` produces CRLF. CI runs on Linux and is unaffected; use
