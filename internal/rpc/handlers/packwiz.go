@@ -107,10 +107,11 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Route /api/v1/packwiz/packs...
 	if len(parts) == 1 && parts[0] == "packs" {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			h.handleListPacks(w, r)
 			return
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			h.handleCreatePack(w, r)
 			return
 		}
