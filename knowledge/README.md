@@ -3,15 +3,23 @@
 This directory is the repository's agent-facing context database. It is not a
 second documentation site.
 
-## What belongs here
+## What goes where
 
-- Durable facts an agent needs before changing code: boundaries, invariants,
-  seams, workflows and known failure modes.
-- Routing metadata: which concept governs which paths (`code_refs`).
-- A link to the authoritative `docs/` page, ADR, plan or issue.
+The knowledge base holds durable context. It is not a diary and not a tracker.
+
+| Record | Lives in |
+| --- | --- |
+| What changed, per commit | the commit message and `git log` |
+| A decision that constrains future work | a `Decision` concept, or an ADR when project-wide |
+| Status, ownership, sprint | the issue tracker |
+| How to perform a recurring change | a `Workflow` concept |
+| A rule that must not be violated | an `Invariant` concept |
+| Which concept governs which path | `code_refs` on the concept |
 
 ## What does not belong here
 
+- An activity log, changelog or "what I did" file. See
+  [Recording actions](#recording-actions).
 - Task state, assignees or sprint status. The live tracker is authoritative.
 - Long prose, API tables or configuration reference. Link to `docs/`.
 - Secrets, credentials, customer data, private endpoints or workstation paths.
@@ -26,7 +34,7 @@ second documentation site.
 | `Invariant` | A rule that must not be violated |
 | `Workflow` | How to perform a recurring change |
 | `Runbook` | A pointer to an operational procedure |
-| `Decision` | An ADR or a pending decision |
+| `Decision` | A decision that constrains future work, or an ADR index |
 | `Domain Term` | Vocabulary with a project-specific meaning |
 | `Failure Mode` | A known failure or open gap |
 
@@ -76,6 +84,41 @@ Rules:
 A subagent writes only inside its assigned section. Shared concepts
 (`overview`, `glossary`, `invariants`) are supervisor-owned.
 
+## Recording decisions
+
+Record a decision when a future agent could plausibly choose the opposite and be
+wrong. That is the bar: a decision constrains later work, it is not a note about
+what you did.
+
+- **Project-wide or architectural** — add `docs/adr/NNNN-<slug>.md` and a row in
+  [decisions/adrs.md](decisions/adrs.md). The ADR is authoritative for rationale.
+- **Local to a subsystem** — add a `Decision` concept under `decisions/`, or
+  extend the one that already governs the area. Do not open an ADR for a
+  reversible implementation call.
+
+A decision concept records:
+
+- the choice, in one sentence;
+- the alternatives rejected, and why;
+- the consequence: what it forbids or forces later;
+- `code_refs` for the code it binds, so `-for-path` surfaces it.
+
+Use `status: draft` until it has been reviewed, then `stable`. When a decision is
+superseded, update the concept and mark the old one `deprecated`; never add a
+second entry that contradicts the first.
+
+## Recording actions
+
+There is no activity log, deliberately. A chronological "I did X" file
+duplicates the commit history, goes stale as soon as the next commit lands, and
+conflicts on every append.
+
+- Write the commit message so it answers what changed and why. That is the
+  record of the action.
+- If the action changed behaviour, update the governing concept. The durable
+  consequence belongs in the knowledge base; the action itself does not.
+- Leave status and ownership to the tracker.
+
 ## Retrieval smoke test
 
 `knowledge/queries.yaml` fixes ten questions and their expected concept. The
@@ -105,8 +148,8 @@ Conflicts are expected and are resolved in git, not in a service.
 5. Never hand-merge `index.md`. Run `make knowledge-index`.
 6. Run `make knowledge-lint` and commit the resolution.
 
-`index.md` is generated. `log.md` is deliberately absent; `git log -- knowledge/`
-is the history.
+`index.md` is generated; never hand-merge it. There is no `log.md`: the
+chronology is `git log -- knowledge/`.
 
 ## MCP access
 

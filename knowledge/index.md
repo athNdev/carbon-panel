@@ -6,7 +6,7 @@
 ## Sections
 
 - [architecture/](architecture/index.md) — System structure, data flow and seams.
-- [decisions/](decisions/index.md) — Architecture decision records and their implications.
+- [decisions/](decisions/index.md) — Decisions that constrain future work, and the ADR index.
 - [failures/](failures/index.md) — Known failure modes and open gaps.
 - [glossary/](glossary/index.md) — Terms with a specific meaning in this project.
 - [invariants/](invariants/index.md) — Rules that must not be violated.
