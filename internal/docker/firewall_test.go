@@ -3,13 +3,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -129,18 +127,13 @@ func TestBuildIsolationRulesOrdersAllowBeforeDrop(t *testing.T) {
 // a stub iptables that records every invocation, and asserts rules are inserted
 // at increasing positions (1,2,3,...) rather than all at position 1.
 func TestApplyPortRateLimitingPreservesRuleOrder(t *testing.T) {
-	dir := t.TempDir()
-	logPath := filepath.Join(dir, "iptables.log")
-	stub := filepath.Join(dir, "iptables-stub.sh")
-	script := "#!/bin/sh\n" +
-		"printf '%s\\n' \"$*\" >> \"" + logPath + "\"\n" +
-		"for a in \"$@\"; do if [ \"$a\" = '-C' ]; then exit 1; fi; done\n" +
-		"exit 0\n"
-	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
-		t.Fatalf("write stub: %v", err)
+	logPath := t.TempDir() + string(os.PathSeparator) + "iptables.log"
+	t.Setenv("CARBONPANEL_IPTABLES_STUB", "1")
+	t.Setenv("CARBONPANEL_IPTABLES_STUB_LOG", logPath)
+	fm := &FirewallManager{
+		enabled: true, defaultRateMin: 10, defaultBurst: 20,
+		iptablesPath: os.Args[0], commandPrefix: []string{"-test.run=TestIptablesStubProcess", "--"},
 	}
-
-	fm := &FirewallManager{enabled: true, defaultRateMin: 10, defaultBurst: 20, iptablesPath: stub}
 	if err := fm.ApplyPortRateLimiting(context.Background(), 25565, 10, 20); err != nil {
 		t.Fatalf("ApplyPortRateLimiting: %v", err)
 	}
@@ -180,6 +173,38 @@ func TestApplyPortRateLimitingPreservesRuleOrder(t *testing.T) {
 			t.Errorf("insert %d rule mismatch:\n got %v\nwant %v", i, gotRule, wantRule)
 		}
 	}
+}
+
+// TestIptablesStubProcess is a portable executable stand-in for iptables.
+// The child test process records calls and simulates absent (-C) rules.
+func TestIptablesStubProcess(t *testing.T) {
+	if os.Getenv("CARBONPANEL_IPTABLES_STUB") != "1" {
+		return
+	}
+	args := os.Args
+	for i, arg := range args {
+		if arg == "--" {
+			args = args[i+1:]
+			break
+		}
+	}
+	file, err := os.OpenFile(os.Getenv("CARBONPANEL_IPTABLES_STUB_LOG"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString(strings.Join(args, " ") + "\n"); err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range args {
+		if arg == "-C" {
+			os.Exit(1)
+		}
+	}
+	os.Exit(0)
 }
 
 func TestFirewallManager_DisabledOrNoBinary(t *testing.T) {

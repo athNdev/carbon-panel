@@ -212,7 +212,12 @@ func ValidateVolumeSource(source, mountType string, safeRoots ...string) error {
 	if src == "" {
 		return nil
 	}
-	if !filepath.IsAbs(src) {
+	if isWindowsAbsoluteHostPath(src) && !filepath.IsAbs(src) {
+		// A controller on another OS cannot prove that a Windows daemon path is
+		// inside its own safe roots. Do not reinterpret it as a named volume.
+		return fmt.Errorf("%w: Windows bind-mount source %q cannot be verified against this host's roots", ErrDockerVolumeOutsideSafeRoot, source)
+	}
+	if !isAbsoluteHostPath(src) {
 		return nil
 	}
 	for _, root := range safeRoots {
@@ -224,6 +229,21 @@ func ValidateVolumeSource(source, mountType string, safeRoots ...string) error {
 		}
 	}
 	return fmt.Errorf("%w: bind-mount source %q is outside the allowed roots", ErrDockerVolumeOutsideSafeRoot, source)
+}
+
+// isAbsoluteHostPath recognizes paths from both native Windows and POSIX
+// Docker hosts. Remote daemon bind paths are not interpreted by the
+// controller's filepath package, so a POSIX absolute path must remain a host
+// path even when the controller itself runs on Windows.
+func isAbsoluteHostPath(src string) bool {
+	if filepath.IsAbs(src) || strings.HasPrefix(src, "/") || strings.HasPrefix(src, `\\`) {
+		return true
+	}
+	return isWindowsAbsoluteHostPath(src)
+}
+
+func isWindowsAbsoluteHostPath(src string) bool {
+	return len(src) >= 3 && ((src[0] >= 'a' && src[0] <= 'z') || (src[0] >= 'A' && src[0] <= 'Z')) && src[1] == ':' && (src[2] == '/' || src[2] == '\\')
 }
 
 // ValidateDockerVolumeOverrides applies ValidateVolumeSource to every

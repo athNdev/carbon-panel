@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -23,6 +22,14 @@ type FirewallManager struct {
 	defaultRateMin int
 	defaultBurst   int
 	iptablesPath   string
+	commandPrefix  []string
+}
+
+func (f *FirewallManager) iptablesCommand(ctx context.Context, args ...string) *exec.Cmd {
+	commandArgs := make([]string, 0, len(f.commandPrefix)+len(args))
+	commandArgs = append(commandArgs, f.commandPrefix...)
+	commandArgs = append(commandArgs, args...)
+	return exec.CommandContext(ctx, f.iptablesPath, commandArgs...)
 }
 
 // NewFirewallManager creates a new DOCKER-USER firewall manager
@@ -97,7 +104,7 @@ func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, r
 	for i, ruleArgs := range rules {
 		// Check if rule already exists (-C)
 		checkArgs := append([]string{"-C", "DOCKER-USER"}, ruleArgs...)
-		cmdCheck := exec.CommandContext(ctx, f.iptablesPath, checkArgs...)
+		cmdCheck := f.iptablesCommand(ctx, checkArgs...)
 		if err := cmdCheck.Run(); err == nil {
 			// Rule already exists
 			continue
@@ -106,7 +113,7 @@ func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, r
 		// Insert rule at its intended position
 		position := strconv.Itoa(i + 1)
 		insertArgs := append([]string{"-I", "DOCKER-USER", position}, ruleArgs...)
-		cmdInsert := exec.CommandContext(ctx, f.iptablesPath, insertArgs...)
+		cmdInsert := f.iptablesCommand(ctx, insertArgs...)
 		if out, err := cmdInsert.CombinedOutput(); err != nil {
 			msg := strings.TrimSpace(string(out))
 			if f.log != nil {
@@ -134,7 +141,7 @@ func (f *FirewallManager) RemovePortRateLimiting(ctx context.Context, port, rate
 	rules := f.BuildPortRules(port, ratePerMin, burst)
 	for _, ruleArgs := range rules {
 		deleteArgs := append([]string{"-D", "DOCKER-USER"}, ruleArgs...)
-		cmdDelete := exec.CommandContext(ctx, f.iptablesPath, deleteArgs...)
+		cmdDelete := f.iptablesCommand(ctx, deleteArgs...)
 		_ = cmdDelete.Run()
 	}
 
@@ -166,7 +173,7 @@ func (f *FirewallManager) ApplyProxyPortIsolation(ctx context.Context, port int)
 	rules := f.BuildIsolationRules(port)
 	for i, ruleArgs := range rules {
 		checkArgs := append([]string{"-C", "DOCKER-USER"}, ruleArgs...)
-		cmdCheck := exec.CommandContext(ctx, f.iptablesPath, checkArgs...)
+		cmdCheck := f.iptablesCommand(ctx, checkArgs...)
 		if err := cmdCheck.Run(); err == nil {
 			continue
 		}
@@ -175,7 +182,7 @@ func (f *FirewallManager) ApplyProxyPortIsolation(ctx context.Context, port int)
 		// before the catch-all DROP (see BuildIsolationRules).
 		position := strconv.Itoa(i + 1)
 		insertArgs := append([]string{"-I", "DOCKER-USER", position}, ruleArgs...)
-		cmdInsert := exec.CommandContext(ctx, f.iptablesPath, insertArgs...)
+		cmdInsert := f.iptablesCommand(ctx, insertArgs...)
 		if out, err := cmdInsert.CombinedOutput(); err != nil {
 			msg := strings.TrimSpace(string(out))
 			if f.log != nil {
@@ -200,7 +207,7 @@ func (f *FirewallManager) RemoveProxyPortIsolation(ctx context.Context, port int
 	rules := f.BuildIsolationRules(port)
 	for _, ruleArgs := range rules {
 		deleteArgs := append([]string{"-D", "DOCKER-USER"}, ruleArgs...)
-		cmdDelete := exec.CommandContext(ctx, f.iptablesPath, deleteArgs...)
+		cmdDelete := f.iptablesCommand(ctx, deleteArgs...)
 		_ = cmdDelete.Run()
 	}
 	return nil

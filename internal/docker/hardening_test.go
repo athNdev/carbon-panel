@@ -303,6 +303,7 @@ func TestValidateVolumeSource_RejectsAbsoluteOutsideRoots(t *testing.T) {
 		"/",
 		"/etc",
 		"/etc/passwd",
+		`C:\Windows\System32`,                  // foreign-OS absolute host path is not a named volume
 		filepath.Join(root, "..", "..", "etc"), // ".." escape
 		root + "-evil",                         // sibling prefix confusion
 		filepath.Join(root+"-evil", "data"),
