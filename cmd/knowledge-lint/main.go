@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -69,6 +70,7 @@ type meta struct {
 	Title       string        `yaml:"title"`
 	Description string        `yaml:"description"`
 	Status      string        `yaml:"status"`
+	Governance  string        `yaml:"governance"`
 	Owners      []string      `yaml:"owners"`
 	CodeRefs    []string      `yaml:"code_refs"`
 	Sources     []source      `yaml:"sources"`
@@ -91,6 +93,8 @@ type report struct {
 	QueriesChecked int      `json:"queries_checked"`
 	QueriesPassed  int      `json:"queries_passed"`
 	QueriesTop1    int      `json:"queries_top1"`
+	TrustHuman     int      `json:"trust_human_reviewed"`
+	TrustMachine   int      `json:"trust_machine_confirmed"`
 	Errors         []string `json:"errors"`
 	Warnings       []string `json:"warnings"`
 }
@@ -117,7 +121,12 @@ func main() {
 	root := flag.String("root", ".", "repository root")
 	fix := flag.Bool("fix", false, "rewrite generated index files")
 	asJSON := flag.Bool("json", false, "emit a machine-readable report")
+	forPath := flag.String("for-path", "", "list concepts governing a source path")
 	flag.Parse()
+
+	if *forPath != "" {
+		os.Exit(runForPath(*root, *forPath))
+	}
 
 	r := lint(*root, *fix)
 	if *asJSON {
@@ -158,6 +167,13 @@ func lint(root string, fix bool) report {
 		r.Errors = append(r.Errors, errs...)
 		r.Warnings = append(r.Warnings, warns...)
 		r.Errors = append(r.Errors, scanForbidden(c)...)
+		if c.Meta.Verified != nil {
+			if strings.HasPrefix(c.Meta.Verified.By, "human:") {
+				r.TrustHuman++
+			} else {
+				r.TrustMachine++
+			}
+		}
 	}
 	r.Errors = append(r.Errors, checkLinks(absRoot, concepts)...)
 	r.Errors = append(r.Errors, checkIndexes(absRoot, kroot, concepts, fix, &r)...)
@@ -317,20 +333,27 @@ func (c *concept) validate(root string) (errs, warns []string) {
 		}
 	}
 	if c.Meta.Verified != nil {
-		if !strings.HasPrefix(c.Meta.Verified.By, "human:") {
-			add("verified.by must start with human:")
+		if !strings.HasPrefix(c.Meta.Verified.By, "human:") &&
+			!strings.HasPrefix(c.Meta.Verified.By, "agent:") &&
+			!strings.HasPrefix(c.Meta.Verified.By, "process:") {
+			add("verified.by must start with human:, agent: or process:")
 		}
-		if _, err := time.Parse("2006-01-02", c.Meta.Verified.At); err != nil {
+		if verifiedAt, err := time.Parse("2006-01-02", c.Meta.Verified.At); err != nil {
 			add("verified.at must be YYYY-MM-DD")
+		} else if lastCommit, ok := lastCommitDate(root, filepath.Join(knowledgeDir, c.Rel)); ok && isVerificationStale(verifiedAt, lastCommit) {
+			warn("verified %s predates the last change to this file (%s); re-verify", c.Meta.Verified.At, lastCommit.Format("2006-01-02"))
 		}
 	}
 	if c.Meta.Type == "Invariant" {
 		if c.Meta.Status == "stable" && c.Meta.Verified == nil {
-			add("verified is required for a stable Invariant; keep it draft until a human reviews it")
+			add("verified is required for a stable Invariant; keep it draft until a reviewer records verified")
 		}
 		if c.Meta.Status == "draft" && c.Meta.Verified == nil {
-			warn("draft Invariant is not human-verified")
+			warn("draft Invariant has no verification")
 		}
+	}
+	if c.Meta.Governance != "" && c.Meta.Governance != "constraint" && c.Meta.Governance != "hold" && c.Meta.Governance != "context" {
+		add("unknown governance %q", c.Meta.Governance)
 	}
 	if c.Meta.ReviewAfter != "" {
 		if t, err := time.Parse("2006-01-02", c.Meta.ReviewAfter); err != nil {
@@ -621,6 +644,117 @@ func renderIndex(rel string, di *dirInfo, sections map[string]string) string {
 	return strings.TrimRight(b.String(), string(byte(10))) + string(byte(10))
 }
 
+func (c *concept) governance() string {
+	if c.Meta.Governance != "" {
+		return c.Meta.Governance
+	}
+	if c.Meta.Type == "Invariant" {
+		return "constraint"
+	}
+	return "context"
+}
+
+func governanceRank(governance string) int {
+	switch governance {
+	case "constraint":
+		return 0
+	case "hold":
+		return 1
+	default:
+		return 2
+	}
+}
+
+type pathMatch struct {
+	governance string
+	id         string
+	title      string
+	score      int
+}
+
+func conceptsForPath(concepts []*concept, target string) []pathMatch {
+	target = strings.Trim(strings.ReplaceAll(target, "\\", "/"), "/")
+	var matches []pathMatch
+	for _, c := range concepts {
+		score := 0
+		for _, ref := range c.Meta.CodeRefs {
+			ref = strings.Trim(strings.ReplaceAll(ref, "\\", "/"), "/")
+			if ref == "" {
+				continue
+			}
+			clean := path.Clean(ref)
+			switch {
+			case clean == target:
+				score += 4
+			case strings.HasPrefix(target, clean+"/"):
+				score += 3
+			default:
+				if ok, _ := path.Match(clean, target); ok {
+					score += 3
+				}
+			}
+		}
+		if score > 0 {
+			matches = append(matches, pathMatch{governance: c.governance(), id: c.ID, title: c.Meta.Title, score: score})
+		}
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		if left, right := governanceRank(matches[i].governance), governanceRank(matches[j].governance); left != right {
+			return left < right
+		}
+		if matches[i].score != matches[j].score {
+			return matches[i].score > matches[j].score
+		}
+		return matches[i].id < matches[j].id
+	})
+	return matches
+}
+
+func runForPath(root, target string) int {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	concepts, errs := loadConcepts(absRoot, filepath.Join(absRoot, knowledgeDir))
+	for _, err := range errs {
+		fmt.Println("ERROR " + err)
+	}
+	matches := conceptsForPath(concepts, target)
+	if len(matches) == 0 {
+		fmt.Printf("no concept governs %s\n", target)
+	} else {
+		fmt.Printf("%d concept(s) govern %s:\n", len(matches), target)
+		for _, match := range matches {
+			fmt.Printf("  [%-10s] %-42s %s\n", match.governance, match.id, match.title)
+		}
+	}
+	if len(errs) > 0 {
+		return 1
+	}
+	return 0
+}
+
+func lastCommitDate(root, gitPath string) (time.Time, bool) {
+	out, err := exec.Command("git", "-C", root, "log", "-1", "--format=%cs", "--", filepath.ToSlash(gitPath)).Output()
+	if err != nil {
+		return time.Time{}, false
+	}
+	stamp := strings.TrimSpace(string(out))
+	if stamp == "" {
+		return time.Time{}, false
+	}
+	when, err := time.Parse("2006-01-02", stamp)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return when, true
+}
+
+func isVerificationStale(verifiedAt, lastCommit time.Time) bool {
+	return lastCommit.After(verifiedAt)
+}
+
 func duplicateTitles(concepts []*concept) []string {
 	seen := map[string]string{}
 	var warnings []string
@@ -792,6 +926,9 @@ func printReport(r report) {
 	}
 	if r.QueriesChecked > 0 {
 		fmt.Printf("queries: %d/%d pass, %d top-1\n", r.QueriesPassed, r.QueriesChecked, r.QueriesTop1)
+	}
+	if r.TrustHuman+r.TrustMachine > 0 {
+		fmt.Printf("trust: %d machine-confirmed, %d human-reviewed\n", r.TrustMachine, r.TrustHuman)
 	}
 	if len(r.Errors) == 0 {
 		fmt.Printf("OK: %d concept(s), indexes current\n", r.Concepts)

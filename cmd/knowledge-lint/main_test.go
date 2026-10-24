@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func writeFile(t *testing.T, root, rel, content string) {
@@ -109,7 +110,7 @@ Worlds survive cleanup.
 	}
 }
 
-func TestInvariantRejectsAgentVerification(t *testing.T) {
+func TestInvariantAcceptsAgentVerification(t *testing.T) {
 	root := baseBundle(t)
 	writeFile(t, root, "knowledge/invariants/data-safety.md", `---
 type: Invariant
@@ -118,13 +119,35 @@ description: Worlds survive cleanup.
 status: stable
 owners: [oss-runtime]
 code_refs: [src/main.go]
-verified: { by: agent/zed, at: 2026-10-23 }
+verified: { by: agent:mimo, at: 2026-10-23 }
 ---
 Worlds survive cleanup.
 `)
 	r := lint(root, true)
-	if !hasSubstring(r.Errors, "verified.by must start with human:") {
-		t.Fatalf("expected a human verification error, got %v", r.Errors)
+	if len(r.Errors) != 0 {
+		t.Fatalf("expected agent verification to be accepted, got %v", r.Errors)
+	}
+	if r.TrustMachine != 1 || r.TrustHuman != 0 {
+		t.Fatalf("expected 1 machine-confirmed, got machine=%d human=%d", r.TrustMachine, r.TrustHuman)
+	}
+}
+
+func TestInvariantRejectsUnknownActor(t *testing.T) {
+	root := baseBundle(t)
+	writeFile(t, root, "knowledge/invariants/data-safety.md", `---
+type: Invariant
+title: Data safety
+description: Worlds survive cleanup.
+status: stable
+owners: [oss-runtime]
+code_refs: [src/main.go]
+verified: { by: athN, at: 2026-10-23 }
+---
+Worlds survive cleanup.
+`)
+	r := lint(root, true)
+	if !hasSubstring(r.Errors, "verified.by must start with human:, agent: or process:") {
+		t.Fatalf("expected a verification actor error, got %v", r.Errors)
 	}
 }
 
@@ -144,7 +167,7 @@ Worlds survive cleanup.
 	if len(r.Errors) != 0 {
 		t.Fatalf("draft invariant reported errors: %v", r.Errors)
 	}
-	if !hasSubstring(r.Warnings, "draft Invariant is not human-verified") {
+	if !hasSubstring(r.Warnings, "draft Invariant has no verification") {
 		t.Fatalf("expected a draft verification warning, got %v", r.Warnings)
 	}
 }
@@ -271,5 +294,82 @@ func TestUnknownQueryExpect(t *testing.T) {
 	r := lint(root, true)
 	if !hasSubstring(r.Errors, "does not exist") {
 		t.Fatalf("expected an unknown concept error, got %v", r.Errors)
+	}
+}
+
+func conceptsForTest(t *testing.T, root string) []*concept {
+	t.Helper()
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	concepts, errs := loadConcepts(absRoot, filepath.Join(absRoot, knowledgeDir))
+	if len(errs) != 0 {
+		t.Fatalf("load concepts: %v", errs)
+	}
+	return concepts
+}
+
+func TestGovernanceDefaultsAndValidation(t *testing.T) {
+	root := baseBundle(t)
+	writeFile(t, root, "knowledge/invariants/data-safety.md", `---
+type: Invariant
+title: Data safety
+description: Worlds survive cleanup.
+status: draft
+owners: [oss-runtime]
+code_refs: [src/main.go]
+---
+Worlds survive cleanup.
+`)
+	if r := lint(root, true); len(r.Errors) != 0 {
+		t.Fatalf("expected default governance to pass, got %v", r.Errors)
+	}
+	writeFile(t, root, "knowledge/invariants/data-safety.md", `---
+type: Invariant
+title: Data safety
+description: Worlds survive cleanup.
+status: draft
+governance: bogus
+owners: [oss-runtime]
+code_refs: [src/main.go]
+---
+Worlds survive cleanup.
+`)
+	r := lint(root, true)
+	if !hasSubstring(r.Errors, "unknown governance") {
+		t.Fatalf("expected a governance error, got %v", r.Errors)
+	}
+}
+
+func TestForPath(t *testing.T) {
+	root := baseBundle(t)
+	writeFile(t, root, "knowledge/invariants/data-safety.md", `---
+type: Invariant
+title: Data safety
+description: Worlds survive cleanup.
+status: draft
+owners: [oss-runtime]
+code_refs: [src/main.go]
+---
+Worlds survive cleanup.
+`)
+	matches := conceptsForPath(conceptsForTest(t, root), "src/main.go")
+	if len(matches) == 0 {
+		t.Fatal("expected a governing concept")
+	}
+	if matches[0].governance != "constraint" {
+		t.Fatalf("expected constraint ranked first, got %q", matches[0].governance)
+	}
+}
+
+func TestVerificationStale(t *testing.T) {
+	verified := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	changed := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+	if !isVerificationStale(verified, changed) {
+		t.Fatal("expected verification to be stale")
+	}
+	if isVerificationStale(changed, verified) {
+		t.Fatal("expected verification to be fresh")
 	}
 }

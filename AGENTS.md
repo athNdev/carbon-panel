@@ -49,8 +49,8 @@ versioned knowledge base, not task state and not a second documentation site.
 
 - Start at `knowledge/index.md` and search before reading:
   `make knowledge-search q="remote node docker client"`.
-- Before editing a path, check whether a concept governs it by searching its
-  `code_refs` in `knowledge/`.
+- Before editing a path, run `go run ./cmd/knowledge-lint -root . -for-path <path>`
+  to see the concepts that govern it, constraints first.
 - When behavior changes, update or create the governing concept in the same
   commit as the code change.
 - Keep concepts short and link to the authoritative `docs/` page, ADR or issue.

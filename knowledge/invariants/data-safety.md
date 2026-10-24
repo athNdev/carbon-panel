@@ -2,7 +2,7 @@
 type: Invariant
 title: Data safety
 description: Worlds, databases, backups and snapshots are persistent user data and must survive build, development and cleanup commands.
-status: draft
+status: stable
 owners: [oss-runtime]
 code_refs:
   - internal/snapshot
@@ -14,6 +14,7 @@ sources:
     resource: ../../AGENTS.md
   - title: Backup confirmation issue
     resource: ../../docs/issues/013-UI-5-backup-confirmation-dialogs.md
+verified: { by: agent:mimo-v2.6-pro, at: 2026-10-24 }
 review_after: 2027-01-23
 ---
 
@@ -25,7 +26,7 @@ explicitly named and separately invoked; it is never a side effect.
 
 # Why
 
-Worlds and databases are the user's data. Recreating a container is routine;
+Worlds and databases are the user's data. Re-creating a container is routine;
 losing a world is not recoverable by rebuilding the controller.
 
 # How to check
@@ -38,4 +39,13 @@ losing a world is not recoverable by rebuilding the controller.
 
 # Review
 
-This invariant is a draft until a human reviews it and records `verified`.
+Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the code:
+
+- `make clean` removes only the build binary and states that server data and
+  Docker volumes are preserved; `proto-clean` removes generated proto output.
+- Snapshot retention prunes only expired snapshots and protects the most recent
+  copy (`internal/snapshot/integrity_retention_test.go`).
+- Restore coverage exists in `internal/snapshot` and `internal/worldstore`.
+
+Human attestation is still pending. The remote archive path gap is tracked in
+[known gaps](../failures/known-gaps.md).

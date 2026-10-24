@@ -7,7 +7,7 @@
 # one at https://mozilla.org/MPL/2.0/.
 
 
-.PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs knowledge knowledge-lint knowledge-index knowledge-search knowledge-mcp knowledge-mcp-git knowledge-mcp-smoke
+.PHONY: dev prod clean build build-frontend run deps test fmt lint check help kill-dev image dev-docker dev-auth modules proto proto-clean proto-lint proto-format proto-breaking gen dev-docs knowledge knowledge-lint knowledge-index knowledge-search knowledge-mcp knowledge-mcp-git knowledge-mcp-smoke knowledge-for-path
 
 DATA_DIR := ./data
 FRONTEND_DIR := web/carbon-panel
@@ -224,6 +224,7 @@ help:
 	@echo "  make knowledge-index  - Regenerate knowledge indexes"
 	@echo "  make knowledge-search - Search the knowledge base (q=...)"
 	@echo "  make knowledge-mcp-smoke - Exercise the pinned MCP servers"
+	@echo "  make knowledge-for-path - Show concepts governing a path (path=...)"
 	@echo "  make gen            - Clean and regenerate proto code (via Docker)"
 	@echo "  make proto          - Generate Go and TypeScript code from proto files (via Docker)"
 	@echo "  make proto-clean    - Remove all generated proto files"
@@ -231,3 +232,7 @@ help:
 	@echo "  make proto-format   - Format proto files (via Docker)"
 	@echo "  make proto-breaking - Check for breaking changes against main (via Docker)"
 	@echo "  make help           - Show this help message"
+
+knowledge-for-path:
+	@if [ -z "$(path)" ]; then echo 'usage: make knowledge-for-path path=...'; exit 2; fi
+	go run ./cmd/knowledge-lint -root . -for-path $(path)

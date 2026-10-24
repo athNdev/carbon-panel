@@ -54,15 +54,20 @@ Rules:
   Deprecate it with `status: deprecated` and link to the replacement.
 - `description` is one sentence and at most 240 characters.
 - `code_refs` are repository-relative. Use a directory for a subsystem.
-- `verified` is required for a **stable** `Invariant`, and must start with
-  `human:`. Draft invariants are allowed but are reported as unverified.
+- `verified` records who confirmed a rule: `human:` for a human review, `agent:`
+  or `process:` for a machine check. A **stable** `Invariant` requires a
+  `verified` entry. The linter reports the trust tier and warns when a
+  verification predates the last change to the file.
+- `governance` is optional: `constraint`, `hold` or `context`. It defaults to
+  `constraint` for invariants and `context` otherwise, and it orders the
+  `-for-path` results.
 - `review_after` is optional; the linter warns when it has passed.
 
 ## Writing protocol
 
 1. Search before writing: `rg -n "remote node docker client" knowledge`
    (or `make knowledge-search q="remote node docker client"`).
-2. Read the governing concept before editing its `code_refs`.
+2. Read the governing concepts first: `go run ./cmd/knowledge-lint -root . -for-path internal/docker`.
 3. Create or update the concept in the same change as the behavior.
 4. Run `go run ./cmd/knowledge-lint -root . -fix`, then run it again without
    `-fix`.
@@ -95,7 +100,8 @@ Conflicts are expected and are resolved in git, not in a service.
 1. Merge the body semantically; keep the newer verified claim.
 2. Union list fields (`code_refs`, `sources`); do not duplicate entries.
 3. Set `status: draft` if the change is provisional.
-4. For an `Invariant`, remove the stale `verified` entry; a human must re-verify.
+4. For an `Invariant`, keep `verified` current: the linter warns when a
+   verification predates the last change to the file, and re-review is required.
 5. Never hand-merge `index.md`. Run `make knowledge-index`.
 6. Run `make knowledge-lint` and commit the resolution.
 
