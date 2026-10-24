@@ -910,11 +910,6 @@ type originPolicy struct {
 	trustProxy bool
 }
 
-// checkSameOrigin is the default policy: same host, no forwarded-host trust.
-func checkSameOrigin(r *http.Request) bool {
-	return checkOrigin(r, originPolicy{})
-}
-
 // checkOrigin verifies that the request Origin matches the request Host,
 // a trusted forwarded host, or an explicit allowlist entry.
 // Non-browser clients omitting the Origin header are permitted.

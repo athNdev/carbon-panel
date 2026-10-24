@@ -14,7 +14,7 @@ import (
 func TestBackupRecord_CRUD(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	rec := &BackupRecord{
 		ID:        "bk-1",
@@ -71,7 +71,7 @@ func TestBackupRecord_CRUD(t *testing.T) {
 func TestBlueprint_SaveListGet(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	custom := &ServerBlueprint{
 		ID: "bp-custom", Name: "Custom", ModLoader: ModLoaderVanilla,

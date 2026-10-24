@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package packwiz
 
 import (
@@ -100,11 +99,12 @@ func TestPackwiz_ImportMrpackAndExport(t *testing.T) {
 	require.NoError(t, err)
 	var foundPackToml, foundIndexToml, foundOptions bool
 	for _, f := range zr.File {
-		if f.Name == "pack.toml" {
+		switch f.Name {
+		case "pack.toml":
 			foundPackToml = true
-		} else if f.Name == "index.toml" {
+		case "index.toml":
 			foundIndexToml = true
-		} else if f.Name == "config/options.txt" {
+		case "config/options.txt":
 			foundOptions = true
 		}
 	}

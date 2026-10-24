@@ -84,7 +84,7 @@ func NewManager(store *db.Store, cfg *config.Config, logger *logger.Logger, dock
 			opts = append(opts, client.FromEnv)
 		}
 		if cfg.Docker.Version != "" {
-			opts = append(opts, client.WithVersion(cfg.Docker.Version))
+			opts = append(opts, client.WithAPIVersion(cfg.Docker.Version))
 		}
 		if cli, err := docker.NewAPIClient(opts...); err == nil {
 			m.dockerClient = cli

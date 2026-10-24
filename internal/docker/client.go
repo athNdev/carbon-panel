@@ -108,7 +108,7 @@ func boundedCall(ctx context.Context) (context.Context, context.CancelFunc) {
 // client.WithAPIVersionNegotiation, or the SDK re-enters the lazy path whenever
 // this eager ping fails.
 func NewAPIClient(opts ...client.Opt) (*client.Client, error) {
-	cli, err := client.NewClientWithOpts(opts...)
+	cli, err := client.New(opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +393,7 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 
 	// Apply API version if provided
 	if len(config) > 0 && config[0].APIVersion != "" {
-		opts = append(opts, client.WithVersion(config[0].APIVersion))
+		opts = append(opts, client.WithAPIVersion(config[0].APIVersion))
 	}
 
 	if host != "" && host != "unix:///var/run/docker.sock" {
@@ -518,16 +518,16 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 
 	// Apply resource limits
 	if overrides.GetCpuLimit() > 0 {
-		hostConfig.Resources.NanoCPUs = int64(overrides.GetCpuLimit() * 1e9)
+		hostConfig.NanoCPUs = int64(overrides.GetCpuLimit() * 1e9)
 	}
 	if overrides.GetCpusetCpus() != "" {
-		hostConfig.Resources.CpusetCpus = overrides.GetCpusetCpus()
+		hostConfig.CpusetCpus = overrides.GetCpusetCpus()
 	}
 	if overrides.GetMemoryLimit() > 0 {
 		memBytes := overrides.GetMemoryLimit() * 1024 * 1024
-		hostConfig.Resources.Memory = memBytes
+		hostConfig.Memory = memBytes
 		// MINE-128: Maintain 0-swap (MemorySwap == Memory) to prevent JVM GC latency collapse
-		hostConfig.Resources.MemorySwap = memBytes
+		hostConfig.MemorySwap = memBytes
 	}
 
 	// Apply additional labels
@@ -574,7 +574,7 @@ func ApplyOverrides(overrides *v1.DockerOverrides, config *container.Config, hos
 	// Apply PIDs limit (fork bomb guard)
 	if overrides.GetPidsLimit() > 0 {
 		pids := overrides.GetPidsLimit()
-		hostConfig.Resources.PidsLimit = &pids
+		hostConfig.PidsLimit = &pids
 	}
 
 	// Apply SHM size

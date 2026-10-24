@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package handlers
 
 import (
@@ -21,9 +20,9 @@ import (
 
 // ValidateKeyRequest represents incoming request payload
 type ValidateKeyRequest struct {
-	Provider  string `json:"provider"`  // "curseforge" or "modrinth"
-	APIKey    string `json:"api_key"`   // Token or API Key
-	UserAgent string `json:"user_agent"`// Custom User-Agent
+	Provider  string `json:"provider"`   // "curseforge" or "modrinth"
+	APIKey    string `json:"api_key"`    // Token or API Key
+	UserAgent string `json:"user_agent"` // Custom User-Agent
 }
 
 // ValidateKeyResponse represents validation outcome
@@ -94,7 +93,8 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 			}
 			defer res.Body.Close()
 
-			if res.StatusCode == http.StatusOK {
+			switch res.StatusCode {
+			case http.StatusOK:
 				// Also check if mods/search endpoint allows this key
 				reqSearch, sErr := http.NewRequestWithContext(r.Context(), "GET", "https://api.curseforge.com/v1/mods/search?gameId=432&pageSize=1", nil)
 				if sErr == nil {
@@ -103,13 +103,14 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 					resSearch, doErr := httpClient.Do(reqSearch)
 					if doErr == nil {
 						defer resSearch.Body.Close()
-						if resSearch.StatusCode == http.StatusOK {
+						switch resSearch.StatusCode {
+						case http.StatusOK:
 							resp.Valid = true
 							resp.Message = "Connected successfully! CurseForge API key is valid and approved for mod searches."
-						} else if resSearch.StatusCode == http.StatusForbidden || resSearch.StatusCode == http.StatusUnauthorized {
+						case http.StatusForbidden, http.StatusUnauthorized:
 							resp.Valid = true
 							resp.Message = "CurseForge API key accepted, but Overwolf restricts direct mod search (403). Carbon Panel will automatically use the keyless community proxy for mod searches!"
-						} else {
+						default:
 							resp.Valid = true
 							resp.Message = "Connected successfully! CurseForge API key is valid."
 						}
@@ -121,9 +122,9 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 					resp.Valid = true
 					resp.Message = "Connected successfully! CurseForge API key is valid."
 				}
-			} else if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusUnauthorized {
+			case http.StatusForbidden, http.StatusUnauthorized:
 				resp.Message = "CurseForge rejected API key (403 Forbidden). Please verify your key at https://console.curseforge.com/#/api-keys."
-			} else {
+			default:
 				body, _ := io.ReadAll(res.Body)
 				resp.Message = fmt.Sprintf("CurseForge returned status %d: %s", res.StatusCode, string(body))
 			}
@@ -154,7 +155,8 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 				}
 				defer res.Body.Close()
 
-				if res.StatusCode == http.StatusOK {
+				switch res.StatusCode {
+				case http.StatusOK:
 					var user struct {
 						Username string `json:"username"`
 					}
@@ -165,9 +167,9 @@ func NewKeyValidatorHandler(authManager *auth.Manager, enforcer *rbac.Enforcer, 
 					} else {
 						resp.Message = "Authenticated successfully with Modrinth API."
 					}
-				} else if res.StatusCode == http.StatusUnauthorized {
+				case http.StatusUnauthorized:
 					resp.Message = "Modrinth rejected Personal Access Token (401 Unauthorized)."
-				} else {
+				default:
 					resp.Message = fmt.Sprintf("Modrinth returned status %d", res.StatusCode)
 				}
 			} else {

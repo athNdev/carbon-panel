@@ -12,11 +12,27 @@ run:
 linters:
   # "standard" = errcheck, govet, ineffassign, staticcheck, unused.
   # This is golangci-lint's own default set; we're not adding anything
-  # exotic on top of it for this first pass. CI runs this with
-  # only-new-issues so it only fails on issues introduced by a given
-  # change, not the ~80 pre-existing findings across the codebase today.
+  # exotic on top of it.
   default: standard
 
   exclusions:
     paths:
       - pkg/proto # generated protobuf/connect code
+
+issues:
+  # Report every finding instead of stopping at golangci-lint's default caps
+  # (50 per linter, 3 per identical message). A truncated report makes a local
+  # run disagree with a full audit and understates how much debt exists.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+# CI gates on new code only (golangci-lint-action's only-new-issues), so the
+# pre-existing baseline does not block a change. Pay the baseline down with an
+# explicit full audit:
+#
+#   golangci-lint run --max-issues-per-linter=0 --max-same-issues=0 ./...
+#
+# Baseline as of golangci-lint v2.13.2 / Go 1.27 on main: 356 errcheck findings
+# (unchecked Close/Remove on best-effort paths) and 2 staticcheck SA1019
+# findings for httputil.ReverseProxy.Director in internal/proxy/http.go.
+# New code is held to the full standard.
