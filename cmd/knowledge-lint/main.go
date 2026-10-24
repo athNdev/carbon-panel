@@ -51,8 +51,8 @@ var forbiddenPatterns = []struct {
 	{"Windows home path", regexp.MustCompile(`[A-Za-z]:\\Users\\`)},
 	{"Unix home path", regexp.MustCompile(`(^|[\s(])/(home|Users)/[A-Za-z0-9._-]+/`)},
 	{"private network URL", regexp.MustCompile(`https?://(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)`)},
-	{"workstation workspace path", regexp.MustCompile(`C:\\research_learning_new`)},
-	{"known homelab host", regexp.MustCompile(`\b(prox3|pveZ3|carbon\.local)\b`)},
+	{"absolute Windows path", regexp.MustCompile(`[A-Za-z]:\\[A-Za-z0-9._ -]+\\`)},
+	{"mDNS hostname", regexp.MustCompile(`\b[A-Za-z0-9][A-Za-z0-9-]*\.local\b`)},
 }
 
 type source struct {

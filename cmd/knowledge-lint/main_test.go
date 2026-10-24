@@ -224,6 +224,29 @@ Deployment lives at https://192.168.1.10/admin.
 	}
 }
 
+func TestForbiddenContentWorkstationPatterns(t *testing.T) {
+	cases := map[string]string{
+		"absolute Windows path": `Copied from C:\example\workspace\repo on start.`,
+		"mDNS hostname":         `Reachable at panel.local from the LAN.`,
+	}
+	for want, body := range cases {
+		root := baseBundle(t)
+		writeFile(t, root, "knowledge/overview.md", `---
+type: Overview
+title: Overview
+description: Entry point.
+status: stable
+owners: [oss-runtime]
+---
+`+body+`
+`)
+		r := lint(root, true)
+		if !hasSubstring(r.Errors, "forbidden content: "+want) {
+			t.Fatalf("%s: expected a forbidden content error, got %v", want, r.Errors)
+		}
+	}
+}
+
 func TestIndexFix(t *testing.T) {
 	root := baseBundle(t)
 
