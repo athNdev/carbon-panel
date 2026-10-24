@@ -6,6 +6,8 @@ status: stable
 owners: [oss-runtime]
 code_refs:
   - internal/docker/freezer.go
+  - internal/docker/sleep.go
+  - internal/docker/idle.go
   - docs/runbook-sleep-baseline.md
   - docs/deep-sleep-tier-b.md
 sources:
