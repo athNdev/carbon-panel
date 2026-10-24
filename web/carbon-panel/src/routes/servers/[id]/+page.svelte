@@ -63,7 +63,7 @@ one at https://mozilla.org/MPL/2.0/.
 	} from '$lib/proto/carbonpanel/v1/server_pb';
 	import { enumToString } from '$lib/utils';
 	import { copyToClipboard as copyText } from '$lib/utils/clipboard';
-	import { CarbonTag, CarbonTabs, CarbonConfirm } from '$lib/components/carbon';
+	import { CarbonTag, CarbonTabs, CarbonConfirm, CarbonErrorState } from '$lib/components/carbon';
 	import { memoryUsagePercent } from '$lib/utils/safe-percent';
 	import ServerConsole from '$lib/components/server-console.svelte';
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
@@ -79,6 +79,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	let server = $state<Server | null>(null);
 	let loading = $state(true);
+	let loadError = $state<string | null>(null);
 	let actionLoading = $state(false);
 	let serverId = $derived(page.params.id);
 	let prevServerId = $state<string | undefined>(undefined);
@@ -144,6 +145,10 @@ one at https://mozilla.org/MPL/2.0/.
 	async function loadServer(skipLoading = false) {
 		if (!serverId) return;
 		const requestedId = serverId;
+		if (!skipLoading) {
+			loading = true;
+			loadError = null;
+		}
 		try {
 			const request = create(GetServerRequestSchema, { id: requestedId });
 			const callOptions = skipLoading ? silentCallOptions : undefined;
@@ -153,11 +158,13 @@ one at https://mozilla.org/MPL/2.0/.
 			if (response.server) {
 				server = response.server;
 				serversStore.updateServer(server);
+				loadError = null;
 				loading = false;
 			} else {
 				// A successful call with no server means it was deleted or moved;
 				// stop the spinner instead of leaving the page loading forever.
 				loading = false;
+				loadError = 'This server no longer exists or was moved.';
 				if (!skipLoading) {
 					toast.error('Server not found');
 				}
@@ -169,6 +176,7 @@ one at https://mozilla.org/MPL/2.0/.
 				// First load failed: stop the spinner and report (unless the RPC
 				// interceptor already toasted).
 				loading = false;
+				loadError = error instanceof Error ? error.message : 'Failed to load server';
 				if (!wasRpcErrorToasted(error)) {
 					toast.error('Failed to load server');
 				}
@@ -779,11 +787,17 @@ one at https://mozilla.org/MPL/2.0/.
 			<CarbonTabs
 				tabs={subViewTabs}
 				bind:selectedTab={activeTab}
+				idPrefix="server-detail-tabs"
 				class="sticky top-0 z-20 overflow-x-auto bg-[#161616]"
 			/>
 
 			<!-- Tab Content Areas -->
-			<div class="motion-fade-in min-h-0 flex-1">
+			<div
+				id={`server-detail-tabs-panel-${activeTab}`}
+				role="tabpanel"
+				aria-labelledby={`server-detail-tabs-tab-${activeTab}`}
+				class="motion-fade-in min-h-0 flex-1"
+			>
 				<!--
 						A throw while a tab panel renders must never be able to wedge the
 						whole content area. Without this boundary, Svelte's effect flush
@@ -864,16 +878,19 @@ one at https://mozilla.org/MPL/2.0/.
 		</div>
 	</div>
 {:else}
-	<div class="flex h-96 items-center justify-center bg-[#161616]">
-		<div class="rounded-none border border-[#393939] bg-[#262626] p-8 text-center">
-			<p class="font-mono text-sm text-[#ff8389]">Server instance not found</p>
-			<a
-				href={resolve('/servers')}
-				class="mt-4 inline-flex h-8 items-center rounded-none bg-[#393939] px-4 font-sans text-xs text-white transition-colors hover:bg-[#4c4c4c]"
-			>
-				Back to servers
-			</a>
-		</div>
+	<div class="flex h-96 flex-col items-center justify-center gap-4 bg-[#161616] p-6">
+		<CarbonErrorState
+			title="Failed to load server"
+			message={loadError ?? 'The server could not be loaded. Try again.'}
+			onretry={() => loadServer()}
+			class="w-full max-w-lg"
+		/>
+		<a
+			href={resolve('/servers')}
+			class="inline-flex h-8 items-center rounded-none bg-[#393939] px-4 font-sans text-xs text-white transition-colors hover:bg-[#4c4c4c]"
+		>
+			Back to servers
+		</a>
 	</div>
 {/if}
 

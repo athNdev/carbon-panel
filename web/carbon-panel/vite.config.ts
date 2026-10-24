@@ -60,33 +60,39 @@ export default defineConfig({
 		host: '0.0.0.0',
 		port: 5174,
 		strictPort: true,
-		proxy: {
-			'/api': {
-				target: 'http://localhost:8080',
-				changeOrigin: true
-			},
-			// Proxy Connect RPC service paths
-			'/carbonpanel.v1': {
-				target: 'http://localhost:8080',
-				changeOrigin: true
-			},
-			// Proxy gRPC reflection service
-			'/grpc.reflection': {
-				target: 'http://localhost:8080',
-				changeOrigin: true
-			},
-			// Proxy Connect service paths
-			'/connect': {
-				target: 'http://localhost:8080',
-				changeOrigin: true
-			},
-			// Proxy WebSocket connections
-			'/ws': {
-				target: 'ws://localhost:8080',
-				ws: true,
-				changeOrigin: true
-			}
-		}
+		proxy: (() => {
+			// Default matches a local controller. Override for a staged or remote
+			// backend without editing this file.
+			const apiTarget = process.env.CARBONPANEL_API_TARGET ?? 'http://localhost:8080';
+			const wsTarget = apiTarget.replace(/^http/, 'ws');
+			return {
+				'/api': {
+					target: apiTarget,
+					changeOrigin: true
+				},
+				// Proxy Connect RPC service paths
+				'/carbonpanel.v1': {
+					target: apiTarget,
+					changeOrigin: true
+				},
+				// Proxy gRPC reflection service
+				'/grpc.reflection': {
+					target: apiTarget,
+					changeOrigin: true
+				},
+				// Proxy Connect service paths
+				'/connect': {
+					target: apiTarget,
+					changeOrigin: true
+				},
+				// Proxy WebSocket connections
+				'/ws': {
+					target: wsTarget,
+					ws: true,
+					changeOrigin: true
+				}
+			};
+		})()
 	},
 	optimizeDeps: {
 		include: ['monaco-editor']
