@@ -1105,7 +1105,6 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 	backendReserved := false
 	if server.ProxyHostname != "" {
-		used := map[int]bool{}
 		dockerCli, err := s.getDockerClientStrict(server.NodeID)
 		if err != nil || dockerCli == nil {
 			if err == nil {
@@ -1117,8 +1116,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		if err != nil {
 			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated backend ports on node %s: %w", server.NodeID, err))
 		}
-		used = allocated
-		gamePort, _, err := s.store.ReserveBackendPortPair(ctx, server.NodeID, server.ID, used)
+		gamePort, _, err := s.store.ReserveBackendPortPair(ctx, server.NodeID, server.ID, allocated)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no free backend port on node: %w", err))
 		}
