@@ -1,0 +1,8 @@
+architecture: System structure, data flow and seams.
+invariants: Rules that must not be violated.
+workflows: How to perform recurring changes.
+decisions: Architecture decision records and their implications.
+operations: Operational procedures and runbooks.
+failures: Known failure modes and open gaps.
+testing: How the project is verified.
+glossary: Terms with a specific meaning in this project.

@@ -1,0 +1,23 @@
+{
+  "context_servers": {
+    "carbon-knowledge": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem@2.0.0",
+        "knowledge"
+      ]
+    },
+    "carbon-git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cyanheads/git-mcp-server@2.15.3"
+      ],
+      "env": {
+        "GIT_BASE_DIR": ".",
+        "MCP_TRANSPORT_TYPE": "stdio"
+      }
+    }
+  }
+}
