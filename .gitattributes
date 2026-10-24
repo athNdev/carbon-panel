@@ -1,0 +1,2 @@
+knowledge/** text eol=lf
+knowledge/**/index.md merge=union

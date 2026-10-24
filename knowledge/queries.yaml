@@ -1,0 +1,20 @@
+- query: How do I add a new RPC?
+  expect: workflows/add-rpc
+- query: What happens when a remote node's Docker client cannot be resolved?
+  expect: failures/remote-node-fallback
+- query: Do cleanup commands delete worlds or backups?
+  expect: invariants/data-safety
+- query: How does the TCP proxy route a Minecraft handshake by hostname?
+  expect: architecture/proxy
+- query: How durable are SQLite migrations?
+  expect: architecture/persistence
+- query: How does the scheduler recover tasks after a restart?
+  expect: architecture/scheduler
+- query: Which module hook still uses the manager's Docker client?
+  expect: architecture/module-system
+- query: Where are backup and restore procedures described?
+  expect: operations/backup-restore
+- query: Why does deep sleep still use the local Docker client?
+  expect: operations/deep-sleep
+- query: Which commands verify the frontend?
+  expect: workflows/frontend-change
