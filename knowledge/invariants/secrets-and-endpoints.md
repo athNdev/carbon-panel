@@ -10,7 +10,7 @@ code_refs:
 sources:
   - title: Contributor guide
     resource: ../../AGENTS.md
-verified: { by: agent:mimo-v2.6-pro, at: 2026-10-24 }
+verified: { by: human:athNdev, at: 2026-10-24 }
 review_after: 2027-01-23
 ---
 
@@ -35,9 +35,9 @@ credential is not fixed by deleting the line; it is already in history.
 
 # Review
 
-Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the tree: the knowledge
-denylist and manual pattern searches find no credentials, private endpoints or
-workstation paths.
+Reviewed `2026-10-24` by `agent:mimo-v2.6-pro` against the tree and attested by
+`human:athNdev`: the knowledge denylist and manual pattern searches find no
+credentials, private endpoints or workstation paths.
 
 History was not scanned, so a secret that was committed and later removed is not
-covered by this rule. Human attestation is still pending.
+covered by this rule; that remains an accepted limitation of the check.

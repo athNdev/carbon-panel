@@ -10,7 +10,7 @@ code_refs:
 sources:
   - title: Contributor guide
     resource: ../../AGENTS.md
-verified: { by: agent:mimo-v2.6-pro, at: 2026-10-24 }
+verified: { by: human:athNdev, at: 2026-10-24 }
 review_after: 2027-01-23
 ---
 
@@ -35,7 +35,8 @@ host or the Docker socket can escape that boundary.
 
 # Review
 
-Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the code:
+Reviewed `2026-10-24` by `agent:mimo-v2.6-pro` against the code and attested by
+`human:athNdev`:
 
 - `applyContainerHardening` in `internal/docker/client.go` sets `CapDrop ALL`,
   the Minecraft bootstrap capabilities and `no-new-privileges`.
@@ -44,4 +45,4 @@ Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the code:
   change policy, not a runtime bound.
 
 A validation bound on operator overrides is a known gap and would strengthen
-this invariant. Human attestation is still pending.
+this invariant; it is recorded as accepted risk rather than a merge blocker.

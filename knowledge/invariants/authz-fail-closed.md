@@ -11,7 +11,7 @@ code_refs:
 sources:
   - title: Contributor guide
     resource: ../../AGENTS.md
-verified: { by: agent:mimo-v2.6-pro, at: 2026-10-24 }
+verified: { by: human:athNdev, at: 2026-10-24 }
 review_after: 2027-01-23
 ---
 
@@ -37,14 +37,13 @@ controller exposes server lifecycle, files, backups and user administration.
 
 # Review
 
-Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the code:
+Reviewed `2026-10-24` by `agent:mimo-v2.6-pro` against the code and attested by
+`human:athNdev`:
 
 - `internal/rpc/server.go` denies a procedure with no `rbac.ProcedurePermissions`
   entry and denies the request when the RBAC enforcer is unavailable.
 - `internal/rbac/mapping_scope_test.go` covers the mapping, and
   `internal/rpc/server_test.go` covers denial.
-
-Human attestation is still pending.
 
 # Read next
 

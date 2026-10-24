@@ -14,7 +14,7 @@ sources:
     resource: ../../AGENTS.md
   - title: Backup confirmation issue
     resource: ../../docs/issues/013-UI-5-backup-confirmation-dialogs.md
-verified: { by: agent:mimo-v2.6-pro, at: 2026-10-24 }
+verified: { by: human:athNdev, at: 2026-10-24 }
 review_after: 2027-01-23
 ---
 
@@ -39,7 +39,8 @@ losing a world is not recoverable by rebuilding the controller.
 
 # Review
 
-Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the code:
+Reviewed `2026-10-24` by `agent:mimo-v2.6-pro` against the code and attested by
+`human:athNdev`:
 
 - `make clean` removes only the build binary and states that server data and
   Docker volumes are preserved; `proto-clean` removes generated proto output.
@@ -47,5 +48,5 @@ Verified `2026-10-24` by `agent:mimo-v2.6-pro` against the code:
   copy (`internal/snapshot/integrity_retention_test.go`).
 - Restore coverage exists in `internal/snapshot` and `internal/worldstore`.
 
-Human attestation is still pending. The remote archive path gap is tracked in
+The remote archive path gap is tracked in
 [known gaps](../failures/known-gaps.md).
