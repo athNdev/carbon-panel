@@ -62,3 +62,8 @@ versioned knowledge base, not task state and not a second documentation site.
 - In a conflict, merge concept bodies semantically and union list fields. Never
   hand-merge generated `index.md`; run `make knowledge-index`. Re-verify any
   `Invariant` whose review was invalidated.
+- Record a non-obvious decision in the same commit: an ADR under
+  `docs/adr/` plus a row in `knowledge/decisions/adrs.md` when it is
+  project-wide, or a `Decision` concept when it is local to a subsystem.
+- Do not keep an activity log in `knowledge/`. Commit messages record what
+  changed; the tracker owns status.
