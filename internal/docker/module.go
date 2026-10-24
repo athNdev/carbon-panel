@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -228,7 +227,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 
 	// Apply CPU limit if specified
 	if module.CPULimit > 0 {
-		hostConfig.Resources.NanoCPUs = int64(module.CPULimit * 1e9)
+		hostConfig.NanoCPUs = int64(module.CPULimit * 1e9)
 	}
 
 	// Network configuration - same network as server for communication

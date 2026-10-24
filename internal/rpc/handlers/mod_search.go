@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package handlers
 
 import (
@@ -828,9 +827,10 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 		}
 
 		vType := "release"
-		if f.ReleaseType == 2 {
+		switch f.ReleaseType {
+		case 2:
 			vType = "beta"
-		} else if f.ReleaseType == 3 {
+		case 3:
 			vType = "alpha"
 		}
 
@@ -867,9 +867,10 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 	if len(versions) == 0 && len(cfFiles.Data) > 0 {
 		for _, f := range cfFiles.Data {
 			vType := "release"
-			if f.ReleaseType == 2 {
+			switch f.ReleaseType {
+			case 2:
 				vType = "beta"
-			} else if f.ReleaseType == 3 {
+			case 3:
 				vType = "alpha"
 			}
 			var deps []ModDependencyItem

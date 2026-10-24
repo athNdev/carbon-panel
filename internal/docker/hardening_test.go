@@ -36,7 +36,7 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 	if !slices.Contains(hostConfig.SecurityOpt, "no-new-privileges:true") {
 		t.Errorf("expected no-new-privileges:true by default")
 	}
-	if *hostConfig.Resources.PidsLimit != 512 {
+	if *hostConfig.PidsLimit != 512 {
 		t.Errorf("expected PidsLimit 512 by default")
 	}
 
@@ -52,8 +52,8 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 
 	ApplyOverrides(overrides, config, hostConfig)
 
-	if hostConfig.Resources.CpusetCpus != "0,1,2" {
-		t.Errorf("expected CpusetCpus 0,1,2, got %s", hostConfig.Resources.CpusetCpus)
+	if hostConfig.CpusetCpus != "0,1,2" {
+		t.Errorf("expected CpusetCpus 0,1,2, got %s", hostConfig.CpusetCpus)
 	}
 	if !slices.Contains(hostConfig.CapAdd, "SYS_NICE") {
 		t.Errorf("expected SYS_NICE in CapAdd")
@@ -63,7 +63,7 @@ func TestContainerHardening_ApplyOverrides(t *testing.T) {
 			t.Errorf("Docker capability override must retain Minecraft bootstrap capability %s", cap)
 		}
 	}
-	if *hostConfig.Resources.PidsLimit != 1024 {
+	if *hostConfig.PidsLimit != 1024 {
 		t.Errorf("expected PidsLimit overridden to 1024")
 	}
 	if !hostConfig.ReadonlyRootfs {

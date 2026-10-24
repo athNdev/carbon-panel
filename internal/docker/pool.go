@@ -537,7 +537,7 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 	}
 
 	if baseConfig.APIVersion != "" {
-		opts = append(opts, client.WithVersion(baseConfig.APIVersion))
+		opts = append(opts, client.WithAPIVersion(baseConfig.APIVersion))
 	}
 	if baseConfig.NetworkName == "" {
 		baseConfig.NetworkName = "carbon-panel-network"

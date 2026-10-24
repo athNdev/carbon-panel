@@ -71,12 +71,12 @@ func (e *IndexerError) Unwrap() error {
 // It automatically classifies 401/403 as Auth, 404 as NotFound, 429 as RateLimit.
 func NewAPIError(indexer string, statusCode int, url string, body string) *IndexerError {
 	kind := ErrAPI
-	switch {
-	case statusCode == 401 || statusCode == 403:
+	switch statusCode {
+	case 401, 403:
 		kind = ErrAuth
-	case statusCode == 404:
+	case 404:
 		kind = ErrNotFound
-	case statusCode == 429:
+	case 429:
 		kind = ErrRateLimit
 	}
 	return &IndexerError{

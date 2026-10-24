@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package auth
 
 import (
@@ -35,9 +34,9 @@ func TestFetchExtraClaims(t *testing.T) {
 		}
 		switch r.URL.Path {
 		case "/claims":
-			w.Write([]byte(`{"groups":["a"],"nested":{"x":1}}`))
+			_, _ = w.Write([]byte(`{"groups":["a"],"nested":{"x":1}}`))
 		case "/invalid":
-			w.Write([]byte(`not json`))
+			_, _ = w.Write([]byte(`not json`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
