@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+<meta charset="utf-8">
+<title>Arch bisect</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #161616; --layer-01: #262626; --term-bg: #0d0d0d; --border: #393939;
+  --border-strong: #525252; --text-primary: #f4f4f4; --text-secondary: #c6c6c6;
+  --text-tertiary: #8d8d8d; --accent: #0f62fe; --accent-text: #78a9ff;
+  --sans: "IBM Plex Sans", sans-serif; --mono: "IBM Plex Mono", monospace;
+  --ease: cubic-bezier(0.2, 0, 0.38, 0.9); --dur-med: 240ms; --p: 0.5;
+}
+body { margin: 0; background: var(--bg); color: var(--text-secondary); font-family: var(--sans); }
+h2, h3 { color: var(--text-primary); }
+.qa-label { font-family: var(--mono); font-size: 14px; color: var(--accent-text); padding: 8px 32px 0; }
+.js .arch-track { height: auto !important; }
+.js .arch-stage { position: static !important; height: auto !important; padding: 24px 0 48px !important; }
+.container { max-width: 1312px; margin: 0 auto; padding: 0 32px; }
+
+</style>
+</head>
+<body>
+<div class="qa-label">A: SINGLE COPY, data-beat=0, --p 0.12 inline — expect: only beat-0 text, cards hidden, fan lines hidden</div>
+
+<div class="qa-label">B: SECOND COPY ADDED, data-beat=1 — expect in this copy: only beat-1 text, cards hidden, fan lines drawn</div>
+
+<div class="qa-label">C: NO INLINE --p (root 0.5), data-beat=0 — expect: only beat-0 text</div>
+
+</body>
+</html>
