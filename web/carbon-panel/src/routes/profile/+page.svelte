@@ -244,7 +244,13 @@ one at https://mozilla.org/MPL/2.0/.
 </svelte:head>
 
 <div class="flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
-	{#if user}
+	{#if !user}
+		<CarbonErrorState
+			title="Failed to load profile"
+			message="Your account details could not be loaded. Retry, or sign in again if it persists."
+			onretry={() => window.location.reload()}
+		/>
+	{:else}
 		<!-- Header with Sharp Avatar -->
 		<div class="flex items-center gap-6 rounded-none border-b border-[#393939] pb-6">
 			<div

@@ -183,6 +183,12 @@ one at https://mozilla.org/MPL/2.0/.
 			<div class="motion-fade-in space-y-4">
 				<RoleSettings />
 			</div>
+		{:else}
+			<CarbonErrorState
+				title="Settings unavailable"
+				message="This section needs permissions that are not loaded, or the page data failed to load. Retry, or contact an administrator if you lack access."
+				onretry={() => window.location.reload()}
+			/>
 		{/if}
 	</div>
 </div>

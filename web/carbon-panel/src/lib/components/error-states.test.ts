@@ -92,3 +92,51 @@ test('robustness: server tasks distinguishes load errors from empty results', ()
 	assert.ok(c.includes('CarbonErrorState'), 'tasks should render CarbonErrorState');
 	assert.ok(c.includes('onretry={loadTasks}'), 'tasks should retry via loadTasks');
 });
+
+test('robustness: profile renders a load error instead of a blank page when user data is missing', () => {
+	const p = path.resolve(import.meta.dirname, '../../routes/profile/+page.svelte');
+	const c = fs.readFileSync(p, 'utf-8');
+	assert.ok(c.includes('{#if !user}'), 'profile must branch on missing user data');
+	assert.ok(
+		/if !user\}[\s\S]{0,400}CarbonErrorState/.test(c),
+		'missing user data must render CarbonErrorState, not nothing'
+	);
+});
+
+test('robustness: settings renders an explicit state when its permission gate is closed', () => {
+	const p = path.resolve(import.meta.dirname, '../../routes/settings/+page.svelte');
+	const c = fs.readFileSync(p, 'utf-8');
+	assert.ok(c.includes('Settings unavailable'), 'settings must explain an unavailable section');
+	assert.ok(
+		/:else\}[\s\S]{0,300}Settings unavailable/.test(c),
+		'the tab chain must fall through to the unavailable state'
+	);
+});
+
+test('robustness: modpacks search and favorites failures render persistent errors with retry', () => {
+	const p = path.resolve(import.meta.dirname, '../../routes/modpacks/+page.svelte');
+	const c = fs.readFileSync(p, 'utf-8');
+	assert.ok(c.includes('searchError'), 'modpacks should track searchError');
+	assert.ok(c.includes('favoritesError'), 'modpacks should track favoritesError');
+	assert.ok(c.includes('CarbonErrorState'), 'modpacks should render CarbonErrorState');
+	assert.ok(
+		c.includes('onretry={() => searchModpacks()}'),
+		'search errors should retry the search'
+	);
+	assert.ok(
+		c.includes('onretry={loadFavorites}'),
+		'favorites errors should retry the favorites load'
+	);
+});
+
+test('robustness: studio project loads render persistent errors with retry', () => {
+	for (const rel of [
+		'../../routes/modpacks/studio/+page.svelte',
+		'../../routes/modpacks/studio/[id]/+page.svelte'
+	]) {
+		const c = fs.readFileSync(path.resolve(import.meta.dirname, rel), 'utf-8');
+		assert.ok(c.includes('loadError'), `${rel} should track loadError`);
+		assert.ok(c.includes('CarbonErrorState'), `${rel} should render CarbonErrorState`);
+		assert.ok(c.includes('onretry='), `${rel} should offer retry`);
+	}
+});

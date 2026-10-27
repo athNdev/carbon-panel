@@ -24,25 +24,28 @@ import (
 	"github.com/athNdev/carbon-panel/internal/packwiz"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/upload"
 )
 
 type PackwizHandler struct {
-	manager     *packwiz.Manager
-	store       *storage.Store
-	log         *logger.Logger
-	authManager *auth.Manager
-	enforcer    *rbac.Enforcer
-	config      *config.Config
+	uploadManager *upload.Manager
+	manager       *packwiz.Manager
+	store         *storage.Store
+	log           *logger.Logger
+	authManager   *auth.Manager
+	enforcer      *rbac.Enforcer
+	config        *config.Config
 }
 
-func NewPackwizHandler(manager *packwiz.Manager, store *storage.Store, log *logger.Logger, authManager *auth.Manager, enforcer *rbac.Enforcer, cfg *config.Config) *PackwizHandler {
+func NewPackwizHandler(manager *packwiz.Manager, store *storage.Store, uploadManager *upload.Manager, log *logger.Logger, authManager *auth.Manager, enforcer *rbac.Enforcer, cfg *config.Config) *PackwizHandler {
 	return &PackwizHandler{
-		manager:     manager,
-		store:       store,
-		log:         log,
-		authManager: authManager,
-		enforcer:    enforcer,
-		config:      cfg,
+		manager:       manager,
+		store:         store,
+		uploadManager: uploadManager,
+		log:           log,
+		authManager:   authManager,
+		enforcer:      enforcer,
+		config:        cfg,
 	}
 }
 
@@ -163,6 +166,8 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.handleSaveFile(w, r, packID)
 		case subRoute == "files" && r.Method == http.MethodDelete:
 			h.handleDeleteFile(w, r, packID)
+		case subRoute == "datapacks" && len(parts) >= 4 && parts[3] == "upload" && r.Method == http.MethodPost:
+			h.handleUploadDatapack(w, r, packID)
 		case subRoute == "datapacks" && r.Method == http.MethodPost:
 			h.handleAddDatapack(w, r, packID)
 		case subRoute == "mods" && len(parts) >= 4 && parts[3] == "url" && r.Method == http.MethodPost:

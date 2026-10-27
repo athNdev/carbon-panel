@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -94,5 +95,56 @@ func (h *PackwizHandler) handleAddDatapack(w http.ResponseWriter, r *http.Reques
 	}
 
 	h.log.Info("Installed studio datapack %s into pack %s", name, packID)
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "file_name": name})
+}
+
+// handleUploadDatapack installs a datapack from a completed chunked upload
+// session into the pack's datapacks override directory. The manager validates
+// the archive (and repairs wrapper-folder packaging) before it lands.
+func (h *PackwizHandler) handleUploadDatapack(w http.ResponseWriter, r *http.Request, packID string) {
+	var req struct {
+		UploadSessionID string `json:"upload_session_id"`
+		FileName        string `json:"file_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.UploadSessionID) == "" {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	tempPath, originalFilename, err := h.uploadManager.GetTempPath(req.UploadSessionID)
+	if err != nil {
+		http.Error(w, "upload session not found or not completed", http.StatusNotFound)
+		return
+	}
+
+	name := strings.TrimSpace(req.FileName)
+	if name == "" {
+		name = filepath.Base(originalFilename)
+	}
+	if err := minecraft.ValidateDatapackFilename(name); err != nil {
+		_ = os.Remove(tempPath)
+		_ = h.uploadManager.CleanupSession(req.UploadSessionID)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	f, err := os.Open(tempPath)
+	if err != nil {
+		_ = h.uploadManager.CleanupSession(req.UploadSessionID)
+		http.Error(w, "uploaded file unavailable", http.StatusInternalServerError)
+		return
+	}
+	installErr := h.manager.AddDatapackFile(packID, name, f)
+	_ = f.Close()
+	_ = os.Remove(tempPath)
+	_ = h.uploadManager.CleanupSession(req.UploadSessionID)
+	if installErr != nil {
+		// Most failures come from the uploaded archive itself (invalid name or
+		// not a real datapack), so surface them as bad requests.
+		http.Error(w, fmt.Sprintf("failed to install datapack: %v", installErr), http.StatusBadRequest)
+		return
+	}
+
+	h.log.Info("Uploaded studio datapack %s into pack %s", name, packID)
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "file_name": name})
 }

@@ -42,10 +42,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		FolderGit2,
 		ArrowRightLeft,
 		Copy,
-		Sparkles
+		Sparkles,
+		Upload
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import { CarbonErrorState } from '$lib/components/carbon';
 	import { apiFetch } from '$lib/api/fetch';
+	import { uploadFile } from '$lib/utils/chunked-upload';
 	import ModpackDeployDialog from '$lib/components/modpack-deploy-dialog.svelte';
 	import DatapackBrowserDialog from '$lib/components/datapack-browser-dialog.svelte';
 	import { formatBytes } from '$lib/utils';
@@ -167,6 +170,37 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	let uploadFileContent = $state('');
 	let savingFile = $state(false);
 	let datapackBrowseOpen = $state(false);
+	let datapackFileInput = $state<HTMLInputElement | null>(null);
+	let uploadingDatapack = $state(false);
+
+	async function handleDatapackUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		if (!file.name.toLowerCase().endsWith('.zip')) {
+			toast.error('Datapacks must be .zip archives containing pack.mcmeta');
+			return;
+		}
+		uploadingDatapack = true;
+		try {
+			const { sessionId } = await uploadFile(file);
+			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/datapacks/upload`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ upload_session_id: sessionId, file_name: file.name })
+			});
+			if (!res.ok) {
+				throw new Error((await res.text()) || `HTTP ${res.status}`);
+			}
+			toast.success(`Uploaded datapack ${file.name}`);
+			await loadFiles();
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Upload failed');
+		} finally {
+			uploadingDatapack = false;
+		}
+	}
 
 	async function installStudioDatapack(datapackId: string, gameVersion: string, indexer: string) {
 		const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/datapacks`, {
@@ -295,8 +329,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
+	let loadError = $state('');
+
 	async function loadPack() {
 		if (!packId) return;
+		loadError = '';
 		loading = true;
 		try {
 			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}`);
@@ -309,6 +346,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			loadedMCVersion = data.mc_version || '';
 		} catch (err) {
 			console.error('Failed to load pack:', err);
+			loadError = err instanceof Error ? err.message : 'Failed to load modpack project';
 			toast.error('Failed to load modpack project');
 		} finally {
 			loading = false;
@@ -838,6 +876,13 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 </svelte:head>
 
 <div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
+	{#if loadError}
+		<CarbonErrorState
+			title="Failed to load modpack project"
+			message={loadError}
+			onretry={loadPack}
+		/>
+	{/if}
 	<!-- Top Header Bar -->
 	<div
 		class="flex flex-col justify-between gap-4 rounded-none border-b border-[#393939] pb-5 sm:flex-row sm:items-center"
@@ -1387,6 +1432,23 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
+								<input
+									bind:this={datapackFileInput}
+									type="file"
+									accept=".zip,application/zip"
+									class="hidden"
+									onchange={handleDatapackUpload}
+								/>
+								<CarbonButton
+									size="sm"
+									kind="secondary"
+									class="rounded-none"
+									disabled={uploadingDatapack}
+									onclick={() => datapackFileInput?.click()}
+								>
+									<Upload class="mr-1.5 h-4 w-4" />
+									{#if uploadingDatapack}Uploading...{:else}Upload Datapack{/if}
+								</CarbonButton>
 								<CarbonButton
 									size="sm"
 									kind="secondary"
