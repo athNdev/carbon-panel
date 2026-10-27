@@ -41,6 +41,9 @@ already had a hand-written guard against exactly this
   controller-side storage root itself to pre-exist: creating it could hide a
   missing mount and silently store server data on the controller's local
   disk.
+- `NodePath` provides the node-side view for the compute plane: Docker bind
+  sources under a server data root map to the node-side storage root, so
+  containers on that node bind its own layout.
 
 Content RPCs (get/update/delete/rename) route through the accessor in this
 change. Backup and restore resolve `server.DataPath` through the same mapping
@@ -65,9 +68,11 @@ own staging and containment.
 - Path safety and symlink rules are enforced at one boundary instead of
   scattered per call site; the existing inline checks remain as defense in
   depth.
+- Docker bind sources are translated to the node's layout: the server data
+  bind and module volume binds under the server data root map to the
+  node-side storage root on nodes that declare shared storage. Binds that
+  cannot be represented there are skipped with a warning instead of mounting
+  a controller-local path into a remote container.
 - The remote adapter (per-node `carbon-storage` style channel over the node's
-  Docker daemon) plugs into `ForNode` without further API change; tracked as
-  the remainder of OSS-232, together with the compute-plane half of the
-  mapping: Docker bind translation (`TranslateToHostPath`) must bind the
-  node-side path `Join(storage_root, Base(data_path))` into remote
-  containers.
+  Docker daemon) plugs into `ForNode` without further API change and remains
+  the tracked remainder of OSS-232 for nodes without shared storage.

@@ -19,6 +19,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/alias"
 	"github.com/athNdev/carbon-panel/internal/config"
 	models "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/moby/moby/api/types/container"
@@ -148,15 +149,26 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 				c.log.Warn("Skipping pre-create of mount directory outside safe roots: %q", vol.Source)
 				continue
 			}
-			if _, err := os.Stat(vol.Source); os.IsNotExist(err) {
-				if err := os.MkdirAll(vol.Source, 0755); err != nil {
-					c.log.Warn("Failed to pre-create mount directory %s: %v", vol.Source, err)
+			// Pre-create on the filesystem that backs the bind: the
+			// controller's view of the node's storage (ADR 0005). A node that
+			// declares its own layout gets the mapped path; others keep the
+			// identical-path contract.
+			target := vol.Source
+			if !c.nodeStorage.IsLocal && c.nodeStorage.StorageRoot != "" {
+				target = nodestorage.MapPath(c.nodeStorage, server.DataPath, vol.Source)
+				if target == vol.Source {
+					continue
+				}
+			}
+			if _, err := os.Stat(target); os.IsNotExist(err) {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					c.log.Warn("Failed to pre-create mount directory %s: %v", target, err)
 				}
 			}
 		}
 	}
 
-	mounts := c.moduleVolumesToMounts(vols, mountRoots...)
+	mounts := c.moduleVolumesToMounts(vols, server.DataPath, mountRoots...)
 
 	config := &container.Config{
 		Image:        imageName,
@@ -351,7 +363,7 @@ func (c *Client) parseModuleVolumes(volumeJSON string, aliasCtx *alias.Context) 
 // Module volumes to Docker mount specs. safeRoots is the already-validated
 // confinement set; entries that fail it are skipped defensively so a caller
 // that bypassed parseModuleVolumes can never turn a host path into a mount.
-func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount, safeRoots ...string) []mount.Mount {
+func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount, serverDataPath string, safeRoots ...string) []mount.Mount {
 	var mounts []mount.Mount
 
 	for _, vol := range volumes {
@@ -366,17 +378,21 @@ func (c *Client) moduleVolumesToMounts(volumes []ModuleVolumeMount, safeRoots ..
 			continue
 		}
 
-		// Translate bind mount sources to host paths when running in a container
 		source := vol.Source
 		if mountType == mount.TypeBind {
-			source = TranslateToHostPath(source)
-		}
-
-		if mountType == mount.TypeBind {
+			// Validate in the panel's own filesystem view first; the
+			// translation to the daemon's view follows the containment check,
+			// so a host path can never turn into a mount.
 			if err := ValidateVolumeSource(source, "bind", safeRoots...); err != nil {
 				c.log.Warn("Skipping volume mount outside safe roots: source=%q, target=%q: %v", vol.Source, vol.Target, err)
 				continue
 			}
+			mapped, ok := c.bindSource(serverDataPath, source)
+			if !ok {
+				c.log.Warn("Skipping volume mount that cannot be mapped onto the node's storage layout: source=%q, target=%q", vol.Source, vol.Target)
+				continue
+			}
+			source = mapped
 		}
 
 		mounts = append(mounts, mount.Mount{
