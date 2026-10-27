@@ -81,6 +81,10 @@ and recoverable.
 
 ## Features
 
+A control plane, not a start button. From container orchestration to modpack distribution,
+Carbon Panel ships the whole toolchain &mdash; opinionated where it matters, self-hosted
+everywhere.
+
 <table>
   <tr>
     <td width="50%" valign="top">
@@ -352,15 +356,18 @@ curl -X POST http://localhost:8080/carbonpanel.v1.ServerService/RestartServer \
 
 ## How it compares
 
+Purpose-built for Minecraft servers &mdash; a quick look at how Carbon Panel compares with the
+common alternatives.
+
 | Capability | Carbon Panel | Raw Docker Compose | Typical free panel |
 |---|---|---|---|
-| Per-server container isolation | &#9989; Built-in | &#9989; Manual | &#10070; Sometimes |
+| Per-server container isolation | &#9989; Built-in | &#9989; Manual | &#9680; Sometimes |
 | Hostname-based player routing | &#9989; One port | &#10060; DIY | &#10060; Rare |
-| Modpack studio (CurseForge / Modrinth) | &#9989; Keyless | &#10060; &mdash; | &#10070; Add-ons |
-| Multi-node clustering | &#9989; First-class | &#10070; DIY | &#10070; Paid tiers |
+| Modpack studio (CurseForge / Modrinth) | &#9989; Keyless | &#10060; &mdash; | &#9680; Add-ons |
+| Multi-node clustering | &#9989; First-class | &#9680; DIY | &#9680; Paid tiers |
 | Deep-sleep &amp; wake-on-connect | &#9989; Zero-RAM idle | &#10060; &mdash; | &#10060; &mdash; |
-| Typed API &amp; Prometheus metrics | &#9989; Connect RPC | &#10060; Shell | &#10070; Varies |
-| Open source &amp; self-hosted | &#9989; MPL-2.0 | &#9989; Yours | &#10070; Varies |
+| Typed API &amp; Prometheus metrics | &#9989; Connect RPC | &#10060; Shell | &#9680; Varies |
+| Open source &amp; self-hosted | &#9989; MPL-2.0 | &#9989; Yours | &#9680; Varies |
 
 <sub>Comparison reflects publicly documented, commonly available capabilities and is a general
 guide &mdash; evaluate each option against your own requirements.</sub>
