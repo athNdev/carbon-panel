@@ -9,6 +9,7 @@
 package scheduler
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,7 +20,9 @@ import (
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
+	"github.com/athNdev/carbon-panel/internal/worldstore"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/google/uuid"
 )
@@ -72,9 +75,15 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		return "", fmt.Errorf("server has no data directory")
 	}
 
-	paths, missing, err := resolveBackupPaths(server.DataPath, config.Paths)
-	if err != nil {
-		return "", err
+	// Explicit path requests validate their configured paths up front; the
+	// default backup covers the full state tree through the world-data seam.
+	var paths, missing []string
+	if len(config.Paths) > 0 {
+		var pathErr error
+		paths, missing, pathErr = resolveBackupPaths(server.DataPath, config.Paths)
+		if pathErr != nil {
+			return "", pathErr
+		}
 	}
 
 	// Backups are grouped per server using the unique server data directory name
@@ -117,11 +126,47 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 
 	start := time.Now()
 	excludes := append(append([]string{}, defaultBackupExcludes...), config.Exclude...)
-	count, err := files.CreateZipArchive(paths, server.DataPath, destPath, config.Compress, func(rel string) bool {
-		return files.PathExcluded(rel, excludes)
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to create backup archive: %w", err)
+	var count int
+	if len(config.Paths) == 0 {
+		// Default backups run through the world-data seam (worldstore): a
+		// deterministic manifest archive covering the full server state tree
+		// minus excludes, streamed to disk. See ADR 0004.
+		owner, oerr := docker.LoadOrCreateInstallationID(s.appConfig.Storage.DataDir)
+		if oerr != nil {
+			return "", fmt.Errorf("installation identity: %w", oerr)
+		}
+		ws, werr := worldstore.OpenServerWorlds(owner, server.ID, server.NodeID,
+			filepath.Join(s.appConfig.Storage.DataDir, "worldstore-journal"), server.DataPath)
+		if werr != nil {
+			return "", fmt.Errorf("open world store: %w", werr)
+		}
+		defer func() { _ = ws.Close() }()
+		if rerr := ws.Recover(); rerr != nil {
+			return "", fmt.Errorf("world store recovery: %w", rerr)
+		}
+		if _, cerr := ws.BackupTo(ws.Identity(), destPath, func(rel string) bool {
+			return files.PathExcluded(rel, excludes)
+		}); cerr != nil {
+			return "", fmt.Errorf("failed to create backup archive: %w", cerr)
+		}
+		if zr, zerr := zip.OpenReader(destPath); zerr == nil {
+			for _, f := range zr.File {
+				if strings.TrimSuffix(f.Name, "/") != ".worldstore-manifest.json" {
+					count++
+				}
+			}
+			_ = zr.Close()
+		}
+	} else {
+		// Explicit path requests keep the legacy zip pipeline so existing
+		// custom-path tasks behave exactly as before (ADR 0004).
+		var cerr error
+		count, cerr = files.CreateZipArchive(paths, server.DataPath, destPath, config.Compress, func(rel string) bool {
+			return files.PathExcluded(rel, excludes)
+		})
+		if cerr != nil {
+			return "", fmt.Errorf("failed to create backup archive: %w", cerr)
+		}
 	}
 	if err := secureBackupArtifact(destPath); err != nil {
 		return "", fmt.Errorf("failed to secure backup archive: %w", err)

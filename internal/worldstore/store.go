@@ -361,6 +361,18 @@ func (l *Local) Restore(id Identity, data []byte) error {
 	if err != nil {
 		return err
 	}
+	return l.stageAndSwap(id, func(stage string) error {
+		return extractFiles(l.root, stage, files)
+	})
+}
+
+// stageAndSwap performs the journaled, atomic replacement of the authorized
+// data root: extract into a sibling stage tree, then swap it in through the
+// recoverable journal. Every restore variant shares this one atomic path.
+func (l *Local) stageAndSwap(id Identity, extract func(stage string) error) error {
+	if err := l.check(id); err != nil {
+		return err
+	}
 	operationID, err := newID()
 	if err != nil {
 		return err
@@ -378,7 +390,7 @@ func (l *Local) Restore(id Identity, data []byte) error {
 	if err := l.root.Mkdir(stage, 0700); err != nil {
 		return err
 	}
-	if err := extractFiles(l.root, stage, files); err != nil {
+	if err := extract(stage); err != nil {
 		_ = l.root.RemoveAll(stage)
 		_ = l.removeJournal(j.ID)
 		return err
@@ -446,4 +458,130 @@ func rejectSymlinkComponents(root *os.Root, path string) error {
 		}
 	}
 	return nil
+}
+
+// BackupTo streams a deterministic worldstore archive of the authorized tree
+// to destPath and returns the whole-archive SHA-256. skip may exclude paths
+// (it receives the same relative paths List returns). The write is staged to
+// destPath+".partial" and renamed into place, so a failed backup never leaves
+// a truncated artifact behind. Unlike Backup, it streams from disk and is
+// intended for large worlds.
+func (l *Local) BackupTo(id Identity, destPath string, skip func(rel string) bool) (string, error) {
+	if err := l.check(id); err != nil {
+		return "", err
+	}
+	entries, err := l.List(id)
+	if err != nil {
+		return "", err
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
+
+	partial := destPath + ".partial"
+	_ = os.Remove(partial)
+	out, err := os.OpenFile(partial, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	z := zip.NewWriter(io.MultiWriter(out, hash))
+
+	manifest := struct {
+		Version int     `json:"version"`
+		Files   []Entry `json:"files"`
+	}{Version: 1, Files: make([]Entry, 0, len(entries))}
+	var total int64
+	failed := func(err error) (string, error) {
+		_ = z.Close()
+		_ = out.Close()
+		_ = os.Remove(partial)
+		return "", err
+	}
+	for _, e := range entries {
+		if skip != nil && skip(e.Path) {
+			continue
+		}
+		data, err := l.Read(id, e.Path)
+		if err != nil {
+			return failed(err)
+		}
+		total += int64(len(data))
+		if total > streamMaxWorldBytes {
+			return failed(errors.New("worldstore: world exceeds streaming backup limit"))
+		}
+		sum := sha256.Sum256(data)
+		manifest.Files = append(manifest.Files, Entry{Path: e.Path, Size: int64(len(data)), SHA256: hex.EncodeToString(sum[:])})
+		h := &zip.FileHeader{Name: e.Path, Method: zip.Deflate}
+		h.SetMode(0600)
+		h.Modified = time.Unix(0, 0).UTC()
+		w, err := z.CreateHeader(h)
+		if err != nil {
+			return failed(err)
+		}
+		if _, err := w.Write(data); err != nil {
+			return failed(err)
+		}
+	}
+	mb, err := json.Marshal(manifest)
+	if err != nil {
+		return failed(err)
+	}
+	mh := &zip.FileHeader{Name: manifestName, Method: zip.Deflate}
+	mh.SetMode(0600)
+	mh.Modified = time.Unix(0, 0).UTC()
+	mw, err := z.CreateHeader(mh)
+	if err != nil {
+		return failed(err)
+	}
+	if _, err := mw.Write(mb); err != nil {
+		return failed(err)
+	}
+	if err := z.Close(); err != nil {
+		return failed(err)
+	}
+	if err := out.Close(); err != nil {
+		_ = os.Remove(partial)
+		return "", err
+	}
+	if err := os.Rename(partial, destPath); err != nil {
+		_ = os.Remove(partial)
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// RestoreFrom verifies a worldstore archive on disk and swaps it in through
+// the same journaled, atomic restore as Restore. It streams file contents and
+// verifies them against the manifest while extracting, so it handles large
+// worlds that exceed the in-memory API's limits.
+func (l *Local) RestoreFrom(id Identity, archivePath string) error {
+	sx, err := openZipArchive(archivePath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = sx.Close() }()
+	return l.stageAndSwap(id, func(stage string) error {
+		return sx.extract(l.root, stage)
+	})
+}
+
+// ServerIdentity builds the canonical world-data identity for a server owned
+// by one controller installation. Backup and restore must construct identities
+// the same way, so both call this helper. The node stands in for the daemon
+// locator: in this panel each node names one Docker daemon.
+func ServerIdentity(owner, serverID, nodeID string) Identity {
+	return Identity{Server: serverID, Node: nodeID, Daemon: nodeID, Owner: owner, Generation: 1}
+}
+
+// OpenServerWorlds opens the world-data seam for one server. journalRoot must
+// live outside every server data root; a per-server subdirectory is created
+// under it.
+func OpenServerWorlds(owner, serverID, nodeID, journalRoot, dataPath string) (*Local, error) {
+	if strings.TrimSpace(owner) == "" || strings.TrimSpace(serverID) == "" || strings.TrimSpace(nodeID) == "" {
+		return nil, errors.New("worldstore: owner, server and node are required")
+	}
+	journal := filepath.Join(journalRoot, serverID)
+	if err := os.MkdirAll(journal, 0o700); err != nil {
+		return nil, err
+	}
+	return NewLocal(ServerIdentity(owner, serverID, nodeID), dataPath, journal)
 }
