@@ -1215,7 +1215,7 @@ button {
 }
 .arch-inner {
   display: grid;
-  grid-template-columns: minmax(0, 4.2fr) minmax(0, 7.8fr);
+  grid-template-columns: minmax(0, 3.6fr) minmax(0, 8.4fr);
   gap: 56px;
   align-items: center;
 }
@@ -1280,9 +1280,9 @@ button {
   display: block;
 }
 .a-chip { fill: var(--term-bg); stroke: var(--border-strong); stroke-width: 1; }
-.a-panel-box { fill: rgba(15, 98, 254, 0.06); stroke: var(--accent); stroke-width: 1.5; }
+.a-panel-box { fill: rgba(15, 98, 254, 0.06); stroke: var(--accent); stroke-width: 1.5; filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45)); }
 .a-sub-box { fill: var(--layer-01); stroke: var(--border); stroke-width: 1; transition: stroke var(--dur-med) var(--ease); }
-.a-card { fill: var(--layer-01); stroke: var(--border-strong); stroke-width: 1; }
+.a-card { fill: var(--layer-01); stroke: var(--border-strong); stroke-width: 1; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35)); }
 .a-mini { fill: var(--term-bg); stroke: var(--border); stroke-width: 1; }
 .a-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--text-primary); }
 .a-mono { font-family: var(--mono); font-size: 11px; font-weight: 500; fill: var(--text-secondary); }
@@ -1290,7 +1290,8 @@ button {
 .a-sub { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2px; fill: var(--text-tertiary); }
 .a-cap { font-family: var(--mono); font-size: 9px; letter-spacing: 1px; fill: var(--accent-text); }
 .a-dot { fill: var(--accent-text); opacity: 0.7; }
-.a-line { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.a-dot-mute { fill: var(--text-tertiary); opacity: 0.6; }
+.a-line { fill: none; stroke: url(#route-grad); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .a-glow { fill: rgba(15, 98, 254, 0.12); filter: blur(30px); opacity: 0.4; }
 .a-packet { fill: var(--accent-text); filter: drop-shadow(0 0 5px rgba(120, 169, 255, 0.8)); }
 .a-line-dash { stroke-dasharray: 5 5; stroke: var(--accent-text); opacity: 0.5; }
@@ -1319,7 +1320,7 @@ button {
   .js .arch-beats {
     position: relative;
     display: block;
-    height: 148px;
+    height: 160px;
   }
   .js .arch-beat {
     position: absolute;
@@ -1368,11 +1369,13 @@ button {
   .js .arch-stage[data-beat="1"] .a-proxy-box,
   .js .arch-stage[data-beat="2"] .a-proxy-box {
     stroke: var(--accent);
+    fill: rgba(15, 98, 254, 0.1);
   }
   .js .arch-stage[data-beat="3"] .a-control-box,
   .js .arch-stage[data-beat="4"] .a-control-box {
     stroke: var(--accent);
-    filter: drop-shadow(0 0 6px rgba(15, 98, 254, 0.35));
+    fill: rgba(15, 98, 254, 0.1);
+    filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 6px rgba(15, 98, 254, 0.35));
   }
 
   /* scrubbed line draws */
@@ -1395,7 +1398,7 @@ button {
   /* continuous scrub: the diagram scales up and the glow intensifies */
   .js .arch-svg {
     transform-origin: center;
-    transform: scale(calc(0.97 + 0.05 * clamp(0, var(--p, 0), 1)));
+    transform: scale(calc(0.98 + 0.06 * clamp(0, var(--p, 0), 1)));
     will-change: transform;
   }
   .js .arch-svg .a-glow {
