@@ -221,12 +221,11 @@ func TestTaskService_CreateTask_RequireOnlineDefaults(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, cmd.Msg.Task.RequireOnline, "RCON commands need a live server")
 
-	explicit := false
 	cmd2, err := svc.CreateTask(ctx, connect.NewRequest(&v1.CreateTaskRequest{
 		ServerId: server.ID, Name: "cmd2", Schedule: v1.ScheduleType_SCHEDULE_TYPE_INTERVAL,
 		IntervalSecs: 3600, TaskType: v1.TaskType_TASK_TYPE_COMMAND, Config: `{"command":"list"}`,
-		RequireOnline: &explicit,
+		RequireOnline: false,
 	}))
 	require.NoError(t, err)
-	assert.False(t, cmd2.Msg.Task.RequireOnline, "explicit values are honored")
+	assert.True(t, cmd2.Msg.Task.RequireOnline, "RCON while offline is nonsensical and cannot be configured")
 }
