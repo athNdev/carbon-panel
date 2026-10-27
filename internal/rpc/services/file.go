@@ -184,18 +184,24 @@ func (s *FileService) ListFiles(ctx context.Context, req *connect.Request[v1.Lis
 		path = "."
 	}
 
+	// Server data lives on the owning node; list through the mapped root.
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Clean and validate path
-	fullPath := filepath.Join(server.DataPath, path)
-	if !files.WithinReal(server.DataPath, fullPath) {
+	fullPath := filepath.Join(root, path)
+	if !files.WithinReal(root, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
 	// List directory
 	var files []*v1.FileInfo
 	if msg.Tree {
-		files, err = s.listDirectoryTree(fullPath, server.DataPath, 0, 10) // max depth 10
+		files, err = s.listDirectoryTree(fullPath, root, 0, 10) // max depth 10
 	} else {
-		files, err = s.listDirectory(fullPath, server.DataPath)
+		files, err = s.listDirectory(fullPath, root)
 	}
 
 	if err != nil {
@@ -322,9 +328,15 @@ func (s *FileService) SaveUploadedFile(ctx context.Context, req *connect.Request
 		targetPath = "."
 	}
 
+	// Server data lives on the owning node; write through the mapped root.
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Clean and validate path
-	fullPath := filepath.Join(server.DataPath, targetPath)
-	if !files.WithinReal(server.DataPath, fullPath) {
+	fullPath := filepath.Join(root, targetPath)
+	if !files.WithinReal(root, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -535,9 +547,15 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
+	// Server data lives on the owning node; extract through the mapped root.
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Clean and validate archive path
-	fullArchivePath := filepath.Join(server.DataPath, msg.Path)
-	if !files.WithinReal(server.DataPath, fullArchivePath) {
+	fullArchivePath := filepath.Join(root, msg.Path)
+	if !files.WithinReal(root, fullArchivePath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid archive path"))
 	}
 
@@ -567,7 +585,7 @@ func (s *FileService) ExtractArchive(ctx context.Context, req *connect.Request[v
 	}
 
 	destPath := filepath.Join(archiveDir, folderName)
-	if !files.WithinReal(server.DataPath, destPath) {
+	if !files.WithinReal(root, destPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 
@@ -661,9 +679,15 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("SSRF guard blocked URL: %w", err))
 	}
 
+	// Server data lives on the owning node; download into the mapped root.
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Resolve destination path inside server root
-	destPath := filepath.Join(server.DataPath, msg.DestinationPath)
-	if !files.WithinReal(server.DataPath, destPath) {
+	destPath := filepath.Join(root, msg.DestinationPath)
+	if !files.WithinReal(root, destPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 	if err := os.MkdirAll(destPath, 0755); err != nil {
@@ -785,7 +809,7 @@ func (s *FileService) DownloadRemoteArchive(ctx context.Context, req *connect.Re
 			// Infer filename from URL
 			fileName := remoteArchiveFilename(rawURL)
 			targetPath := filepath.Join(destPath, fileName)
-			if !files.WithinReal(server.DataPath, targetPath) {
+			if !files.WithinReal(root, targetPath) {
 				op.fail("downloaded filename resolves outside the server data directory")
 				return
 			}
@@ -870,8 +894,13 @@ func (s *FileService) CreateFolder(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.WithinReal(server.DataPath, fullPath) {
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
+	fullPath := filepath.Join(root, msg.Path)
+	if !files.WithinReal(root, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -894,10 +923,15 @@ func (s *FileService) MoveFile(ctx context.Context, req *connect.Request[v1.Move
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	srcFull := filepath.Join(server.DataPath, msg.SourcePath)
-	dstFull := filepath.Join(server.DataPath, msg.DestinationPath)
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
 
-	if !files.WithinReal(server.DataPath, srcFull) || !files.WithinReal(server.DataPath, dstFull) {
+	srcFull := filepath.Join(root, msg.SourcePath)
+	dstFull := filepath.Join(root, msg.DestinationPath)
+
+	if !files.WithinReal(root, srcFull) || !files.WithinReal(root, dstFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -947,10 +981,15 @@ func (s *FileService) CopyFile(ctx context.Context, req *connect.Request[v1.Copy
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	srcFull := filepath.Join(server.DataPath, msg.SourcePath)
-	dstFull := filepath.Join(server.DataPath, msg.DestinationPath)
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
 
-	if !files.WithinReal(server.DataPath, srcFull) || !files.WithinReal(server.DataPath, dstFull) {
+	srcFull := filepath.Join(root, msg.SourcePath)
+	dstFull := filepath.Join(root, msg.DestinationPath)
+
+	if !files.WithinReal(root, srcFull) || !files.WithinReal(root, dstFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -1001,10 +1040,16 @@ func (s *FileService) CreateArchive(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no paths specified"))
 	}
 
+	// Server data lives on the owning node; archive through the mapped root.
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Validate all paths
 	for _, p := range msg.Paths {
-		fullPath := filepath.Join(server.DataPath, p)
-		if !files.WithinReal(server.DataPath, fullPath) {
+		fullPath := filepath.Join(root, p)
+		if !files.WithinReal(root, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 	}
@@ -1022,18 +1067,18 @@ func (s *FileService) CreateArchive(ctx context.Context, req *connect.Request[v1
 	if destDir == "" {
 		destDir = "."
 	}
-	destFull := filepath.Join(server.DataPath, destDir, archiveName)
-	if !files.WithinReal(server.DataPath, destFull) {
+	destFull := filepath.Join(root, destDir, archiveName)
+	if !files.WithinReal(root, destFull) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid destination path"))
 	}
 
-	count, err := files.CreateZipArchive(msg.Paths, server.DataPath, destFull, true)
+	count, err := files.CreateZipArchive(msg.Paths, root, destFull, true)
 	if err != nil {
 		s.log.Error("Failed to create archive: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to create archive"))
 	}
 
-	archivePath, _ := filepath.Rel(server.DataPath, destFull)
+	archivePath, _ := filepath.Rel(root, destFull)
 	return connect.NewResponse(&v1.CreateArchiveResponse{
 		Message:       "Archive created successfully",
 		ArchivePath:   archivePath,
@@ -1055,9 +1100,15 @@ func (s *FileService) DownloadArchive(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no paths specified"))
 	}
 
+	// Server data lives on the owning node; read through the mapped root.
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	for _, p := range msg.Paths {
-		fullPath := filepath.Join(server.DataPath, p)
-		if !files.WithinReal(server.DataPath, fullPath) {
+		fullPath := filepath.Join(root, p)
+		if !files.WithinReal(root, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
 	}
@@ -1071,7 +1122,7 @@ func (s *FileService) DownloadArchive(ctx context.Context, req *connect.Request[
 
 	// Create zip on disk in temp directory
 	tempPath := filepath.Join(s.downloadManager.TempDir(), fmt.Sprintf("download-%s.zip", time.Now().Format("20060102-150405.000")))
-	_, err = files.CreateZipArchive(msg.Paths, server.DataPath, tempPath, true)
+	_, err = files.CreateZipArchive(msg.Paths, root, tempPath, true)
 	if err != nil {
 		s.log.Error("Failed to create download archive: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to create archive"))
@@ -1111,8 +1162,13 @@ func (s *FileService) InitFileDownload(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.WithinReal(server.DataPath, fullPath) {
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
+	fullPath := filepath.Join(root, msg.Path)
+	if !files.WithinReal(root, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 

@@ -224,7 +224,11 @@ func (s *DatapackService) InstallDatapack(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("could not find a datapack file: %w", err))
 	}
 
-	datapacksDir := minecraft.GetDatapacksPath(server.DataPath, "")
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	datapacksDir := minecraft.GetDatapacksPath(root, "")
 	if err := os.MkdirAll(datapacksDir, 0755); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create datapacks directory: %w", err))
 	}
@@ -314,7 +318,11 @@ func (s *DatapackService) UploadDatapack(ctx context.Context, req *connect.Reque
 		s.log.Info("Normalized wrapped datapack archive %s for server %s", filename, server.ID)
 	}
 
-	datapacksDir := minecraft.GetDatapacksPath(server.DataPath, "")
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return fail(storageError(err))
+	}
+	datapacksDir := minecraft.GetDatapacksPath(root, "")
 	if err := os.MkdirAll(datapacksDir, 0755); err != nil {
 		return fail(connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create datapacks directory: %w", err)))
 	}
@@ -351,7 +359,11 @@ func (s *DatapackService) ListDatapacks(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	dir := minecraft.GetDatapacksPath(server.DataPath, "")
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	dir := minecraft.GetDatapacksPath(root, "")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -391,7 +403,11 @@ func (s *DatapackService) DeleteDatapack(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	dir := minecraft.GetDatapacksPath(server.DataPath, "")
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	dir := minecraft.GetDatapacksPath(root, "")
 	target := filepath.Join(dir, msg.FileName)
 	// Re-resolve inside the datapacks dir so a crafted name cannot escape it.
 	if filepath.Dir(target) != filepath.Clean(dir) {
