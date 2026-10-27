@@ -2089,18 +2089,32 @@ table.compare .icon { width: 18px; height: 18px; }
   background: radial-gradient(ellipse 45% 35% at 85% 15%, rgba(120, 169, 255, 0.1) 0%, transparent 72%);
 }
 
-/* headline bloom — barely there */
+/* headline glow — tight halo under a wide bloom */
+.hero h1,
 .section-head h2,
 .arch-copy h2,
 .deepdive-copy h2,
 .final-cta h2 {
-  text-shadow: 0 0 60px rgba(15, 98, 254, 0.3), 0 0 24px rgba(15, 98, 254, 0.12);
+  text-shadow:
+    0 0 10px rgba(120, 169, 255, 0.4),
+    0 0 28px rgba(15, 98, 254, 0.45),
+    0 0 72px rgba(15, 98, 254, 0.35);
 }
 .hero h1 .grad {
-  filter: drop-shadow(0 0 40px rgba(120, 169, 255, 0.4));
+  filter:
+    drop-shadow(0 0 12px rgba(120, 169, 255, 0.55))
+    drop-shadow(0 0 36px rgba(15, 98, 254, 0.5))
+    drop-shadow(0 0 80px rgba(15, 98, 254, 0.35));
+}
+.stat .num {
+  text-shadow:
+    0 0 10px rgba(120, 169, 255, 0.35),
+    0 0 30px rgba(15, 98, 254, 0.4);
 }
 .stat .num .unit {
-  text-shadow: 0 0 28px rgba(120, 169, 255, 0.6);
+  text-shadow:
+    0 0 12px rgba(120, 169, 255, 0.6),
+    0 0 36px rgba(15, 98, 254, 0.5);
 }
 
 /* frosted surfaces with an edge light and a gloss sheen */
