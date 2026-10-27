@@ -47,6 +47,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	import { toast } from 'svelte-sonner';
 	import { apiFetch } from '$lib/api/fetch';
 	import ModpackDeployDialog from '$lib/components/modpack-deploy-dialog.svelte';
+	import DatapackBrowserDialog from '$lib/components/datapack-browser-dialog.svelte';
 	import { formatBytes } from '$lib/utils';
 
 	interface ModItem {
@@ -165,6 +166,20 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	let uploadFilePath = $state('config/settings.json');
 	let uploadFileContent = $state('');
 	let savingFile = $state(false);
+	let datapackBrowseOpen = $state(false);
+
+	async function installStudioDatapack(datapackId: string, gameVersion: string, indexer: string) {
+		const res = await apiFetch(`/api/v1/packwiz/packs/${packId}/datapacks`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ datapack_id: datapackId, game_version: gameVersion, indexer })
+		});
+		if (!res.ok) {
+			const text = await res.text();
+			throw new Error(text || `HTTP ${res.status}`);
+		}
+		await loadFiles();
+	}
 
 	// Migration State
 	let migrateMC = $state('1.21.1');
@@ -1371,14 +1386,25 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 									scripts.
 								</p>
 							</div>
-							<CarbonButton
-								size="sm"
-								class="rounded-none"
-								onclick={() => (uploadFileDialogOpen = true)}
-							>
-								<Plus class="mr-1.5 h-4 w-4" />
-								Add Override File
-							</CarbonButton>
+							<div class="flex items-center gap-2">
+								<CarbonButton
+									size="sm"
+									kind="secondary"
+									class="rounded-none"
+									onclick={() => (datapackBrowseOpen = true)}
+								>
+									<Package class="mr-1.5 h-4 w-4" />
+									Browse Datapacks
+								</CarbonButton>
+								<CarbonButton
+									size="sm"
+									class="rounded-none"
+									onclick={() => (uploadFileDialogOpen = true)}
+								>
+									<Plus class="mr-1.5 h-4 w-4" />
+									Add Override File
+								</CarbonButton>
+							</div>
 						</div>
 
 						{#if loadingFiles}
@@ -1393,6 +1419,15 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 									Add custom server configs, datapacks, or options to bundle them directly into the
 									modpack.
 								</p>
+								<CarbonButton
+									size="sm"
+									kind="secondary"
+									class="rounded-none"
+									onclick={() => (datapackBrowseOpen = true)}
+								>
+									<Package class="mr-1.5 h-4 w-4" />
+									Browse Datapacks
+								</CarbonButton>
 								<CarbonButton
 									size="sm"
 									kind="secondary"
@@ -1842,6 +1877,14 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		{/if}
 	</div>
 </CarbonModal>
+
+<DatapackBrowserDialog
+	bind:open={datapackBrowseOpen}
+	gameVersion={pack?.mc_version ?? ''}
+	description="Search and install datapacks to bundle under the pack's datapacks/ override. Datapacks run on Vanilla servers with no mod loader."
+	install={installStudioDatapack}
+	onInstalled={loadFiles}
+/>
 
 <!-- Upload / Add Override File Modal -->
 <CarbonModal

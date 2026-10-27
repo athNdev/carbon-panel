@@ -269,6 +269,18 @@ func (s *ModService) ImportUploadedMod(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid file type for this mod loader"))
 	}
 
+	// Reject client-only mods before installing: they crash a dedicated server
+	// at class load. Only a confirmed client descriptor is rejected; unknown
+	// metadata (Forge/NeoForge) is left to the runtime.
+	if side, sideErr := minecraft.InspectModSide(tempPath); sideErr == nil && side == minecraft.SideClient {
+		_ = os.Remove(tempPath)
+		_ = s.uploadManager.CleanupSession(msg.UploadSessionId)
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("this mod is client-only and cannot run on a dedicated server"),
+		)
+	}
+
 	// Get the correct mods directory based on mod loader
 	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
 	if modsDir == "" {

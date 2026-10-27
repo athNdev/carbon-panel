@@ -31,8 +31,23 @@ type Store struct {
 	cfg *config.Config
 }
 
+// sqliteDSN appends per-connection pragma presets to a SQLite DSN. PRAGMAs
+// executed on a pooled connection apply to that connection only, and
+// database/sql opens replacement connections behind our back, so anything
+// that matters under concurrency must live in the DSN: without this, a
+// contending writer can hit SQLITE_BUSY on a connection that never received
+// the busy timeout (seen as "record create intent: database is locked"
+// during server creation).
+func sqliteDSN(path string) string {
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+	return path + sep + "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)"
+}
+
 func NewSQLiteStore(cfg *config.Config) (*Store, error) {
-	db, err := gorm.Open(sqlite.Open(cfg.Database.Path), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(sqliteDSN(cfg.Database.Path)), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()

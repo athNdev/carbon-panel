@@ -91,9 +91,9 @@ func (s *ConfigService) GetServerConfig(ctx context.Context, req *connect.Reques
 
 // Updates server config
 func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Request[v1.UpdateServerConfigRequest]) (*connect.Response[v1.UpdateServerConfigResponse], error) {
-	transition, err := docker.TryBeginServerTransition(req.Msg.ServerId)
+	transition, err := beginServerLifecycleTransition(req.Msg.ServerId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeAborted, err)
+		return nil, err
 	}
 	defer transition.Release()
 

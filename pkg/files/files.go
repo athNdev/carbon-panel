@@ -130,7 +130,23 @@ func SanitizePathName(name string) string {
 }
 
 // Extract archive to destPath
+// DefaultMaxExtractedBytes caps the total uncompressed bytes an archive may
+// expand to during extraction. A small compressed upload can otherwise expand
+// to fill the disk (a decompression bomb).
+const DefaultMaxExtractedBytes int64 = 20 << 30 // 20 GiB
+
+// ExtractArchive extracts archivePath into destPath, bounded by
+// DefaultMaxExtractedBytes.
 func ExtractArchive(ctx context.Context, archivePath string, destPath string, counter *atomic.Int32) (int, error) {
+	return ExtractArchiveLimit(ctx, archivePath, destPath, counter, DefaultMaxExtractedBytes)
+}
+
+// ExtractArchiveLimit is ExtractArchive with an explicit aggregate uncompressed
+// budget. It fails rather than writing past maxBytes.
+func ExtractArchiveLimit(ctx context.Context, archivePath string, destPath string, counter *atomic.Int32, maxBytes int64) (int, error) {
+	if maxBytes <= 0 {
+		maxBytes = DefaultMaxExtractedBytes
+	}
 	archiveFile, err := os.Open(archivePath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to open archive file: %w", err)
@@ -156,6 +172,7 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 
 	// Extract and walk while recursively extracting
 	filesExtracted := 0
+	var totalBytes int64
 	err = extractor.Extract(ctx, stream, func(ctx context.Context, f archives.FileInfo) error {
 		// Reject entries that are not regular files or directories. A symlink
 		// (or device/fifo) entry would let the archive point outside the
@@ -183,7 +200,7 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 		// the output handle and the archive-reader handle are closed when this
 		// entry is done — not held open until the whole extraction finishes
 		// (defer in a loop body only runs at function exit).
-		if err := extractArchiveEntry(destPath, f); err != nil {
+		if err := extractArchiveEntry(destPath, f, &totalBytes, maxBytes); err != nil {
 			return err
 		}
 
@@ -207,7 +224,7 @@ func ExtractArchive(ctx context.Context, archivePath string, destPath string, co
 // file and the archive reader — when this entry finishes instead of holding
 // one pair of handles per entry for the whole extraction, which exhausts
 // file descriptors on large or crafted archives.
-func extractArchiveEntry(destPath string, f archives.FileInfo) error {
+func extractArchiveEntry(destPath string, f archives.FileInfo, total *int64, maxBytes int64) error {
 	targetPath := filepath.Join(destPath, f.NameInArchive)
 	if !WithinReal(destPath, targetPath) {
 		return fmt.Errorf("illegal file path in archive: %s", f.NameInArchive)
@@ -240,9 +257,25 @@ func extractArchiveEntry(destPath string, f archives.FileInfo) error {
 	}
 	defer func() { _ = rc.Close() }()
 
-	// Copy contents
-	if _, err := io.Copy(outFile, rc); err != nil {
+	// Copy contents within the remaining aggregate budget. Reading one byte past
+	// the limit lets us detect an overshoot and fail instead of writing a
+	// decompression bomb to disk.
+	remaining := maxBytes - *total
+	if remaining <= 0 {
+		return fmt.Errorf("archive exceeds maximum extracted size of %d bytes", maxBytes)
+	}
+	// Write at most `remaining` bytes so a decompression bomb can never push the
+	// on-disk size past the budget, then peek one byte to detect an overshoot.
+	n, err := io.Copy(outFile, io.LimitReader(rc, remaining))
+	if err != nil {
 		return fmt.Errorf("failed to extract file %s: %w", targetPath, err)
+	}
+	*total += n
+	if n == remaining {
+		var peek [1]byte
+		if m, _ := io.ReadFull(rc, peek[:]); m > 0 {
+			return fmt.Errorf("archive exceeds maximum extracted size of %d bytes", maxBytes)
+		}
 	}
 
 	// Set file perms

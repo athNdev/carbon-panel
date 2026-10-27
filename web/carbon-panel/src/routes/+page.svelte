@@ -185,6 +185,17 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
+	// Status pip colours derive from getStatusTagType so a transient state
+	// (starting, sleeping, paused) is never shown as an error red. Only
+	// ERROR/UNHEALTHY are red; deep sleep and other transients are purple.
+	const statusPipColor: Record<string, string> = {
+		green: 'bg-[#24a148]',
+		red: 'bg-[#da1e28]',
+		purple: 'bg-[#a56eff]',
+		blue: 'bg-[#0f62fe]',
+		gray: 'bg-[#8d8d8d]'
+	};
+
 	const formatUptime = (lastStarted?: Timestamp) => {
 		if (!lastStarted) return 'Never';
 		const start = new Date(Number(lastStarted.seconds) * 1000);
@@ -769,11 +780,9 @@ one at https://mozilla.org/MPL/2.0/.
 										role="img"
 										aria-label={getStringForEnum(ServerStatus, activity.status)}
 										title={getStringForEnum(ServerStatus, activity.status)}
-										class="h-2 w-2 shrink-0 {activity.status === ServerStatus.RUNNING
-											? 'bg-[#24a148]'
-											: activity.status === ServerStatus.STOPPED
-												? 'bg-[#8d8d8d]'
-												: 'bg-[#da1e28]'} {activity.status === ServerStatus.ERROR ||
+										class="h-2 w-2 shrink-0 {statusPipColor[
+											getStatusTagType(activity.status)
+										]} {activity.status === ServerStatus.ERROR ||
 										activity.status === ServerStatus.UNHEALTHY
 											? 'motion-pulse'
 											: ''}"

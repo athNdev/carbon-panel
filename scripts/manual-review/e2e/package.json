@@ -1,0 +1,14 @@
+{
+  "name": "carbon-panel-review-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser-driven manual review harness for Carbon Panel. Controls the app like a user, captures screenshots at every viewport, and emits a structured findings report.",
+  "scripts": {
+    "review": "node run.mjs",
+    "install-browser": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "1.49.1"
+  }
+}

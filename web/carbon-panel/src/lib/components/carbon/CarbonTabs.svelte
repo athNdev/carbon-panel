@@ -99,7 +99,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			data-tab
 			data-testid="tab-{tab.id}"
 			onclick={() => handleTabClick(tab.id)}
-			class="relative z-10 flex h-10 cursor-pointer items-center gap-2 border-b-2 border-transparent px-4 text-sm font-normal transition-colors select-none {selectedTab ===
+			class="relative z-10 flex h-10 cursor-pointer items-center gap-2 border-b-2 border-transparent px-3 text-sm font-normal transition-colors select-none {selectedTab ===
 			tab.id
 				? 'bg-[#262626] font-semibold text-[#f4f4f4]'
 				: 'text-[#a8a8a8] hover:bg-[#262626] hover:text-[#f4f4f4]'}"
@@ -113,9 +113,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		</button>
 	{/each}
 	{#if indicatorWidth > 0}
+		<!-- GPU-only motion: translateX + scaleX on a 1px base avoids transitioning
+		     the layout `width` property, which is what made tab switches janky. -->
 		<div
-			class="pointer-events-none absolute bottom-[-1px] h-0.5 bg-[#0f62fe] transition-[transform,width] duration-[var(--motion-fast)] ease-[var(--ease-in-out-standard)]"
-			style="width: {indicatorWidth}px; transform: translateX({indicatorLeft}px)"
+			class="pointer-events-none absolute bottom-[-1px] left-0 h-0.5 w-px origin-left bg-[#0f62fe] transition-transform duration-[var(--motion-fast)] ease-[var(--ease-in-out-standard)]"
+			style="transform: translateX({indicatorLeft}px) scaleX({indicatorWidth})"
 		></div>
 	{/if}
 </div>

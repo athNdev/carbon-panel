@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package utils
 
 import (
@@ -78,26 +77,38 @@ func EnsureMemoryHeadroom(maxHeapMB int, configuredContainerMB int) (int, int64)
 	return configuredContainerMB, int64(configuredContainerMB) * 1024 * 1024
 }
 
-// ParseMemoryMB parses memory string values (e.g. "4096M", "4G", "4096") into megabytes
+// ParseMemoryMB parses memory string values (e.g. "4096M", "4G", "4096") into megabytes.
+// Values must be positive; zero and negatives are rejected so a typo can never
+// become a nonsensical heap or container limit.
 func ParseMemoryMB(memStr string) (int, error) {
 	memStr = strings.TrimSpace(memStr)
 	if memStr == "" {
 		return 0, fmt.Errorf("empty memory string")
 	}
 	unit := strings.ToUpper(memStr[len(memStr)-1:])
-	if unit == "G" {
+	var mb int
+	switch unit {
+	case "G":
 		val, err := strconv.Atoi(strings.TrimSpace(memStr[:len(memStr)-1]))
 		if err != nil {
 			return 0, err
 		}
-		return val * 1024, nil
-	}
-	if unit == "M" {
+		mb = val * 1024
+	case "M":
 		val, err := strconv.Atoi(strings.TrimSpace(memStr[:len(memStr)-1]))
 		if err != nil {
 			return 0, err
 		}
-		return val, nil
+		mb = val
+	default:
+		val, err := strconv.Atoi(memStr)
+		if err != nil {
+			return 0, err
+		}
+		mb = val
 	}
-	return strconv.Atoi(memStr)
+	if mb <= 0 {
+		return 0, fmt.Errorf("memory must be positive, got %d MB", mb)
+	}
+	return mb, nil
 }

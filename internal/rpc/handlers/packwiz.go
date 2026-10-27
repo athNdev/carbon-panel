@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
+	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
 	"github.com/athNdev/carbon-panel/internal/packwiz"
@@ -31,15 +32,17 @@ type PackwizHandler struct {
 	log         *logger.Logger
 	authManager *auth.Manager
 	enforcer    *rbac.Enforcer
+	config      *config.Config
 }
 
-func NewPackwizHandler(manager *packwiz.Manager, store *storage.Store, log *logger.Logger, authManager *auth.Manager, enforcer *rbac.Enforcer) *PackwizHandler {
+func NewPackwizHandler(manager *packwiz.Manager, store *storage.Store, log *logger.Logger, authManager *auth.Manager, enforcer *rbac.Enforcer, cfg *config.Config) *PackwizHandler {
 	return &PackwizHandler{
 		manager:     manager,
 		store:       store,
 		log:         log,
 		authManager: authManager,
 		enforcer:    enforcer,
+		config:      cfg,
 	}
 }
 
@@ -160,6 +163,8 @@ func (h *PackwizHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.handleSaveFile(w, r, packID)
 		case subRoute == "files" && r.Method == http.MethodDelete:
 			h.handleDeleteFile(w, r, packID)
+		case subRoute == "datapacks" && r.Method == http.MethodPost:
+			h.handleAddDatapack(w, r, packID)
 		case subRoute == "mods" && len(parts) >= 4 && parts[3] == "url" && r.Method == http.MethodPost:
 			h.handleAddModURL(w, r, packID)
 		case subRoute == "mods" && len(parts) >= 4 && parts[3] == "batch" && r.Method == http.MethodPost:

@@ -15,6 +15,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { resolve } from '$app/paths';
 	import { rpcClient } from '$lib/api/rpc-client';
 	import { toast } from 'svelte-sonner';
+	import DatapackSearch from '$lib/components/datapack-search.svelte';
 	import {
 		ArrowLeft,
 		Loader2,
@@ -24,7 +25,9 @@ one at https://mozilla.org/MPL/2.0/.
 		Activity,
 		ChevronRight,
 		ChevronLeft,
-		Check
+		Check,
+		Plus,
+		X
 	} from '@lucide/svelte';
 	import { create } from '@bufbuild/protobuf';
 	import type { CreateServerRequest } from '$lib/proto/carbonpanel/v1/server_pb';
@@ -66,8 +69,24 @@ one at https://mozilla.org/MPL/2.0/.
 		{ id: 0, title: 'Basic Information', subtitle: 'Name & preset' },
 		{ id: 1, title: 'Game Engine', subtitle: 'Version & loader' },
 		{ id: 2, title: 'Resources & Network', subtitle: 'Port & RAM' },
-		{ id: 3, title: 'Cluster & Runtime', subtitle: 'Placement & flags' }
+		{ id: 3, title: 'Cluster & Runtime', subtitle: 'Placement & flags' },
+		{ id: 4, title: 'Datapacks', subtitle: 'Optional world packs' }
 	];
+
+	// Datapack selection — installed into the world after the server is created
+	let selectedDatapacks = $state<Array<{ id: string; name: string; indexer: string }>>([]);
+
+	function toggleDatapack(id: string, name: string, indexer: string) {
+		if (selectedDatapacks.some((p) => p.id === id)) {
+			selectedDatapacks = selectedDatapacks.filter((p) => p.id !== id);
+		} else {
+			selectedDatapacks = [...selectedDatapacks, { id, name, indexer }];
+		}
+	}
+
+	function removeDatapack(id: string) {
+		selectedDatapacks = selectedDatapacks.filter((p) => p.id !== id);
+	}
 
 	// Cluster node placement state
 	let nodes = $state<Node[]>([]);
@@ -376,8 +395,28 @@ one at https://mozilla.org/MPL/2.0/.
 			};
 
 			const response = await rpcClient.server.createServer(createRequest);
+			const serverId = response.server?.id ?? '';
+
+			// Install the datapacks selected in the wizard (best-effort: the server
+			// is usable even if a download fails).
+			for (const dp of selectedDatapacks) {
+				try {
+					await rpcClient.datapack.installDatapack({
+						serverId,
+						datapackId: dp.id,
+						gameVersion: formData.mcVersion,
+						indexer: dp.indexer
+					});
+					toast.success(`Installed datapack ${dp.name}`);
+				} catch (error) {
+					toast.error(
+						`Datapack ${dp.name} failed to install: ${error instanceof Error ? error.message : 'Unknown error'}`
+					);
+				}
+			}
+
 			toast.success(`Server "${response.server?.name}" created successfully!`);
-			goto(resolve(`/servers/${response.server?.id}`));
+			goto(resolve(`/servers/${serverId}`));
 		} catch (error) {
 			toast.error(
 				`Failed to create server: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -1233,6 +1272,63 @@ one at https://mozilla.org/MPL/2.0/.
 							onchange={(overrides) => (formData.dockerOverrides = overrides)}
 						/>
 					</div>
+				</div>
+			{:else if currentStep === 4}
+				<div class="space-y-5">
+					<div>
+						<h2 class="text-lg font-light text-[#f4f4f4]">Step 5: Datapacks (Optional)</h2>
+						<p class="mt-1 text-xs text-[#a8a8a8]">
+							Search and select datapacks to install into the world after the server is created.
+							Datapacks run on Vanilla servers with no mod loader — skip this step and add them
+							later from the server's Datapacks tab if you prefer.
+						</p>
+					</div>
+
+					{#if selectedDatapacks.length > 0}
+						<div class="border border-[#393939] bg-[#262626]">
+							<div
+								class="border-b border-[#393939] px-4 py-2.5 text-xs font-semibold text-[#f4f4f4] uppercase"
+							>
+								Selected for install ({selectedDatapacks.length})
+							</div>
+							<ul class="divide-y divide-[#393939]">
+								{#each selectedDatapacks as dp (dp.id)}
+									<li class="flex items-center justify-between px-4 py-2.5 text-sm text-[#f4f4f4]">
+										<span class="flex items-center gap-2">
+											<Package class="h-4 w-4 text-[#8d8d8d]" />
+											{dp.name}
+										</span>
+										<button
+											type="button"
+											onclick={() => removeDatapack(dp.id)}
+											aria-label={`Remove datapack ${dp.name}`}
+											class="flex h-8 w-8 cursor-pointer items-center justify-center text-[#8d8d8d] transition-colors hover:bg-[#353535] hover:text-[#ff8389]"
+										>
+											<X class="h-4 w-4" />
+										</button>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					<DatapackSearch
+						gameVersion={formData.mcVersion}
+						emptyHint="Search for datapacks, or skip this step and add them later."
+					>
+						{#snippet actions(d)}
+							{@const added = selectedDatapacks.some((p) => p.id === d.id)}
+							<button
+								type="button"
+								onclick={() => toggleDatapack(d.id, d.name, d.indexer)}
+								class="flex h-9 cursor-pointer items-center gap-1.5 rounded-none px-3 font-sans text-xs font-medium transition-colors {added
+									? 'bg-[#393939] text-[#c6c6c6] hover:bg-[#4c4c4c]'
+									: 'bg-[#0f62fe] text-white hover:bg-[#0353e9]'}"
+							>
+								{#if added}<Check class="h-3.5 w-3.5" /> Added{:else}<Plus class="h-3.5 w-3.5" /> Add{/if}
+							</button>
+						{/snippet}
+					</DatapackSearch>
 				</div>
 			{/if}
 
