@@ -2045,3 +2045,134 @@ table.compare .icon { width: 18px; height: 18px; }
   .footer-grid { grid-template-columns: 1fr; gap: 32px; }
   .footer-brand { grid-column: span 1; }
 }
+
+/* ============================================================
+   GLOW & GLASS — layered light and frosted surfaces
+   ============================================================ */
+
+/* soft light pools behind key sections */
+.hero::before {
+  background:
+    radial-gradient(ellipse 60% 55% at 50% -5%, rgba(15, 98, 254, 0.28) 0%, rgba(15, 98, 254, 0.08) 35%, transparent 70%),
+    radial-gradient(ellipse 45% 40% at 88% 18%, rgba(120, 169, 255, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 35% at 6% 65%, rgba(15, 98, 254, 0.08) 0%, transparent 70%);
+}
+#features,
+#how,
+#compare {
+  isolation: isolate;
+}
+#features::before,
+#how::before,
+#compare::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+#features::before {
+  background:
+    radial-gradient(ellipse 38% 32% at 12% 0%, rgba(15, 98, 254, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 42% 36% at 92% 96%, rgba(120, 169, 255, 0.07) 0%, transparent 72%);
+}
+#how::before {
+  background: radial-gradient(ellipse 45% 32% at 50% 0%, rgba(15, 98, 254, 0.08) 0%, transparent 70%);
+}
+#compare::before {
+  background: radial-gradient(ellipse 55% 40% at 50% 100%, rgba(15, 98, 254, 0.07) 0%, transparent 72%);
+}
+
+/* headline bloom — barely there */
+.section-head h2,
+.arch-copy h2,
+.deepdive-copy h2,
+.final-cta h2 {
+  text-shadow: 0 0 48px rgba(15, 98, 254, 0.18);
+}
+.hero h1 .grad {
+  filter: drop-shadow(0 0 32px rgba(120, 169, 255, 0.28));
+}
+.stat .num .unit {
+  text-shadow: 0 0 24px rgba(120, 169, 255, 0.45);
+}
+
+/* frosted surfaces with an edge light */
+.nav {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.hero-badge {
+  background: rgba(38, 38, 38, 0.6);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.install {
+  background: rgba(13, 13, 13, 0.6);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.btn-ghost {
+  background: rgba(38, 38, 38, 0.5);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.btn-ghost:hover {
+  background: rgba(57, 57, 57, 0.6);
+}
+.btn-primary {
+  box-shadow: 0 8px 24px -10px rgba(15, 98, 254, 0.7), inset 0 1px 0 rgba(120, 169, 255, 0.25);
+}
+.btn-primary:hover {
+  box-shadow: 0 12px 32px -10px rgba(15, 98, 254, 0.85), inset 0 1px 0 rgba(120, 169, 255, 0.35);
+}
+.gh-star {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.mock-chip {
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.mock {
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.85), 0 40px 90px -50px rgba(15, 98, 254, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+/* glass cards + hover bloom */
+.tile,
+.step,
+.problem-card,
+.oss-point {
+  background: rgba(38, 38, 38, 0.6);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.problem-card.pain {
+  background: rgba(22, 22, 22, 0.55);
+}
+.tile {
+  transition: border-color var(--dur-med) var(--ease),
+    transform var(--dur-med) var(--ease),
+    background-color var(--dur-med) var(--ease),
+    box-shadow var(--dur-med) var(--ease);
+}
+.tile:hover {
+  background: rgba(57, 57, 57, 0.65);
+  box-shadow: 0 18px 44px -18px rgba(15, 98, 254, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* the closing band glows from within */
+.deepdive,
+.oss {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.final-cta {
+  background:
+    radial-gradient(ellipse 70% 90% at 16% 8%, rgba(15, 98, 254, 0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 86% 92%, rgba(120, 169, 255, 0.1) 0%, transparent 65%),
+    linear-gradient(140deg, rgba(15, 98, 254, 0.1) 0%, rgba(38, 38, 38, 0.7) 46%, rgba(38, 38, 38, 0.7) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
