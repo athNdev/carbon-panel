@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>qa-p-feat2.html</title>
+<style>
+  html,body { margin:0; padding:0; background:#0d0d0d; }
+  iframe { display:block; border:0; width:375px; height:820px; background:#161616; }
+</style>
+</head>
+<body>
+<iframe id="f" src="./qa-full.html" title="qa-p-feat2.html"></iframe>
+<script>
+  const f = document.getElementById("f");
+  const jump = () => {
+    try {
+      const d = f.contentDocument;
+      d.documentElement.style.scrollBehavior = "auto";
+      const el = d.getElementById("feat2");
+      if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
+    } catch (e) {}
+  };
+  f.addEventListener("load", () => { jump(); setTimeout(jump, 250); setTimeout(jump, 900); setTimeout(jump, 2200); });
+</script>
+</body></html>

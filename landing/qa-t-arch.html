@@ -7,5 +7,17 @@
 </style>
 </head>
 <body>
-<iframe src="./qa-full.html#architecture" title="qa-t-arch.html"></iframe>
+<iframe id="f" src="./qa-full.html" title="qa-t-arch.html"></iframe>
+<script>
+  const f = document.getElementById("f");
+  const jump = () => {
+    try {
+      const d = f.contentDocument;
+      d.documentElement.style.scrollBehavior = "auto";
+      const el = d.getElementById("architecture");
+      if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
+    } catch (e) {}
+  };
+  f.addEventListener("load", () => { jump(); setTimeout(jump, 250); setTimeout(jump, 900); setTimeout(jump, 2200); });
+</script>
 </body></html>
