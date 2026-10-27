@@ -30,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261027e" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261028a" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -437,6 +437,8 @@
               <div class="av-rows">
                 <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">survival-01</span> <span class="ip">172.18.0.2 · 6 GB</span></span></div>
                 <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">creative</span> <span class="ip">172.18.0.3 · 4 GB</span></span></div>
+                <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">modded-01</span> <span class="ip">172.18.0.4 · 8 GB</span></span></div>
+                <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">lobby-01</span> <span class="ip">172.18.0.5 · asleep</span></span></div>
                 <div class="row"><span class="arrow">└─</span> <span class="node"><span class="nm">proxy</span> <span class="ip">:25565 → 2 containers</span></span></div>
               </div>
               <div class="row av-foot"><span class="av-dot"></span> limits · auto-restart · aikar flags</div>
@@ -444,7 +446,7 @@
           </div>
 
           <!-- Reverse proxy -->
-          <div class="tile reveal">
+          <div class="tile span-3 reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-route"/></svg></div>
             <h3>One port, every server</h3>
             <p>
@@ -460,7 +462,7 @@
           </div>
 
           <!-- Modpack studio -->
-          <div class="tile reveal">
+          <div class="tile span-3 reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-puzzle"/></svg></div>
             <h3>Modpack Studio</h3>
             <p>
@@ -519,7 +521,7 @@
           </div>
 
           <!-- API -->
-          <div class="tile reveal">
+          <div class="tile span-3 reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-code"/></svg></div>
             <h3>Typed, observable API</h3>
             <p>Protocol Buffers over Connect RPC &amp; gRPC, with a live OpenAPI viewer, reflection, and Prometheus metrics endpoints.</p>
@@ -527,7 +529,7 @@
           </div>
 
           <!-- Deep sleep -->
-          <div class="tile reveal">
+          <div class="tile span-3 reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-zap"/></svg></div>
             <h3>Sleep, freeze, wake on join</h3>
             <p>Empty servers can freeze in place at ~0% CPU, or stop entirely at zero RAM while the proxy keeps answering pings. Either way, a player joining brings them back — nothing to start by hand.</p>
@@ -700,11 +702,12 @@
     <section class="section fleet" id="fleet">
       <div class="container">
         <div class="section-head reveal">
-          <h2>Treat three machines like one cluster.</h2>
+          <h2>Run Minecraft servers across a cluster</h2>
           <p>
-            Placement stops being permanent. Move a server to the machine with headroom,
-            keep a warm copy of its world on another node, and let every snapshot leave the
-            building — without opening a terminal.
+            Put each world on the machine that suits it — the PC in your room, a box in the
+            closet, a VPS in the cloud — and let one panel hold the lot together. Spread the
+            load across the hardware you already own, keep worlds available when a machine
+            goes down, and move anything between nodes as your players change.
           </p>
         </div>
 
@@ -726,16 +729,6 @@
             <circle class="f-anchor" cx="600" cy="180" r="3" />
             <circle class="f-anchor" cx="1030" cy="180" r="3" opacity="0.35" />
             <text class="f-label" x="385" y="150" text-anchor="middle">live migration</text>
-
-            <g class="f-carrier" opacity="0">
-              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.22;0.8;1" dur="7s" repeatCount="indefinite" />
-              <rect x="-52" y="-13" width="104" height="26" rx="13" />
-              <circle class="f-carrier-dot" cx="-35" cy="0" r="3" />
-              <text x="-24" y="4">survival-01</text>
-              <animateMotion dur="7s" repeatCount="indefinite" rotate="0">
-                <mpath href="#f-migrate" xlink:href="#f-migrate" />
-              </animateMotion>
-            </g>
 
             <!-- node: home -->
             <g>
@@ -810,6 +803,18 @@
 
               <line class="f-hr" x1="884" y1="440" x2="1176" y2="440" />
               <text class="f-foot" x="884" y="464">2 asleep · wake on join</text>
+            </g>
+
+            <!-- the server in flight, drawn over the nodes -->
+            <g class="f-carrier" opacity="0">
+              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.86;1" dur="9s" repeatCount="indefinite" />
+              <circle class="f-carrier-glow" cx="0" cy="0" r="26" />
+              <rect x="-52" y="-13" width="104" height="26" rx="13" />
+              <circle class="f-carrier-dot" cx="-35" cy="0" r="3" />
+              <text x="-24" y="4">survival-01</text>
+              <animateMotion dur="9s" repeatCount="indefinite" rotate="0" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.25 0.1 0.25 1">
+                <mpath href="#f-migrate" xlink:href="#f-migrate" />
+              </animateMotion>
             </g>
 
             <!-- offsite -->
@@ -1239,6 +1244,6 @@
     </div>
   </footer>
 
-  <script src="./assets/script.js?v=20261027e" defer></script>
+  <script src="./assets/script.js?v=20261028a" defer></script>
 </body>
 </html>

@@ -950,6 +950,7 @@ body > footer {
 }
 .tile:hover {
   border-color: var(--border-strong);
+  will-change: transform;
   transform: translateY(-3px);
 }
 .tile.span-3 { grid-column: span 3; }
@@ -1016,7 +1017,7 @@ body > footer {
     display: grid;
     grid-template-columns: 0.95fr 1.05fr;
     gap: 24px;
-    align-items: center;
+    align-items: stretch;
   }
   .tile.feature-anchor .anchor-copy {
     display: flex;
@@ -1047,6 +1048,8 @@ body > footer {
 .anchor-visual .av-rows {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  justify-content: space-evenly;
   gap: 8px;
 }
 .anchor-visual .av-foot {
@@ -1152,6 +1155,7 @@ body > footer {
   color: var(--text-secondary);
   white-space: nowrap;
   opacity: 0;
+  will-change: transform, opacity;
   animation: sc-cycle 9s var(--ease) infinite;
 }
 .sleep-cycle .sc-1 { animation-delay: 0s; }
@@ -1168,10 +1172,10 @@ body > footer {
 .sleep-cycle .sc-2 .sc-dot { background: var(--accent-text); box-shadow: 0 0 6px rgba(120, 169, 255, 0.7); }
 .sleep-cycle .sc-3 .sc-dot { background: var(--warning); box-shadow: 0 0 6px rgba(241, 194, 27, 0.7); }
 @keyframes sc-cycle {
-  0% { opacity: 0; transform: translateY(4px); filter: blur(4px); }
-  4% { opacity: 1; transform: none; filter: blur(0); }
-  30% { opacity: 1; transform: none; filter: blur(0); }
-  34%, 100% { opacity: 0; transform: translateY(-4px); filter: blur(4px); }
+  0% { opacity: 0; transform: translateY(4px); }
+  4% { opacity: 1; transform: none; }
+  30% { opacity: 1; transform: none; }
+  34%, 100% { opacity: 0; transform: translateY(-4px); }
 }
 
 /* ---------- Server type ticker ---------- */
@@ -1186,6 +1190,7 @@ body > footer {
 .ticker-track {
   display: flex;
   width: max-content;
+  will-change: transform;
   animation: ticker-scroll 56s linear infinite;
 }
 .ticker:hover .ticker-track {
@@ -1205,6 +1210,7 @@ body > footer {
   font-size: 13px;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  text-rendering: geometricPrecision;
   color: var(--text-tertiary);
   white-space: nowrap;
 }
@@ -1217,7 +1223,7 @@ body > footer {
   transform: rotate(45deg);
 }
 @keyframes ticker-scroll {
-  to { transform: translateX(-50%); }
+  to { transform: translate3d(-50%, 0, 0); }
 }
 
 /* ============ ARCH-SECTION-START ============ */
@@ -1312,6 +1318,7 @@ body > footer {
   width: 100%;
   height: auto;
   display: block;
+  text-rendering: geometricPrecision;
 }
 .a-chip { fill: var(--term-bg); stroke: var(--border-strong); stroke-width: 1; }
 .a-panel-box { fill: rgba(15, 98, 254, 0.06); stroke: var(--accent); stroke-width: 1.5; filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45)); }
@@ -1363,6 +1370,7 @@ body > footer {
     right: 0;
     opacity: 0;
     transform: translateY(10px);
+    will-change: transform, opacity;
     transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
   }
   .js .arch-stage[data-beat="0"] .arch-beat[data-beat-for="0"],
@@ -1378,6 +1386,7 @@ body > footer {
   .js .arch-stage .a-anim {
     opacity: 0;
     transform: translateY(14px);
+    will-change: transform, opacity;
     transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
   }
   .js .arch-stage[data-beat="0"] [data-ap="0"],
@@ -1429,10 +1438,10 @@ body > footer {
     transition: transform 100ms linear;
   }
 
-  /* continuous scrub: the diagram scales up and the glow intensifies */
+  /* continuous scrub: the diagram eases closer and the glow intensifies */
   .js .arch-svg {
     transform-origin: center;
-    transform: scale(calc(0.98 + 0.08 * clamp(0, var(--p, 0), 1)));
+    transform: scale(calc(0.99 + 0.03 * clamp(0, var(--p, 0), 1)));
     will-change: transform;
   }
   .js .arch-svg .a-glow {
@@ -2134,6 +2143,7 @@ table.compare .icon { width: 18px; height: 18px; }
   height: auto;
   display: block;
   overflow: visible;
+  text-rendering: geometricPrecision;
 }
 
 /* diagram primitives */
@@ -2158,6 +2168,10 @@ table.compare .icon { width: 18px; height: 18px; }
 .f-arc { fill: none; stroke: var(--accent); stroke-width: 1.25; stroke-dasharray: 5 5; opacity: 0.55; }
 .f-arc-idle { opacity: 0.16; }
 .f-anchor { fill: var(--accent-text); opacity: 0.85; }
+.f-carrier {
+  will-change: transform, opacity;
+}
+.f-carrier-glow { fill: url(#fleet-glow); }
 .f-carrier rect { fill: var(--layer-02); stroke: var(--accent-text); stroke-width: 1; }
 .f-carrier text { font-family: var(--mono); font-size: 9.5px; font-weight: 500; fill: var(--text-primary); }
 .f-carrier .f-carrier-dot { fill: var(--accent-text); }
@@ -2166,12 +2180,6 @@ table.compare .icon { width: 18px; height: 18px; }
 .f-bar { fill: rgba(38, 38, 38, 0.72); stroke: var(--border); stroke-width: 1; }
 .f-dot-ok { fill: var(--success); }
 
-@media (prefers-reduced-motion: no-preference) {
-  .f-arc { animation: f-march 1.6s linear infinite; }
-  @keyframes f-march {
-    to { stroke-dashoffset: -10; }
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .f-carrier { display: none; }
 }
