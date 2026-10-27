@@ -54,6 +54,12 @@
 
   --container: 1312px;
   --nav-h: 64px;
+
+  /* Structural grid — the same lattice under every section.
+     One cell is one content column, so section edges always land on a line. */
+  --grid-cols: 12;
+  --grid-line: rgba(244, 244, 244, 0.055);
+  --grid-cell: calc((min(100%, var(--container)) - 64px) / var(--grid-cols));
 }
 
 /* ---------- Reset ---------- */
@@ -151,6 +157,36 @@ button {
   background: var(--layer-03);
 }
 
+/* ---------- Page grid ---------- */
+
+/* Fixed lattice behind the document. A hairline runs down the centre of every
+   cell, so one always lands on the viewport centre and the rest fall on the
+   content columns — then continue past the container to the screen edges. */
+.page-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to right,
+    transparent calc(50% - 0.5px),
+    var(--grid-line) calc(50% - 0.5px),
+    var(--grid-line) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+  background-size: var(--grid-cell) 100%;
+  background-position: center top;
+  background-repeat: repeat;
+}
+
+/* Content layers above the lattice. Sticky nav and fixed helpers keep their
+   own stacking contexts. */
+body > main,
+body > footer {
+  position: relative;
+  z-index: 1;
+}
+
 /* ---------- Layout helpers ---------- */
 .container {
   width: 100%;
@@ -162,6 +198,7 @@ button {
 .section {
   padding: 96px 0;
   position: relative;
+  border-top: 1px solid var(--grid-line);
 }
 
 .section-head {
@@ -270,15 +307,11 @@ button {
   height: var(--nav-h);
   display: flex;
   align-items: center;
-  background: rgba(22, 22, 22, 0.72);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  backdrop-filter: blur(12px) saturate(140%);
-  border-bottom: 1px solid transparent;
-  transition: background-color var(--dur-med) var(--ease),
-    border-color var(--dur-med) var(--ease);
+  background: var(--bg);
+  border-bottom: 1px solid var(--grid-line);
+  transition: border-color var(--dur-med) var(--ease);
 }
 .nav.scrolled {
-  background: rgba(22, 22, 22, 0.92);
   border-bottom-color: var(--border);
 }
 
@@ -410,19 +443,7 @@ button {
     transparent 70%);
 }
 
-/* Dot grid, masked at the edges */
-.hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: radial-gradient(rgba(244, 244, 244, 0.14) 1px, transparent 1px);
-  background-size: 32px 32px;
-  opacity: 0.5;
-  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 10%, transparent 75%);
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 10%, transparent 75%);
-}
+/* the page lattice carries the hero; no second pattern here */
 
 .hero-grid {
   display: grid;
@@ -758,9 +779,7 @@ button {
   padding: 8px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: rgba(38, 38, 38, 0.9);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: var(--layer-01);
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text-primary);
@@ -771,16 +790,15 @@ button {
   height: 15px;
   color: var(--accent-text);
 }
-.mock-chip.chip-a { top: 64px; right: -18px; }
-.mock-chip.chip-b { bottom: 34px; left: -22px; }
+.mock-chip.chip-a { top: -16px; right: -14px; }
+.mock-chip.chip-b { bottom: -16px; left: -14px; }
 
 /* ============================================================
    STATS STRIP
    ============================================================ */
 .stats {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, var(--layer-01) 0%, var(--bg) 100%);
+  border-top: 1px solid var(--grid-line);
+  background: rgba(38, 38, 38, 0.25);
 }
 .stats-grid {
   display: grid;
@@ -998,7 +1016,7 @@ button {
     display: grid;
     grid-template-columns: 0.95fr 1.05fr;
     gap: 24px;
-    align-items: stretch;
+    align-items: center;
   }
   .tile.feature-anchor .anchor-copy {
     display: flex;
@@ -1160,7 +1178,7 @@ button {
 .ticker {
   position: relative;
   overflow: hidden;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--grid-line);
   padding: 20px 0;
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
@@ -1206,6 +1224,7 @@ button {
 /* ---------- Architecture (scroll-driven) ---------- */
 .arch {
   position: relative;
+  border-top: 1px solid var(--grid-line);
 }
 .arch-track {
   position: relative;
@@ -1214,20 +1233,18 @@ button {
   padding: 96px 0;
   position: relative;
 }
-/* full-bleed infrastructure grid — extends past the diagram box */
+/* light behind the diagram — drifts and brightens with the scrub */
 .arch-stage::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(244, 244, 244, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(244, 244, 244, 0.05) 1px, transparent 1px);
-  background-size: 34px 34px;
-  background-position: calc(var(--p, 0) * 22px) calc(var(--p, 0) * -14px);
-  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 62% 50%, #000 25%, transparent 80%);
-  mask-image: radial-gradient(ellipse 85% 75% at 62% 50%, #000 25%, transparent 80%);
+  background:
+    radial-gradient(ellipse 40% 44% at 62% 50%, rgba(15, 98, 254, 0.15) 0%, transparent 72%),
+    radial-gradient(ellipse 26% 30% at 28% 30%, rgba(120, 169, 255, 0.06) 0%, transparent 74%);
+  opacity: calc(0.55 + var(--p, 0) * 0.45);
+  transform: translate3d(0, calc(var(--p, 0) * -18px), 0);
 }
 .arch-inner {
   display: grid;
@@ -1847,8 +1864,7 @@ table.compare .icon { width: 18px; height: 18px; }
    FOOTER
    ============================================================ */
 .footer {
-  border-top: 1px solid var(--border);
-  background: var(--bg);
+  border-top: 1px solid var(--grid-line);
   padding: 64px 0 40px;
 }
 .footer-grid {
@@ -1993,10 +2009,8 @@ table.compare .icon { width: 18px; height: 18px; }
     gap: 2px;
     margin: 0;
     padding: 12px 20px 18px;
-    background: rgba(22, 22, 22, 0.98);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
   }
   .nav-links.open { display: flex; }
   .nav-links a { padding: 12px 14px; font-size: 15px; }
@@ -2047,15 +2061,15 @@ table.compare .icon { width: 18px; height: 18px; }
 }
 
 /* ============================================================
-   GLOW & GLASS — layered light and frosted surfaces
+   LIGHT — ambient glow behind the lattice
    ============================================================ */
 
-/* soft light pools behind key sections */
+/* soft light pools; the grid reads through them */
 .hero::before {
   background:
-    radial-gradient(ellipse 65% 60% at 50% -8%, rgba(15, 98, 254, 0.4) 0%, rgba(15, 98, 254, 0.12) 38%, transparent 72%),
-    radial-gradient(ellipse 50% 45% at 88% 18%, rgba(120, 169, 255, 0.2) 0%, transparent 70%),
-    radial-gradient(ellipse 45% 40% at 4% 62%, rgba(15, 98, 254, 0.16) 0%, transparent 70%);
+    radial-gradient(ellipse 65% 60% at 50% -8%, rgba(15, 98, 254, 0.32) 0%, rgba(15, 98, 254, 0.1) 38%, transparent 72%),
+    radial-gradient(ellipse 50% 45% at 88% 18%, rgba(120, 169, 255, 0.16) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 40% at 4% 62%, rgba(15, 98, 254, 0.12) 0%, transparent 70%);
 }
 #features,
 #how,
@@ -2075,159 +2089,167 @@ table.compare .icon { width: 18px; height: 18px; }
 }
 #features::before {
   background:
-    radial-gradient(ellipse 55% 45% at 50% 45%, rgba(15, 98, 254, 0.16) 0%, transparent 72%),
-    radial-gradient(ellipse 38% 32% at 10% 0%, rgba(15, 98, 254, 0.16) 0%, transparent 70%),
-    radial-gradient(ellipse 42% 36% at 94% 96%, rgba(120, 169, 255, 0.12) 0%, transparent 72%);
+    radial-gradient(ellipse 55% 45% at 50% 45%, rgba(15, 98, 254, 0.12) 0%, transparent 72%),
+    radial-gradient(ellipse 38% 32% at 10% 0%, rgba(15, 98, 254, 0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 42% 36% at 94% 96%, rgba(120, 169, 255, 0.08) 0%, transparent 72%);
 }
 #how::before {
-  background: radial-gradient(ellipse 50% 45% at 50% 55%, rgba(15, 98, 254, 0.15) 0%, transparent 72%);
+  background: radial-gradient(ellipse 50% 45% at 50% 55%, rgba(15, 98, 254, 0.11) 0%, transparent 72%);
 }
 #compare::before {
-  background: radial-gradient(ellipse 60% 45% at 50% 50%, rgba(15, 98, 254, 0.13) 0%, transparent 74%);
+  background: radial-gradient(ellipse 60% 45% at 50% 50%, rgba(15, 98, 254, 0.1) 0%, transparent 74%);
 }
 #faq::before {
-  background: radial-gradient(ellipse 45% 35% at 85% 15%, rgba(120, 169, 255, 0.1) 0%, transparent 72%);
+  background: radial-gradient(ellipse 45% 35% at 85% 15%, rgba(120, 169, 255, 0.08) 0%, transparent 72%);
 }
 
-/* headline glow — tight halo under a wide bloom */
-.hero h1,
-.section-head h2,
-.arch-copy h2,
-.deepdive-copy h2,
-.final-cta h2 {
-  text-shadow:
-    0 0 10px rgba(120, 169, 255, 0.4),
-    0 0 28px rgba(15, 98, 254, 0.45),
-    0 0 72px rgba(15, 98, 254, 0.35);
-}
-.hero h1 .grad {
-  filter:
-    drop-shadow(0 0 12px rgba(120, 169, 255, 0.55))
-    drop-shadow(0 0 36px rgba(15, 98, 254, 0.5))
-    drop-shadow(0 0 80px rgba(15, 98, 254, 0.35));
-}
-.stat .num {
-  text-shadow:
-    0 0 10px rgba(120, 169, 255, 0.35),
-    0 0 30px rgba(15, 98, 254, 0.4);
-}
-.stat .num .unit {
-  text-shadow:
-    0 0 12px rgba(120, 169, 255, 0.6),
-    0 0 36px rgba(15, 98, 254, 0.5);
-}
-
-/* frosted surfaces with an edge light and a gloss sheen */
-.nav {
-  background: rgba(22, 22, 22, 0.6);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-.hero-badge {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 34%, transparent 60%),
-    rgba(38, 38, 38, 0.45);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 30px -14px rgba(0, 0, 0, 0.6);
-}
-.install {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 34%, transparent 60%),
-    rgba(13, 13, 13, 0.5);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 36px -18px rgba(0, 0, 0, 0.7);
-}
-.btn-ghost {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, transparent 65%),
-    rgba(38, 38, 38, 0.4);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-.btn-ghost:hover {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 40%, transparent 65%),
-    rgba(57, 57, 57, 0.5);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-.btn-primary {
-  box-shadow: 0 10px 30px -10px rgba(15, 98, 254, 0.8), inset 0 1px 0 rgba(120, 169, 255, 0.35);
-}
-.btn-primary:hover {
-  box-shadow: 0 16px 44px -10px rgba(15, 98, 254, 1), inset 0 1px 0 rgba(120, 169, 255, 0.45);
-}
-.gh-star {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 55%),
-    rgba(38, 38, 38, 0.45);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  backdrop-filter: blur(14px) saturate(150%);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-.mock-chip {
-  background: rgba(38, 38, 38, 0.5);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  backdrop-filter: blur(14px) saturate(150%);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-.mock {
-  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.85), 0 50px 110px -50px rgba(15, 98, 254, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-/* glass cards + hover bloom */
-.tile,
-.step,
-.problem-card,
-.oss-point {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 32%, transparent 58%),
-    rgba(38, 38, 38, 0.45);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 16px 40px -18px rgba(0, 0, 0, 0.5);
-}
-.problem-card.pain {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 55%),
-    rgba(22, 22, 22, 0.5);
-}
-.tile {
-  transition: border-color var(--dur-med) var(--ease),
-    transform var(--dur-med) var(--ease),
-    background-color var(--dur-med) var(--ease),
-    box-shadow var(--dur-med) var(--ease);
-}
+/* a card may catch a little light on hover — never a pane of glass */
 .tile:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 32%, transparent 58%),
-    rgba(57, 57, 57, 0.5);
-  box-shadow: 0 24px 60px -20px rgba(15, 98, 254, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  box-shadow: 0 24px 60px -34px rgba(15, 98, 254, 0.65);
 }
 
-/* the closing band glows from within */
-.deepdive,
-.oss {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+/* ============================================================
+   FLEET OPERATIONS
+   ============================================================ */
+.fleet {
+  position: relative;
+  isolation: isolate;
 }
-.final-cta {
+.fleet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
-    radial-gradient(ellipse 70% 90% at 16% 8%, rgba(15, 98, 254, 0.32) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 86% 92%, rgba(120, 169, 255, 0.18) 0%, transparent 65%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 30%, transparent 55%),
-    linear-gradient(140deg, rgba(15, 98, 254, 0.12) 0%, rgba(38, 38, 38, 0.6) 46%, rgba(38, 38, 38, 0.6) 100%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 30px 80px -30px rgba(15, 98, 254, 0.35);
+    radial-gradient(ellipse 52% 38% at 52% 34%, rgba(15, 98, 254, 0.12) 0%, transparent 72%),
+    radial-gradient(ellipse 28% 24% at 84% 12%, rgba(120, 169, 255, 0.07) 0%, transparent 74%);
+}
+
+.fleet-board {
+  margin-bottom: 8px;
+}
+.fleet-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* diagram primitives */
+.f-corner { fill: none; stroke: rgba(244, 244, 244, 0.16); stroke-width: 1; }
+.f-node { fill: var(--layer-01); stroke: var(--border); stroke-width: 1; }
+.f-node-hot { stroke: rgba(120, 169, 255, 0.26); }
+.f-nodetitle { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--text-primary); }
+.f-role { font-family: var(--mono); font-size: 9px; letter-spacing: 1.1px; fill: var(--accent-text); }
+.f-val { font-family: var(--mono); font-size: 10.5px; fill: var(--text-tertiary); }
+.f-val-hot { fill: var(--warning); }
+.f-track { fill: rgba(244, 244, 244, 0.07); }
+.f-fill { fill: var(--accent-text); opacity: 0.5; }
+.f-fill-hot { fill: var(--warning); opacity: 0.65; }
+.f-chip { fill: var(--term-bg); stroke: var(--border); stroke-width: 1; }
+.f-chip-hot { fill: rgba(15, 98, 254, 0.1); stroke: rgba(120, 169, 255, 0.48); }
+.f-chip-rep { fill: rgba(15, 98, 254, 0.04); stroke: rgba(120, 169, 255, 0.34); stroke-dasharray: 4 3; }
+.f-chip-sleep { fill: rgba(22, 22, 22, 0.72); stroke: var(--border); stroke-dasharray: 3 3; }
+.f-name { font-family: var(--mono); font-size: 11.5px; font-weight: 500; fill: var(--text-primary); }
+.f-meta { font-family: var(--mono); font-size: 9.5px; fill: var(--text-tertiary); }
+.f-hr { stroke: var(--grid-line); stroke-width: 1; }
+.f-foot { font-family: var(--mono); font-size: 9px; letter-spacing: 0.4px; fill: var(--text-tertiary); }
+.f-arc { fill: none; stroke: var(--accent); stroke-width: 1.25; stroke-dasharray: 5 5; opacity: 0.55; }
+.f-arc-idle { opacity: 0.16; }
+.f-anchor { fill: var(--accent-text); opacity: 0.85; }
+.f-carrier rect { fill: var(--layer-02); stroke: var(--accent-text); stroke-width: 1; }
+.f-carrier text { font-family: var(--mono); font-size: 9.5px; font-weight: 500; fill: var(--text-primary); }
+.f-carrier .f-carrier-dot { fill: var(--accent-text); }
+.f-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.5px; fill: var(--text-tertiary); }
+.f-backup { stroke: var(--accent-text); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.36; }
+.f-bar { fill: rgba(38, 38, 38, 0.72); stroke: var(--border); stroke-width: 1; }
+.f-dot-ok { fill: var(--success); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .f-arc { animation: f-march 1.6s linear infinite; }
+  @keyframes f-march {
+    to { stroke-dashoffset: -10; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .f-carrier { display: none; }
+}
+
+/* four capabilities, ruled like the rest of the page */
+.fleet-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 40px;
+}
+.fleet-card {
+  padding: 26px 24px 0;
+  border-left: 1px solid var(--grid-line);
+}
+.fleet-card:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+.fleet-card:last-child {
+  padding-right: 0;
+}
+.fleet-card .f-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-text);
+  margin-bottom: 14px;
+}
+.fleet-card h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.fleet-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1100px) and (min-width: 861px) {
+  .fleet-cards { grid-template-columns: 1fr 1fr; }
+  .fleet-card:nth-child(odd) { padding-left: 0; border-left: none; }
+  .fleet-card:nth-child(n + 3) {
+    border-top: 1px solid var(--grid-line);
+    padding-top: 22px;
+  }
+}
+@media (max-width: 860px) {
+  .fleet-cards { grid-template-columns: 1fr; margin-top: 24px; }
+  .fleet-card {
+    border-left: none;
+    border-top: 1px solid var(--grid-line);
+    padding: 22px 0 0;
+  }
+  .fleet-card:first-child { border-top: none; }
+}
+
+
+/* ============================================================
+   Grid + fleet — responsive
+   ============================================================ */
+
+/* fewer rails as the viewport narrows; a cell stays one content column */
+@media (max-width: 1100px) {
+  :root { --grid-cols: 8; }
+}
+@media (max-width: 720px) {
+  :root { --grid-cols: 4; }
+}
+
+/* the board keeps a legible size and pans sideways rather than shrinking */
+@media (max-width: 1080px) {
+  .fleet-board {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-right: -32px;
+    padding-right: 32px;
+  }
+  .fleet-svg { min-width: 880px; }
+}
+@media (max-width: 640px) {
+  .fleet-board { display: none; }
 }
