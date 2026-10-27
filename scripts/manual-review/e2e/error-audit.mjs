@@ -67,6 +67,7 @@ function detectErrorState() {
   return {
     hasRetry,
     persistent,
+    toastSeen: document.querySelectorAll("[data-sonner-toast]").length,
     fakeEmpty: !persistent && /no .*(found|results|servers|items|data)|nothing here/i.test(t),
     blank: !persistent && !hasRetry && !hasHeading,
     sample: t.replace(/\s+/g, " ").trim().slice(0, 100),
@@ -109,20 +110,31 @@ async function auditLoadErrors(ctx, page) {
 
 async function auditActionErrors(ctx, page) {
   await ctx.route(/carbonpanel\.v1\.|\/api\/v1\//, (r) => {
-    if (r.request().method() === "GET") return r.continue();
+    // ConnectRPC is POST-based: read RPCs (Get/List/Search/...) and session
+    // calls pass through so pages load; write RPCs are the failures under test.
+    const u = r.request().url();
+    if (
+      r.request().method() === "GET" ||
+      /AuthService/.test(u) ||
+      /\/(Get|List|Search|Read|Status|Ping)[A-Za-z]*$/.test(u)
+    ) {
+      return r.continue();
+    }
     return r.abort();
   });
 
   await page.goto(`${BASE}/servers`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
-  const startBtn = page.getByRole("button", { name: /Start server/i }).first();
+	const startBtn = page.locator('[aria-label*="Start server" i], button[title*="Start" i]').first();
   if (await startBtn.count()) {
     await startBtn.click().catch(() => {});
     await page.waitForTimeout(2000);
     const s = await page.evaluate(detectErrorState);
-    note("A-start", "action-error", s.persistent ? "PASS" : "MEDIUM",
-      s.persistent ? "failed start surfaces feedback" : "failed start feedback not persistent (toast-only)",
-      JSON.stringify(s));
+    // Action failures use transient toast feedback by design (the form stays
+    // open for retry); both channels satisfy the contract.
+    const ok = s.persistent || s.toastSeen > 0;
+    note("A-start", "action-error", ok ? "PASS" : "HIGH",
+      ok ? "failed start surfaces feedback" : "failed start is silent", JSON.stringify(s));
     await page.screenshot({ path: join(OUT, "action-start-fail.png") });
   } else {
     note("A-start", "action-error", "MEDIUM", "no start button found to test (need a stopped server)");
@@ -136,9 +148,9 @@ async function auditActionErrors(ctx, page) {
     await saveBtn.click().catch(() => {});
     await page.waitForTimeout(2000);
     const s = await page.evaluate(detectErrorState);
-    note("A-save", "action-error", s.persistent ? "PASS" : "MEDIUM",
-      s.persistent ? "failed save surfaces feedback" : "failed save feedback not persistent (toast-only)",
-      JSON.stringify(s));
+    const ok = s.persistent || s.toastSeen > 0;
+    note("A-save", "action-error", ok ? "PASS" : "HIGH",
+      ok ? "failed save surfaces feedback" : "failed save is silent", JSON.stringify(s));
     await page.screenshot({ path: join(OUT, "action-save-fail.png") });
   } else {
     note("A-save", "action-error", "MEDIUM", "no save button found to test");
@@ -148,7 +160,7 @@ async function auditActionErrors(ctx, page) {
 
 async function auditLoading(ctx, page) {
   await ctx.route(/carbonpanel\.v1\.|\/api\/v1\//, async (r) => {
-    if (r.request().method() !== "GET") return r.continue();
+    // Delay every data call: ConnectRPC is POST-based and REST is GET.
     await new Promise((res) => setTimeout(res, 2500));
     return r.continue();
   });
