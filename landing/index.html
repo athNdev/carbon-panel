@@ -558,7 +558,7 @@
                 </li>
                 <li class="arch-beat" data-beat-for="1">
                   <h3>The proxy routes every connection.</h3>
-                  <p>The handshake names the destination, so Carbon Panel sends each player to the right container on the right machine.</p>
+                  <p>The handshake names the destination, so each player lands in the right container on the right machine.</p>
                 </li>
                 <li class="arch-beat" data-beat-for="2">
                   <h3>Servers run where you have machines.</h3>
@@ -566,90 +566,119 @@
                 </li>
                 <li class="arch-beat" data-beat-for="3">
                   <h3>One control plane keeps it in sync.</h3>
-                  <p>Schedules, backups, routes and consoles work the same across every machine — and idle servers deep-sleep at zero RAM.</p>
+                  <p>Routes, consoles and a typed API work identically across every machine — one panel, one view.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="4">
+                  <h3>Idle servers take care of themselves.</h3>
+                  <p>Deep-sleep parks unused servers at zero RAM, world snapshots head offsite — and everything wakes the moment a player connects.</p>
                 </li>
               </ol>
               <div class="arch-progress" aria-hidden="true"><span class="arch-progress-bar"></span></div>
             </div>
 
             <div class="arch-visual">
-              <svg class="arch-svg" viewBox="0 0 640 520" role="img" aria-label="Architecture diagram: players connect through one address to Carbon Panel, which routes them to servers on your home machine and a cloud VPS, with one control plane handling schedules and offsite backups">
+              <svg class="arch-svg" viewBox="0 0 720 560" role="img" aria-label="Architecture diagram: players connect through one address to Carbon Panel, which routes them to servers on a home machine and a cloud VPS, while one control plane syncs routes and ships backups offsite">
                 <defs>
                   <pattern id="arch-grid" width="32" height="32" patternUnits="userSpaceOnUse">
                     <path d="M32 0H0V32" fill="none" stroke="rgba(244,244,244,0.05)" stroke-width="1" />
                   </pattern>
                 </defs>
-                <rect x="0" y="0" width="640" height="520" fill="url(#arch-grid)" />
-                <ellipse class="a-glow" cx="328" cy="256" rx="200" ry="230" />
+                <rect x="0" y="0" width="720" height="560" fill="url(#arch-grid)" />
+                <ellipse class="a-glow" cx="360" cy="280" rx="240" ry="260" />
 
                 <!-- connection lines (scrubbed draw-in) -->
-                <path class="a-line a-draw" data-draw="in" pathLength="1" d="M192 176H240" />
-                <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 162 448 162" />
-                <path id="a-fan-cloud" class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 318 448 318" />
-                <path class="a-line a-draw" data-draw="backup" pathLength="1" d="M400 346C428 346 424 442 448 442" />
+                <path class="a-line a-draw" data-draw="in" pathLength="1" d="M200 176H256" />
+                <path id="a-fan-home" class="a-line a-draw" data-draw="fan" pathLength="1" d="M464 176C484 176 488 156 504 156" />
+                <path id="a-fan-cloud" class="a-line a-draw" data-draw="fan" pathLength="1" d="M464 176C484 176 488 340 504 340" />
+                <path id="a-backup" class="a-line a-draw" data-draw="backup" pathLength="1" d="M464 392C484 392 488 516 504 516" />
 
-                <!-- connection packet (decorative) -->
+                <!-- control sync (fades in at beat 3) -->
+                <g class="a-anim" data-ap="3">
+                  <path class="a-line a-line-dash" d="M464 392C484 392 488 228 504 228" />
+                  <path class="a-line a-line-dash" d="M464 392C484 392 488 436 504 436" />
+                </g>
+
+                <!-- flowing packets -->
                 <g class="a-anim" data-ap="1">
-                  <circle class="a-packet" r="3.5">
-                    <animateMotion dur="2.4s" repeatCount="indefinite">
+                  <circle class="a-packet" cx="464" cy="176" r="3.5">
+                    <animateMotion dur="2.2s" repeatCount="indefinite">
+                      <mpath href="#a-fan-home" xlink:href="#a-fan-home" />
+                    </animateMotion>
+                  </circle>
+                  <circle class="a-packet" cx="464" cy="176" r="3.5">
+                    <animateMotion dur="2.6s" begin="0.9s" repeatCount="indefinite">
                       <mpath href="#a-fan-cloud" xlink:href="#a-fan-cloud" />
+                    </animateMotion>
+                  </circle>
+                </g>
+                <g class="a-anim" data-ap="4">
+                  <circle class="a-packet" cx="464" cy="392" r="3.5">
+                    <animateMotion dur="2.4s" repeatCount="indefinite">
+                      <mpath href="#a-backup" xlink:href="#a-backup" />
                     </animateMotion>
                   </circle>
                 </g>
 
                 <!-- players -->
                 <g class="a-anim" data-ap="0">
-                  <rect class="a-chip" x="16" y="140" width="176" height="72" rx="10" />
-                  <text class="a-title" x="36" y="168">players</text>
-                  <text class="a-sub" x="36" y="190">survival.yourdomain.com</text>
-                  <circle class="a-dot" cx="168" cy="152" r="4" />
-                  <circle class="a-dot" cx="152" cy="152" r="4" />
+                  <rect class="a-chip" x="16" y="132" width="184" height="88" rx="12" />
+                  <text class="a-title" x="36" y="166">players</text>
+                  <text class="a-sub" x="36" y="192">survival.yourdomain.com</text>
+                  <circle class="a-dot" cx="150" cy="150" r="4.5" />
+                  <circle class="a-dot" cx="168" cy="150" r="4.5" />
+                  <circle class="a-dot" cx="186" cy="150" r="4.5" />
                 </g>
 
                 <!-- carbon panel -->
                 <g class="a-anim" data-ap="0">
-                  <rect class="a-panel-box" x="240" y="96" width="176" height="320" rx="14" />
-                  <text class="a-title" x="256" y="124">Carbon Panel</text>
+                  <rect class="a-panel-box" x="256" y="72" width="208" height="416" rx="16" />
+                  <text class="a-title" x="276" y="106">Carbon Panel</text>
                 </g>
                 <g class="a-anim" data-ap="0">
-                  <rect class="a-sub-box a-proxy-box" x="256" y="140" width="144" height="76" rx="8" />
-                  <text class="a-mono" x="272" y="170">proxy :25565</text>
-                  <text class="a-sub" x="272" y="190">handshake-aware</text>
+                  <rect class="a-sub-box a-proxy-box" x="272" y="124" width="176" height="92" rx="10" />
+                  <text class="a-mono" x="292" y="162">proxy :25565</text>
+                  <text class="a-sub" x="292" y="186">handshake-aware routing</text>
                 </g>
                 <g class="a-anim" data-ap="0">
-                  <rect class="a-sub-box a-control-box" x="256" y="296" width="144" height="100" rx="8" />
-                  <text class="a-mono" x="272" y="326">control plane</text>
+                  <rect class="a-sub-box a-control-box" x="272" y="332" width="176" height="120" rx="10" />
+                  <text class="a-mono" x="292" y="368">control plane</text>
                 </g>
                 <g class="a-anim" data-ap="3">
-                  <text class="a-sub" x="272" y="348">schedules · backups</text>
-                  <text class="a-sub" x="272" y="366">routes · console · API</text>
+                  <text class="a-sub" x="292" y="394">routes · console · API</text>
+                </g>
+                <g class="a-anim" data-ap="4">
+                  <text class="a-sub" x="292" y="416">schedules · backups</text>
                 </g>
 
                 <!-- machines -->
                 <g class="a-anim" data-ap="2">
-                  <rect class="a-card" x="448" y="104" width="176" height="116" rx="12" />
-                  <text class="a-title" x="464" y="132">Home machine</text>
-                  <text class="a-cap" x="464" y="150">AT HOME</text>
-                  <rect class="a-mini" x="464" y="158" width="144" height="24" rx="6" />
-                  <text class="a-mini-t" x="474" y="174">survival-01 · 6 GB</text>
-                  <rect class="a-mini" x="464" y="188" width="144" height="24" rx="6" />
-                  <text class="a-mini-t" x="474" y="204">creative · 4 GB</text>
+                  <rect class="a-card" x="504" y="72" width="200" height="168" rx="14" />
+                  <text class="a-title" x="524" y="104">Home machine</text>
+                  <text class="a-cap" x="524" y="124">AT HOME</text>
+                  <rect class="a-mini" x="524" y="136" width="160" height="28" rx="7" />
+                  <text class="a-mini-t" x="536" y="155">survival-01 · 6 GB</text>
+                  <rect class="a-mini" x="524" y="172" width="160" height="28" rx="7" />
+                  <text class="a-mini-t" x="536" y="191">creative · 4 GB</text>
                 </g>
                 <g class="a-anim" data-ap="2">
-                  <rect class="a-card" x="448" y="260" width="176" height="116" rx="12" />
-                  <text class="a-title" x="464" y="288">Cloud VPS</text>
-                  <text class="a-cap" x="464" y="306">IN THE CLOUD</text>
-                  <rect class="a-mini" x="464" y="314" width="144" height="24" rx="6" />
-                  <text class="a-mini-t" x="474" y="330">event-01 · 8 GB</text>
-                  <rect class="a-mini" x="464" y="344" width="144" height="24" rx="6" />
-                  <text class="a-mini-t" x="474" y="360">lobby-01 · 4 GB</text>
+                  <rect class="a-card" x="504" y="280" width="200" height="168" rx="14" />
+                  <text class="a-title" x="524" y="312">Cloud VPS</text>
+                  <text class="a-cap" x="524" y="332">IN THE CLOUD</text>
+                  <rect class="a-mini" x="524" y="344" width="160" height="28" rx="7" />
+                  <text class="a-mini-t" x="536" y="363">event-01 · 8 GB</text>
+                  <rect class="a-mini" x="524" y="380" width="160" height="28" rx="7" />
+                  <text class="a-mini-t" x="536" y="399">lobby-01 · sleeping</text>
+                </g>
+                <g class="a-anim" data-ap="4">
+                  <rect class="a-badge" x="644" y="386" width="32" height="17" rx="8" />
+                  <text class="a-badge-t" x="651" y="399">0 B</text>
                 </g>
 
                 <!-- offsite backups -->
-                <g class="a-anim" data-ap="3">
-                  <rect class="a-card" x="448" y="416" width="176" height="52" rx="10" />
-                  <text class="a-mono" x="464" y="440">S3 · offsite backups</text>
-                  <text class="a-sub" x="464" y="458">world snapshots</text>
+                <g class="a-anim" data-ap="4">
+                  <rect class="a-card" x="504" y="488" width="200" height="56" rx="12" />
+                  <text class="a-mono" x="524" y="514">S3 · offsite backups</text>
+                  <text class="a-sub" x="524" y="534">world snapshots</text>
                 </g>
               </svg>
             </div>
