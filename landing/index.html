@@ -10,18 +10,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Carbon Panel — Open-source Minecraft server management</title>
-  <meta name="description" content="Carbon Panel is the open-source, Docker-native control panel for Minecraft networks. Deploy every server in its own container, route players by hostname, and ship modpacks — all from one IBM Carbon interface." />
+  <meta name="description" content="Carbon Panel is the open-source, Docker-native control panel for Minecraft servers. Deploy every server in its own container, route players by hostname, and ship modpacks — all from one IBM Carbon interface." />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#161616" />
 
   <link rel="canonical" href="https://athNdev.github.io/carbon-panel/" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Carbon Panel — Open-source Minecraft server management" />
-  <meta property="og:description" content="The open-source, Docker-native control panel for Minecraft networks. Deploy, orchestrate, and scale every server from one IBM Carbon interface." />
+  <meta property="og:description" content="The open-source, Docker-native control panel for Minecraft servers. Deploy, orchestrate, and scale every server from one IBM Carbon interface." />
   <meta property="og:url" content="https://athNdev.github.io/carbon-panel/" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Carbon Panel — Open-source Minecraft server management" />
-  <meta name="twitter:description" content="The open-source, Docker-native control panel for Minecraft networks." />
+  <meta name="twitter:description" content="The open-source, Docker-native control panel for Minecraft servers." />
 
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f62fe'/%3E%3Cpath d='M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M8 10.5l8 4.5 8-4.5M16 15v9' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E" />
 
@@ -182,7 +182,7 @@
           <div class="hero-badge">
             <span class="tag"><span class="dot"></span>Open source</span>
             <span class="sep">·</span>
-            <span>MIT + MPL-2.0</span>
+            <span>MPL-2.0</span>
             <span class="sep">·</span>
             <span>self-hosted</span>
           </div>
@@ -191,7 +191,7 @@
 
           <p class="hero-sub">
             Carbon Panel is the open-source, Docker-native control plane for Minecraft
-            networks. Every server in its own container, players routed by hostname, and
+            servers. Every server in its own container, players routed by hostname, and
             modpacks shipped from one <strong>IBM Carbon</strong> interface.
           </p>
 
@@ -216,7 +216,7 @@
 
         <!-- Hero product mockup -->
         <div class="hero-visual reveal">
-          <div class="mock" role="img" aria-label="Carbon Panel dashboard showing server status, network health and a live console">
+          <div class="mock" role="img" aria-label="Carbon Panel dashboard showing server status, node health and a live console">
             <div class="mock-bar">
               <div class="dots"><i></i><i></i><i></i></div>
               <div class="url">carbon-panel · cluster / overview</div>
@@ -287,6 +287,44 @@
       </div>
     </section>
 
+    <!-- Server type ticker -->
+    <section class="ticker" aria-label="Supported server types and platforms">
+      <div class="ticker-track">
+        <div class="ticker-group">
+          <span class="ticker-item">Vanilla</span>
+          <span class="ticker-item">Paper</span>
+          <span class="ticker-item">Purpur</span>
+          <span class="ticker-item">Spigot</span>
+          <span class="ticker-item">Bukkit</span>
+          <span class="ticker-item">Fabric</span>
+          <span class="ticker-item">Quilt</span>
+          <span class="ticker-item">Forge</span>
+          <span class="ticker-item">NeoForge</span>
+          <span class="ticker-item">Folia</span>
+          <span class="ticker-item">Pufferfish</span>
+          <span class="ticker-item">Bedrock</span>
+          <span class="ticker-item">Geyser</span>
+          <span class="ticker-item">Floodgate</span>
+        </div>
+        <div class="ticker-group" aria-hidden="true">
+          <span class="ticker-item">Vanilla</span>
+          <span class="ticker-item">Paper</span>
+          <span class="ticker-item">Purpur</span>
+          <span class="ticker-item">Spigot</span>
+          <span class="ticker-item">Bukkit</span>
+          <span class="ticker-item">Fabric</span>
+          <span class="ticker-item">Quilt</span>
+          <span class="ticker-item">Forge</span>
+          <span class="ticker-item">NeoForge</span>
+          <span class="ticker-item">Folia</span>
+          <span class="ticker-item">Pufferfish</span>
+          <span class="ticker-item">Bedrock</span>
+          <span class="ticker-item">Geyser</span>
+          <span class="ticker-item">Floodgate</span>
+        </div>
+      </div>
+    </section>
+
     <!-- ============================================================
          STATS STRIP
          ============================================================ -->
@@ -309,7 +347,7 @@
             <div class="sub">runs on your own hardware</div>
           </div>
           <div class="stat reveal">
-            <div class="num">MIT<span class="unit"> +MPL</span></div>
+            <div class="num">MPL<span class="unit">-2.0</span></div>
             <div class="label">Permanently open</div>
             <div class="sub">free as in cost and speech</div>
           </div>
@@ -323,8 +361,7 @@
     <section class="section">
       <div class="container">
         <div class="section-head center reveal">
-          <span class="eyebrow">Why another panel?</span>
-          <h2>Hosting a network shouldn't feel like babysitting.</h2>
+          <h2>Hosting servers shouldn't feel like babysitting.</h2>
           <p>
             One flaky plugin, one forgotten backup, one accidental <code>rm -rf</code> — and
             the whole night is gone. Carbon Panel treats your worlds the way production
@@ -370,7 +407,6 @@
     <section class="section" id="features">
       <div class="container">
         <div class="section-head center reveal">
-          <span class="eyebrow">Everything in the box</span>
           <h2>A control plane, not a start button.</h2>
           <p>
             From container orchestration to modpack distribution, Carbon Panel ships the
@@ -381,7 +417,7 @@
         <div class="bento">
           <!-- Anchor: server management -->
           <div class="tile feature-anchor reveal">
-            <div>
+            <div class="anchor-copy">
               <div class="t-icon"><svg class="icon"><use href="#i-box"/></svg></div>
               <h3>Docker-native server management</h3>
               <p>
@@ -392,8 +428,12 @@
             </div>
             <div class="anchor-visual" aria-hidden="true">
               <div class="row"><span class="arrow">▸</span> node-eu-1 <span class="arrow">·</span> docker</div>
-              <div class="row"><span class="arrow">└─</span> <span class="node"><span class="nm">survival-01</span> <span class="ip">172.18.0.2 · 6 GB · Java 21</span></span></div>
-              <div class="row"><span class="arrow">└─</span> <span class="node"><span class="nm">proxy</span> <span class="ip">:25565 → 2 containers</span></span></div>
+              <div class="av-rows">
+                <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">survival-01</span> <span class="ip">172.18.0.2 · 6 GB · Java 21</span></span></div>
+                <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">creative</span> <span class="ip">172.18.0.3 · 4 GB · Java 21</span></span></div>
+                <div class="row"><span class="arrow">└─</span> <span class="node"><span class="nm">proxy</span> <span class="ip">:25565 → 2 containers</span></span></div>
+              </div>
+              <div class="row av-foot"><span class="av-dot"></span> limits applied · auto-restart · aikar flags</div>
             </div>
           </div>
 
@@ -405,7 +445,12 @@
               A handshake-aware reverse proxy routes players by hostname through a single
               ingress — with Velocity forwarding, PROXY protocol, and Bedrock UDP built in.
             </p>
-            <div class="t-tags"><span>25565</span><span>SRV</span><span>Velocity</span></div>
+            <div class="route-map" aria-hidden="true">
+              <div class="rm-head"><span class="arrow">▸</span> :25565 ingress</div>
+              <div class="rm-row"><span class="rm-stem">├─</span><span class="rm-host">survival.mc.yourdomain.com</span><span class="rm-arrow">→</span><span class="rm-target">survival-01</span></div>
+              <div class="rm-row"><span class="rm-stem">├─</span><span class="rm-host">creative.mc.yourdomain.com</span><span class="rm-arrow">→</span><span class="rm-target">creative</span></div>
+              <div class="rm-row"><span class="rm-stem">└─</span><span class="rm-host">modded.mc.yourdomain.com</span><span class="rm-arrow">→</span><span class="rm-target">modded-forge</span></div>
+            </div>
           </div>
 
           <!-- Modpack studio -->
@@ -480,7 +525,11 @@
             <div class="t-icon"><svg class="icon"><use href="#i-zap"/></svg></div>
             <h3>Deep-sleep &amp; wake-on-connect</h3>
             <p>Park idle servers at zero RAM while a lightweight listener answers the MOTD — then wakes the container the moment a player connects.</p>
-            <div class="t-tags"><span>0&nbsp;B idle</span><span>wake-on-connect</span></div>
+            <div class="sleep-cycle" aria-hidden="true">
+              <span class="sc-pill sc-1"><span class="sc-dot"></span>running · 6 GB</span>
+              <span class="sc-pill sc-2"><span class="sc-dot"></span>deep-sleep · 0 B</span>
+              <span class="sc-pill sc-3"><span class="sc-dot"></span>player connects · waking</span>
+            </div>
           </div>
         </div>
       </div>
@@ -492,7 +541,6 @@
     <section class="section" id="how">
       <div class="container">
         <div class="section-head center reveal">
-          <span class="eyebrow">Up in three steps</span>
           <h2>From clone to players in minutes.</h2>
           <p>No cloud account, no license key, no control plane phoning home. Just Docker and a browser.</p>
         </div>
@@ -530,7 +578,6 @@
         <div class="deepdive reveal">
           <div class="deepdive-grid">
             <div class="deepdive-copy">
-              <span class="eyebrow">Isolation &amp; security</span>
               <h2>Trust it with your worlds.</h2>
               <p>
                 Every player connection crosses a checked boundary before it reaches a
@@ -593,8 +640,7 @@
     <section class="section" id="compare">
       <div class="container">
         <div class="section-head center reveal">
-          <span class="eyebrow">How it stacks up</span>
-          <h2>Built for networks, not just boxes.</h2>
+          <h2>Built for Minecraft, not just containers.</h2>
           <p>A quick look at how Carbon Panel compares with the common alternatives.</p>
         </div>
 
@@ -652,7 +698,7 @@
               </tr>
               <tr>
                 <td>Open source &amp; self-hosted</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> MIT + MPL</span></td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> MPL-2.0</span></td>
                 <td><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Yours</span></td>
                 <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Varies</span></td>
               </tr>
@@ -674,10 +720,9 @@
         <div class="oss reveal">
           <div class="oss-grid">
             <div>
-              <span class="eyebrow">Open by design</span>
               <h2>Free as in cost.<br />Free as in speech.</h2>
               <p>
-                Carbon Panel is MIT + MPL-2.0 licensed, built in the open, and never phones
+                Carbon Panel is MPL-2.0 licensed, built in the open, and never phones
                 home. Your worlds, your database, your infrastructure — no telemetry, no
                 account, no lock-in.
               </p>
@@ -726,7 +771,6 @@
     <section class="section" id="faq">
       <div class="container">
         <div class="section-head center reveal">
-          <span class="eyebrow">Questions</span>
           <h2>Good to know.</h2>
         </div>
 
@@ -734,7 +778,7 @@
           <details class="faq-item">
             <summary>Is Carbon Panel really free?<span class="plus"></span></summary>
             <div class="faq-body">
-              Yes. It's open source under the MIT + MPL-2.0 licenses — free to use, modify
+              Yes. It's open source under the MPL-2.0 license — free to use, modify
               and self-host. There are no paid tiers, no seats, and no cloud account required.
             </div>
           </details>
@@ -789,10 +833,10 @@
     <section class="section">
       <div class="container">
         <div class="final-cta reveal">
-          <h2>Give your network a control plane.</h2>
+          <h2>Give your servers a control plane.</h2>
           <p>
             Self-hosted, Docker-native, and open from the first commit. Spin up your first
-            server tonight.
+            server today.
           </p>
           <div class="hero-cta">
             <a class="btn btn-primary btn-lg" href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">
@@ -873,7 +917,6 @@
         <p>© <span id="year">2026</span> Carbon Panel contributors. Built on the IBM Carbon Design System.</p>
         <p class="lic">
           Licensed
-          <span class="badge">MIT</span>
           <span class="badge">MPL-2.0</span>
         </p>
       </div>

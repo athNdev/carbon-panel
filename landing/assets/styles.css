@@ -164,25 +164,6 @@ button {
   position: relative;
 }
 
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.32px;
-  text-transform: uppercase;
-  color: var(--accent-text);
-}
-.eyebrow::before {
-  content: "";
-  width: 16px;
-  height: 1px;
-  background: var(--accent-text);
-  opacity: 0.7;
-}
-
 .section-head {
   max-width: 720px;
   margin-bottom: 56px;
@@ -191,9 +172,6 @@ button {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
-}
-.section-head .eyebrow {
-  margin-bottom: 16px;
 }
 .section-head h2 {
   font-size: clamp(30px, 3.6vw, 44px);
@@ -920,6 +898,8 @@ button {
   grid-auto-rows: minmax(178px, auto);
 }
 .tile {
+  position: relative;
+  overflow: hidden;
   grid-column: span 2;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -930,6 +910,25 @@ button {
   transition: border-color var(--dur-med) var(--ease),
     transform var(--dur-med) var(--ease),
     background-color var(--dur-med) var(--ease);
+}
+/* accent edge sweeps in on hover */
+.tile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent) 35%, var(--accent) 65%, transparent);
+  opacity: 0;
+  transform: scaleX(0.5);
+  transform-origin: center;
+  transition: opacity var(--dur) var(--ease), transform var(--dur-med) var(--ease);
+  pointer-events: none;
+}
+.tile:hover::before {
+  opacity: 1;
+  transform: scaleX(1);
 }
 .tile:hover {
   border-color: var(--border-strong);
@@ -983,11 +982,36 @@ button {
 .tile.feature-anchor {
   grid-column: span 3;
   grid-row: span 2;
-  overflow: hidden;
-  justify-content: space-between;
 }
 .tile.feature-anchor .anchor-visual {
-  margin-top: 22px;
+  margin-top: auto;
+  padding-top: 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+/* horizontal split at wide viewports: copy left, cluster panel right */
+@media (min-width: 1081px) {
+  .tile.feature-anchor {
+    display: grid;
+    grid-template-columns: 1.02fr 0.98fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+  .tile.feature-anchor .anchor-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .tile.feature-anchor .anchor-visual {
+    margin-top: 0;
+    padding-top: 0;
+    justify-content: space-evenly;
+  }
+}
+.anchor-visual {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--term-bg);
@@ -1002,6 +1026,23 @@ button {
   align-items: center;
   gap: 8px;
 }
+.anchor-visual .av-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.anchor-visual .av-foot {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+.anchor-visual .av-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px rgba(66, 190, 101, 0.7);
+  flex: none;
+}
 .anchor-visual .node {
   flex: 1;
   border: 1px solid var(--border);
@@ -1013,6 +1054,152 @@ button {
 .anchor-visual .node .ip { color: var(--text-tertiary); font-size: 10px; }
 .anchor-visual .arrow {
   color: var(--accent-text);
+}
+
+/* ---------- Routing table (proxy tile) — shares the tree motif ---------- */
+.route-map {
+  margin-top: auto;
+  padding-top: 18px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.route-map .rm-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  padding: 0 10px 6px;
+}
+.route-map .rm-head .arrow { color: var(--accent-text); }
+.route-map .rm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.route-map .rm-row:hover {
+  border-color: var(--border-strong);
+  background: var(--term-bg);
+}
+.route-map .rm-stem { color: var(--accent-text); }
+.route-map .rm-host { color: var(--text-primary); }
+.route-map .rm-arrow {
+  color: var(--text-tertiary);
+  transition: color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.route-map .rm-row:hover .rm-arrow {
+  color: var(--accent-text);
+  transform: translateX(2px);
+}
+.route-map .rm-target {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: var(--accent-text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  transition: border-color var(--dur) var(--ease);
+}
+.route-map .rm-row:hover .rm-target {
+  border-color: var(--accent);
+}
+
+/* ---------- Deep-sleep state cycle ---------- */
+.sleep-cycle {
+  position: relative;
+  height: 46px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+.sleep-cycle .sc-pill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--term-bg);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  animation: sc-cycle 9s var(--ease) infinite;
+}
+.sleep-cycle .sc-1 { animation-delay: 0s; }
+.sleep-cycle .sc-2 { animation-delay: 3s; }
+.sleep-cycle .sc-3 { animation-delay: 6s; }
+.sleep-cycle .sc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex: none;
+}
+.sleep-cycle .sc-1 .sc-dot { background: var(--success); box-shadow: 0 0 6px rgba(66, 190, 101, 0.7); }
+.sleep-cycle .sc-2 .sc-dot { background: var(--accent-text); box-shadow: 0 0 6px rgba(120, 169, 255, 0.7); }
+.sleep-cycle .sc-3 .sc-dot { background: var(--warning); box-shadow: 0 0 6px rgba(241, 194, 27, 0.7); }
+@keyframes sc-cycle {
+  0% { opacity: 0; transform: translateY(4px); filter: blur(4px); }
+  4% { opacity: 1; transform: none; filter: blur(0); }
+  30% { opacity: 1; transform: none; filter: blur(0); }
+  34%, 100% { opacity: 0; transform: translateY(-4px); filter: blur(4px); }
+}
+
+/* ---------- Server type ticker ---------- */
+.ticker {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  padding: 20px 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 56s linear infinite;
+}
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+.ticker-group {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding-right: 32px;
+}
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 32px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.ticker-item::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: var(--accent-text);
+  opacity: 0.45;
+  transform: rotate(45deg);
+}
+@keyframes ticker-scroll {
+  to { transform: translateX(-50%); }
 }
 
 /* ============================================================
@@ -1226,6 +1413,15 @@ table.compare tbody td {
   color: var(--text-secondary);
 }
 table.compare tbody tr:last-child td { border-bottom: none; }
+table.compare tbody tr {
+  transition: background-color var(--dur) var(--ease);
+}
+table.compare tbody tr:hover td {
+  background: var(--layer-01);
+}
+table.compare tbody tr:hover td.col-hl {
+  background: rgba(15, 98, 254, 0.12);
+}
 table.compare tbody td:first-child {
   color: var(--text-primary);
   font-weight: 500;
@@ -1527,6 +1723,11 @@ table.compare .icon { width: 18px; height: 18px; }
   .btn:active { scale: 1; }
   .btn-primary:hover { transform: none; }
   .tile:hover { transform: none; }
+  .ticker { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .ticker-track { animation: none; }
+  .ticker-group[aria-hidden="true"] { display: none; }
+  .sleep-cycle .sc-pill { animation: none; opacity: 0; filter: none; }
+  .sleep-cycle .sc-1 { opacity: 1; }
 }
 
 /* ============================================================
@@ -1596,6 +1797,7 @@ table.compare .icon { width: 18px; height: 18px; }
   .mock-chip { display: none; }
   .bento { grid-template-columns: 1fr; }
   .tile.feature-anchor { grid-column: span 1; }
+  .route-map .rm-row { flex-wrap: wrap; row-gap: 4px; }
   .stat { padding: 28px 20px; }
   .stat .num { font-size: 32px; }
   .deepdive-copy { padding: 32px 24px; }
