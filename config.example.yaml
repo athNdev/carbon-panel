@@ -39,7 +39,11 @@ database:
   max_idle_conns: 5
   conn_max_lifetime: 300
   # Daily VACUUM INTO snapshot under storage.data_dir/backups. "off" disables it.
-  # Restore: stop the panel, replace the database file with panel-YYYYMMDD.sqlite, start.
+  # Snapshots are crash-consistent (VACUUM INTO) and integrity-checked before use.
+  # Restore: stop the panel, then run
+  #   carbon-panel -config config.yaml -restore-panel-backup <snapshot-file>
+  # The restore verifies the snapshot and purges stale WAL sidecars; the previous
+  # database is kept as <db>.pre-restore. See docs/runbook-panel-db-restore.md.
   # There is no automatic restore. This is not Litestream.
   panel_backup: daily
   panel_backup_keep: 7

@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -158,4 +159,88 @@ func replaceFile(src, dest string) error {
 	}
 	_ = os.Remove(bak)
 	return nil
+}
+
+// RestorePanelDatabase replaces the panel database at dbPath with the snapshot
+// at backupPath. The panel must be stopped: this operates on plain files, not
+// on a live Store.
+//
+// It verifies the snapshot first (a corrupt backup never replaces a good
+// database), keeps the previous database at dbPath+".pre-restore", and purges
+// stale WAL sidecars left by the previous database — a leftover -wal would be
+// replayed over the restored file and corrupt it on the next start.
+func RestorePanelDatabase(dbPath, backupPath string) error {
+	if isInMemorySQLitePath(dbPath) {
+		return fmt.Errorf("panel restore requires a file database")
+	}
+	if _, err := os.Stat(backupPath); err != nil {
+		return fmt.Errorf("backup not readable: %w", err)
+	}
+	// Refuse to install a snapshot that does not pass its own integrity check.
+	if err := sqliteIntegrity(backupPath); err != nil {
+		return fmt.Errorf("refusing to restore: %w", err)
+	}
+
+	// Copy the snapshot beside the target first: the swap must be a rename on
+	// the same filesystem, and the snapshot file itself stays in place.
+	installed := dbPath + ".restoring"
+	_ = os.Remove(installed)
+	if err := copyFileContents(backupPath, installed); err != nil {
+		_ = os.Remove(installed)
+		return fmt.Errorf("staging restore: %w", err)
+	}
+
+	// Swap the old database aside instead of deleting it so the operator can
+	// still recover from a mistaken restore.
+	previous := dbPath + ".pre-restore"
+	_ = os.Remove(previous)
+	hadDB := false
+	if _, err := os.Stat(dbPath); err == nil {
+		hadDB = true
+		if err := os.Rename(dbPath, previous); err != nil {
+			_ = os.Remove(installed)
+			return fmt.Errorf("moving previous database aside: %w", err)
+		}
+	}
+	if err := os.Rename(installed, dbPath); err != nil {
+		if hadDB {
+			_ = os.Rename(previous, dbPath)
+		}
+		_ = os.Remove(installed)
+		return fmt.Errorf("installing restored database: %w", err)
+	}
+
+	// The old WAL sidecars describe the previous database, not the restored
+	// one. Remove them after the swap; failing to remove them is an error the
+	// operator must resolve before starting the panel.
+	for _, sidecar := range []string{dbPath + "-wal", dbPath + "-shm"} {
+		if err := os.Remove(sidecar); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("restored database in place but stale %s could not be removed: %w", sidecar, err)
+		}
+	}
+
+	// Final check on the installed file, so a failure here is caught before
+	// the panel ever opens it.
+	if err := sqliteIntegrity(dbPath); err != nil {
+		return fmt.Errorf("restored database failed integrity check: %w", err)
+	}
+	return nil
+}
+
+// copyFileContents copies src to dest, truncating dest if it exists.
+func copyFileContents(src, dest string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		return err
+	}
+	return out.Close()
 }
