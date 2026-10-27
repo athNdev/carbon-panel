@@ -146,11 +146,15 @@ func (x *Datapack) GetGameVersions() []string {
 
 // A datapack installed on a server's filesystem.
 type InstalledDatapack struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Size          int64                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`
-	InstalledAt   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=installed_at,json=installedAt,proto3" json:"installed_at,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	FileName    string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	DisplayName string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Size        int64                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`
+	InstalledAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=installed_at,json=installedAt,proto3" json:"installed_at,omitempty"`
+	// Declared pack format range ("48", "88 - 94.1"); empty when unknown.
+	PackFormat string `protobuf:"bytes,5,opt,name=pack_format,json=packFormat,proto3" json:"pack_format,omitempty"`
+	// Compatibility warning against the server version; empty when fine or unknown.
+	FormatWarning string `protobuf:"bytes,6,opt,name=format_warning,json=formatWarning,proto3" json:"format_warning,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -213,6 +217,21 @@ func (x *InstalledDatapack) GetInstalledAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *InstalledDatapack) GetPackFormat() string {
+	if x != nil {
+		return x.PackFormat
+	}
+	return ""
+}
+
+func (x *InstalledDatapack) GetFormatWarning() string {
+	if x != nil {
+		return x.FormatWarning
+	}
+	return ""
+}
+
+// SearchDatapacksRequest queries a datapack index.
 type SearchDatapacksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
@@ -289,6 +308,7 @@ func (x *SearchDatapacksRequest) GetLimit() int32 {
 	return 0
 }
 
+// SearchDatapacksResponse is a page of datapack search results.
 type SearchDatapacksResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datapacks     []*Datapack            `protobuf:"bytes,1,rep,name=datapacks,proto3" json:"datapacks,omitempty"`
@@ -357,6 +377,7 @@ func (x *SearchDatapacksResponse) GetOffset() int32 {
 	return 0
 }
 
+// InstallDatapackRequest installs a datapack from an index into the world.
 type InstallDatapackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -433,6 +454,7 @@ func (x *InstallDatapackRequest) GetIndexer() string {
 	return ""
 }
 
+// InstallDatapackResponse reports the installed datapack.
 type InstallDatapackResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datapack      *InstalledDatapack     `protobuf:"bytes,1,opt,name=datapack,proto3" json:"datapack,omitempty"`
@@ -477,6 +499,7 @@ func (x *InstallDatapackResponse) GetDatapack() *InstalledDatapack {
 	return nil
 }
 
+// UploadDatapackRequest imports a previously uploaded datapack archive.
 type UploadDatapackRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ServerId        string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -537,6 +560,7 @@ func (x *UploadDatapackRequest) GetFileName() string {
 	return ""
 }
 
+// UploadDatapackResponse reports the imported datapack.
 type UploadDatapackResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datapack      *InstalledDatapack     `protobuf:"bytes,1,opt,name=datapack,proto3" json:"datapack,omitempty"`
@@ -589,6 +613,7 @@ func (x *UploadDatapackResponse) GetMessage() string {
 	return ""
 }
 
+// ListDatapacksRequest lists the datapacks installed in the world.
 type ListDatapacksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -633,6 +658,7 @@ func (x *ListDatapacksRequest) GetServerId() string {
 	return ""
 }
 
+// ListDatapacksResponse holds the installed datapacks.
 type ListDatapacksResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datapacks     []*InstalledDatapack   `protobuf:"bytes,1,rep,name=datapacks,proto3" json:"datapacks,omitempty"`
@@ -677,6 +703,7 @@ func (x *ListDatapacksResponse) GetDatapacks() []*InstalledDatapack {
 	return nil
 }
 
+// DeleteDatapackRequest removes an installed datapack.
 type DeleteDatapackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -729,6 +756,7 @@ func (x *DeleteDatapackRequest) GetFileName() string {
 	return ""
 }
 
+// DeleteDatapackResponse acknowledges the removal.
 type DeleteDatapackResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -782,12 +810,15 @@ const file_carbonpanel_v1_datapack_proto_rawDesc = "" +
 	"\x06author\x18\b \x01(\tR\x06author\x12%\n" +
 	"\x0edownload_count\x18\t \x01(\x03R\rdownloadCount\x12#\n" +
 	"\rgame_versions\x18\n" +
-	" \x03(\tR\fgameVersions\"\xa6\x01\n" +
+	" \x03(\tR\fgameVersions\"\xee\x01\n" +
 	"\x11InstalledDatapack\x12\x1b\n" +
 	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x12\n" +
 	"\x04size\x18\x03 \x01(\x03R\x04size\x12=\n" +
-	"\finstalled_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vinstalledAt\"\x99\x01\n" +
+	"\finstalled_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vinstalledAt\x12\x1f\n" +
+	"\vpack_format\x18\x05 \x01(\tR\n" +
+	"packFormat\x12%\n" +
+	"\x0eformat_warning\x18\x06 \x01(\tR\rformatWarning\"\x99\x01\n" +
 	"\x16SearchDatapacksRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12!\n" +
 	"\fgame_version\x18\x02 \x01(\tR\vgameVersion\x12\x18\n" +

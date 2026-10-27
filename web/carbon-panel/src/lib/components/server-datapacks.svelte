@@ -22,7 +22,15 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 	let { server }: Props = $props();
 
-	let datapacks = $state<Array<{ fileName: string; displayName: string; size: number }>>([]);
+	let datapacks = $state<
+		Array<{
+			fileName: string;
+			displayName: string;
+			size: number;
+			packFormat: string;
+			formatWarning: string;
+		}>
+	>([]);
 	let loading = $state(false);
 	let error = $state('');
 	let browseOpen = $state(false);
@@ -70,7 +78,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			datapacks = (res.datapacks ?? []).map((d) => ({
 				fileName: d.fileName,
 				displayName: d.displayName,
-				size: Number(d.size)
+				size: Number(d.size),
+				packFormat: d.packFormat ?? '',
+				formatWarning: d.formatWarning ?? ''
 			}));
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load datapacks';
@@ -164,6 +174,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						<div class="min-w-0 flex-1">
 							<p class="truncate font-medium text-white">{d.displayName}</p>
 							<p class="text-xs text-[#8d8d8d]">{d.fileName}</p>
+							{#if d.packFormat}
+								<p class="text-xs text-[#8d8d8d]">pack format {d.packFormat}</p>
+							{/if}
+							{#if d.formatWarning}
+								<p class="text-xs text-[#ff8389]">{d.formatWarning}</p>
+							{/if}
 						</div>
 						<Badge class="border-[#393939] bg-[#393939] text-[#c6c6c6]">
 							{(d.size / 1024).toFixed(1)} KB

@@ -19,7 +19,7 @@ import type { Message } from '@bufbuild/protobuf';
 export const file_carbonpanel_v1_datapack: GenFile =
 	/*@__PURE__*/
 	fileDesc(
-		'Ch1jYXJib25wYW5lbC92MS9kYXRhcGFjay5wcm90bxIOY2FyYm9ucGFuZWwudjEiugEKCERhdGFwYWNrEgoKAmlkGAEgASgJEg8KB2luZGV4ZXIYAiABKAkSDAoEbmFtZRgDIAEoCRIMCgRzbHVnGAQgASgJEg8KB3N1bW1hcnkYBSABKAkSEAoIaWNvbl91cmwYBiABKAkSEwoLd2Vic2l0ZV91cmwYByABKAkSDgoGYXV0aG9yGAggASgJEhYKDmRvd25sb2FkX2NvdW50GAkgASgDEhUKDWdhbWVfdmVyc2lvbnMYCiADKAkifAoRSW5zdGFsbGVkRGF0YXBhY2sSEQoJZmlsZV9uYW1lGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIMCgRzaXplGAMgASgDEjAKDGluc3RhbGxlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAibQoWU2VhcmNoRGF0YXBhY2tzUmVxdWVzdBINCgVxdWVyeRgBIAEoCRIUCgxnYW1lX3ZlcnNpb24YAiABKAkSDwoHaW5kZXhlchgDIAEoCRIOCgZvZmZzZXQYBCABKAUSDQoFbGltaXQYBSABKAUifgoXU2VhcmNoRGF0YXBhY2tzUmVzcG9uc2USKwoJZGF0YXBhY2tzGAEgAygLMhguY2FyYm9ucGFuZWwudjEuRGF0YXBhY2sSEwoLdG90YWxfY291bnQYAiABKAUSEQoJcGFnZV9zaXplGAMgASgFEg4KBm9mZnNldBgEIAEoBSJ6ChZJbnN0YWxsRGF0YXBhY2tSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRITCgtkYXRhcGFja19pZBgCIAEoCRIUCgxnYW1lX3ZlcnNpb24YAyABKAkSEQoJZmlsZV9uYW1lGAQgASgJEg8KB2luZGV4ZXIYBSABKAkiTgoXSW5zdGFsbERhdGFwYWNrUmVzcG9uc2USMwoIZGF0YXBhY2sYASABKAsyIS5jYXJib25wYW5lbC52MS5JbnN0YWxsZWREYXRhcGFjayJYChVVcGxvYWREYXRhcGFja1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEhkKEXVwbG9hZF9zZXNzaW9uX2lkGAIgASgJEhEKCWZpbGVfbmFtZRgDIAEoCSJeChZVcGxvYWREYXRhcGFja1Jlc3BvbnNlEjMKCGRhdGFwYWNrGAEgASgLMiEuY2FyYm9ucGFuZWwudjEuSW5zdGFsbGVkRGF0YXBhY2sSDwoHbWVzc2FnZRgCIAEoCSIpChRMaXN0RGF0YXBhY2tzUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiTQoVTGlzdERhdGFwYWNrc1Jlc3BvbnNlEjQKCWRhdGFwYWNrcxgBIAMoCzIhLmNhcmJvbnBhbmVsLnYxLkluc3RhbGxlZERhdGFwYWNrIj0KFURlbGV0ZURhdGFwYWNrUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSEQoJZmlsZV9uYW1lGAIgASgJIhgKFkRlbGV0ZURhdGFwYWNrUmVzcG9uc2Uy+QMKD0RhdGFwYWNrU2VydmljZRJiCg9TZWFyY2hEYXRhcGFja3MSJi5jYXJib25wYW5lbC52MS5TZWFyY2hEYXRhcGFja3NSZXF1ZXN0GicuY2FyYm9ucGFuZWwudjEuU2VhcmNoRGF0YXBhY2tzUmVzcG9uc2USYgoPSW5zdGFsbERhdGFwYWNrEiYuY2FyYm9ucGFuZWwudjEuSW5zdGFsbERhdGFwYWNrUmVxdWVzdBonLmNhcmJvbnBhbmVsLnYxLkluc3RhbGxEYXRhcGFja1Jlc3BvbnNlEl8KDlVwbG9hZERhdGFwYWNrEiUuY2FyYm9ucGFuZWwudjEuVXBsb2FkRGF0YXBhY2tSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuVXBsb2FkRGF0YXBhY2tSZXNwb25zZRJcCg1MaXN0RGF0YXBhY2tzEiQuY2FyYm9ucGFuZWwudjEuTGlzdERhdGFwYWNrc1JlcXVlc3QaJS5jYXJib25wYW5lbC52MS5MaXN0RGF0YXBhY2tzUmVzcG9uc2USXwoORGVsZXRlRGF0YXBhY2sSJS5jYXJib25wYW5lbC52MS5EZWxldGVEYXRhcGFja1JlcXVlc3QaJi5jYXJib25wYW5lbC52MS5EZWxldGVEYXRhcGFja1Jlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw',
+		'Ch1jYXJib25wYW5lbC92MS9kYXRhcGFjay5wcm90bxIOY2FyYm9ucGFuZWwudjEiugEKCERhdGFwYWNrEgoKAmlkGAEgASgJEg8KB2luZGV4ZXIYAiABKAkSDAoEbmFtZRgDIAEoCRIMCgRzbHVnGAQgASgJEg8KB3N1bW1hcnkYBSABKAkSEAoIaWNvbl91cmwYBiABKAkSEwoLd2Vic2l0ZV91cmwYByABKAkSDgoGYXV0aG9yGAggASgJEhYKDmRvd25sb2FkX2NvdW50GAkgASgDEhUKDWdhbWVfdmVyc2lvbnMYCiADKAkiqQEKEUluc3RhbGxlZERhdGFwYWNrEhEKCWZpbGVfbmFtZRgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSDAoEc2l6ZRgDIAEoAxIwCgxpbnN0YWxsZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC3BhY2tfZm9ybWF0GAUgASgJEhYKDmZvcm1hdF93YXJuaW5nGAYgASgJIm0KFlNlYXJjaERhdGFwYWNrc1JlcXVlc3QSDQoFcXVlcnkYASABKAkSFAoMZ2FtZV92ZXJzaW9uGAIgASgJEg8KB2luZGV4ZXIYAyABKAkSDgoGb2Zmc2V0GAQgASgFEg0KBWxpbWl0GAUgASgFIn4KF1NlYXJjaERhdGFwYWNrc1Jlc3BvbnNlEisKCWRhdGFwYWNrcxgBIAMoCzIYLmNhcmJvbnBhbmVsLnYxLkRhdGFwYWNrEhMKC3RvdGFsX2NvdW50GAIgASgFEhEKCXBhZ2Vfc2l6ZRgDIAEoBRIOCgZvZmZzZXQYBCABKAUiegoWSW5zdGFsbERhdGFwYWNrUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSEwoLZGF0YXBhY2tfaWQYAiABKAkSFAoMZ2FtZV92ZXJzaW9uGAMgASgJEhEKCWZpbGVfbmFtZRgEIAEoCRIPCgdpbmRleGVyGAUgASgJIk4KF0luc3RhbGxEYXRhcGFja1Jlc3BvbnNlEjMKCGRhdGFwYWNrGAEgASgLMiEuY2FyYm9ucGFuZWwudjEuSW5zdGFsbGVkRGF0YXBhY2siWAoVVXBsb2FkRGF0YXBhY2tSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRIZChF1cGxvYWRfc2Vzc2lvbl9pZBgCIAEoCRIRCglmaWxlX25hbWUYAyABKAkiXgoWVXBsb2FkRGF0YXBhY2tSZXNwb25zZRIzCghkYXRhcGFjaxgBIAEoCzIhLmNhcmJvbnBhbmVsLnYxLkluc3RhbGxlZERhdGFwYWNrEg8KB21lc3NhZ2UYAiABKAkiKQoUTGlzdERhdGFwYWNrc1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJIk0KFUxpc3REYXRhcGFja3NSZXNwb25zZRI0CglkYXRhcGFja3MYASADKAsyIS5jYXJib25wYW5lbC52MS5JbnN0YWxsZWREYXRhcGFjayI9ChVEZWxldGVEYXRhcGFja1JlcXVlc3QSEQoJc2VydmVyX2lkGAEgASgJEhEKCWZpbGVfbmFtZRgCIAEoCSIYChZEZWxldGVEYXRhcGFja1Jlc3BvbnNlMvkDCg9EYXRhcGFja1NlcnZpY2USYgoPU2VhcmNoRGF0YXBhY2tzEiYuY2FyYm9ucGFuZWwudjEuU2VhcmNoRGF0YXBhY2tzUmVxdWVzdBonLmNhcmJvbnBhbmVsLnYxLlNlYXJjaERhdGFwYWNrc1Jlc3BvbnNlEmIKD0luc3RhbGxEYXRhcGFjaxImLmNhcmJvbnBhbmVsLnYxLkluc3RhbGxEYXRhcGFja1JlcXVlc3QaJy5jYXJib25wYW5lbC52MS5JbnN0YWxsRGF0YXBhY2tSZXNwb25zZRJfCg5VcGxvYWREYXRhcGFjaxIlLmNhcmJvbnBhbmVsLnYxLlVwbG9hZERhdGFwYWNrUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLlVwbG9hZERhdGFwYWNrUmVzcG9uc2USXAoNTGlzdERhdGFwYWNrcxIkLmNhcmJvbnBhbmVsLnYxLkxpc3REYXRhcGFja3NSZXF1ZXN0GiUuY2FyYm9ucGFuZWwudjEuTGlzdERhdGFwYWNrc1Jlc3BvbnNlEl8KDkRlbGV0ZURhdGFwYWNrEiUuY2FyYm9ucGFuZWwudjEuRGVsZXRlRGF0YXBhY2tSZXF1ZXN0GiYuY2FyYm9ucGFuZWwudjEuRGVsZXRlRGF0YXBhY2tSZXNwb25zZUJIWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxYgZwcm90bzM',
 		[file_google_protobuf_timestamp]
 	);
 
@@ -113,6 +113,20 @@ export type InstalledDatapack = Message<'carbonpanel.v1.InstalledDatapack'> & {
 	 * @generated from field: google.protobuf.Timestamp installed_at = 4;
 	 */
 	installedAt?: Timestamp | undefined;
+
+	/**
+	 * Declared pack format range ("48", "88 - 94.1"); empty when unknown.
+	 *
+	 * @generated from field: string pack_format = 5;
+	 */
+	packFormat: string;
+
+	/**
+	 * Compatibility warning against the server version; empty when fine or unknown.
+	 *
+	 * @generated from field: string format_warning = 6;
+	 */
+	formatWarning: string;
 };
 
 /**
@@ -124,6 +138,8 @@ export const InstalledDatapackSchema: GenMessage<InstalledDatapack> =
 	messageDesc(file_carbonpanel_v1_datapack, 1);
 
 /**
+ * SearchDatapacksRequest queries a datapack index.
+ *
  * @generated from message carbonpanel.v1.SearchDatapacksRequest
  */
 export type SearchDatapacksRequest = Message<'carbonpanel.v1.SearchDatapacksRequest'> & {
@@ -162,6 +178,8 @@ export const SearchDatapacksRequestSchema: GenMessage<SearchDatapacksRequest> =
 	messageDesc(file_carbonpanel_v1_datapack, 2);
 
 /**
+ * SearchDatapacksResponse is a page of datapack search results.
+ *
  * @generated from message carbonpanel.v1.SearchDatapacksResponse
  */
 export type SearchDatapacksResponse = Message<'carbonpanel.v1.SearchDatapacksResponse'> & {
@@ -195,6 +213,8 @@ export const SearchDatapacksResponseSchema: GenMessage<SearchDatapacksResponse> 
 	messageDesc(file_carbonpanel_v1_datapack, 3);
 
 /**
+ * InstallDatapackRequest installs a datapack from an index into the world.
+ *
  * @generated from message carbonpanel.v1.InstallDatapackRequest
  */
 export type InstallDatapackRequest = Message<'carbonpanel.v1.InstallDatapackRequest'> & {
@@ -237,6 +257,8 @@ export const InstallDatapackRequestSchema: GenMessage<InstallDatapackRequest> =
 	messageDesc(file_carbonpanel_v1_datapack, 4);
 
 /**
+ * InstallDatapackResponse reports the installed datapack.
+ *
  * @generated from message carbonpanel.v1.InstallDatapackResponse
  */
 export type InstallDatapackResponse = Message<'carbonpanel.v1.InstallDatapackResponse'> & {
@@ -255,6 +277,8 @@ export const InstallDatapackResponseSchema: GenMessage<InstallDatapackResponse> 
 	messageDesc(file_carbonpanel_v1_datapack, 5);
 
 /**
+ * UploadDatapackRequest imports a previously uploaded datapack archive.
+ *
  * @generated from message carbonpanel.v1.UploadDatapackRequest
  */
 export type UploadDatapackRequest = Message<'carbonpanel.v1.UploadDatapackRequest'> & {
@@ -285,6 +309,8 @@ export const UploadDatapackRequestSchema: GenMessage<UploadDatapackRequest> =
 	messageDesc(file_carbonpanel_v1_datapack, 6);
 
 /**
+ * UploadDatapackResponse reports the imported datapack.
+ *
  * @generated from message carbonpanel.v1.UploadDatapackResponse
  */
 export type UploadDatapackResponse = Message<'carbonpanel.v1.UploadDatapackResponse'> & {
@@ -308,6 +334,8 @@ export const UploadDatapackResponseSchema: GenMessage<UploadDatapackResponse> =
 	messageDesc(file_carbonpanel_v1_datapack, 7);
 
 /**
+ * ListDatapacksRequest lists the datapacks installed in the world.
+ *
  * @generated from message carbonpanel.v1.ListDatapacksRequest
  */
 export type ListDatapacksRequest = Message<'carbonpanel.v1.ListDatapacksRequest'> & {
@@ -326,6 +354,8 @@ export const ListDatapacksRequestSchema: GenMessage<ListDatapacksRequest> =
 	messageDesc(file_carbonpanel_v1_datapack, 8);
 
 /**
+ * ListDatapacksResponse holds the installed datapacks.
+ *
  * @generated from message carbonpanel.v1.ListDatapacksResponse
  */
 export type ListDatapacksResponse = Message<'carbonpanel.v1.ListDatapacksResponse'> & {
@@ -344,6 +374,8 @@ export const ListDatapacksResponseSchema: GenMessage<ListDatapacksResponse> =
 	messageDesc(file_carbonpanel_v1_datapack, 9);
 
 /**
+ * DeleteDatapackRequest removes an installed datapack.
+ *
  * @generated from message carbonpanel.v1.DeleteDatapackRequest
  */
 export type DeleteDatapackRequest = Message<'carbonpanel.v1.DeleteDatapackRequest'> & {
@@ -367,6 +399,8 @@ export const DeleteDatapackRequestSchema: GenMessage<DeleteDatapackRequest> =
 	messageDesc(file_carbonpanel_v1_datapack, 10);
 
 /**
+ * DeleteDatapackResponse acknowledges the removal.
+ *
  * @generated from message carbonpanel.v1.DeleteDatapackResponse
  */
 export type DeleteDatapackResponse = Message<'carbonpanel.v1.DeleteDatapackResponse'> & {};

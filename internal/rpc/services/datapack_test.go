@@ -121,7 +121,7 @@ func newUploadTestService(t *testing.T) (*DatapackService, *upload.Manager, *sto
 	require.NoError(t, store.Migrate())
 	t.Cleanup(func() { _ = store.Close() })
 
-	server := &storage.Server{ID: "srv-up", Name: "up", DataPath: t.TempDir()}
+	server := &storage.Server{ID: "srv-up", Name: "up", DataPath: t.TempDir(), MCVersion: "1.21.1"}
 	require.NoError(t, store.CreateServer(context.Background(), server))
 
 	um := upload.NewManager(t.TempDir(), time.Minute, 10<<20, logger.New())
@@ -155,6 +155,8 @@ func TestUploadDatapack(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "my-pack.zip", res.Msg.Datapack.FileName)
 		require.Equal(t, "my-pack", res.Msg.Datapack.DisplayName)
+		require.Equal(t, "34", res.Msg.Datapack.PackFormat, "declared pack format must surface")
+		require.Empty(t, res.Msg.Datapack.FormatWarning, "an older pack format must not warn")
 
 		installed := filepath.Join(server.DataPath, "world", "datapacks", "my-pack.zip")
 		require.FileExists(t, installed)
@@ -174,6 +176,20 @@ func TestUploadDatapack(t *testing.T) {
 		}))
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(server.DataPath, "world", "datapacks", "wrapped.zip"))
+	})
+
+	t.Run("warns on future pack formats", func(t *testing.T) {
+		s, um, server := newUploadTestService(t)
+		data := zipArchiveBytes(t, map[string]string{"pack.mcmeta": `{"pack":{"pack_format":57}}`})
+		session := uploadSession(t, um, "future.zip", data)
+
+		res, err := s.UploadDatapack(context.Background(), connect.NewRequest(&v1.UploadDatapackRequest{
+			ServerId:        server.ID,
+			UploadSessionId: session,
+		}))
+		require.NoError(t, err)
+		require.Equal(t, "57", res.Msg.Datapack.PackFormat)
+		require.NotEmpty(t, res.Msg.Datapack.FormatWarning, "a pack built for a newer Minecraft must warn")
 	})
 
 	t.Run("rejects non-datapack uploads and cleans the session", func(t *testing.T) {
