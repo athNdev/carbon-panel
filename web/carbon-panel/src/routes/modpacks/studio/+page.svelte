@@ -454,8 +454,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 					</div>
 
 					<!-- Tile Footer Actions -->
-					<div class="mt-4 flex items-center justify-between gap-2 border-t border-[#393939] pt-3">
-						<div class="flex items-center gap-1">
+					<div
+						class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#393939] pt-3"
+					>
+						<div class="flex flex-wrap items-center gap-1">
 							<CarbonButton
 								kind="ghost"
 								size="sm"
@@ -480,7 +482,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 							</CarbonButton>
 						</div>
 
-						<div class="flex items-center gap-1.5">
+						<div class="flex flex-wrap items-center justify-end gap-1.5">
 							<CarbonButton
 								kind="tertiary"
 								size="sm"

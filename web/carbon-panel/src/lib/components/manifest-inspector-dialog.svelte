@@ -116,7 +116,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 </script>
 
 <Dialog bind:open {onOpenChange}>
-	<DialogContent class="flex max-h-[85vh] max-w-4xl flex-col overflow-hidden p-6">
+	<DialogContent class="flex max-h-[85vh] flex-col overflow-hidden p-6 sm:max-w-4xl">
 		<DialogHeader>
 			<DialogTitle class="flex items-center gap-2 text-xl font-bold">
 				<FileSearch class="h-5 w-5 text-primary" />

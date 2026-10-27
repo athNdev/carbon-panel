@@ -40,7 +40,8 @@ one at https://mozilla.org/MPL/2.0/.
 		Radio,
 		History,
 		Users,
-		Archive
+		Archive,
+		Database
 	} from '@lucide/svelte';
 	import {
 		DropdownMenu,
@@ -69,6 +70,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import ServerConfiguration from '$lib/components/server-configuration.svelte';
 	import ServerSettings from '$lib/components/server-settings.svelte';
 	import ServerMods from '$lib/components/server-mods.svelte';
+	import ServerDatapacks from '$lib/components/server-datapacks.svelte';
 	import ServerFiles from '$lib/components/files/server-files.svelte';
 	import ServerRouting from '$lib/components/server-routing.svelte';
 	import ServerTasks from '$lib/components/server-tasks.svelte';
@@ -318,6 +320,7 @@ one at https://mozilla.org/MPL/2.0/.
 		{ id: 'console', label: 'Console', icon: Terminal },
 		{ id: 'configuration', label: 'Configuration', icon: HardDrive },
 		{ id: 'mods', label: 'Mods', icon: Package },
+		{ id: 'datapacks', label: 'Datapacks', icon: Database },
 		{ id: 'modules', label: 'Modules', icon: Boxes },
 		{ id: 'files', label: 'Files', icon: Files },
 		{ id: 'tasks', label: 'Tasks', icon: ListTodo },
@@ -827,6 +830,8 @@ one at https://mozilla.org/MPL/2.0/.
 						</div>
 					{:else if activeTab === 'mods'}
 						<ServerMods {server} active={activeTab === 'mods'} />
+					{:else if activeTab === 'datapacks'}
+						<ServerDatapacks {server} />
 					{:else if activeTab === 'modules'}
 						<ServerModules {server} active={activeTab === 'modules'} />
 					{:else if activeTab === 'files'}

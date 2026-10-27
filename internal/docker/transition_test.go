@@ -8,6 +8,8 @@ package docker
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -125,5 +127,54 @@ func TestWaitForServerTransitionHonorsContext(t *testing.T) {
 	cancel()
 	if err := WaitForServerTransition(ctx, "srv-cancel"); err != context.Canceled {
 		t.Fatalf("WaitForServerTransition error = %v, want context canceled", err)
+	}
+}
+
+func TestTransitionDiagnosticsWarnOnStuckLock(t *testing.T) {
+	var warned []string
+	SetTransitionWarner(func(format string, args ...any) {
+		warned = append(warned, fmt.Sprintf(format, args...))
+	})
+	t.Cleanup(func() { SetTransitionWarner(nil) })
+
+	held, err := TryBeginServerTransition("srv-stuck")
+	if err != nil {
+		t.Fatalf("transition should be acquired: %v", err)
+	}
+	defer held.Release()
+
+	// A fresh holder must not warn on contention.
+	if _, err := TryBeginServerTransition("srv-stuck"); err == nil {
+		t.Fatal("second claim should be rejected")
+	}
+	if len(warned) != 0 {
+		t.Fatalf("unexpected warning for a fresh holder: %v", warned)
+	}
+
+	// Backdate the holder past the slow threshold; contention must warn and
+	// name the holder.
+	serverTransitions.Lock()
+	st := serverTransitions.active["srv-stuck"]
+	st.since = time.Now().Add(-slowTransitionWarnAt - time.Minute)
+	serverTransitions.active["srv-stuck"] = st
+	serverTransitions.Unlock()
+
+	if _, err := TryBeginServerTransition("srv-stuck"); err == nil {
+		t.Fatal("second claim should be rejected")
+	}
+	if len(warned) != 1 {
+		t.Fatalf("want exactly one stuck-lock warning, got %v", warned)
+	}
+	if !strings.Contains(warned[0], "srv-stuck") || !strings.Contains(warned[0], "held") {
+		t.Fatalf("warning lacks holder details: %q", warned[0])
+	}
+
+	debug := TransitionDebug("srv-stuck")
+	if !strings.Contains(debug, "held") {
+		t.Fatalf("TransitionDebug = %q, want holder details", debug)
+	}
+	held.Release()
+	if got := TransitionDebug("srv-stuck"); got != "" {
+		t.Fatalf("TransitionDebug after release = %q, want empty", got)
 	}
 }

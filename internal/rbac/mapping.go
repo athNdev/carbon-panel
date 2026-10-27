@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package rbac
 
 // ProcedurePermission maps an RPC procedure to a resource and action.
@@ -105,6 +104,13 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.ModService/DeleteMod":                      {Resource: ResourceMods, Action: ActionDelete, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.ModService/GetFabricOptimizationStack":     {Resource: ResourceMods, Action: ActionRead, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.ModService/InstallFabricOptimizationStack": {Resource: ResourceMods, Action: ActionUpdate, ObjectIDField: "server_id"},
+
+	// ─── DatapackService (world datapacks, scoped like mods) ─────────────────────
+	"/carbonpanel.v1.DatapackService/SearchDatapacks": {Resource: ResourceMods, Action: ActionRead},
+	"/carbonpanel.v1.DatapackService/InstallDatapack": {Resource: ResourceMods, Action: ActionCreate, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.DatapackService/UploadDatapack":  {Resource: ResourceMods, Action: ActionCreate, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.DatapackService/ListDatapacks":   {Resource: ResourceMods, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.DatapackService/DeleteDatapack":  {Resource: ResourceMods, Action: ActionDelete, ObjectIDField: "server_id"},
 
 	// â”€â”€ ModpackService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.ModpackService/SearchModpacks":        {Resource: ResourceModpacks, Action: ActionRead},

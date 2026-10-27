@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package packwiz
 
 import (
@@ -23,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/athNdev/carbon-panel/internal/minecraft"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/google/uuid"
 	toml "github.com/pelletier/go-toml/v2"
@@ -689,6 +689,38 @@ func (m *Manager) ExportMrpack(packID string, w io.Writer) error {
 		return err
 	}
 	if _, err := f.Write(idxBytes); err != nil {
+		return err
+	}
+
+	// Bundle override files (configs, datapacks, options, ...) under overrides/,
+	// mirroring the packwiz layout Modrinth-compatible installers extract.
+	pDir := filepath.Clean(m.packDir(packID))
+	err = filepath.Walk(pDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		rel, relErr := filepath.Rel(pDir, path)
+		if relErr != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+		if rel == "pack.toml" || rel == "index.toml" || strings.HasPrefix(rel, "mods/") {
+			return nil
+		}
+		src, openErr := os.Open(path)
+		if openErr != nil {
+			return nil
+		}
+		dst, createErr := zw.Create("overrides/" + rel)
+		if createErr != nil {
+			_ = src.Close()
+			return createErr
+		}
+		_, copyErr := io.Copy(dst, io.LimitReader(src, 500*1024*1024))
+		_ = src.Close()
+		return copyErr
+	})
+	if err != nil {
 		return err
 	}
 
@@ -1368,6 +1400,53 @@ func (m *Manager) DeletePackFile(packID, relPath string) error {
 
 	_ = os.Remove(target)
 
+	return m.RefreshPack(packID)
+}
+
+// AddDatapackFile installs a datapack archive into the pack's datapacks override
+// directory. The archive is validated as a real Minecraft datapack before it
+// lands, repairing the common wrapper-folder packaging mistake when needed.
+func (m *Manager) AddDatapackFile(packID, fileName string, r io.Reader) error {
+	if err := minecraft.ValidateDatapackFilename(fileName); err != nil {
+		return err
+	}
+
+	pDir := filepath.Clean(m.packDir(packID))
+	target := filepath.Clean(filepath.Join(pDir, "datapacks", fileName))
+	if !strings.HasPrefix(target, pDir+string(filepath.Separator)) {
+		return fmt.Errorf("path escapes pack directory")
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(target), ".datapack-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }() // no-op once renamed into place
+
+	written, err := io.Copy(tmp, io.LimitReader(r, minecraft.MaxDatapackBytes+1))
+	_ = tmp.Close()
+	if err != nil {
+		return err
+	}
+	if written > minecraft.MaxDatapackBytes {
+		return fmt.Errorf("datapack exceeds %d bytes", minecraft.MaxDatapackBytes)
+	}
+
+	// Reject anything that is not a real datapack before it reaches the pack.
+	if err := minecraft.ValidateDatapackArchive(tmpPath); err != nil {
+		normalized, nerr := minecraft.NormalizeDatapackArchive(tmpPath)
+		if nerr != nil || !normalized {
+			return fmt.Errorf("not a valid datapack archive: %w", err)
+		}
+	}
+
+	if err := os.Rename(tmpPath, target); err != nil {
+		return err
+	}
 	return m.RefreshPack(packID)
 }
 

@@ -6,12 +6,14 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package indexers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -104,4 +106,95 @@ func NewIndexer(name string, apiKey string, cfg *config.Config) (ModpackIndexer,
 		return nil, fmt.Errorf("unknown indexer: %s", name)
 	}
 	return factory(apiKey, cfg), nil
+}
+
+// DatapackIndexerFactory creates a DatapackIndexer from an API key and config.
+type DatapackIndexerFactory func(apiKey string, cfg *config.Config) DatapackIndexer
+
+var (
+	datapackRegistryMu sync.RWMutex
+	datapackRegistry   = make(map[string]DatapackIndexerFactory)
+)
+
+// RegisterDatapackIndexer registers a DatapackIndexerFactory under the given name.
+// Typically called from an indexer package's init() function.
+func RegisterDatapackIndexer(name string, factory DatapackIndexerFactory) {
+	datapackRegistryMu.Lock()
+	defer datapackRegistryMu.Unlock()
+	datapackRegistry[name] = factory
+}
+
+// normalizeDatapackIndexerName maps provider aliases to their canonical
+// registry name so callers can use one vocabulary across content types
+// ("fuego" is the CurseForge adapter's established name on the modpack side).
+func normalizeDatapackIndexerName(name string) string {
+	if strings.EqualFold(name, "fuego") {
+		return "curseforge"
+	}
+	return name
+}
+
+// NewDatapackIndexer creates a DatapackIndexer by name using the factory registry.
+func NewDatapackIndexer(name string, apiKey string, cfg *config.Config) (DatapackIndexer, error) {
+	name = normalizeDatapackIndexerName(name)
+	datapackRegistryMu.RLock()
+	factory, ok := datapackRegistry[name]
+	datapackRegistryMu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("unknown datapack indexer: %s", name)
+	}
+	return factory(apiKey, cfg), nil
+}
+
+// DatapackIndexerNames returns the registered datapack indexer names,
+// sorted, so callers can search every provider for merged coverage.
+func DatapackIndexerNames() []string {
+	datapackRegistryMu.RLock()
+	defer datapackRegistryMu.RUnlock()
+	names := make([]string, 0, len(datapackRegistry))
+	for name := range datapackRegistry {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// DatapackIndexersFor builds the datapack indexer set for file resolution: the
+// named indexer, or every registered provider when name is empty so search
+// results from any provider remain installable.
+func DatapackIndexersFor(name, apiKey string, cfg *config.Config) ([]DatapackIndexer, error) {
+	if strings.TrimSpace(name) != "" {
+		idx, err := NewDatapackIndexer(name, apiKey, cfg)
+		if err != nil {
+			return nil, err
+		}
+		return []DatapackIndexer{idx}, nil
+	}
+	var idxs []DatapackIndexer
+	for _, n := range DatapackIndexerNames() {
+		if idx, err := NewDatapackIndexer(n, apiKey, cfg); err == nil {
+			idxs = append(idxs, idx)
+		}
+	}
+	if len(idxs) == 0 {
+		return nil, fmt.Errorf("no datapack providers available")
+	}
+	return idxs, nil
+}
+
+// FirstDatapackLatestFile resolves a datapack file against the given indexers
+// in order and returns the first success with the indexer that resolved it (for
+// download trust scoping). An id from one provider must not be resolvable on
+// another, so cross-provider misses are expected and joined into the final
+// error.
+func FirstDatapackLatestFile(ctx context.Context, datapackID, gameVersion string, idxs []DatapackIndexer) (*DatapackFile, DatapackIndexer, error) {
+	var errs []error
+	for _, idx := range idxs {
+		f, err := idx.GetDatapackLatestFile(ctx, datapackID, gameVersion)
+		if err == nil {
+			return f, idx, nil
+		}
+		errs = append(errs, fmt.Errorf("%s: %w", idx.GetIndexerName(), err))
+	}
+	return nil, nil, fmt.Errorf("no datapack file found for %s: %w", datapackID, errors.Join(errs...))
 }

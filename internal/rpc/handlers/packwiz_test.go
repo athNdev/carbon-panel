@@ -26,7 +26,7 @@ func TestPackwizHandler_CRUD(t *testing.T) {
 
 	log := logger.New()
 	mgr := packwiz.NewManager(tempDir, log)
-	handler := NewPackwizHandler(mgr, nil, log, nil, nil)
+	handler := NewPackwizHandler(mgr, nil, log, nil, nil, nil)
 
 	// 1. List Packs (initially empty)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/packwiz/packs", nil)
@@ -114,7 +114,7 @@ func TestPackwizHandler_CRUD(t *testing.T) {
 
 func TestPackwizHandler_LoaderVersions(t *testing.T) {
 	log := logger.New()
-	handler := NewPackwizHandler(nil, nil, log, nil, nil)
+	handler := NewPackwizHandler(nil, nil, log, nil, nil, nil)
 
 	loaders := []string{"fabric", "forge", "neoforge", "quilt"}
 	for _, l := range loaders {

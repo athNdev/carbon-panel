@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: MPL-2.0
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+syntax = "proto3";
+
+package carbonpanel.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1";
+
+// Server datapack management. Datapacks are world-data bundles that run on
+// Vanilla servers (no mod loader) and live under <world>/datapacks.
+service DatapackService {
+  // Search a datapack index (e.g. Modrinth) for installable datapacks
+  rpc SearchDatapacks(SearchDatapacksRequest) returns (SearchDatapacksResponse);
+  	// Install a datapack from an index into the server's world
+  	rpc InstallDatapack(InstallDatapackRequest) returns (InstallDatapackResponse);
+  	// Import an uploaded datapack archive into the server's world
+  	rpc UploadDatapack(UploadDatapackRequest) returns (UploadDatapackResponse);
+  // List datapacks installed in the server's world
+  rpc ListDatapacks(ListDatapacksRequest) returns (ListDatapacksResponse);
+  // Delete an installed datapack
+  rpc DeleteDatapack(DeleteDatapackRequest) returns (DeleteDatapackResponse);
+}
+
+// Datapack as reported by a search index.
+message Datapack {
+  string id = 1;
+  string indexer = 2;
+  string name = 3;
+  string slug = 4;
+  string summary = 5;
+  string icon_url = 6;
+  string website_url = 7;
+  string author = 8;
+  int64 download_count = 9;
+  repeated string game_versions = 10;
+}
+
+// A datapack installed on a server's filesystem.
+message InstalledDatapack {
+  string file_name = 1;
+  string display_name = 2;
+  int64 size = 3;
+  google.protobuf.Timestamp installed_at = 4;
+}
+
+// SearchDatapacksRequest queries a datapack index.
+message SearchDatapacksRequest {
+  string query = 1;
+  string game_version = 2;
+  string indexer = 3;
+  int32 offset = 4;
+  int32 limit = 5;
+}
+
+// SearchDatapacksResponse is a page of datapack search results.
+message SearchDatapacksResponse {
+  repeated Datapack datapacks = 1;
+  int32 total_count = 2;
+  int32 page_size = 3;
+  int32 offset = 4;
+}
+
+// InstallDatapackRequest installs a datapack from an index into the world.
+message InstallDatapackRequest {
+  string server_id = 1;
+  string datapack_id = 2;
+  string game_version = 3;
+  string file_name = 4; // optional override for the stored filename
+  string indexer = 5;   // provider that resolved datapack_id (empty: try all)
+}
+
+// InstallDatapackResponse reports the installed datapack.
+message InstallDatapackResponse {
+  InstalledDatapack datapack = 1;
+}
+
+// UploadDatapackRequest imports a previously uploaded datapack archive.
+message UploadDatapackRequest {
+  string server_id = 1;
+  string upload_session_id = 2;
+  string file_name = 3; // optional override for the stored filename
+}
+
+// UploadDatapackResponse reports the imported datapack.
+message UploadDatapackResponse {
+  InstalledDatapack datapack = 1;
+  string message = 2;
+}
+
+// ListDatapacksRequest lists the datapacks installed in the world.
+message ListDatapacksRequest {
+  string server_id = 1;
+}
+
+// ListDatapacksResponse holds the installed datapacks.
+message ListDatapacksResponse {
+  repeated InstalledDatapack datapacks = 1;
+}
+
+// DeleteDatapackRequest removes an installed datapack.
+message DeleteDatapackRequest {
+  string server_id = 1;
+  string file_name = 2;
+}
+
+// DeleteDatapackResponse acknowledges the removal.
+message DeleteDatapackResponse {}

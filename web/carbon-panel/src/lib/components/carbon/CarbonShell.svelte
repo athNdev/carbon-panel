@@ -25,6 +25,21 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	let { children }: Props = $props();
 
 	let sideNavExpanded = $state(true);
+	let profileOpen = $state(false);
+
+	function toggleProfile() {
+		profileOpen = !profileOpen;
+	}
+
+	function closeProfile() {
+		profileOpen = false;
+	}
+
+	function handleProfileKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			profileOpen = false;
+		}
+	}
 	let servers = $derived($activitySortedServers);
 	let runningCount = $derived($runningServers.length);
 	let user = $derived($currentUser);
@@ -193,9 +208,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				href={resolve('/')}
 				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-accent-text"
 			>
-				<img src="/carbon_panel_logo.png" alt="Carbon Panel" class="h-6 w-6 rounded-sm" />
 				<span class="font-semibold tracking-wide">Carbon Panel</span>
-				<CarbonTag type="cyan" size="sm" class="hidden md:inline-flex">Carbon UI</CarbonTag>
 			</a>
 		</div>
 
@@ -209,15 +222,72 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				</CarbonTag>
 			</div>
 
-			<!-- User Profile / Status -->
+			<!-- User Profile Menu -->
 			{#if user}
-				<div class="flex items-center gap-2 border-l border-[#393939] pl-2">
-					<div
-						class="flex h-6 w-6 items-center justify-center bg-[#393939] font-mono text-xs font-bold text-[#f4f4f4]"
+				<div class="relative flex items-center gap-2 border-l border-[#393939] pl-2">
+					<button
+						type="button"
+						class="flex items-center gap-2 px-1 py-1 transition-colors hover:bg-[#262626] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0f62fe]"
+						aria-haspopup="menu"
+						aria-expanded={profileOpen}
+						onclick={toggleProfile}
+						onkeydown={handleProfileKeydown}
 					>
-						{user.username.slice(0, 2).toUpperCase()}
-					</div>
-					<span class="hidden text-xs text-[#c6c6c6] lg:inline">{user.username}</span>
+						<div
+							class="flex h-6 w-6 items-center justify-center bg-[#393939] font-mono text-xs font-bold text-[#f4f4f4]"
+						>
+							{user.username.slice(0, 2).toUpperCase()}
+						</div>
+						<span class="hidden text-xs text-[#c6c6c6] lg:inline">{user.username}</span>
+						<svg
+							class="h-3 w-3 text-[#8d8d8d]"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<path d="M7 10l5 5 5-5z" />
+						</svg>
+					</button>
+
+					{#if profileOpen}
+						<div
+							class="fixed inset-0 z-40"
+							role="presentation"
+							onclick={closeProfile}
+							onkeydown={handleProfileKeydown}
+						></div>
+						<div
+							role="menu"
+							aria-label="Profile"
+							class="absolute top-full right-0 z-50 mt-1 w-44 border border-[#393939] bg-[#262626] py-1 shadow-lg"
+						>
+							<button
+								type="button"
+								role="menuitem"
+								class="block w-full px-3 py-2 text-left font-sans text-sm text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
+								onclick={closeProfile}
+							>
+								Profile
+							</button>
+							<button
+								type="button"
+								role="menuitem"
+								class="block w-full px-3 py-2 text-left font-sans text-sm text-[#c6c6c6] transition-colors hover:bg-[#353535] hover:text-white"
+								onclick={closeProfile}
+							>
+								Preferences
+							</button>
+							<div class="my-1 border-t border-[#393939]"></div>
+							<button
+								type="button"
+								role="menuitem"
+								class="block w-full px-3 py-2 text-left font-sans text-sm text-[#ff8389] transition-colors hover:bg-[#353535]"
+								onclick={closeProfile}
+							>
+								Sign out
+							</button>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -238,10 +308,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 						<a
 							href={resolve(item.href)}
 							onclick={closeMobileNav}
-							class="relative flex items-center gap-3 px-3.5 py-2.5 font-sans text-sm transition-colors {isCurrentPath(
-								item.href
-							)
-								? 'bg-[#353535] font-medium text-white before:absolute before:top-0 before:bottom-0 before:left-0 before:w-1 before:origin-center before:bg-[#0f62fe] before:transition-transform before:duration-[var(--motion-fast)] before:ease-[var(--ease-out-quart)]'
+							class="relative flex items-center gap-3 py-2.5 font-sans text-sm transition-colors {sideNavExpanded
+								? 'px-3.5'
+								: 'justify-center px-0'} {isCurrentPath(item.href)
+								? 'bg-[#353535] font-medium text-white before:absolute before:top-0 before:bottom-0 before:left-0 before:w-1 before:bg-[#0f62fe]'
 								: 'text-[#c6c6c6] hover:bg-[#262626] hover:text-white'}"
 							title={item.label}
 						>

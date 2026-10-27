@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package rpc
 
 import (
@@ -265,7 +264,7 @@ func (s *Server) setupHandler() {
 	// Packwiz Modpack Studio and Server Deployment Engine (MINE-30, MINE-31)
 	packwizDir := filepath.Join(s.config.Storage.DataDir, "packwiz")
 	packwizManager := packwiz.NewManager(packwizDir, s.log)
-	mux.Handle("/api/v1/packwiz/", handlers.NewPackwizHandler(packwizManager, s.store, s.log, s.authManager, s.enforcer))
+	mux.Handle("/api/v1/packwiz/", handlers.NewPackwizHandler(packwizManager, s.store, s.log, s.authManager, s.enforcer, s.config))
 
 	// Scheduled/staged config rollout for instances (staged diffs applied on restart or cron)
 	mux.Handle("/api/v1/staged-config/", handlers.NewStagedConfigHandler(s.store, s.log, s.authManager, s.enforcer))
@@ -296,6 +295,7 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	minecraftService := services.NewMinecraftService(s.store, s.docker, s.log)
 	modService := services.NewModService(s.store, s.docker, s.uploadManager, s.log)
 	modpackService := services.NewModpackService(s.store, s.config, s.uploadManager, s.log)
+	datapackService := services.NewDatapackService(s.store, s.config, s.uploadManager, s.log)
 	nodeService := services.NewNodeService(s.store, s.clientPool, s.log)
 	proxyService := services.NewProxyService(s.store, s.docker, s.clientPool, s.proxyManager, s.config, s.logStreamer, s.log)
 	serverService := services.NewServerService(s.store, s.docker, s.sender, s.config, s.proxyManager, s.logStreamer, s.metricsCollector, s.moduleManager, s.bus, s.log, s.clientPool, s.placementEngine, s.enforcer)
@@ -333,6 +333,9 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 
 	modpackPath, modpackHandler := carbonpanelv1connect.NewModpackServiceHandler(modpackService, opts...)
 	mux.Handle(modpackPath, modpackHandler)
+
+	datapackPath, datapackHandler := carbonpanelv1connect.NewDatapackServiceHandler(datapackService, opts...)
+	mux.Handle(datapackPath, datapackHandler)
 
 	proxyPath, proxyHandler := carbonpanelv1connect.NewProxyServiceHandler(proxyService, opts...)
 	mux.Handle(proxyPath, proxyHandler)

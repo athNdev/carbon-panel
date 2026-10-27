@@ -446,13 +446,13 @@ one at https://mozilla.org/MPL/2.0/.
 					class="border-b border-[#525252] bg-[#393939] text-xs font-medium tracking-wider text-[#f4f4f4] uppercase select-none"
 				>
 					<tr>
-						<th scope="col" class="w-28 px-4 py-3">Status</th>
-						<th scope="col" class="px-4 py-3">Server Instance</th>
-						<th scope="col" class="px-4 py-3">Engine & Loader</th>
-						<th scope="col" class="hidden px-4 py-3 md:table-cell">Host / Port</th>
-						<th scope="col" class="hidden px-4 py-3 md:table-cell">Memory</th>
-						<th scope="col" class="px-4 py-3">Players & TPS</th>
-						<th scope="col" class="px-4 py-3 text-right">Actions</th>
+						<th scope="col" class="w-28 px-3 py-3">Status</th>
+						<th scope="col" class="px-3 py-3">Server Instance</th>
+						<th scope="col" class="px-3 py-3">Engine & Loader</th>
+						<th scope="col" class="hidden px-3 py-3 md:table-cell">Host / Port</th>
+						<th scope="col" class="hidden px-3 py-3 md:table-cell">Memory</th>
+						<th scope="col" class="px-3 py-3">Players & TPS</th>
+						<th scope="col" class="px-3 py-3 text-right">Actions</th>
 					</tr>
 				</thead>
 
@@ -461,14 +461,14 @@ one at https://mozilla.org/MPL/2.0/.
 					{#each filteredServers as server (server.id)}
 						<tr class="group transition-colors hover:bg-[#353535]">
 							<!-- Status Cell -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="px-3 py-3.5 whitespace-nowrap">
 								<CarbonTag type={getStatusTagType(server.status)} size="sm">
 									{getStatusDisplayName(server.status)}
 								</CarbonTag>
 							</td>
 
 							<!-- Name & Description -->
-							<td class="min-w-[200px] px-4 py-3.5">
+							<td class="min-w-[200px] px-3 py-3.5">
 								<div class="flex items-center gap-2.5">
 									<div
 										class="flex h-8 w-8 shrink-0 items-center justify-center border border-[#393939] bg-[#161616] text-[#78a9ff]"
@@ -490,7 +490,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</td>
 
 							<!-- Engine & Loader -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="px-3 py-3.5 whitespace-nowrap">
 								<div class="flex items-center gap-1.5 font-mono text-xs">
 									<span class="text-[#f4f4f4]">{server.mcVersion || 'Latest'}</span>
 									{#if server.modLoader !== ModLoader.VANILLA && server.modLoader !== ModLoader.UNSPECIFIED}
@@ -504,7 +504,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</td>
 
 							<!-- Host / Port -->
-							<td class="hidden px-4 py-3.5 whitespace-nowrap md:table-cell">
+							<td class="hidden px-3 py-3.5 whitespace-nowrap md:table-cell">
 								<div class="flex items-center gap-1.5 font-mono text-xs">
 									<Wifi class="h-3.5 w-3.5 text-[#8d8d8d]" />
 									<span class="text-[#c6c6c6]">
@@ -514,7 +514,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</td>
 
 							<!-- Memory -->
-							<td class="hidden px-4 py-3.5 whitespace-nowrap md:table-cell">
+							<td class="hidden px-3 py-3.5 whitespace-nowrap md:table-cell">
 								<div class="flex items-center gap-1.5 font-mono text-xs text-[#c6c6c6]">
 									<MemoryStick class="h-3.5 w-3.5 text-[#8d8d8d]" />
 									<span>{(server.memory / 1024).toFixed(1)} GB</span>
@@ -522,7 +522,7 @@ one at https://mozilla.org/MPL/2.0/.
 							</td>
 
 							<!-- Players & TPS -->
-							<td class="px-4 py-3.5 whitespace-nowrap">
+							<td class="px-3 py-3.5 whitespace-nowrap">
 								{#if server.status === ServerStatus.RUNNING || server.status === ServerStatus.UNHEALTHY}
 									<div class="flex items-center gap-3 font-mono text-xs">
 										<span class="flex items-center gap-1 text-[#6fdc8c]">
@@ -546,7 +546,10 @@ one at https://mozilla.org/MPL/2.0/.
 							</td>
 
 							<!-- Actions -->
-							<td class="px-4 py-3.5 text-right whitespace-nowrap">
+							<td
+								class="px-3 py-3.5 text-right whitespace-nowrap"
+								onclick={(e) => e.stopPropagation()}
+							>
 								<div class="inline-flex items-center border border-[#393939] bg-[#161616]">
 									{#if server.status === ServerStatus.STOPPED || server.status === ServerStatus.ERROR || server.status === ServerStatus.DEEPSLEEP || server.status === ServerStatus.PAUSED}
 										<button
