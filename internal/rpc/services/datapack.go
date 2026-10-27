@@ -261,11 +261,11 @@ func (s *DatapackService) InstallDatapack(ctx context.Context, req *connect.Requ
 
 	s.log.Info("Installed datapack %s for server %s", filename, server.ID)
 	return connect.NewResponse(&v1.InstallDatapackResponse{
-		Datapack: &v1.InstalledDatapack{
+		Datapack: withPackFormat(&v1.InstalledDatapack{
 			FileName:    filename,
 			DisplayName: displayNameFromFilename(filename),
 			Size:        info.Size(),
-		},
+		}, destPath, server.MCVersion),
 	}), nil
 }
 
@@ -335,11 +335,11 @@ func (s *DatapackService) UploadDatapack(ctx context.Context, req *connect.Reque
 
 	s.log.Info("Uploaded datapack %s for server %s", filename, server.ID)
 	return connect.NewResponse(&v1.UploadDatapackResponse{
-		Datapack: &v1.InstalledDatapack{
+		Datapack: withPackFormat(&v1.InstalledDatapack{
 			FileName:    filename,
 			DisplayName: displayNameFromFilename(filename),
 			Size:        info.Size(),
-		},
+		}, destPath, server.MCVersion),
 		Message: "Datapack uploaded successfully",
 	}), nil
 }
@@ -369,11 +369,11 @@ func (s *DatapackService) ListDatapacks(ctx context.Context, req *connect.Reques
 		if err != nil {
 			continue
 		}
-		out = append(out, &v1.InstalledDatapack{
+		out = append(out, withPackFormat(&v1.InstalledDatapack{
 			FileName:    e.Name(),
 			DisplayName: displayNameFromFilename(e.Name()),
 			Size:        info.Size(),
-		})
+		}, filepath.Join(dir, e.Name()), server.MCVersion))
 	}
 
 	return connect.NewResponse(&v1.ListDatapacksResponse{Datapacks: out}), nil
@@ -407,6 +407,16 @@ func (s *DatapackService) DeleteDatapack(ctx context.Context, req *connect.Reque
 
 	s.log.Info("Deleted datapack %s for server %s", msg.FileName, server.ID)
 	return connect.NewResponse(&v1.DeleteDatapackResponse{}), nil
+}
+
+// withPackFormat annotates an installed datapack with its declared pack
+// format and any compatibility warning against the server version.
+func withPackFormat(dp *v1.InstalledDatapack, path, mcVersion string) *v1.InstalledDatapack {
+	if format, err := minecraft.ReadPackFormat(path); err == nil {
+		dp.PackFormat = format.String()
+		dp.FormatWarning = minecraft.PackFormatWarning(format, mcVersion)
+	}
+	return dp
 }
 
 // displayNameFromFilename strips the .zip extension for display.

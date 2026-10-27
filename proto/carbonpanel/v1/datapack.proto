@@ -47,6 +47,10 @@ message InstalledDatapack {
   string display_name = 2;
   int64 size = 3;
   google.protobuf.Timestamp installed_at = 4;
+  // Declared pack format range ("48", "88 - 94.1"); empty when unknown.
+  string pack_format = 5;
+  // Compatibility warning against the server version; empty when fine or unknown.
+  string format_warning = 6;
 }
 
 // SearchDatapacksRequest queries a datapack index.
