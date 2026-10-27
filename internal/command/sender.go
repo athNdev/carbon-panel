@@ -48,33 +48,15 @@ func NewSender(store *storage.Store, cfg *config.Config, dockerExec DockerExecut
 // strict node-specific client from the pool over the single default executor so
 // commands are not silently sent to the wrong (local) daemon for a remote node.
 func (s *Sender) resolveExecutor(nodeID string) (DockerExecutor, error) {
-	// Servers without a node assignment retain the legacy local execution path.
-	if nodeID == "" {
-		return s.docker, nil
+	executor, err := docker.NewExecutorLocator(s.pool, s.docker, s.store).ExecutorFor(context.Background(), nodeID)
+	if errors.Is(err, docker.ErrNoClient) {
+		// Preserve SendCommand's explicit "no docker executor available" path.
+		return nil, nil
 	}
-	if s.pool != nil {
-		cli, err := s.pool.GetClientStrict(nodeID)
-		if err != nil {
-			if nodeID == "default" || nodeID == "local" {
-				return s.docker, nil
-			}
-			return nil, fmt.Errorf("docker executor unavailable for node %q: %w", nodeID, err)
-		}
-		if cli == nil {
-			return nil, fmt.Errorf("docker executor unavailable for node %q", nodeID)
-		}
-		return cli, nil
+	if err != nil {
+		return nil, fmt.Errorf("docker executor unavailable for node %q: %w", nodeID, err)
 	}
-	if nodeID == "default" || nodeID == "local" {
-		return s.docker, nil
-	}
-	if s.store != nil {
-		node, err := s.store.GetNode(context.Background(), nodeID)
-		if err == nil && node != nil && node.IsLocal {
-			return s.docker, nil
-		}
-	}
-	return nil, fmt.Errorf("docker executor unavailable for node %q: client pool is not configured", nodeID)
+	return executor, nil
 }
 
 func (s *Sender) SendCommand(ctx context.Context, serverID string, command string) (string, error) {

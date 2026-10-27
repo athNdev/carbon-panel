@@ -146,37 +146,9 @@ func (s *Scheduler) dockerForNode(nodeID string) (*docker.Client, error) {
 	s.mu.RLock()
 	pool := s.clientPool
 	defaultCli := s.docker
+	store := s.store
 	s.mu.RUnlock()
-	// An empty assignment is the legacy local-node case; explicit node IDs must
-	// resolve strictly so an unavailable remote node cannot target the default.
-	if nodeID == "" {
-		return defaultCli, nil
-	}
-
-	if pool != nil {
-		cli, err := pool.GetClientStrict(nodeID)
-		if err != nil {
-			if nodeID == "default" || nodeID == "local" {
-				return defaultCli, nil
-			}
-			return nil, fmt.Errorf("docker client unavailable for node %q: %w", nodeID, err)
-		}
-		if cli == nil {
-			return nil, fmt.Errorf("docker client unavailable for node %q", nodeID)
-		}
-		return cli, nil
-	}
-	if nodeID == "default" || nodeID == "local" {
-		return defaultCli, nil
-	}
-	// A standalone client represents the local daemon. Resolve an explicit ID
-	// through persisted node metadata before allowing it to use that client.
-	if s.store != nil {
-		if node, err := s.store.GetNode(context.Background(), nodeID); err == nil && node != nil && node.IsLocal {
-			return defaultCli, nil
-		}
-	}
-	return nil, fmt.Errorf("docker client unavailable for node %q: client pool is not configured", nodeID)
+	return docker.NewLocator(pool, defaultCli, store).For(context.Background(), nodeID)
 }
 
 // Start begins the scheduler loop

@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package metrics
 
 import (
@@ -37,8 +36,8 @@ func TestNewCollectorWiring(t *testing.T) {
 	if got := c.collectorConfig; got != DefaultConfig() {
 		t.Fatalf("config=%+v", got)
 	}
-	if c.resolveDocker("any") != nil {
-		t.Fatal("no docker source: must resolve nil")
+	if cli, err := c.resolveDocker("any"); cli != nil || err == nil {
+		t.Fatalf("no docker source: cli=%v err=%v, want nil error", cli, err)
 	}
 
 	custom := CollectorConfig{StatsInterval: time.Second}

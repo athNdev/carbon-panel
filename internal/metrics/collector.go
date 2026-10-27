@@ -145,16 +145,8 @@ func NewCollectorWithPool(store *storage.Store, dockerCli *docker.Client, pool *
 // strict node-specific client from the pool over the single default client so
 // metrics collection for a remote node's server is not silently gathered from
 // the local Docker daemon.
-func (c *Collector) resolveDocker(nodeID string) *docker.Client {
-	if c.pool != nil {
-		if cli, err := c.pool.GetClientStrict(nodeID); err == nil && cli != nil {
-			return cli
-		}
-		if nodeID != "" && nodeID != "local" && nodeID != c.pool.GetDefaultNodeID() {
-			return nil
-		}
-	}
-	return c.docker
+func (c *Collector) resolveDocker(nodeID string) (*docker.Client, error) {
+	return docker.NewLocator(c.pool, c.docker, c.store).For(context.Background(), nodeID)
 }
 
 // Start background metrics collection
@@ -315,8 +307,8 @@ func (c *Collector) collectDockerStats() {
 			continue
 		}
 
-		dockerCli := c.resolveDocker(server.NodeID)
-		if dockerCli == nil {
+		dockerCli, dockerErr := c.resolveDocker(server.NodeID)
+		if dockerErr != nil {
 			// A remote node must never silently fall back to the local
 			// daemon. Skip this sample until that node is reachable again.
 			continue
@@ -359,8 +351,8 @@ func (c *Collector) collectRCONData() {
 			continue
 		}
 
-		dockerCli := c.resolveDocker(server.NodeID)
-		if dockerCli == nil {
+		dockerCli, dockerErr := c.resolveDocker(server.NodeID)
+		if dockerErr != nil {
 			continue
 		}
 
@@ -580,7 +572,13 @@ func (c *Collector) collectSLPData() {
 			continue
 		}
 
-		dockerCli := c.resolveDocker(server.NodeID)
+		dockerCli, dockerErr := c.resolveDocker(server.NodeID)
+		if dockerErr != nil {
+			c.updateMetrics(server.ID, func(m *ServerMetrics) {
+				m.SLPAvailable = false
+			})
+			continue
+		}
 
 		// Check if server is running
 		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
@@ -717,7 +715,12 @@ func (c *Collector) detectLifecycleEvents() {
 			continue
 		}
 
-		status, err := c.resolveDocker(server.NodeID).GetContainerStatus(ctx, server.ContainerID)
+		dockerCli, dockerErr := c.resolveDocker(server.NodeID)
+		if dockerErr != nil {
+			c.clearLifecycle(server.ID)
+			continue
+		}
+		status, err := dockerCli.GetContainerStatus(ctx, server.ContainerID)
 		if err != nil {
 			c.clearLifecycle(server.ID)
 			continue

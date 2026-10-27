@@ -131,26 +131,8 @@ func (s *BackupService) authorizeServerBackup(ctx context.Context, serverID stri
 	return nil
 }
 
-func (s *BackupService) dockerFor(nodeID string) *docker.Client {
-	if s.pool != nil {
-		cli, err := s.pool.GetClientStrict(nodeID)
-		if err != nil {
-			return nil
-		}
-		return cli
-	}
-	if s.docker == nil {
-		return nil
-	}
-	if nodeID == "" || nodeID == "local" || nodeID == "default" {
-		return s.docker
-	}
-	if s.store != nil {
-		if node, err := s.store.GetNode(context.Background(), nodeID); err == nil && node != nil && node.IsLocal {
-			return s.docker
-		}
-	}
-	return nil
+func (s *BackupService) dockerFor(nodeID string) (*docker.Client, error) {
+	return docker.NewLocator(s.pool, s.docker, s.store).For(context.Background(), nodeID)
 }
 
 func dbBackupToProto(b *storage.BackupRecord) *v1.BackupRecord {
@@ -338,7 +320,11 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("backup archive corrupt or invalid: %w", err))
 	}
 
-	dockerCli := s.dockerFor(server.NodeID)
+	dockerCli, dockerErr := s.dockerFor(server.NodeID)
+	if server.ContainerID != "" && dockerErr != nil {
+		done("failed")
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable for restore: %w", server.NodeID, dockerErr))
+	}
 	if server.ContainerID != "" && dockerCli == nil {
 		done("failed")
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q is unavailable for restore", server.NodeID))
