@@ -226,6 +226,63 @@ func TestNodeService_UpdateNode(t *testing.T) {
 	}
 }
 
+// TestNodeService_StorageRoots pins the ADR 0005 mapping model: storage roots
+// survive create, read and update, including clearing them again.
+func TestNodeService_StorageRoots(t *testing.T) {
+	store := setupTestStore(t)
+	defer func() { _ = store.Close() }()
+
+	log := logger.New()
+	svc := NewNodeService(store, nil, log)
+	ctx := context.Background()
+
+	createRes, err := svc.CreateNode(ctx, connect.NewRequest(&v1.CreateNodeRequest{
+		Name:                  "shared-node",
+		Host:                  "tcp://192.168.1.30:2376",
+		Enabled:               true,
+		StorageRoot:           "/srv/shared/servers",
+		ControllerStorageRoot: "/mnt/shared/servers",
+	}))
+	if err != nil {
+		t.Fatalf("CreateNode failed: %v", err)
+	}
+	created := createRes.Msg.Node
+	if created.StorageRoot != "/srv/shared/servers" || created.ControllerStorageRoot != "/mnt/shared/servers" {
+		t.Fatalf("storage roots not mapped on create: %+v", created)
+	}
+
+	getRes, err := svc.GetNode(ctx, connect.NewRequest(&v1.GetNodeRequest{Id: created.Id}))
+	if err != nil {
+		t.Fatalf("GetNode failed: %v", err)
+	}
+	if getRes.Msg.Node.StorageRoot != "/srv/shared/servers" || getRes.Msg.Node.ControllerStorageRoot != "/mnt/shared/servers" {
+		t.Fatalf("storage roots not persisted: %+v", getRes.Msg.Node)
+	}
+
+	updateRes, err := svc.UpdateNode(ctx, connect.NewRequest(&v1.UpdateNodeRequest{
+		Id:                    created.Id,
+		ControllerStorageRoot: strPtr("/mnt/other/servers"),
+	}))
+	if err != nil {
+		t.Fatalf("UpdateNode failed: %v", err)
+	}
+	if updateRes.Msg.Node.ControllerStorageRoot != "/mnt/other/servers" {
+		t.Fatalf("controller storage root not updated: %+v", updateRes.Msg.Node)
+	}
+
+	// Clearing the controller root falls back to the node-side root.
+	updateRes, err = svc.UpdateNode(ctx, connect.NewRequest(&v1.UpdateNodeRequest{
+		Id:                    created.Id,
+		ControllerStorageRoot: strPtr(""),
+	}))
+	if err != nil {
+		t.Fatalf("UpdateNode clearing controller root failed: %v", err)
+	}
+	if updateRes.Msg.Node.ControllerStorageRoot != "" || updateRes.Msg.Node.StorageRoot != "/srv/shared/servers" {
+		t.Fatalf("storage roots wrong after clear: %+v", updateRes.Msg.Node)
+	}
+}
+
 func TestNodeService_DeleteNode(t *testing.T) {
 	store := setupTestStore(t)
 	defer store.Close()

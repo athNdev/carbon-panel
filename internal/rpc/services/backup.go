@@ -20,6 +20,7 @@ import (
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/internal/worldstore"
@@ -247,6 +248,16 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	if err := requireLocalRestoreStorage(ctx, s.store, server.NodeID); err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, err)
 	}
+	// Restores land in the server's data root on the owning node; map it to the
+	// controller-side path for nodes on shared storage (ADR 0005).
+	nodeInfo, err := storageNodeInfo(ctx, s.store, server.NodeID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, err)
+	}
+	worldDataPath, err := nodestorage.EnsureDataRoot(nodeInfo, server.DataPath)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable, err)
+	}
 	transition, err := docker.TryBeginServerTransition(server.ID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeAborted, err)
@@ -382,7 +393,7 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("installation identity: %w", oerr))
 		}
 		ws, werr := worldstore.OpenServerWorlds(owner, server.ID, server.NodeID,
-			filepath.Join(s.worldDataDir, "worldstore-journal"), server.DataPath)
+			filepath.Join(s.worldDataDir, "worldstore-journal"), worldDataPath)
 		if werr != nil {
 			done("failed")
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("open world store: %w", werr))
@@ -396,7 +407,7 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 			done("failed")
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restore backup: %w", rerr))
 		}
-	} else if _, err := files.ExtractArchive(ctx, archivePath, server.DataPath, nil); err != nil {
+	} else if _, err := files.ExtractArchive(ctx, archivePath, worldDataPath, nil); err != nil {
 		done("failed")
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to extract backup: %w", err))
 	}
@@ -414,8 +425,9 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 }
 
 // requireLocalRestoreStorage prevents a controller-local archive extraction
-// from being mistaken for a restore on a remote Docker host. Remote storage
-// adapters must be wired before this restriction can be relaxed.
+// from being mistaken for a restore on a remote Docker host without reachable
+// storage. Local nodes and remote nodes on shared storage (ADR 0005) pass;
+// other remote nodes need their storage adapter wired first.
 func requireLocalRestoreStorage(ctx context.Context, store *storage.Store, nodeID string) error {
 	// Preserve the explicit legacy aliases accepted by getDockerClientStrict.
 	// They designate the configured local daemon, whose storage is the
@@ -430,7 +442,7 @@ func requireLocalRestoreStorage(ctx context.Context, store *storage.Store, nodeI
 	if err != nil {
 		return fmt.Errorf("cannot identify owning storage for node %q: %w", nodeID, err)
 	}
-	if !node.IsLocal {
+	if !node.IsLocal && node.StorageRoot == "" && node.ControllerStorageRoot == "" {
 		return fmt.Errorf("backup restore for remote node %q is unavailable until node-aware storage is configured", nodeID)
 	}
 	return nil

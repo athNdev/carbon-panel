@@ -65,28 +65,30 @@ func dbNodeToProto(node *storage.Node) *v1.Node {
 	}
 
 	return &v1.Node{
-		Id:                node.ID,
-		Name:              node.Name,
-		Host:              node.Host,
-		AdvertisedIp:      node.AdvertisedIP,
-		TlsCaCert:         node.TLSCACert,
-		TlsCert:           node.TLSCert,
-		TlsKey:            node.TLSKey,
-		TlsEnabled:        node.TLSEnabled,
-		TlsSkipVerify:     node.TLSSkipVerify,
-		MaxMemoryMb:       node.MaxMemoryMB,
-		MaxServers:        int32(node.MaxServers),
-		Enabled:           node.Enabled,
-		Status:            status,
-		IsLocal:           node.IsLocal,
-		LastHeartbeat:     lastHeartbeat,
-		CreatedAt:         timestamppb.New(node.CreatedAt),
-		UpdatedAt:         timestamppb.New(node.UpdatedAt),
-		AllocatedMemoryMb: node.AllocatedMemoryMB,
-		ServerCount:       int32(node.ServerCount),
-		RunningCount:      int32(node.RunningCount),
-		TotalMemoryMb:     node.TotalMemoryMB,
-		AvailableMemoryMb: node.AvailableMemoryMB,
+		Id:                    node.ID,
+		Name:                  node.Name,
+		Host:                  node.Host,
+		AdvertisedIp:          node.AdvertisedIP,
+		TlsCaCert:             node.TLSCACert,
+		TlsCert:               node.TLSCert,
+		TlsKey:                node.TLSKey,
+		TlsEnabled:            node.TLSEnabled,
+		TlsSkipVerify:         node.TLSSkipVerify,
+		MaxMemoryMb:           node.MaxMemoryMB,
+		MaxServers:            int32(node.MaxServers),
+		Enabled:               node.Enabled,
+		Status:                status,
+		IsLocal:               node.IsLocal,
+		StorageRoot:           node.StorageRoot,
+		ControllerStorageRoot: node.ControllerStorageRoot,
+		LastHeartbeat:         lastHeartbeat,
+		CreatedAt:             timestamppb.New(node.CreatedAt),
+		UpdatedAt:             timestamppb.New(node.UpdatedAt),
+		AllocatedMemoryMb:     node.AllocatedMemoryMB,
+		ServerCount:           int32(node.ServerCount),
+		RunningCount:          int32(node.RunningCount),
+		TotalMemoryMb:         node.TotalMemoryMB,
+		AvailableMemoryMb:     node.AvailableMemoryMB,
 	}
 }
 
@@ -181,19 +183,21 @@ func (s *NodeService) CreateNode(ctx context.Context, req *connect.Request[v1.Cr
 	}
 
 	node := &storage.Node{
-		Name:          msg.Name,
-		Host:          msg.Host,
-		AdvertisedIP:  msg.AdvertisedIp,
-		TLSCACert:     msg.TlsCaCert,
-		TLSCert:       msg.TlsCert,
-		TLSKey:        msg.TlsKey,
-		TLSEnabled:    msg.TlsEnabled,
-		TLSSkipVerify: msg.TlsSkipVerify,
-		MaxMemoryMB:   msg.MaxMemoryMb,
-		MaxServers:    int(msg.MaxServers),
-		Enabled:       msg.Enabled,
-		Status:        storage.NodeStatusOffline,
-		IsLocal:       isLocalDockerHost(msg.Host),
+		Name:                  msg.Name,
+		Host:                  msg.Host,
+		AdvertisedIP:          msg.AdvertisedIp,
+		TLSCACert:             msg.TlsCaCert,
+		TLSCert:               msg.TlsCert,
+		TLSKey:                msg.TlsKey,
+		TLSEnabled:            msg.TlsEnabled,
+		TLSSkipVerify:         msg.TlsSkipVerify,
+		MaxMemoryMB:           msg.MaxMemoryMb,
+		MaxServers:            int(msg.MaxServers),
+		Enabled:               msg.Enabled,
+		Status:                storage.NodeStatusOffline,
+		IsLocal:               isLocalDockerHost(msg.Host),
+		StorageRoot:           msg.StorageRoot,
+		ControllerStorageRoot: msg.ControllerStorageRoot,
 	}
 
 	if err := s.store.CreateNode(ctx, node); err != nil {
@@ -266,6 +270,12 @@ func (s *NodeService) UpdateNode(ctx context.Context, req *connect.Request[v1.Up
 	}
 	if msg.Enabled != nil {
 		node.Enabled = *msg.Enabled
+	}
+	if msg.StorageRoot != nil {
+		node.StorageRoot = *msg.StorageRoot
+	}
+	if msg.ControllerStorageRoot != nil {
+		node.ControllerStorageRoot = *msg.ControllerStorageRoot
 	}
 
 	if err := s.store.UpdateNode(ctx, node); err != nil {

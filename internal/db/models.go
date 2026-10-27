@@ -12,6 +12,7 @@ package db
 import (
 	"time"
 
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
 
@@ -872,9 +873,15 @@ type Node struct {
 	Enabled       bool       `json:"enabled" gorm:"not null;default:true"`
 	Status        NodeStatus `json:"status" gorm:"not null;default:'offline'"`
 	IsLocal       bool       `json:"is_local" gorm:"column:is_local;default:false"`
-	LastHeartbeat *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
-	CreatedAt     time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt     time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	// StorageRoot is the node-side root where server data directories live on
+	// shared storage (ADR 0005). Empty when the node has no shared storage.
+	StorageRoot string `json:"storage_root,omitempty" gorm:"column:storage_root"`
+	// ControllerStorageRoot is where the controller mounts that same storage.
+	// Empty means the paths are identical on both sides (defaults to StorageRoot).
+	ControllerStorageRoot string     `json:"controller_storage_root,omitempty" gorm:"column:controller_storage_root"`
+	LastHeartbeat         *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
+	CreatedAt             time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt             time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 
 	// Runtime stats (not persisted to DB)
 	AllocatedMemoryMB int64 `json:"allocated_memory_mb" gorm:"-"`
@@ -882,4 +889,15 @@ type Node struct {
 	RunningCount      int   `json:"running_count" gorm:"-"`
 	TotalMemoryMB     int64 `json:"total_memory_mb" gorm:"-"`
 	AvailableMemoryMB int64 `json:"available_memory_mb" gorm:"-"`
+}
+
+// StorageInfo returns the node's storage mapping view for node-aware file
+// access and world-data paths (ADR 0005).
+func (n *Node) StorageInfo() nodestorage.NodeInfo {
+	return nodestorage.NodeInfo{
+		Name:                  n.Name,
+		IsLocal:               n.IsLocal,
+		StorageRoot:           n.StorageRoot,
+		ControllerStorageRoot: n.ControllerStorageRoot,
+	}
 }

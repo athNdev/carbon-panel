@@ -44,6 +44,12 @@ message Node {
   int32 running_count = 20;
   int64 total_memory_mb = 21;
   int64 available_memory_mb = 22;
+  // Node-side root where server data directories live on this node (shared
+  // storage mount). Empty for local nodes.
+  string storage_root = 23;
+  // Where the controller mounts that same storage. Defaults to storage_root
+  // when the paths are identical on both sides.
+  string controller_storage_root = 24;
 }
 
 // Docker node management service
@@ -93,6 +99,8 @@ message CreateNodeRequest {
   int64 max_memory_mb = 9;
   int32 max_servers = 10;
   bool enabled = 11;
+  string storage_root = 12;
+  string controller_storage_root = 13;
 }
 
 // Create node response
@@ -114,6 +122,8 @@ message UpdateNodeRequest {
   optional int64 max_memory_mb = 10;
   optional int32 max_servers = 11;
   optional bool enabled = 12;
+  optional string storage_root = 13;
+  optional string controller_storage_root = 14;
 }
 
 // Update node response

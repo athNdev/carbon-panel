@@ -5,9 +5,10 @@
 
 // Package nodestorage routes server file, configuration and content I/O
 // through the node that owns the server (ADR 0005). The local accessor is
-// confined to the server data root; remote nodes get a typed refusal until a
-// remote adapter is wired, so a controller-local path is never silently
-// mistaken for a remote node's storage.
+// confined to the server data root. Remote nodes on shared storage are served
+// through the controller's mount of that storage; other remote nodes get a
+// typed refusal until a remote adapter is wired, so a controller-local path is
+// never silently mistaken for a remote node's storage.
 package nodestorage
 
 import (
@@ -182,20 +183,91 @@ func (l *local) Rename(oldRel, newRel string) error {
 	return l.root.Rename(o, n)
 }
 
-// NodeInfo is the storage-relevant view of a server's node.
+// NodeInfo is the storage-relevant view of a server's node. StorageRoot is
+// the node-side root of the shared storage that holds server data directories;
+// ControllerStorageRoot is where the controller mounts the same storage
+// (empty when the paths are identical on both sides).
 type NodeInfo struct {
-	Name    string
-	IsLocal bool
+	Name                  string
+	IsLocal               bool
+	StorageRoot           string
+	ControllerStorageRoot string
+}
+
+// LocalNode returns the storage view of the controller's own daemon.
+func LocalNode() NodeInfo {
+	return NodeInfo{Name: "local", IsLocal: true}
+}
+
+// IsLegacyLocalNodeID reports whether a node ID designates the controller's
+// own daemon on the legacy single-node deployment path. The aliases match the
+// ones the Docker client pool accepts.
+func IsLegacyLocalNodeID(nodeID string) bool {
+	return nodeID == "" || nodeID == "local" || nodeID == "default"
+}
+
+// sharedStorageRoot returns the controller-side mount of a node's shared
+// storage. The mount paths are identical on both sides when only the node-side
+// root is configured.
+func sharedStorageRoot(node NodeInfo) string {
+	if node.ControllerStorageRoot != "" {
+		return node.ControllerStorageRoot
+	}
+	return node.StorageRoot
+}
+
+// MapDataPath maps a server data root to the controller-side directory that
+// holds it. Local nodes keep the path unchanged. Remote nodes on shared
+// storage are mapped through the controller's mount of that storage: the
+// server directory keeps its name under the controller-side root. Other
+// remote nodes are refused with ErrUnavailable.
+func MapDataPath(node NodeInfo, dataRoot string) (string, error) {
+	if node.IsLocal {
+		return dataRoot, nil
+	}
+	root := sharedStorageRoot(node)
+	if root == "" {
+		return "", fmt.Errorf("%w: %q", ErrUnavailable, node.Name)
+	}
+	return filepath.Join(root, filepath.Base(dataRoot)), nil
+}
+
+// EnsureDataRoot resolves the mapped data root like MapDataPath and creates
+// the server directory under it when missing, so restore can target a fresh
+// directory on shared storage. The controller-side storage root itself must
+// already exist: creating it could hide a missing mount and silently store
+// server data on the controller's local disk.
+func EnsureDataRoot(node NodeInfo, dataRoot string) (string, error) {
+	mapped, err := MapDataPath(node, dataRoot)
+	if err != nil {
+		return "", err
+	}
+	if !node.IsLocal {
+		mount := sharedStorageRoot(node)
+		if fi, serr := os.Stat(mount); serr != nil || !fi.IsDir() {
+			return "", fmt.Errorf("%w: controller storage root %q for node %q is not accessible", ErrUnavailable, mount, node.Name)
+		}
+	}
+	if err := os.MkdirAll(mapped, 0o755); err != nil {
+		return "", fmt.Errorf("create data root for node %q: %w", node.Name, err)
+	}
+	return mapped, nil
 }
 
 // ForNode returns the accessor for a server data root owned by a node. Local
-// nodes (the controller's own daemon) use the confined local accessor; remote
-// nodes are refused until their storage adapter is wired.
+// nodes (the controller's own daemon) use the confined local accessor rooted
+// at the server's data path. Remote nodes on shared storage are served through
+// the controller's mount of that storage (see MapDataPath). Remote nodes
+// without shared storage are refused until their storage adapter is wired.
 func ForNode(node NodeInfo, dataRoot string) (Accessor, error) {
 	if node.IsLocal {
 		return NewLocal(dataRoot)
 	}
-	return nil, fmt.Errorf("%w: %q", ErrUnavailable, node.Name)
+	mapped, err := EnsureDataRoot(node, dataRoot)
+	if err != nil {
+		return nil, err
+	}
+	return NewLocal(mapped)
 }
 
 // IsUnavailable reports whether err is the typed remote-node refusal.
