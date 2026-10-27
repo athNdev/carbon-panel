@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -131,5 +130,43 @@ func TestRecreateContainerUnpausesFrozenContainerBeforeRemoval(t *testing.T) {
 	}
 	if unpauseAt < 0 || finalStopAt < unpauseAt || removeAt < finalStopAt {
 		t.Fatalf("Docker call order = %v, want unpause, retry stop, then remove", calls)
+	}
+}
+
+func TestRecreateContainerDoesNotRemoveWhenInspectIsUnavailable(t *testing.T) {
+	var removeCalls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/_ping":
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
+		case strings.HasSuffix(r.URL.Path, "/containers/original/json"):
+			http.Error(w, `{"message":"daemon temporarily unavailable"}`, http.StatusServiceUnavailable)
+		case r.Method == http.MethodDelete && strings.HasSuffix(r.URL.Path, "/containers/original"):
+			removeCalls++
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	sdk, err := NewAPIClient(client.WithHost(fakeDockerHost(t, srv)))
+	if err != nil {
+		t.Fatalf("NewAPIClient: %v", err)
+	}
+	defer func() { _ = sdk.Close() }()
+
+	dockerClient := &Client{docker: sdk, log: logger.New()}
+	result, err := dockerClient.RecreateContainer(context.Background(), "original", &models.Server{}, &models.ServerConfig{})
+	if err == nil {
+		t.Fatal("RecreateContainer() error = nil, want inspect failure")
+	}
+	if result == nil || result.NewContainerID != "original" {
+		t.Fatalf("RecreateContainer() result = %+v, want original ID retained", result)
+	}
+	if removeCalls != 0 {
+		t.Fatalf("remove calls = %d, want zero when inspect outcome is unknown", removeCalls)
 	}
 }

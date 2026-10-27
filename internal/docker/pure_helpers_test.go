@@ -3,10 +3,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
+	"path/filepath"
 	"testing"
 
 	models "github.com/athNdev/carbon-panel/internal/db"
@@ -42,8 +42,8 @@ func TestTranslateToHostPath(t *testing.T) {
 
 	t.Setenv("CARBONPANEL_HOST_DATA_PATH", "/host/data")
 	t.Setenv("CARBONPANEL_DATA_DIR", "/app/data")
-	if got := TranslateToHostPath("/app/data/world"); got != "/host/data/world" {
-		t.Errorf("translated = %q", got)
+	if got, want := TranslateToHostPath("/app/data/world"), filepath.Join("/host/data", "world"); got != want {
+		t.Errorf("translated = %q, want %q", got, want)
 	}
 	// Outside the container data dir: returned as-is.
 	if got := TranslateToHostPath("/etc/passwd"); got != "/etc/passwd" {
@@ -179,7 +179,6 @@ func TestValidateServerPorts(t *testing.T) {
 func portList(containerPort, hostPort int32) []*v1.AdditionalPort {
 	return []*v1.AdditionalPort{{Name: "x", ContainerPort: containerPort, HostPort: hostPort, Protocol: "tcp"}}
 }
-
 
 func TestIsProxyServer(t *testing.T) {
 	c := &Client{config: ClientConfig{ProxyEnabled: false}}

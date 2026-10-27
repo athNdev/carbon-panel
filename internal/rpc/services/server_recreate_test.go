@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -25,6 +24,18 @@ import (
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
+
+func ensureLocalTestNode(t *testing.T, store *storage.Store, id string) {
+	t.Helper()
+	node, err := store.GetNode(context.Background(), id)
+	if err != nil {
+		t.Fatalf("get test node fixture: %v", err)
+	}
+	node.IsLocal = true
+	if err := store.UpdateNode(context.Background(), node); err != nil {
+		t.Fatalf("mark test node local: %v", err)
+	}
+}
 
 func TestUpdateServerReturnsErrorAndPersistsRecoveryStateWhenRecreationFails(t *testing.T) {
 	ctx := context.Background()
@@ -125,6 +136,7 @@ func TestStartServer_PausedContainerIsRefrozenWhenStatusPersistenceFails(t *test
 	t.Cleanup(func() { _ = dockerClient.Close() })
 	svc.docker = dockerClient
 	svc.pool = nil
+	ensureLocalTestNode(t, svc.store, "test-node")
 
 	server := &storage.Server{
 		ID: "resume-persistence-failure", Name: "Resume Persistence Failure", NodeID: "test-node",
@@ -195,6 +207,7 @@ func TestStartServer_PausedContainerStaysFrozenWhenStagedConfigReadFails(t *test
 	t.Cleanup(func() { _ = dockerClient.Close() })
 	svc.docker = dockerClient
 	svc.pool = nil
+	ensureLocalTestNode(t, svc.store, "test-node")
 
 	lastStarted := time.Now().Add(-time.Minute)
 	server := &storage.Server{
@@ -264,6 +277,7 @@ func TestCreateServer_HoldsTransitionUntilAsyncContainerCreationCompletes(t *tes
 	})
 	svc.pool = nil
 	svc.docker = dockerClient
+	ensureLocalTestNode(t, svc.store, "test-node")
 
 	resp, err := svc.CreateServer(ctxWithRole("operator"), connect.NewRequest(&v1.CreateServerRequest{
 		Name: "async-create-transition", McVersion: "1.20.1", DockerImage: "java21",
@@ -334,6 +348,7 @@ func TestCreateServer_RemovesUntrackedContainerWhenIdentityPersistenceFails(t *t
 	t.Cleanup(func() { _ = dockerClient.Close() })
 	svc.pool = nil
 	svc.docker = dockerClient
+	ensureLocalTestNode(t, svc.store, "test-node")
 	if err := svc.store.DB().Exec(`CREATE TRIGGER fail_container_id BEFORE UPDATE OF container_id ON servers
 		WHEN NEW.container_id = 'created-container' BEGIN SELECT RAISE(ABORT, 'injected container identity persistence failure'); END`).Error; err != nil {
 		t.Fatalf("create persistence failure trigger: %v", err)

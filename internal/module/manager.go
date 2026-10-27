@@ -119,13 +119,44 @@ func sleepCtx(ctx context.Context, d time.Duration) bool {
 // module lifecycle operations for a module assigned to a remote node are not
 // silently applied to the local Docker daemon (the "dead Module.NodeID field"
 // problem: module containers used to always land on the local daemon).
-func (m *Manager) resolveDocker(nodeID string) *docker.Client {
+//
+// An unresolvable remote node is an error: silently using the local daemon would
+// start, stop, or delete containers on the wrong host.
+func (m *Manager) resolveDocker(nodeID string) (*docker.Client, error) {
+	defaultNodeID := "default"
 	if m.pool != nil {
-		if cli, err := m.pool.GetClientStrict(nodeID); err == nil && cli != nil {
-			return cli
+		defaultNodeID = m.pool.GetDefaultNodeID()
+		cli, err := m.pool.GetClientStrict(nodeID)
+		if err == nil && cli != nil {
+			return cli, nil
 		}
+		if err != nil && !isLocalNodeID(nodeID, defaultNodeID) {
+			return nil, fmt.Errorf("cannot resolve Docker client for node %q: %w", nodeID, err)
+		}
+	} else if !isLocalNodeID(nodeID, defaultNodeID) {
+		return nil, fmt.Errorf("cannot resolve Docker client for node %q: no Docker client pool is configured", nodeID)
 	}
-	return m.docker
+	if m.docker == nil {
+		return nil, fmt.Errorf("no Docker client available for node %q", nodeID)
+	}
+	return m.docker, nil
+}
+
+// isLocalNodeID reports whether nodeID addresses the controller's local Docker
+// daemon. The empty ID and the well-known "local" alias are accepted by
+// ClientPool.GetClientStrict alongside the configured default node ID.
+func isLocalNodeID(nodeID, defaultNodeID string) bool {
+	return nodeID == "" || nodeID == "local" || nodeID == defaultNodeID
+}
+
+// isLocalNode reports whether nodeID addresses the local Docker daemon for this
+// manager's pool.
+func (m *Manager) isLocalNode(nodeID string) bool {
+	defaultNodeID := "default"
+	if m.pool != nil {
+		defaultNodeID = m.pool.GetDefaultNodeID()
+	}
+	return isLocalNodeID(nodeID, defaultNodeID)
 }
 
 // SetLogStreamer sets the log streamer for module containers
@@ -192,11 +223,16 @@ func (m *Manager) restoreProxyRoutes() {
 
 		// Verify whether the module is currently running
 		isRunning := module.Status == storage.ModuleStatusRunning
-		if dockerCli := m.resolveDocker(module.NodeID); dockerCli != nil {
-			status, err := dockerCli.GetContainerStatus(ctx, module.ContainerID)
-			if err == nil {
-				isRunning = (status == storage.StatusRunning)
+		if dockerCli, err := m.resolveDocker(module.NodeID); err != nil {
+			if !m.isLocalNode(module.NodeID) {
+				m.logger.Warn("Skipping proxy route restoration for module %s: %v", module.Name, err)
+				continue
 			}
+			// No local Docker client is configured; trust the persisted status
+			// rather than falling back to another daemon.
+			m.logger.Debug("Cannot verify status of module %s: %v", module.Name, err)
+		} else if status, statusErr := dockerCli.GetContainerStatus(ctx, module.ContainerID); statusErr == nil {
+			isRunning = (status == storage.StatusRunning)
 		}
 
 		if !isRunning {
@@ -293,8 +329,17 @@ func (m *Manager) CreateAndStartModule(ctx context.Context, moduleID string, sta
 		}
 	}
 
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		module.Status = storage.ModuleStatusError
+		if updateErr := m.store.UpdateModule(ctx, module); updateErr != nil {
+			m.logger.Error("Failed to mark module %s as errored: %v", module.Name, updateErr)
+		}
+		return fmt.Errorf("failed to create module %s: %w", module.Name, err)
+	}
+
 	// Create the container
-	containerID, err := m.resolveDocker(module.NodeID).CreateModuleContainer(ctx, module, template, server, serverConfig, m.config, siblingModules)
+	containerID, err := dockerCli.CreateModuleContainer(ctx, module, template, server, serverConfig, m.config, siblingModules)
 	if err != nil {
 		module.Status = storage.ModuleStatusError
 		m.store.UpdateModule(ctx, module)
@@ -328,8 +373,15 @@ func (m *Manager) StartModule(ctx context.Context, moduleID string) error {
 		return m.CreateAndStartModule(ctx, moduleID, true)
 	}
 
+	// Resolve before inspecting: an unresolvable node must not be mistaken for a
+	// missing container and recreated against the local daemon.
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		return fmt.Errorf("failed to start module %s: %w", module.Name, err)
+	}
+
 	// Check if container still exists in Docker
-	_, err = m.resolveDocker(module.NodeID).GetContainerStatus(ctx, module.ContainerID)
+	_, err = dockerCli.GetContainerStatus(ctx, module.ContainerID)
 	if err != nil {
 		// Container doesn't exist, recreate it
 		m.logger.Info("Container for module %s no longer exists, recreating", module.Name)
@@ -352,7 +404,7 @@ func (m *Manager) StartModule(ctx context.Context, moduleID string) error {
 	}
 
 	// Start the container
-	if err := m.resolveDocker(module.NodeID).StartContainer(ctx, module.ContainerID); err != nil {
+	if err := dockerCli.StartContainer(ctx, module.ContainerID); err != nil {
 		module.Status = storage.ModuleStatusError
 		m.store.UpdateModule(ctx, module)
 		return fmt.Errorf("failed to start module container: %w", err)
@@ -416,7 +468,11 @@ func (m *Manager) runInitCommand(moduleID string) {
 	}
 
 	m.logger.Info("Init command: executing for module %s: %s", module.Name, module.InitCommand)
-	dockerCli := m.resolveDocker(module.NodeID)
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		m.logger.Error("Init command: %v", err)
+		return
+	}
 	output, err := dockerCli.Exec(ctx, module.ContainerID, []string{"sh", "-c", module.InitCommand})
 	if err != nil {
 		m.logger.Error("Init command: failed for module %s: %v", module.Name, err)
@@ -513,7 +569,10 @@ func (m *Manager) waitForHealthy(ctx context.Context, moduleID string, timeoutSe
 	}
 
 	failCount := 0
-	dockerCli := m.resolveDocker(module.NodeID)
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -599,6 +658,11 @@ func (m *Manager) StopModule(ctx context.Context, moduleID string) error {
 		return fmt.Errorf("module has no container")
 	}
 
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		return fmt.Errorf("failed to stop module %s: %w", module.Name, err)
+	}
+
 	// Update status
 	module.Status = storage.ModuleStatusStopping
 	if err := m.store.UpdateModule(ctx, module); err != nil {
@@ -622,7 +686,7 @@ func (m *Manager) StopModule(ctx context.Context, moduleID string) error {
 	}
 
 	// Stop the container
-	if _, err := m.resolveDocker(module.NodeID).StopContainer(ctx, module.ContainerID); err != nil {
+	if _, err := dockerCli.StopContainer(ctx, module.ContainerID); err != nil {
 		m.logger.Error("Failed to stop module container: %v", err)
 	}
 
@@ -654,6 +718,11 @@ func (m *Manager) RecreateModule(ctx context.Context, moduleID string) error {
 		return fmt.Errorf("failed to get module: %w", err)
 	}
 
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		return fmt.Errorf("failed to recreate module %s: %w", module.Name, err)
+	}
+
 	wasRunning := module.Status == storage.ModuleStatusRunning
 
 	// Stop if running
@@ -665,7 +734,7 @@ func (m *Manager) RecreateModule(ctx context.Context, moduleID string) error {
 
 	// Remove old container
 	if module.ContainerID != "" {
-		if err := m.resolveDocker(module.NodeID).RemoveContainer(ctx, module.ContainerID); err != nil {
+		if err := dockerCli.RemoveContainer(ctx, module.ContainerID); err != nil {
 			m.logger.Error("Failed to remove old module container: %v", err)
 		}
 		module.ContainerID = ""
@@ -686,9 +755,12 @@ func (m *Manager) DeleteModule(ctx context.Context, moduleID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get module: %w", err)
 	}
-	dockerCli := m.resolveDocker(module.NodeID)
-	if module.ContainerID != "" && dockerCli == nil {
-		return fmt.Errorf("no Docker client available for module node %q", module.NodeID)
+	var dockerCli *docker.Client
+	if module.ContainerID != "" {
+		dockerCli, err = m.resolveDocker(module.NodeID)
+		if err != nil {
+			return fmt.Errorf("failed to delete module %s: %w", module.Name, err)
+		}
 	}
 
 	// Stop if running
@@ -732,7 +804,12 @@ func (m *Manager) GetModuleStatus(ctx context.Context, moduleID string) (storage
 		return storage.ModuleStatusStopped, nil
 	}
 
-	status, err := m.resolveDocker(module.NodeID).GetContainerStatus(ctx, module.ContainerID)
+	dockerCli, err := m.resolveDocker(module.NodeID)
+	if err != nil {
+		return storage.ModuleStatusError, err
+	}
+
+	status, err := dockerCli.GetContainerStatus(ctx, module.ContainerID)
 	if err != nil {
 		return storage.ModuleStatusError, err
 	}
