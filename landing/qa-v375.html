@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>viewport 375</title>
+<style>
+  html,body { margin:0; padding:0; background:#0d0d0d; }
+  iframe { display:block; border:0; width:375px; background:#161616; }
+</style>
+</head>
+<body>
+<iframe id="f" src="./qa-full.html" title="viewport 375"></iframe>
+<script>
+  const f = document.getElementById("f");
+  const fit = () => {
+    try { f.style.height = f.contentDocument.documentElement.scrollHeight + "px"; }
+    catch (e) { f.style.height = "6000px"; }
+  };
+  f.addEventListener("load", () => { fit(); setTimeout(fit, 300); setTimeout(fit, 900); setTimeout(fit, 2000); });
+</script>
+</body></html>
