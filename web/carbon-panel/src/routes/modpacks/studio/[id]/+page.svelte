@@ -46,6 +46,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		Upload
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import { CarbonErrorState } from '$lib/components/carbon';
 	import { apiFetch } from '$lib/api/fetch';
 	import { uploadFile } from '$lib/utils/chunked-upload';
 	import ModpackDeployDialog from '$lib/components/modpack-deploy-dialog.svelte';
@@ -328,8 +329,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
+	let loadError = $state('');
+
 	async function loadPack() {
 		if (!packId) return;
+		loadError = '';
 		loading = true;
 		try {
 			const res = await apiFetch(`/api/v1/packwiz/packs/${packId}`);
@@ -342,6 +346,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			loadedMCVersion = data.mc_version || '';
 		} catch (err) {
 			console.error('Failed to load pack:', err);
+			loadError = err instanceof Error ? err.message : 'Failed to load modpack project';
 			toast.error('Failed to load modpack project');
 		} finally {
 			loading = false;
@@ -871,6 +876,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 </svelte:head>
 
 <div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
+	{#if loadError}
+		<CarbonErrorState title="Failed to load modpack project" message={loadError} onretry={loadPack} />
+	{/if}
 	<!-- Top Header Bar -->
 	<div
 		class="flex flex-col justify-between gap-4 rounded-none border-b border-[#393939] pb-5 sm:flex-row sm:items-center"

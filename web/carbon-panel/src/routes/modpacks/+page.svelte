@@ -41,6 +41,7 @@ one at https://mozilla.org/MPL/2.0/.
 		FileSearch
 	} from '@lucide/svelte';
 	import ManifestInspectorDialog from '$lib/components/manifest-inspector-dialog.svelte';
+	import { CarbonErrorState } from '$lib/components/carbon';
 	import { create } from '@bufbuild/protobuf';
 	import type {
 		IndexedModpack,
@@ -67,6 +68,8 @@ one at https://mozilla.org/MPL/2.0/.
 	);
 
 	let searchResults = $state<SearchModpacksResponse | null>(null);
+	let searchError = $state('');
+	let favoritesError = $state('');
 	let favorites = $state<IndexedModpack[]>([]);
 	let uploadedPacks = $state<IndexedModpack[]>([]);
 	let loading = $state(false);
@@ -151,6 +154,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function searchModpacks(resetPage = true) {
 		loading = true;
+		searchError = '';
 		try {
 			if (resetPage) {
 				searchParams.page = 1;
@@ -161,6 +165,7 @@ one at https://mozilla.org/MPL/2.0/.
 			});
 			searchResults = response;
 		} catch (error) {
+			searchError = error instanceof Error ? error.message : 'Failed to search modpacks';
 			toast.error('Failed to search modpacks');
 			console.error(error);
 		} finally {
@@ -219,10 +224,12 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	async function loadFavorites() {
+		favoritesError = '';
 		try {
 			const result = await rpcClient.modpack.listFavorites({});
 			favorites = result.modpacks;
 		} catch (error) {
+			favoritesError = error instanceof Error ? error.message : 'Failed to load favorites';
 			toast.error('Failed to load favorites');
 			console.error(error);
 		}
@@ -418,6 +425,11 @@ one at https://mozilla.org/MPL/2.0/.
 </svelte:head>
 
 <div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
+	{#if searchError && !showFavorites && !showUploaded}
+		<CarbonErrorState title="Failed to search modpacks" message={searchError} onretry={() => searchModpacks()} />
+	{:else if favoritesError && showFavorites}
+		<CarbonErrorState title="Failed to load favorites" message={favoritesError} onretry={loadFavorites} />
+	{/if}
 	<!-- Top Bar -->
 	<div
 		class="flex flex-col justify-between gap-4 rounded-none border-b border-[#393939] pb-6 lg:flex-row lg:items-center"

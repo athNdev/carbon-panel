@@ -32,6 +32,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		Calendar
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import { CarbonErrorState } from '$lib/components/carbon';
 	import { apiFetch } from '$lib/api/fetch';
 
 	interface PackSummary {
@@ -151,8 +152,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		}
 	}
 
+	let loadError = $state('');
+
 	async function loadPacks() {
 		loading = true;
+		loadError = '';
 		try {
 			const res = await apiFetch('/api/v1/packwiz/packs');
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -160,6 +164,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			packs = data.packs || [];
 		} catch (err) {
 			console.error('Failed to load packwiz projects:', err);
+			loadError = err instanceof Error ? err.message : 'Failed to load custom modpack projects';
 			toast.error('Failed to load custom modpack projects');
 		} finally {
 			loading = false;
@@ -301,6 +306,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 </script>
 
 <svelte:head>
+	{#if loadError}
+		<CarbonErrorState title="Failed to load modpack projects" message={loadError} onretry={loadPacks} />
+	{/if}
 	<title>Modpack Studio - Carbon Panel</title>
 </svelte:head>
 
