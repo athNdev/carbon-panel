@@ -3682,5 +3682,19 @@ table.compare .icon { width: 18px; height: 18px; }
 })();
 
 </script>
+
+<script>
+(function () {
+  var t = new URLSearchParams(location.search).get("goto");
+  if (!t) return;
+  var go = function () {
+    var el = document.getElementById(t);
+    if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
+  };
+  document.addEventListener("DOMContentLoaded", go);
+  window.addEventListener("load", go);
+  setTimeout(go, 300); setTimeout(go, 800); setTimeout(go, 1600); setTimeout(go, 2600);
+})();
+</script>
 </body>
 </html>

@@ -7,17 +7,5 @@
 </style>
 </head>
 <body>
-<iframe id="f" src="./qa-full.html" title="qa-t-fleet.html"></iframe>
-<script>
-  const f = document.getElementById("f");
-  const jump = () => {
-    try {
-      const d = f.contentDocument;
-      d.documentElement.style.scrollBehavior = "auto";
-      const el = d.getElementById("fleet");
-      if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
-    } catch (e) {}
-  };
-  f.addEventListener("load", () => { jump(); setTimeout(jump, 250); setTimeout(jump, 900); setTimeout(jump, 2200); });
-</script>
+<iframe id="f" src="./qa-full.html?goto=fleet" title="qa-t-fleet.html"></iframe>
 </body></html>
