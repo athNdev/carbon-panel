@@ -736,6 +736,32 @@ func additionalPortBindings(ports []*v1.AdditionalPort, useProxy bool) network.P
 	return out
 }
 
+// serverImageName resolves the Docker image for a server: an explicit tag
+// when configured, otherwise the loader/version-derived itzg image.
+func serverImageName(server *models.Server) string {
+	if server.DockerImage != "" {
+		return "itzg/minecraft-server:" + server.DockerImage
+	}
+	return getDockerImage(server.ModLoader, server.MCVersion)
+}
+
+// ensureServerImage makes the server's image available on the daemon (MINE-125).
+// If the image is already present locally, the remote registry check is
+// skipped to avoid blocking / stalling during 'Creating' state on network
+// latency or Docker Hub rate limits.
+func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) error {
+	imageName := serverImageName(server)
+	if _, err := c.docker.ImageInspect(ctx, imageName); err != nil {
+		c.log.Info("Image %s not present locally, pulling...", imageName)
+		if pullErr := c.pullImage(ctx, imageName); pullErr != nil {
+			return fmt.Errorf("failed to pull image %s: %w", imageName, pullErr)
+		}
+		return nil
+	}
+	c.log.Debug("Image %s exists locally, skipping pull", imageName)
+	return nil
+}
+
 func (c *Client) CreateContainer(ctx context.Context, server *models.Server, serverConfig *models.ServerConfig) (string, error) {
 	// Validate container-side ports before touching the daemon: the new
 	// SDK's network.Port is built from uint16, so unchecked values would
@@ -746,24 +772,11 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		return "", err
 	}
 
-	// Use server's DockerImage if specified, otherwise determine based on version and loader
-	var imageName string
-	if server.DockerImage != "" {
-		imageName = "itzg/minecraft-server:" + server.DockerImage
-	} else {
-		imageName = getDockerImage(server.ModLoader, server.MCVersion)
-	}
+	imageName := serverImageName(server)
 
 	// Ensure image is available locally before creating container (MINE-125).
-	// If the image is already present on the Docker daemon, skip remote registry check
-	// to avoid blocking / stalling during 'Creating' state on network latency or Docker Hub rate limits.
-	if _, err := c.docker.ImageInspect(ctx, imageName); err != nil {
-		c.log.Info("Image %s not present locally, pulling...", imageName)
-		if pullErr := c.pullImage(ctx, imageName); pullErr != nil {
-			return "", fmt.Errorf("failed to pull image %s: %w", imageName, pullErr)
-		}
-	} else {
-		c.log.Debug("Image %s exists locally, skipping pull", imageName)
+	if err := c.ensureServerImage(ctx, server); err != nil {
+		return "", err
 	}
 
 	// Build environment variables
@@ -1461,79 +1474,135 @@ func (c *Client) RestartContainer(ctx context.Context, containerID string, delay
 // Result of a container recreation operation
 type RecreateContainerResult struct {
 	// NewContainerID is the canonical container identity after the operation.
-	// On a failure before removal, it remains the original ID; after confirmed
-	// removal with no replacement, it is empty; after a partial create/start,
-	// it identifies the replacement that callers must continue tracking.
+	// It is the original ID while the old container is retained — including
+	// after a rollback to it — and the replacement's ID after a verified
+	// cutover, or after a partial create that could not be rolled back.
 	NewContainerID string
 	WasRunning     bool
 }
 
-// Stops, removes, and creates a new container - Returns new container ID and whether it was running before
-func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, server *models.Server, serverConfig *models.ServerConfig) (*RecreateContainerResult, error) {
-	result := &RecreateContainerResult{}
+// retainedContainerName is the side identity a replaced container keeps
+// until the replacement is verified (OSS-230). It is unique per attempt and
+// visible in the daemon so recovery can find the retained artifact.
+func retainedContainerName(serverID string) string {
+	return fmt.Sprintf("carbon-panel-replaced-%s-%d", serverID, time.Now().Unix())
+}
 
-	// Check if container was running before we stop it
+// RecreateContainer replaces a server's container reversibly (OSS-230). The
+// replacement is preflighted (ports and image) before the known-good
+// container is touched; the old container is stopped and retained under a
+// renamed identity until the replacement is created and started according to
+// the preserved run intent. Any failure after that point rolls back to the
+// old identity instead of leaving the server without an executable container.
+func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, server *models.Server, serverConfig *models.ServerConfig) (*RecreateContainerResult, error) {
+	result := &RecreateContainerResult{NewContainerID: oldContainerID}
+
+	// Preflight the replacement before touching the known-good container:
+	// configuration and image failures leave the old container running.
+	if err := validateServerPorts(server); err != nil {
+		return result, err
+	}
+	if err := c.ensureServerImage(ctx, server); err != nil {
+		return result, err
+	}
+
+	// rollback restores the retained old container's name and run state. It is
+	// a no-op until the old container has been retained.
+	rollback := func() {}
+
 	if oldContainerID != "" {
-		status, err := c.GetContainerStatus(ctx, oldContainerID)
-		if err != nil {
-			if !errdefs.IsNotFound(err) {
+		inspectCtx, cancel := boundedCall(ctx)
+		inspectResult, inspectErr := c.docker.ContainerInspect(inspectCtx, oldContainerID, client.ContainerInspectOptions{})
+		cancel()
+		if inspectErr != nil {
+			if !errdefs.IsNotFound(inspectErr) {
 				// An unavailable or timed-out inspect is not evidence that the
 				// old container is absent. Keep its identity and do not send a
-				// destructive remove based on an unknown observation.
-				result.NewContainerID = oldContainerID
-				return result, fmt.Errorf("failed to inspect old container before recreation: %w", err)
+				// destructive call based on an unknown observation.
+				return result, fmt.Errorf("failed to inspect old container before recreation: %w", inspectErr)
 			}
-			c.log.Debug("Container %s is already absent during recreation: %v", oldContainerID, err)
-		} else if status == models.StatusError {
-			// A successful response without a usable state is still an unknown
-			// observation. Preserve the known identity and require reconciliation.
-			result.NewContainerID = oldContainerID
-			return result, fmt.Errorf("failed to determine old container state before recreation: status is unknown")
-		} else if status == models.StatusRunning || status == models.StatusUnhealthy || status == models.StatusPaused {
-			// A paused container cannot be removed reliably until StopContainer
-			// unpauses it. Preserve paused intent as not-running: its replacement
-			// should remain stopped rather than unexpectedly start.
-			result.WasRunning = status == models.StatusRunning || status == models.StatusUnhealthy
-			if _, err := c.StopContainer(ctx, oldContainerID); err != nil {
-				// The original container remains the only known identity when stop
-				// fails before removal. Return it so callers do not drop a still-live
-				// container reference while recording the operation error.
-				result.NewContainerID = oldContainerID
-				return result, fmt.Errorf("failed to stop container: %w", err)
+			c.log.Debug("Container %s is already absent during recreation: %v", oldContainerID, inspectErr)
+		} else {
+			status := mapContainerState(inspectResult.Container.State)
+			if status == models.StatusError {
+				// A successful response without a usable state is still an
+				// unknown observation. Preserve the known identity and require
+				// reconciliation.
+				return result, fmt.Errorf("failed to determine old container state before recreation: status is unknown")
 			}
-		}
+			if status == models.StatusRunning || status == models.StatusUnhealthy || status == models.StatusPaused {
+				// A paused container cannot be retained reliably until
+				// StopContainer unpauses it. Preserve paused intent as
+				// not-running: its replacement should remain stopped rather
+				// than unexpectedly start.
+				result.WasRunning = status == models.StatusRunning || status == models.StatusUnhealthy
+				if _, err := c.StopContainer(ctx, oldContainerID); err != nil {
+					// The original container remains the only known identity
+					// when stop fails. Return it so callers do not drop a
+					// still-live container reference while recording the error.
+					return result, fmt.Errorf("failed to stop container: %w", err)
+				}
+			}
 
-		// Remove old container directly from Docker to preserve log subscribers for migration
-		if _, err := c.docker.ContainerRemove(ctx, oldContainerID, client.ContainerRemoveOptions{Force: true}); err != nil {
-			if !errdefs.IsNotFound(err) {
-				// Do not attempt to create a second identity when removal has an
-				// ambiguous or transient failure. Retain the old ID for recovery.
-				result.NewContainerID = oldContainerID
-				return result, fmt.Errorf("failed to remove old container: %w", err)
+			// Retain the stopped old container under a side identity so the
+			// replacement can be rolled back until cutover is verified. The
+			// canonical name is freed for the replacement.
+			restoreName := strings.TrimPrefix(inspectResult.Container.Name, "/")
+			if restoreName == "" {
+				restoreName = fmt.Sprintf("carbon-panel-server-%s", server.ID)
 			}
-			c.log.Debug("Old container already absent during recreation: %v", err)
+			if _, err := c.docker.ContainerRename(ctx, oldContainerID, client.ContainerRenameOptions{NewName: retainedContainerName(server.ID)}); err != nil {
+				return result, fmt.Errorf("failed to retain old container: %w", err)
+			}
+			rollback = func() {
+				if _, rerr := c.docker.ContainerRename(ctx, oldContainerID, client.ContainerRenameOptions{NewName: restoreName}); rerr != nil {
+					c.log.Error("Failed to restore name of retained container %s: %v", oldContainerID, rerr)
+				}
+				if result.WasRunning {
+					if serr := c.StartContainer(ctx, oldContainerID); serr != nil {
+						c.log.Error("Failed to restart restored container %s: %v", oldContainerID, serr)
+					}
+				}
+			}
 		}
 	}
 
-	// Create new container
+	// Create the replacement; it takes the canonical name again.
 	newContainerID, err := c.CreateContainer(ctx, server, serverConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create container: %w", err)
+		rollback()
+		return result, fmt.Errorf("failed to create container: %w", err)
 	}
-	result.NewContainerID = newContainerID
+
+	// Start if it was running before
+	if result.WasRunning {
+		if err := c.StartContainer(ctx, newContainerID); err != nil {
+			// The replacement is unusable; roll back to the retained old
+			// identity instead of leaving a half-started container tracked.
+			if _, rmErr := c.docker.ContainerRemove(ctx, newContainerID, client.ContainerRemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+				result.NewContainerID = newContainerID
+				return result, fmt.Errorf("failed to start new container: %w (removing the replacement also failed: %v; track the replacement identity)", err, rmErr)
+			}
+			rollback()
+			return result, fmt.Errorf("failed to start new container: %w", err)
+		}
+	}
 
 	// Migrate log subscribers from old to new container
 	if c.logStreamer != nil && oldContainerID != "" {
 		c.logStreamer.MigrateSubscribers(oldContainerID, newContainerID)
 	}
 
-	// Start if it was running before
-	if result.WasRunning {
-		if err := c.StartContainer(ctx, newContainerID); err != nil {
-			return result, fmt.Errorf("failed to start new container: %w", err)
+	// Cutover verified: drop the retained old container. Direct Docker
+	// removal keeps migrated log subscribers intact. A retained container
+	// that cannot be cleaned up is recoverable state, not data loss.
+	if oldContainerID != "" {
+		if _, rmErr := c.docker.ContainerRemove(ctx, oldContainerID, client.ContainerRemoveOptions{Force: true}); rmErr != nil && !errdefs.IsNotFound(rmErr) {
+			c.log.Warn("Retained replaced container %s could not be cleaned up: %v", oldContainerID, rmErr)
 		}
 	}
 
+	result.NewContainerID = newContainerID
 	return result, nil
 }
 
