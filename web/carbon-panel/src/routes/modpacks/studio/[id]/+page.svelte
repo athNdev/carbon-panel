@@ -877,7 +877,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
 	{#if loadError}
-		<CarbonErrorState title="Failed to load modpack project" message={loadError} onretry={loadPack} />
+		<CarbonErrorState
+			title="Failed to load modpack project"
+			message={loadError}
+			onretry={loadPack}
+		/>
 	{/if}
 	<!-- Top Header Bar -->
 	<div

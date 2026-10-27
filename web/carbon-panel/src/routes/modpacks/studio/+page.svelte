@@ -307,7 +307,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <svelte:head>
 	{#if loadError}
-		<CarbonErrorState title="Failed to load modpack projects" message={loadError} onretry={loadPacks} />
+		<CarbonErrorState
+			title="Failed to load modpack projects"
+			message={loadError}
+			onretry={loadPacks}
+		/>
 	{/if}
 	<title>Modpack Studio - Carbon Panel</title>
 </svelte:head>

@@ -426,9 +426,17 @@ one at https://mozilla.org/MPL/2.0/.
 
 <div class="h-full flex-1 space-y-6 rounded-none font-sans text-[#f4f4f4]">
 	{#if searchError && !showFavorites && !showUploaded}
-		<CarbonErrorState title="Failed to search modpacks" message={searchError} onretry={() => searchModpacks()} />
+		<CarbonErrorState
+			title="Failed to search modpacks"
+			message={searchError}
+			onretry={() => searchModpacks()}
+		/>
 	{:else if favoritesError && showFavorites}
-		<CarbonErrorState title="Failed to load favorites" message={favoritesError} onretry={loadFavorites} />
+		<CarbonErrorState
+			title="Failed to load favorites"
+			message={favoritesError}
+			onretry={loadFavorites}
+		/>
 	{/if}
 	<!-- Top Bar -->
 	<div
