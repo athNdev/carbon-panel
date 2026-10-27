@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 560" width="1280" height="560" role="img" aria-label="Carbon Panel — Minecraft servers, run like production.">
+  <title>Carbon Panel — Minecraft servers, run like production.</title>
+  <defs>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f4f4" />
+      <stop offset="1" stop-color="#78a9ff" />
+    </linearGradient>
+    <radialGradient id="sky" cx="0.5" cy="0.04" r="0.9">
+      <stop offset="0" stop-color="#0f62fe" stop-opacity="0.36" />
+      <stop offset="0.38" stop-color="#0f62fe" stop-opacity="0.11" />
+      <stop offset="1" stop-color="#0f62fe" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#78a9ff" stop-opacity="0.12" />
+      <stop offset="1" stop-color="#78a9ff" stop-opacity="0" />
+    </radialGradient>
+    <g id="mark">
+      <rect width="128" height="128" rx="28" fill="#0f62fe" />
+      <g fill="none" stroke="#ffffff" stroke-width="7.2" stroke-linejoin="round">
+        <path d="M64 24l32 18v36L64 96 32 78V42z" />
+        <path d="M32 42l32 18 32-18M64 60v36" />
+      </g>
+    </g>
+  </defs>
+
+  <!-- ground -->
+  <rect width="1280" height="560" fill="#161616" />
+  <rect width="1280" height="560" fill="url(#sky)" />
+  <rect x="0" y="150" width="1280" height="410" fill="url(#pool)" />
+
+  <!-- structural lattice -->
+  <g stroke="#f4f4f4" stroke-opacity="0.055" stroke-width="1">
+    <path d="M40 0V560M120 0V560M200 0V560M280 0V560M360 0V560M440 0V560M520 0V560M600 0V560M680 0V560M760 0V560M840 0V560M920 0V560M1000 0V560M1080 0V560M1160 0V560M1240 0V560" />
+  </g>
+
+  <!-- brand -->
+  <use href="#mark" x="576" y="86" />
+
+  <text x="640" y="316" text-anchor="middle" fill="url(#word)"
+        font-family="IBM Plex Sans, Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="78" font-weight="600" letter-spacing="-1.5">Carbon Panel</text>
+
+  <text x="640" y="372" text-anchor="middle" fill="#c6c6c6"
+        font-family="IBM Plex Sans, Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="27" font-weight="400">Minecraft servers, run like production.</text>
+
+  <path d="M560 418H720" stroke="#f4f4f4" stroke-opacity="0.16" stroke-width="1" />
+
+  <text x="640" y="462" text-anchor="middle" fill="#8d8d8d"
+        font-family="IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="16" letter-spacing="1.6">self-hosted · docker-native · MPL-2.0</text>
+</svg>
