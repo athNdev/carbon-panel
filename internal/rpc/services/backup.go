@@ -22,6 +22,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
+	"github.com/athNdev/carbon-panel/internal/worldstore"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -41,6 +42,7 @@ type BackupService struct {
 	enforcer         *rbac.Enforcer
 	restoringMu      sync.Mutex
 	restoringServers map[string]bool
+	worldDataDir     string
 	// remoteDelete overrides the S3 delete in tests. Production leaves it nil.
 	remoteDelete func(ctx context.Context, key string) error
 }
@@ -79,6 +81,14 @@ func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *dock
 // SetEnforcer injects the RBAC enforcer used for per-server authorization on
 // backup records. Kept as a setter so the constructor signature (and therefore
 // every existing call site) stays stable.
+// SetWorldDataDir configures the world-data seam for manifest'd backups:
+// the controller data directory that owns installation identity and the
+// worldstore journal. Production must set it; without it, restores of
+// worldstore-format archives are refused rather than silently degraded.
+func (s *BackupService) SetWorldDataDir(dataDir string) {
+	s.worldDataDir = dataDir
+}
+
 func (s *BackupService) SetEnforcer(e *rbac.Enforcer) {
 	s.enforcer = e
 }
@@ -358,7 +368,35 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		}
 	}
 
-	if _, err := files.ExtractArchive(ctx, archivePath, server.DataPath, nil); err != nil {
+	// Manifest'd archives are restored through the world-data seam
+	// (worldstore): verified contents and one journaled atomic swap shared
+	// with the CLI. Legacy zips keep the extraction path (ADR 0004).
+	if worldstore.HasWorldstoreManifest(archivePath) {
+		if s.worldDataDir == "" {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, errors.New("world-data seam is not configured"))
+		}
+		owner, oerr := docker.LoadOrCreateInstallationID(s.worldDataDir)
+		if oerr != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("installation identity: %w", oerr))
+		}
+		ws, werr := worldstore.OpenServerWorlds(owner, server.ID, server.NodeID,
+			filepath.Join(s.worldDataDir, "worldstore-journal"), server.DataPath)
+		if werr != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("open world store: %w", werr))
+		}
+		defer func() { _ = ws.Close() }()
+		if rerr := ws.Recover(); rerr != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("world store recovery: %w", rerr))
+		}
+		if rerr := ws.RestoreFrom(ws.Identity(), archivePath); rerr != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restore backup: %w", rerr))
+		}
+	} else if _, err := files.ExtractArchive(ctx, archivePath, server.DataPath, nil); err != nil {
 		done("failed")
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to extract backup: %w", err))
 	}

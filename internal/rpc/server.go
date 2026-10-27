@@ -305,6 +305,7 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	subuserService := services.NewSubuserService(s.store, s.log)
 	blueprintService := services.NewBlueprintService(s.store, s.log)
 	backupService := services.NewBackupService(s.store, s.docker, s.clientPool, s.config.Storage.S3, s.log)
+	backupService.SetWorldDataDir(s.config.Storage.DataDir)
 	// Backup delete/restore/lock carry a backup id rather than a server id, so
 	// the interceptor cannot scope them per-server. Inject the enforcer so the
 	// service can resolve the owning server and enforce against it; without
