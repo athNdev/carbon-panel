@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"time"
 	"strings"
 	"testing"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/indexers/modrinth"
 	"github.com/athNdev/carbon-panel/internal/packwiz"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/athNdev/carbon-panel/pkg/upload"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,7 +64,9 @@ func newDatapackHarness(t *testing.T, artifactBody []byte, filename string) (*Pa
 	_, err := mgr.CreatePack(&packwiz.Pack{ID: "p1", Name: "P", MCVersion: "1.21.1", ModLoader: "fabric"})
 	require.NoError(t, err)
 
-	return NewPackwizHandler(mgr, nil, logger.New(), nil, nil, &config.Config{}), "p1"
+	um := upload.NewManager(t.TempDir(), time.Minute, 10<<20, logger.New())
+	t.Cleanup(um.Stop)
+	return NewPackwizHandler(mgr, nil, um, logger.New(), nil, nil, &config.Config{}), "p1"
 }
 
 func TestHandleAddDatapackInstallsArchive(t *testing.T) {
@@ -144,4 +148,51 @@ func TestHandleAddDatapackValidatesInput(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusBadRequest, rec.Code, "traversal name must be rejected")
+}
+
+func uploadSessionBytes(t *testing.T, h *PackwizHandler, filename string, data []byte) string {
+	t.Helper()
+	sess, err := h.uploadManager.InitSession(filename, int64(len(data)), int32(len(data)))
+	require.NoError(t, err)
+	_, done, err := h.uploadManager.WriteStream(sess.ID, bytes.NewReader(data), 0)
+	require.NoError(t, err)
+	require.True(t, done)
+	return sess.ID
+}
+
+func TestHandleUploadDatapackInstallsArchive(t *testing.T) {
+	h, packID := newDatapackHarness(t, testZipBytes(t, map[string]string{"pack.mcmeta": `{}`}), "unused.zip")
+	body := testZipBytes(t, map[string]string{
+		"pack.mcmeta":      `{"pack":{"pack_format":48}}`,
+		"data/minecraft/x": "",
+	})
+	session := uploadSessionBytes(t, h, "up-pack.zip", body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/packwiz/packs/p1/datapacks/upload",
+		strings.NewReader(`{"upload_session_id":"`+session+`"}`))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	raw, _, err := h.manager.ServePackFile(packID, "datapacks/up-pack.zip")
+	require.NoError(t, err)
+	require.Equal(t, body, raw)
+}
+
+func TestHandleUploadDatapackRejectsNonDatapack(t *testing.T) {
+	h, packID := newDatapackHarness(t, testZipBytes(t, map[string]string{"pack.mcmeta": `{}`}), "unused.zip")
+	body := testZipBytes(t, map[string]string{"readme.txt": "not a pack"})
+	session := uploadSessionBytes(t, h, "junk.zip", body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/packwiz/packs/p1/datapacks/upload",
+		strings.NewReader(`{"upload_session_id":"`+session+`"}`))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	_, _, err := h.manager.ServePackFile(packID, "datapacks/junk.zip")
+	require.Error(t, err, "invalid archive must not be installed")
+
+	_, _, getErr := h.uploadManager.GetTempPath(session)
+	require.Error(t, getErr, "failed upload must clean up its session")
 }

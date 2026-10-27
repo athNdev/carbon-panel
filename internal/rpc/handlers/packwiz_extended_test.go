@@ -29,7 +29,7 @@ func TestPackwizHandler_ExtendedFeatures(t *testing.T) {
 
 	log := logger.New()
 	mgr := packwiz.NewManager(tempDir, log)
-	handler := NewPackwizHandler(mgr, nil, log, nil, nil, nil)
+	handler := NewPackwizHandler(mgr, nil, nil, log, nil, nil, nil)
 
 	// 1. Create Base Pack
 	newPack := packwiz.Pack{
