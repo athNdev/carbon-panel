@@ -297,6 +297,9 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# The Visual Studio rule above must not swallow the backup-encryption
+# package source on case-insensitive filesystems.
+!internal/backupcrypt/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

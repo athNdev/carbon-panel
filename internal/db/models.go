@@ -667,6 +667,11 @@ type BackupRecord struct {
 	Locked    bool   `json:"locked" gorm:"default:false"`
 	Status    string `json:"status" gorm:"default:complete"` // complete, restoring, failed
 	RemoteKey string `json:"remote_key" gorm:"column:remote_key"` // S3 object key when offloaded (MINE-138)
+	// Encrypted marks an authenticated-encrypted artifact (OSS-236);
+	// EncryptionKeyID is the non-secret key label recorded for rotation and
+	// recovery.
+	Encrypted       bool   `json:"encrypted" gorm:"default:false"`
+	EncryptionKeyID string `json:"encryption_key_id" gorm:"column:encryption_key_id"`
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime;index"`
 }

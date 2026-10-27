@@ -6,6 +6,7 @@
 package scheduler
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -13,7 +14,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/athNdev/carbon-panel/internal/backupcrypt"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -164,5 +167,71 @@ func TestBackupTaskResumeFailureIsReported(t *testing.T) {
 	requireNoErr(t, err)
 	if !strings.Contains(out, "WARNING") || !strings.Contains(out, "still OFF") {
 		t.Fatalf("failed resume must be reported in the output, got %q", out)
+	}
+}
+
+// TestBackupTaskEncryptsStoredArtifact pins the runtime wiring (OSS-236
+// repro): a backup through the public task path stores a non-plain-zip
+// artifact and records its key metadata.
+func TestBackupTaskEncryptsStoredArtifact(t *testing.T) {
+	s, server, _ := consistencyFixture(t)
+	s.appConfig.Storage.BackupEncryption = appconfig.BackupEncryptionConfig{
+		KeyID: "key-2026",
+		Key:   strings.Repeat("ab", 32),
+	}
+
+	out, err := s.executeBackupTask(context.Background(), server, &storage.ScheduledTask{Name: "nightly"})
+	requireNoErr(t, err)
+	if !strings.Contains(out, "encrypted (key key-2026)") {
+		t.Fatalf("output must report the encryption state, got %q", out)
+	}
+
+	recs, err := s.store.ListBackupRecords(context.Background(), server.ID, 0)
+	if err != nil || len(recs) != 1 {
+		t.Fatalf("expected one backup record, got %v, %v", recs, err)
+	}
+	rec := recs[0]
+	if !rec.Encrypted || rec.EncryptionKeyID != "key-2026" {
+		t.Fatalf("record must carry encryption metadata, got %+v", rec)
+	}
+	stored, err := os.ReadFile(rec.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.HasPrefix(stored, []byte("PK")) {
+		t.Fatal("stored artifact must not be a plain zip")
+	}
+	isEnc, err := backupcrypt.IsEncrypted(rec.Path)
+	if err != nil || !isEnc {
+		t.Fatalf("stored artifact must carry the encryption magic, got %v, %v", isEnc, err)
+	}
+}
+
+// TestPruneKeepsLastVerifiedCopy: retention must never remove the last
+// verified copy even when newer records exist but are not usable (OSS-236).
+func TestPruneKeepsLastVerifiedCopy(t *testing.T) {
+	s, server, _ := consistencyFixture(t)
+	ctx := context.Background()
+
+	good := &storage.BackupRecord{
+		ID: "b-good", ServerID: server.ID, Name: "good.zip", Path: filepath.Join(t.TempDir(), "good.zip"),
+		Status: "complete", CreatedAt: time.Now().AddDate(0, 0, -30),
+	}
+	if err := s.store.CreateBackupRecord(ctx, good); err != nil {
+		t.Fatal(err)
+	}
+	failed := &storage.BackupRecord{
+		ID: "b-failed", ServerID: server.ID, Name: "failed.zip", Path: "",
+		Status: "failed", CreatedAt: time.Now(),
+	}
+	if err := s.store.CreateBackupRecord(ctx, failed); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.pruneServerBackups(ctx, server, t.TempDir(), "", 1, 0, 0); err != nil {
+		t.Fatalf("prune: %v", err)
+	}
+	if _, err := s.store.GetBackupRecord(ctx, "b-good"); err != nil {
+		t.Fatalf("the last verified copy must survive retention: %v", err)
 	}
 }

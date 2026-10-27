@@ -103,13 +103,26 @@ type DockerConfig struct {
 }
 
 type StorageConfig struct {
-	DataDir               string   `mapstructure:"data_dir" json:"data_dir"`
-	BackupDir             string   `mapstructure:"backup_dir" json:"backup_dir"`
-	TempDir               string   `mapstructure:"temp_dir" json:"temp_dir"`
-	MaxUploadSize         int64    `mapstructure:"max_upload_size" json:"max_upload_size"`
-	MaxSnapshots          int      `mapstructure:"max_snapshots" json:"max_snapshots"`
-	SnapshotRetentionDays int      `mapstructure:"snapshot_retention_days" json:"snapshot_retention_days"`
-	S3                    S3Config `mapstructure:"s3" json:"s3"`
+	DataDir               string                 `mapstructure:"data_dir" json:"data_dir"`
+	BackupDir             string                 `mapstructure:"backup_dir" json:"backup_dir"`
+	TempDir               string                 `mapstructure:"temp_dir" json:"temp_dir"`
+	MaxUploadSize         int64                  `mapstructure:"max_upload_size" json:"max_upload_size"`
+	MaxSnapshots          int                    `mapstructure:"max_snapshots" json:"max_snapshots"`
+	SnapshotRetentionDays int                    `mapstructure:"snapshot_retention_days" json:"snapshot_retention_days"`
+	BackupEncryption      BackupEncryptionConfig `mapstructure:"backup_encryption" json:"backup_encryption"`
+	S3                    S3Config               `mapstructure:"s3" json:"s3"`
+}
+
+// BackupEncryptionConfig enables authenticated encryption of backup
+// artifacts at rest and offsite (OSS-236). Encryption is explicitly disabled
+// when no key material is configured. The key is 32 bytes encoded as hex or
+// base64 and should come from the environment
+// (CARBONPANEL_STORAGE_BACKUP_ENCRYPTION_KEY) rather than the config file;
+// it is never serialized or logged. KeyID is a stable non-secret label
+// recorded with every artifact for key rotation and recovery.
+type BackupEncryptionConfig struct {
+	KeyID string `mapstructure:"key_id" json:"key_id"`
+	Key   string `mapstructure:"key" json:"-"`
 }
 
 // S3Config enables S3-compatible offsite backup upload (MINE-138).

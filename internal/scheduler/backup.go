@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/athNdev/carbon-panel/internal/backupcrypt"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/nodestorage"
@@ -204,6 +205,37 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		return "", fmt.Errorf("failed to secure backup archive: %w", err)
 	}
 
+	// Verify the plaintext archive before any encryption wrapper so a corrupt
+	// archive fails as itself (OSS-236).
+	if err := verifyZipArchive(destPath); err != nil {
+		return "", fmt.Errorf("backup archive failed verification: %w", err)
+	}
+
+	// Authenticated encryption at rest and offsite (OSS-236). The stored
+	// artifact is the ciphertext and its checksum covers the ciphertext.
+	key, kerr := s.backupKey()
+	if kerr != nil {
+		return "", kerr
+	}
+	encrypted := false
+	keyID := ""
+	if key != nil {
+		tmp := destPath + ".enc-tmp"
+		if err := backupcrypt.EncryptFile(destPath, tmp, key); err != nil {
+			_ = os.Remove(tmp)
+			return "", fmt.Errorf("failed to encrypt backup archive: %w", err)
+		}
+		if err := os.Rename(tmp, destPath); err != nil {
+			_ = os.Remove(tmp)
+			return "", fmt.Errorf("failed to finalize encrypted backup archive: %w", err)
+		}
+		if err := secureBackupArtifact(destPath); err != nil {
+			return "", fmt.Errorf("failed to secure encrypted backup archive: %w", err)
+		}
+		encrypted = true
+		keyID = key.ID
+	}
+
 	var size int64
 	if info, err := os.Stat(destPath); err == nil {
 		size = info.Size()
@@ -218,9 +250,6 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	if err := os.WriteFile(sidecarPath, []byte(sum+"  "+filepath.Base(destPath)+"\n"), 0600); err != nil {
 		return "", fmt.Errorf("failed to write backup checksum: %w", err)
 	}
-	if err := verifyZipArchive(destPath); err != nil {
-		return "", fmt.Errorf("backup archive failed verification: %w", err)
-	}
 
 	// Track the archive in the database (MINE-138). A missing record must
 	// never fail the backup itself.
@@ -228,6 +257,7 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		ID: uuid.New().String(), ServerID: server.ID,
 		Name: filepath.Base(destPath), Path: destPath,
 		SizeBytes: size, SHA256: sum, Status: "complete",
+		Encrypted: encrypted, EncryptionKeyID: keyID,
 	}
 	if recErr := s.store.CreateBackupRecord(ctx, rec); recErr != nil {
 		s.log.Error("Backup: failed to record backup %s: %v", destPath, recErr)
@@ -238,11 +268,16 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	remoteNote := ""
 	if s3uploader.Enabled(s.appConfig.Storage.S3) {
 		if key, uerr := s.uploadBackupToS3(ctx, server, rec, destPath); uerr != nil {
-			remoteNote = fmt.Sprintf("; S3 upload failed: %v", uerr)
+			remoteNote = fmt.Sprintf("; offsite: FAILED (S3 upload: %v) — backup is local-only", uerr)
 			s.log.Error("Backup %s: %v", destPath, uerr)
 		} else {
-			remoteNote = fmt.Sprintf("; uploaded to S3 (%s)", key)
+			remoteNote = fmt.Sprintf("; offsite: S3 (%s)", key)
 		}
+	} else {
+		remoteNote = "; offsite: disabled (backup is local-only)"
+	}
+	if encrypted {
+		remoteNote += fmt.Sprintf("; encrypted (key %s)", keyID)
 	}
 
 	pruned, pruneErr := s.pruneServerBackups(ctx, server, destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
@@ -314,6 +349,13 @@ func (s *Scheduler) pauseWorldSaves(ctx context.Context, server *storage.Server)
 	return snapshot.QuiesceWorld(ctx, s.sender, s.log, server)
 }
 
+// backupKey resolves the configured backup encryption key. A nil key with no
+// error is the explicit disabled-encryption state (OSS-236).
+func (s *Scheduler) backupKey() (*backupcrypt.Key, error) {
+	enc := s.appConfig.Storage.BackupEncryption
+	return backupcrypt.ResolveKey(enc.KeyID, enc.Key)
+}
+
 // pruneServerBackups enforces backup retention rules (retentionDays, minBackups, maxBackups)
 // across both database records (including remote S3 copies) and local disk files.
 // Files and records marked locked or ending in .locked.zip are sticky and never pruned.
@@ -367,6 +409,15 @@ func (s *Scheduler) pruneServerBackups(ctx context.Context, server *storage.Serv
 					}
 				}
 			}
+			// Retention must never remove the last verified copy (OSS-236):
+			// the newest complete record is protected regardless of age or
+			// count limits.
+			for _, r := range eligible {
+				if r.Status == "complete" {
+					delete(toDelete, r.ID)
+					break
+				}
+			}
 
 			var up *s3uploader.Uploader
 			if s3uploader.Enabled(s.appConfig.Storage.S3) {
@@ -374,6 +425,16 @@ func (s *Scheduler) pruneServerBackups(ctx context.Context, server *storage.Serv
 			}
 
 			for _, r := range toDelete {
+				// Delete remote S3 backup first: a failed remote delete must not
+				// orphan the object, so the record stays and a later prune
+				// retries (OSS-236). Locked and sole verified copies never
+				// reach this loop.
+				if r.RemoteKey != "" && up != nil {
+					if err := up.Delete(ctx, r.RemoteKey); err != nil {
+						s.log.Warn("Failed to delete remote S3 backup %s during pruning (keeping the record to retry): %v", r.RemoteKey, err)
+						continue
+					}
+				}
 				// Delete local archive and sha256 sidecar if present
 				if r.Path != "" {
 					_ = os.Remove(r.Path)
@@ -383,12 +444,6 @@ func (s *Scheduler) pruneServerBackups(ctx context.Context, server *storage.Serv
 					p := filepath.Join(destDir, r.Name)
 					_ = os.Remove(p)
 					_ = os.Remove(p + ".sha256")
-				}
-				// Delete remote S3 backup if present
-				if r.RemoteKey != "" && up != nil {
-					if err := up.Delete(ctx, r.RemoteKey); err != nil && s.log != nil {
-						s.log.Warn("Failed to delete remote S3 backup %s during pruning: %v", r.RemoteKey, err)
-					}
 				}
 				// Delete database record
 				if err := s.store.DeleteBackupRecord(ctx, r.ID); err != nil {
