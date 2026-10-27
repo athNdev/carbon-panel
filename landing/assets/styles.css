@@ -996,7 +996,7 @@ button {
 @media (min-width: 1081px) {
   .tile.feature-anchor {
     display: grid;
-    grid-template-columns: 1.02fr 0.98fr;
+    grid-template-columns: 0.95fr 1.05fr;
     gap: 24px;
     align-items: stretch;
   }
@@ -1008,7 +1008,7 @@ button {
   .tile.feature-anchor .anchor-visual {
     margin-top: 0;
     padding-top: 0;
-    justify-content: space-evenly;
+    justify-content: space-between;
   }
 }
 .anchor-visual {
