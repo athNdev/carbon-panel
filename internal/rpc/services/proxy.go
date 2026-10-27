@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -660,7 +659,13 @@ func (s *ProxyService) RotateVelocitySecret(ctx context.Context, req *connect.Re
 				if srv.DataPath == "" {
 					continue
 				}
-				if _, syncErr := minecraft.SyncVelocitySecretToDataPath(srv.DataPath, newSecret); syncErr == nil {
+				// Best-effort per server: resolve the node-aware root and skip
+				// servers whose storage is not reachable from the controller.
+				root, rootErr := dataRootFor(ctx, s.store, srv, true)
+				if rootErr != nil {
+					continue
+				}
+				if _, syncErr := minecraft.SyncVelocitySecretToDataPath(root, newSecret); syncErr == nil {
 					syncedServers = append(syncedServers, srv.ID)
 				}
 			}
@@ -692,7 +697,12 @@ func (s *ProxyService) SyncVelocitySecretToServer(ctx context.Context, req *conn
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found: %s", req.Msg.GetServerId()))
 	}
 
-	updatedFile, err := minecraft.SyncVelocitySecretToDataPath(server.DataPath, secret)
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
+	updatedFile, err := minecraft.SyncVelocitySecretToDataPath(root, secret)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to sync secret to server: %w", err))
 	}
@@ -704,4 +714,3 @@ func (s *ProxyService) SyncVelocitySecretToServer(ctx context.Context, req *conn
 		Message:     fmt.Sprintf("Successfully synced Velocity secret to %s", updatedFile),
 	}), nil
 }
-

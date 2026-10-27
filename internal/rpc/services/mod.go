@@ -74,8 +74,13 @@ func (s *ModService) ListMods(ctx context.Context, req *connect.Request[v1.ListM
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Get the mods directory path
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 	if modsDir == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("this server type does not support mods"))
 	}
@@ -173,8 +178,13 @@ func (s *ModService) GetMod(ctx context.Context, req *connect.Request[v1.GetModR
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Get the mods directory path
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 	if modsDir == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("this server type does not support mods"))
 	}
@@ -281,8 +291,13 @@ func (s *ModService) ImportUploadedMod(ctx context.Context, req *connect.Request
 		)
 	}
 
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
 	// Get the correct mods directory based on mod loader
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 	if modsDir == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("this server type does not support mods"))
 	}
@@ -350,7 +365,12 @@ func (s *ModService) UpdateMod(ctx context.Context, req *connect.Request[v1.Upda
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 	if modsDir == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("this server type does not support mods"))
 	}
@@ -465,7 +485,12 @@ func (s *ModService) DeleteMod(ctx context.Context, req *connect.Request[v1.Dele
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 	if modsDir == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("this server type does not support mods"))
 	}
@@ -588,7 +613,11 @@ func (s *ModService) GetFabricOptimizationStack(ctx context.Context, req *connec
 	}
 
 	isFabric := server.ModLoader == storage.ModLoaderFabric || server.ModLoader == storage.ModLoaderQuilt
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 
 	// List files in mods directory to detect installed versions
 	installedFiles := make(map[string]string)
@@ -655,7 +684,12 @@ func (s *ModService) InstallFabricOptimizationStack(ctx context.Context, req *co
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("server mod loader is not Fabric or Quilt"))
 	}
 
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	root, err := dataRootFor(ctx, s.store, server, true)
+	if err != nil {
+		return nil, storageError(err)
+	}
+
+	modsDir := minecraft.GetModsPath(root, server.ModLoader)
 	if err := os.MkdirAll(modsDir, 0755); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create mods directory: %w", err))
 	}

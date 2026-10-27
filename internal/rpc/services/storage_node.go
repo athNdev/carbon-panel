@@ -27,3 +27,18 @@ func storageNodeInfo(ctx context.Context, store *storage.Store, nodeID string) (
 	}
 	return node.StorageInfo(), nil
 }
+
+// dataRootFor resolves the controller-side data root for direct file
+// pipelines (listing, upload, archives, content installs). Write pipelines
+// may create the server directory under the node's mounted storage; read
+// pipelines only map the path (ADR 0005).
+func dataRootFor(ctx context.Context, store *storage.Store, server *storage.Server, write bool) (string, error) {
+	info, err := storageNodeInfo(ctx, store, server.NodeID)
+	if err != nil {
+		return "", err
+	}
+	if write {
+		return nodestorage.EnsureDataRoot(info, server.DataPath)
+	}
+	return nodestorage.MapDataPath(info, server.DataPath)
+}

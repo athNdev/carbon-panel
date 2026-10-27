@@ -45,9 +45,11 @@ already had a hand-written guard against exactly this
 Content RPCs (get/update/delete/rename) route through the accessor in this
 change. Backup and restore resolve `server.DataPath` through the same mapping
 (worldstore seam and the legacy zip/extract pipelines), and
-`requireLocalRestoreStorage` now accepts remote nodes on shared storage.
-Archive and upload pipelines keep their own staging/containment and move onto
-the seam with the remote adapter.
+`requireLocalRestoreStorage` now accepts remote nodes on shared storage. The
+remaining direct-path pipelines — listing, upload, extraction, archives,
+copy/move, content installs (mods, datapacks), proxy secret sync and support
+bundles — resolve the mapped root through `dataRootFor` while keeping their
+own staging and containment.
 
 ## Consequences
 
@@ -65,7 +67,7 @@ the seam with the remote adapter.
   depth.
 - The remote adapter (per-node `carbon-storage` style channel over the node's
   Docker daemon) plugs into `ForNode` without further API change; tracked as
-  the remainder of OSS-232 together with the archive/upload pipelines and the
-  compute-plane half of the mapping: Docker bind translation
-  (`TranslateToHostPath`) must bind the node-side path
-  `Join(storage_root, Base(data_path))` into remote containers.
+  the remainder of OSS-232, together with the compute-plane half of the
+  mapping: Docker bind translation (`TranslateToHostPath`) must bind the
+  node-side path `Join(storage_root, Base(data_path))` into remote
+  containers.

@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -28,7 +27,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/moby/moby/client"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -36,6 +34,7 @@ import (
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
 	"github.com/google/uuid"
+	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -577,7 +576,12 @@ func (s *SupportService) addLogsToBundle(ctx context.Context, tarWriter *tar.Wri
 			}
 
 			// Add server's latest.log if it exists
-			latestLogPath := filepath.Join(server.DataPath, "logs", "latest.log")
+			root, rootErr := dataRootFor(ctx, s.store, server, false)
+			if rootErr != nil {
+				s.log.Warn("Skipping logs for %s: %v", server.Name, rootErr)
+				continue
+			}
+			latestLogPath := filepath.Join(root, "logs", "latest.log")
 			if fileExists(latestLogPath) {
 				targetPath := fmt.Sprintf("servers/%s/latest.log", server.Name)
 				if err := addFileToTar(tarWriter, latestLogPath, targetPath); err != nil {
@@ -656,7 +660,12 @@ func (s *SupportService) addServerConfigsToBundle(ctx context.Context, tarWriter
 		}
 
 		// Also add server.properties if it exists
-		serverPropsPath := filepath.Join(server.DataPath, "server.properties")
+		root, rootErr := dataRootFor(ctx, s.store, server, false)
+		if rootErr != nil {
+			s.log.Warn("Skipping server.properties for %s: %v", server.Name, rootErr)
+			continue
+		}
+		serverPropsPath := filepath.Join(root, "server.properties")
 		if fileExists(serverPropsPath) {
 			targetPath := fmt.Sprintf("configs/servers/%s_server.properties", server.Name)
 			if err := addFileToTar(tarWriter, serverPropsPath, targetPath); err != nil {
