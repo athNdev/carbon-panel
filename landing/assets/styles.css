@@ -1212,12 +1212,29 @@ button {
 }
 .arch-stage {
   padding: 96px 0;
+  position: relative;
+}
+/* full-bleed infrastructure grid — extends past the diagram box */
+.arch-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(244, 244, 244, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 244, 244, 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+  background-position: calc(var(--p, 0) * 22px) calc(var(--p, 0) * -14px);
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 62% 50%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(ellipse 85% 75% at 62% 50%, #000 25%, transparent 80%);
 }
 .arch-inner {
   display: grid;
-  grid-template-columns: minmax(0, 3.6fr) minmax(0, 8.4fr);
+  grid-template-columns: minmax(0, 3.4fr) minmax(0, 8.6fr);
   gap: 56px;
   align-items: center;
+  max-width: 1560px;
 }
 .arch-copy h2 {
   font-size: clamp(30px, 3.6vw, 44px);
@@ -1398,7 +1415,7 @@ button {
   /* continuous scrub: the diagram scales up and the glow intensifies */
   .js .arch-svg {
     transform-origin: center;
-    transform: scale(calc(0.98 + 0.06 * clamp(0, var(--p, 0), 1)));
+    transform: scale(calc(0.98 + 0.08 * clamp(0, var(--p, 0), 1)));
     will-change: transform;
   }
   .js .arch-svg .a-glow {
