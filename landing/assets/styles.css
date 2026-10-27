@@ -1215,7 +1215,7 @@ button {
 }
 .arch-inner {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 4.2fr) minmax(0, 7.8fr);
   gap: 56px;
   align-items: center;
 }
@@ -1293,6 +1293,9 @@ button {
 .a-line { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
 .a-glow { fill: rgba(15, 98, 254, 0.12); filter: blur(30px); opacity: 0.4; }
 .a-packet { fill: var(--accent-text); filter: drop-shadow(0 0 5px rgba(120, 169, 255, 0.8)); }
+.a-line-dash { stroke-dasharray: 5 5; stroke: var(--accent-text); opacity: 0.5; }
+.a-badge { fill: rgba(120, 169, 255, 0.15); stroke: var(--accent-text); stroke-width: 1; }
+.a-badge-t { font-family: var(--mono); font-size: 9px; font-weight: 500; fill: var(--accent-text); }
 
 /* Pinned + scrubbed presentation: JS only, motion OK, wide viewports.
    Everything else degrades to the static layout above. */
@@ -1316,7 +1319,7 @@ button {
   .js .arch-beats {
     position: relative;
     display: block;
-    height: 132px;
+    height: 148px;
   }
   .js .arch-beat {
     position: absolute;
@@ -1330,7 +1333,8 @@ button {
   .js .arch-stage[data-beat="0"] .arch-beat[data-beat-for="0"],
   .js .arch-stage[data-beat="1"] .arch-beat[data-beat-for="1"],
   .js .arch-stage[data-beat="2"] .arch-beat[data-beat-for="2"],
-  .js .arch-stage[data-beat="3"] .arch-beat[data-beat-for="3"] {
+  .js .arch-stage[data-beat="3"] .arch-beat[data-beat-for="3"],
+  .js .arch-stage[data-beat="4"] .arch-beat[data-beat-for="4"] {
     opacity: 1;
     transform: none;
   }
@@ -1345,21 +1349,28 @@ button {
   .js .arch-stage[data-beat="1"] [data-ap="0"],
   .js .arch-stage[data-beat="2"] [data-ap="0"],
   .js .arch-stage[data-beat="3"] [data-ap="0"],
+  .js .arch-stage[data-beat="4"] [data-ap="0"],
   .js .arch-stage[data-beat="1"] [data-ap="1"],
   .js .arch-stage[data-beat="2"] [data-ap="1"],
   .js .arch-stage[data-beat="3"] [data-ap="1"],
+  .js .arch-stage[data-beat="4"] [data-ap="1"],
   .js .arch-stage[data-beat="2"] [data-ap="2"],
   .js .arch-stage[data-beat="3"] [data-ap="2"],
-  .js .arch-stage[data-beat="3"] [data-ap="3"] {
+  .js .arch-stage[data-beat="4"] [data-ap="2"],
+  .js .arch-stage[data-beat="3"] [data-ap="3"],
+  .js .arch-stage[data-beat="4"] [data-ap="3"],
+  .js .arch-stage[data-beat="4"] [data-ap="4"] {
     opacity: 1;
     transform: none;
   }
 
   /* active-state highlights */
-  .js .arch-stage[data-beat="1"] .a-proxy-box {
+  .js .arch-stage[data-beat="1"] .a-proxy-box,
+  .js .arch-stage[data-beat="2"] .a-proxy-box {
     stroke: var(--accent);
   }
-  .js .arch-stage[data-beat="3"] .a-control-box {
+  .js .arch-stage[data-beat="3"] .a-control-box,
+  .js .arch-stage[data-beat="4"] .a-control-box {
     stroke: var(--accent);
     filter: drop-shadow(0 0 6px rgba(15, 98, 254, 0.35));
   }
@@ -1367,13 +1378,13 @@ button {
   /* scrubbed line draws */
   .js .arch-stage .a-draw {
     stroke-dasharray: 1;
-    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.03) * 6, 1));
+    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.02) * 7, 1));
   }
   .js .arch-stage .a-draw[data-draw="fan"] {
-    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.26) * 4.5, 1));
+    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.2) * 4.5, 1));
   }
   .js .arch-stage .a-draw[data-draw="backup"] {
-    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.74) * 6, 1));
+    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.8) * 6, 1));
   }
 
   .js .arch-progress-bar {
@@ -1384,7 +1395,7 @@ button {
   /* continuous scrub: the diagram scales up and the glow intensifies */
   .js .arch-svg {
     transform-origin: center;
-    transform: scale(calc(0.96 + 0.04 * clamp(0, var(--p, 0), 1)));
+    transform: scale(calc(0.97 + 0.05 * clamp(0, var(--p, 0), 1)));
     will-change: transform;
   }
   .js .arch-svg .a-glow {
