@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Carbon Panel">
+  <title>Carbon Panel</title>
+  <rect width="256" height="256" rx="56" fill="#0f62fe" />
+  <g fill="none" stroke="#ffffff" stroke-width="14.4" stroke-linejoin="round">
+    <path d="M128 48l64 36v72L128 192 64 156V84z" />
+    <path d="M64 84l64 36 64-36M128 120v72" />
+  </g>
+</svg>
