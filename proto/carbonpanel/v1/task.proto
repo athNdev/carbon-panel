@@ -225,7 +225,7 @@ message CreateTaskRequest {
   int32 timeout = 11;
   int32 retry_count = 12;
   int32 retry_delay = 13;
-  bool require_online = 14;
+  optional bool require_online = 14;
 
   // Event triggers (only used when schedule == SCHEDULE_TYPE_EVENT)
   repeated TriggeredEventType event_triggers = 15;

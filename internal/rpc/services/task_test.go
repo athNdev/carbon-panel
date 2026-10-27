@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -199,4 +198,35 @@ func TestTaskService_TriggerTask_MissingMapsToNotFound(t *testing.T) {
 	connectErr, ok := err.(*connect.Error)
 	require.True(t, ok, "expected connect error, got %T", err)
 	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+}
+
+// Regression: backing up a stopped server must not be gated on the server
+// being online. require_online is unset for most task types and must default
+// per type (only RCON commands need a live server) instead of a blanket true.
+func TestTaskService_CreateTask_RequireOnlineDefaults(t *testing.T) {
+	svc, server := setupTaskTestService(t)
+	ctx := context.Background()
+
+	backup, err := svc.CreateTask(ctx, connect.NewRequest(&v1.CreateTaskRequest{
+		ServerId: server.ID, Name: "backup", Schedule: v1.ScheduleType_SCHEDULE_TYPE_INTERVAL,
+		IntervalSecs: 3600, TaskType: v1.TaskType_TASK_TYPE_BACKUP,
+	}))
+	require.NoError(t, err)
+	assert.False(t, backup.Msg.Task.RequireOnline, "backups must run while the server is stopped")
+
+	cmd, err := svc.CreateTask(ctx, connect.NewRequest(&v1.CreateTaskRequest{
+		ServerId: server.ID, Name: "cmd", Schedule: v1.ScheduleType_SCHEDULE_TYPE_INTERVAL,
+		IntervalSecs: 3600, TaskType: v1.TaskType_TASK_TYPE_COMMAND, Config: `{"command":"list"}`,
+	}))
+	require.NoError(t, err)
+	assert.True(t, cmd.Msg.Task.RequireOnline, "RCON commands need a live server")
+
+	explicit := false
+	cmd2, err := svc.CreateTask(ctx, connect.NewRequest(&v1.CreateTaskRequest{
+		ServerId: server.ID, Name: "cmd2", Schedule: v1.ScheduleType_SCHEDULE_TYPE_INTERVAL,
+		IntervalSecs: 3600, TaskType: v1.TaskType_TASK_TYPE_COMMAND, Config: `{"command":"list"}`,
+		RequireOnline: &explicit,
+	}))
+	require.NoError(t, err)
+	assert.False(t, cmd2.Msg.Task.RequireOnline, "explicit values are honored")
 }

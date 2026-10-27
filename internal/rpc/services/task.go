@@ -357,7 +357,7 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 		Timeout:           int(msg.Timeout),
 		RetryCount:        int(msg.RetryCount),
 		RetryDelay:        int(msg.RetryDelay),
-		RequireOnline:     msg.RequireOnline,
+		RequireOnline:     msg.GetRequireOnline(),
 		EventTriggers:     eventTriggers,
 		ParentTaskID:      msg.ParentTaskId,
 		StepOrder:         int(msg.StepOrder),
@@ -368,6 +368,11 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 	// Set defaults
 	if task.Timezone == "" {
 		task.Timezone = "UTC"
+	}
+	if msg.RequireOnline == nil {
+		// Only RCON commands need a live server. Backups must run while the
+		// server is stopped: its state on disk still needs protecting.
+		task.RequireOnline = task.TaskType == storage.TaskTypeCommand
 	}
 	if task.Timeout == 0 {
 		task.Timeout = 300 // 5 minutes default
