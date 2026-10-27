@@ -225,9 +225,9 @@ message CreateTaskRequest {
   int32 timeout = 11;
   int32 retry_count = 12;
   int32 retry_delay = 13;
+  // Wire-compatible (same field number and type); presence is refined so
+  // unset now defaults per task type.
   // buf:ignore:FIELD_SAME_CARDINALITY
-  // Presence is deliberately refined: unset now defaults per task type.
-  // Wire-compatible (same field number and type).
   optional bool require_online = 14;
 
   // Event triggers (only used when schedule == SCHEDULE_TYPE_EVENT)
