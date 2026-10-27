@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -306,5 +305,18 @@ func TestNodeService_PingNode(t *testing.T) {
 	}))
 	if err == nil {
 		t.Fatal("expected error pinging non-existent node, got nil")
+	}
+}
+
+func TestIsLocalDockerHost(t *testing.T) {
+	for _, host := range []string{"unix:///var/run/docker.sock", "http://localhost:2375", "tcp://127.0.0.1:2375", "http://[::1]:2375"} {
+		if !isLocalDockerHost(host) {
+			t.Errorf("isLocalDockerHost(%q) = false, want true", host)
+		}
+	}
+	for _, host := range []string{"tcp://10.0.0.5:2375", "http://node2.lan:2375", "", "not a host"} {
+		if isLocalDockerHost(host) {
+			t.Errorf("isLocalDockerHost(%q) = true, want false", host)
+		}
 	}
 }

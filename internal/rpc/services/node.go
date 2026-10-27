@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -11,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -193,7 +193,7 @@ func (s *NodeService) CreateNode(ctx context.Context, req *connect.Request[v1.Cr
 		MaxServers:    int(msg.MaxServers),
 		Enabled:       msg.Enabled,
 		Status:        storage.NodeStatusOffline,
-		IsLocal:       false,
+		IsLocal:       isLocalDockerHost(msg.Host),
 	}
 
 	if err := s.store.CreateNode(ctx, node); err != nil {
@@ -435,4 +435,26 @@ func validateNodeIP(ip net.IP) error {
 		return fmt.Errorf("multicast address %s is prohibited", ip)
 	}
 	return nil
+}
+
+// isLocalDockerHost reports whether a node's Docker host is the controller's
+// own daemon: a unix socket or a loopback TCP address. Local daemons share the
+// controller's filesystem, which is what makes direct archive restore sound;
+// remote daemons need node-aware storage first (see requireLocalRestoreStorage).
+func isLocalDockerHost(host string) bool {
+	h := strings.TrimSpace(host)
+	if strings.HasPrefix(h, "unix://") {
+		return true
+	}
+	u, err := url.Parse(h)
+	if err != nil {
+		return false
+	}
+	if u.Hostname() == "localhost" {
+		return true
+	}
+	if ip := net.ParseIP(u.Hostname()); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
 }
