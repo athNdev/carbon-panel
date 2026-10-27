@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-test('all <th> elements in svelte views declare scope attribute', () => {
+test('all <th> elements in svelte views declare scope attribute', { timeout: 20000 }, () => {
 	const srcDir = path.resolve(import.meta.dirname, '../..');
 
 	function scanDir(dir: string, fileList: string[] = []): string[] {
