@@ -7,6 +7,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -27,10 +28,15 @@ type idleMode struct {
 	TimeoutMinutes func(*db.Server) int
 	// Sleep performs the mode's container action.
 	Sleep func(ctx context.Context, serverID string) error
-	// IdleLogFormat and ErrorLogFormat preserve each mode's operator-facing
-	// messages: name, id, idle duration, container id, then name and error.
+	// Ready reports whether the mode's daemon side is configured. A nil Ready
+	// means the mode is always ready to sweep.
+	Ready func() bool
+	// IdleLogFormat, ErrorLogFormat and SweepLogFormat preserve each mode's
+	// operator-facing messages: name, id, idle duration, container id, then
+	// name and error, then the sweep error.
 	IdleLogFormat  string
 	ErrorLogFormat string
+	SweepLogFormat string
 }
 
 // idleTracker is the per-server state shared by the cgroup-freezer and deep
@@ -176,5 +182,76 @@ func (t *idleTracker) sweep(ctx context.Context, servers []*db.Server, mode idle
 				log.Error(mode.ErrorLogFormat, srv.Name, err)
 			}
 		}
+	}
+}
+
+// idleServerStore is the store surface a runner needs. Both FreezerStore and
+// SleeperStore satisfy it.
+type idleServerStore interface {
+	ListServers(ctx context.Context) ([]*db.Server, error)
+}
+
+// idleRunner owns the sweep ticker for one idle mode. Before this, each manager
+// carried its own copy of Start, Stop and the cancellation pair.
+type idleRunner struct {
+	store   idleServerStore
+	tracker *idleTracker
+	mode    idleMode
+	logger  *logger.Logger
+
+	mu     sync.Mutex
+	cancel context.CancelFunc
+}
+
+func newIdleRunner(store idleServerStore, tracker *idleTracker, mode idleMode, log *logger.Logger) *idleRunner {
+	return &idleRunner{store: store, tracker: tracker, mode: mode, logger: log}
+}
+
+// Check runs one sweep, skipping it while the mode is not configured.
+func (r *idleRunner) Check(ctx context.Context) error {
+	if r.store == nil || (r.mode.Ready != nil && !r.mode.Ready()) {
+		return nil
+	}
+	servers, err := r.store.ListServers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list servers: %w", err)
+	}
+	r.tracker.sweep(ctx, servers, r.mode, r.logger)
+	return nil
+}
+
+// Start sweeps on interval until ctx is cancelled or Stop is called.
+func (r *idleRunner) Start(ctx context.Context, interval time.Duration) {
+	runCtx, cancel := context.WithCancel(ctx)
+	r.mu.Lock()
+	if r.cancel != nil {
+		r.cancel()
+	}
+	r.cancel = cancel
+	r.mu.Unlock()
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-runCtx.Done():
+				return
+			case <-ticker.C:
+				if err := r.Check(runCtx); err != nil && r.logger != nil {
+					r.logger.Warn(r.mode.SweepLogFormat, err)
+				}
+			}
+		}
+	}()
+}
+
+// Stop terminates the sweep loop.
+func (r *idleRunner) Stop() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.cancel != nil {
+		r.cancel()
 	}
 }

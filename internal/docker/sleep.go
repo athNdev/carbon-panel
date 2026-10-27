@@ -71,22 +71,41 @@ type DeepSleepManager struct {
 	refresher          RouteRefresher
 	logger             *logger.Logger
 	idle               *idleTracker
+	runner             *idleRunner
 	mu                 sync.Mutex
 	wakePreparer       WakePreparer
-	ctx                context.Context
-	cancel             context.CancelFunc
 }
 
 // NewDeepSleepManager creates a new DeepSleepManager. commander and refresher
 // may be nil (RCON flush and route refresh are then skipped).
 func NewDeepSleepManager(controller SleepController, store SleeperStore, commander SleepCommander, refresher RouteRefresher, log *logger.Logger) *DeepSleepManager {
-	return &DeepSleepManager{
+	m := &DeepSleepManager{
 		controller: controller,
 		commander:  commander,
 		store:      store,
 		refresher:  refresher,
 		logger:     log,
 		idle:       newIdleTracker(),
+	}
+	m.runner = newIdleRunner(store, m.idle, m.idleMode(), log)
+	return m
+}
+
+// idleMode is the deep-sleep half of the shared idle sweep.
+func (m *DeepSleepManager) idleMode() idleMode {
+	return idleMode{
+		DefaultTimeoutMinutes: 30,
+		Eligible:              func(s *db.Server) bool { return s.AutoDeepSleep },
+		TimeoutMinutes:        func(s *db.Server) int { return s.DeepSleepTimeoutMinutes },
+		Sleep:                 m.SleepServer,
+		Ready: func() bool {
+			m.mu.Lock()
+			defer m.mu.Unlock()
+			return m.controller != nil || m.controllerResolver != nil
+		},
+		IdleLogFormat:  "Server %s (%s) idle for %v, deep-sleeping container %s (full stop)...",
+		ErrorLogFormat: "Failed to deep-sleep server %s: %v",
+		SweepLogFormat: "Error checking idle servers for deep sleep: %v",
 	}
 }
 
@@ -149,36 +168,12 @@ func (m *DeepSleepManager) IsTransitioning(serverID string) bool {
 
 // Start begins the background idle-checker routine.
 func (m *DeepSleepManager) Start(ctx context.Context, checkInterval time.Duration) {
-	m.mu.Lock()
-	m.ctx, m.cancel = context.WithCancel(ctx)
-	m.mu.Unlock()
-
-	go func() {
-		ticker := time.NewTicker(checkInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-m.ctx.Done():
-				return
-			case <-ticker.C:
-				if err := m.CheckIdleServers(m.ctx); err != nil {
-					if m.logger != nil {
-						m.logger.Warn("Error checking idle servers for deep sleep: %v", err)
-					}
-				}
-			}
-		}
-	}()
+	m.runner.Start(ctx, checkInterval)
 }
 
 // Stop terminates the background idle-checker routine.
 func (m *DeepSleepManager) Stop() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.cancel != nil {
-		m.cancel()
-	}
+	m.runner.Stop()
 }
 
 // RecordActivity marks a server as recently active, resetting its idle countdown.
@@ -188,25 +183,7 @@ func (m *DeepSleepManager) RecordActivity(serverID string) {
 
 // CheckIdleServers evaluates all running deep-sleep-enabled servers and stops idle ones.
 func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
-	if m.store == nil || (m.controller == nil && m.controllerResolver == nil) {
-		return nil
-	}
-
-	servers, err := m.store.ListServers(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to list servers: %w", err)
-	}
-
-	m.idle.sweep(ctx, servers, idleMode{
-		DefaultTimeoutMinutes: 30,
-		Eligible:              func(s *db.Server) bool { return s.AutoDeepSleep },
-		TimeoutMinutes:        func(s *db.Server) int { return s.DeepSleepTimeoutMinutes },
-		Sleep:                 m.SleepServer,
-		IdleLogFormat:         "Server %s (%s) idle for %v, deep-sleeping container %s (full stop)...",
-		ErrorLogFormat:        "Failed to deep-sleep server %s: %v",
-	}, m.logger)
-
-	return nil
+	return m.runner.Check(ctx)
 }
 
 // rollbackSleep restores a status that matches the observed container after a

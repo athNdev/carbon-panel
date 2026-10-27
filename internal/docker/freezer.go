@@ -69,10 +69,9 @@ type HibernationManager struct {
 	store         FreezerStore
 	logger        *logger.Logger
 	idle          *idleTracker
+	runner        *idleRunner
 	wakeCallbacks []func(serverID string)
 	mu            sync.Mutex
-	ctx           context.Context
-	cancel        context.CancelFunc
 
 	hibernatedTotal uint64
 	wokenTotal      uint64
@@ -80,11 +79,27 @@ type HibernationManager struct {
 
 // NewHibernationManager creates a new HibernationManager
 func NewHibernationManager(freezer ContainerFreezer, store FreezerStore, log *logger.Logger) *HibernationManager {
-	return &HibernationManager{
+	m := &HibernationManager{
 		freezer: freezer,
 		store:   store,
 		logger:  log,
 		idle:    newIdleTracker(),
+	}
+	m.runner = newIdleRunner(store, m.idle, m.idleMode(), log)
+	return m
+}
+
+// idleMode is the freeze half of the shared idle sweep.
+func (m *HibernationManager) idleMode() idleMode {
+	return idleMode{
+		DefaultTimeoutMinutes: 10,
+		Eligible:              func(s *db.Server) bool { return s.AutoHibernate },
+		TimeoutMinutes:        func(s *db.Server) int { return s.IdleTimeoutMinutes },
+		Sleep:                 m.HibernateServer,
+		Ready:                 func() bool { return m.freezer != nil },
+		IdleLogFormat:         "Server %s (%s) idle for %v, hibernating container %s via cgroup freezer...",
+		ErrorLogFormat:        "Failed to hibernate server %s: %v",
+		SweepLogFormat:        "Error checking idle servers for hibernation: %v",
 	}
 }
 
@@ -123,36 +138,12 @@ func (m *HibernationManager) TotalWoken() uint64 {
 
 // Start begins the background idle-checker routine
 func (m *HibernationManager) Start(ctx context.Context, checkInterval time.Duration) {
-	m.mu.Lock()
-	m.ctx, m.cancel = context.WithCancel(ctx)
-	m.mu.Unlock()
-
-	go func() {
-		ticker := time.NewTicker(checkInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-m.ctx.Done():
-				return
-			case <-ticker.C:
-				if err := m.CheckIdleServers(m.ctx); err != nil {
-					if m.logger != nil {
-						m.logger.Warn("Error checking idle servers for hibernation: %v", err)
-					}
-				}
-			}
-		}
-	}()
+	m.runner.Start(ctx, checkInterval)
 }
 
 // Stop terminates the background idle-checker routine
 func (m *HibernationManager) Stop() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.cancel != nil {
-		m.cancel()
-	}
+	m.runner.Stop()
 }
 
 // RecordActivity marks a server as recently active, resetting its idle countdown
@@ -162,25 +153,7 @@ func (m *HibernationManager) RecordActivity(serverID string) {
 
 // CheckIdleServers evaluates all active servers and hibernates idle ones
 func (m *HibernationManager) CheckIdleServers(ctx context.Context) error {
-	if m.store == nil || m.freezer == nil {
-		return nil
-	}
-
-	servers, err := m.store.ListServers(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to list servers: %w", err)
-	}
-
-	m.idle.sweep(ctx, servers, idleMode{
-		DefaultTimeoutMinutes: 10,
-		Eligible:              func(s *db.Server) bool { return s.AutoHibernate },
-		TimeoutMinutes:        func(s *db.Server) int { return s.IdleTimeoutMinutes },
-		Sleep:                 m.HibernateServer,
-		IdleLogFormat:         "Server %s (%s) idle for %v, hibernating container %s via cgroup freezer...",
-		ErrorLogFormat:        "Failed to hibernate server %s: %v",
-	}, m.logger)
-
-	return nil
+	return m.runner.Check(ctx)
 }
 
 // HibernateServer freezes a server container using cgroup freezer and updates status
