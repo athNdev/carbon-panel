@@ -2932,98 +2932,32 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 		}
 	}
 
-	serverConfig, err := s.store.GetServerConfig(ctx, server.ID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server configuration: %w", err))
+	// One durable operation per server (OSS-229): the journal's active lock
+	// refuses concurrent lifecycle mutations of the same world, and the
+	// transition lease serializes in-process callers (OSS-230).
+	transition, terr := docker.TryBeginServerTransition(server.ID)
+	if terr != nil {
+		return nil, connect.NewError(connect.CodeAborted, terr)
+	}
+	defer transition.Release()
+
+	// Resolve the world transfer paths before touching anything, so a world
+	// that cannot be transferred aborts with the source fully intact.
+	srcRoot, dstRoot, rootErr := s.migrationWorldRoots(ctx, server, targetNode)
+	if rootErr != nil {
+		return nil, migrationResponseError(rootErr)
 	}
 
 	oldContainerID := server.ContainerID
-
-	if isRunning {
-		s.log.Info("Initiating live migration for server '%s' (%s) from node '%s' to node '%s'", server.Name, server.ID, sourceNodeID, targetNodeID)
-
-		// 1. Flush world chunks to disk
-		if s.sender != nil && oldContainerID != "" {
-			_, _ = s.sender.SendCommand(ctx, server.ID, "save-all flush")
-		}
-
-		// 2. Stop old container cleanly to avoid level.dat lock contention
-		if oldContainerID != "" && sourceDockerCli != nil {
-			_, _ = sourceDockerCli.StopContainer(ctx, oldContainerID)
-		}
-
-		// 3. Prepare config and create new container on target node
-		s.prepareServerConfig(ctx, server, serverConfig)
-		var newContainerID string
-		if targetDockerCli != nil {
-			newContainerID, err = targetDockerCli.CreateContainer(ctx, server, serverConfig)
-			if err != nil {
-				s.log.Error("Migration target container creation failed: %v", err)
-				// Rollback: try restarting old container on source node
-				if oldContainerID != "" && sourceDockerCli != nil {
-					_ = sourceDockerCli.StartContainer(ctx, oldContainerID)
-				}
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create container on target node: %w", err))
-			}
-
-			// 4. Start container on target node
-			if err := targetDockerCli.StartContainer(ctx, newContainerID); err != nil {
-				s.log.Error("Migration target container start failed: %v", err)
-				_ = targetDockerCli.RemoveContainer(ctx, newContainerID)
-				// Rollback: restart old container
-				if oldContainerID != "" && sourceDockerCli != nil {
-					_ = sourceDockerCli.StartContainer(ctx, oldContainerID)
-				}
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start container on target node: %w", err))
-			}
-		}
-
-		// 5. Update DB record
-		server.NodeID = targetNodeID
-		server.ContainerID = newContainerID
-		server.Status = storage.StatusRunning
-		now := time.Now()
-		server.LastStarted = &now
-		if err := s.store.UpdateServer(ctx, server); err != nil {
-			s.log.Error("Failed to update server DB record during live migration: %v", err)
-		}
-
-		// 6. Fast proxy route cutover
-		if s.proxy != nil && server.ProxyHostname != "" {
-			if err := s.proxy.UpdateServerRoute(server); err != nil {
-				s.log.Error("Failed to update proxy route during migration: %v", err)
-			}
-		}
-
-		// 7. Cleanup old container on source node asynchronously
-		if oldContainerID != "" && sourceDockerCli != nil {
-			go func(cID string, sCli *docker.Client) {
-				time.Sleep(1 * time.Second)
-				_ = sCli.RemoveContainer(context.Background(), cID)
-			}(oldContainerID, sourceDockerCli)
-		}
-
-	} else {
-		s.log.Info("Initiating offline migration for server '%s' (%s) from node '%s' to node '%s'", server.Name, server.ID, sourceNodeID, targetNodeID)
-
-		// Remove old container if it exists on source node
-		if oldContainerID != "" && sourceDockerCli != nil {
-			_, _ = sourceDockerCli.StopContainer(ctx, oldContainerID)
-			_ = sourceDockerCli.RemoveContainer(ctx, oldContainerID)
-		}
-
-		// Update database record
-		server.NodeID = targetNodeID
-		server.ContainerID = "" // Reset container ID so next start creates it fresh on target node
-		if err := s.store.UpdateServer(ctx, server); err != nil {
-			s.log.Error("Failed to update server record: %v", err)
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server: %w", err))
-		}
+	var migrateResp *v1.MigrateServerResponse
+	migrateErr := s.runJournaledMutation(ctx, server, "migrate", func() error {
+		var mErr error
+		migrateResp, mErr = s.migrateServerNow(ctx, server, targetNode, sourceDockerCli, targetDockerCli, srcRoot, dstRoot, isRunning, oldContainerID, startTime)
+		return mErr
+	})
+	if migrateErr != nil {
+		return nil, migrationResponseError(migrateErr)
 	}
-
-	durationMs := time.Since(startTime).Milliseconds()
-	msg := fmt.Sprintf("Successfully migrated '%s' to node '%s' (%dms, live=%v)", server.Name, targetNodeID, durationMs, isRunning)
-	s.log.Info("%s", msg)
 
 	if s.bus != nil {
 		s.bus.Emit(ctx, events.Event{
@@ -3032,12 +2966,5 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 		})
 	}
 
-	return connect.NewResponse(&v1.MigrateServerResponse{
-		Success:      true,
-		Message:      msg,
-		SourceNodeId: sourceNodeID,
-		TargetNodeId: targetNodeID,
-		DurationMs:   durationMs,
-		Server:       dbServerToProto(server),
-	}), nil
+	return connect.NewResponse(migrateResp), nil
 }
