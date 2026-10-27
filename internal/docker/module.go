@@ -181,6 +181,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 			"willfarrell.autoheal":                  "false",
 		},
 	}
+	c.applyInstallationLabel(config.Labels)
 
 	// Set uid + gid
 	uid, gid := alias.Substitute(module.UID, aliasCtx), alias.Substitute(module.GID, aliasCtx)

@@ -57,6 +57,10 @@ docker:
   #   your.label.key: "your_label_value"
   #   other.label.key: "other_label_value"
   labels: '{ }'
+  # Remove containers created by this installation but unknown to the database at
+  # startup. Disabled by default: they are reported and left running (quarantined),
+  # and containers from another installation are never touched.
+  reconcile_purge_orphans: false
 
 # Storage configuration
 storage:
