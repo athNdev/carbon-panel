@@ -23,6 +23,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
+	"github.com/athNdev/carbon-panel/internal/snapshot"
 	"github.com/athNdev/carbon-panel/internal/worldstore"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/google/uuid"
@@ -120,15 +121,28 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	prefix := files.SanitizePathName(backupName)
 	destPath := filepath.Join(destDir, fmt.Sprintf("%s_%s.zip", prefix, time.Now().UTC().Format("20060102-150405")))
 
-	resumeSaves := s.pauseWorldSaves(ctx, server)
-	defer resumeSaves()
-
 	restart := false
+	resumeSaves, consistency := s.pauseWorldSaves(ctx, server)
+	defer func() {
+		if restart {
+			// The server was stopped for the archive; save state resets on
+			// its next boot and save-on would target a stopped server.
+			return
+		}
+		if rerr := resumeSaves(); rerr != nil {
+			s.log.Error("%v", rerr)
+			output += "; WARNING: " + rerr.Error()
+		}
+	}()
+
 	if config.StopForBackup {
 		restart, err = s.stopServerForBackup(ctx, server)
 		if err != nil {
 			return "", err
 		}
+		// Stopped for the archive: a stopped server is the strongest
+		// consistency claim an archive can make.
+		consistency = snapshot.ConsistencyVerifiedStopped
 	}
 	if restart {
 		defer func() {
@@ -233,8 +247,8 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 
 	pruned, pruneErr := s.pruneServerBackups(ctx, server, destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
 
-	output = fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s)%s",
-		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), remoteNote)
+	output = fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s, consistency: %s)%s",
+		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), consistency, remoteNote)
 	if len(missing) > 0 {
 		output += fmt.Sprintf("; skipped missing paths: %s", strings.Join(missing, ", "))
 	}
@@ -292,39 +306,12 @@ func resolveBackupPaths(dataPath string, requested []string) (paths []string, mi
 	return paths, missing, nil
 }
 
-// Disables auto-saving and flushes pending world writes so the files on disk are consistent while they are archived.
-// The returned function re-enables saving and is safe to call even when the server was offline or the save commands failed.
-func (s *Scheduler) pauseWorldSaves(ctx context.Context, server *storage.Server) func() {
-	if server.Status != storage.StatusRunning || server.ContainerID == "" {
-		return func() {}
-	}
-
-	pauseCtx, pauseCancel := context.WithTimeout(ctx, 30*time.Second)
-	defer pauseCancel()
-
-	if _, err := s.sender.SendCommand(pauseCtx, server.ID, "save-off"); err != nil {
-		s.log.Warn("Backup: failed to disable world saves on server %s (continuing anyway): %v", server.Name, err)
-		return func() {}
-	}
-
-	if _, err := s.sender.SendCommand(pauseCtx, server.ID, "save-all flush"); err != nil {
-		s.log.Warn("Backup: failed to flush world saves on server %s: %v", server.Name, err)
-	} else {
-		// Give the server a moment to finish writing chunks to disk
-		select {
-		case <-pauseCtx.Done():
-		case <-time.After(3 * time.Second):
-		}
-	}
-
-	return func() {
-		// Use a fresh context so saves are re-enabled even if the task was cancelled or timed out
-		resumeCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if _, err := s.sender.SendCommand(resumeCtx, server.ID, "save-on"); err != nil {
-			s.log.Error("Backup: failed to re-enable world saves on server %s: %v", server.Name, err)
-		}
-	}
+// pauseWorldSaves freezes world saves for the archive through the shared
+// quiesce rules (snapshot.QuiesceWorld). The consistency level says what the
+// archive may claim; the resume function reports failure so a world left in
+// save-off is never silent (OSS-235).
+func (s *Scheduler) pauseWorldSaves(ctx context.Context, server *storage.Server) (func() error, snapshot.Consistency) {
+	return snapshot.QuiesceWorld(ctx, s.sender, s.log, server)
 }
 
 // pruneServerBackups enforces backup retention rules (retentionDays, minBackups, maxBackups)

@@ -21,6 +21,7 @@ import (
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/nodestorage"
+	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/internal/worldstore"
@@ -342,6 +343,26 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("backup archive corrupt or invalid: %w", err))
 	}
 
+	// The per-server operation lock serializes this restore against every
+	// other lifecycle mutation of the world (OSS-229/OSS-235).
+	var restoreResp *v1.RestoreBackupResponse
+	jerr := operation.RunJournaled(ctx, s.store, s.log, server, "restore", func() error {
+		var rerr error
+		restoreResp, rerr = s.restoreBackupNow(ctx, server, rec, archivePath, worldDataPath, done)
+		return rerr
+	})
+	if jerr != nil {
+		done("failed")
+		return nil, jerr
+	}
+	return connect.NewResponse(restoreResp), nil
+}
+
+// restoreBackupNow runs the journaled mutation window of a restore: verify
+// the server is stopped, restore the world through the world-data seam or a
+// clean staged swap, restart per the preserved intent, and verify players can
+// join before calling the restore successful.
+func (s *BackupService) restoreBackupNow(ctx context.Context, server *storage.Server, rec *storage.BackupRecord, archivePath, worldDataPath string, done func(string)) (*v1.RestoreBackupResponse, error) {
 	dockerCli, dockerErr := s.dockerFor(server.NodeID)
 	if server.ContainerID != "" && dockerErr != nil {
 		done("failed")
@@ -381,7 +402,8 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 
 	// Manifest'd archives are restored through the world-data seam
 	// (worldstore): verified contents and one journaled atomic swap shared
-	// with the CLI. Legacy zips keep the extraction path (ADR 0004).
+	// with the CLI. Legacy zips get a clean staged swap (ADR 0004/OSS-235).
+	var verifyNote string
 	if worldstore.HasWorldstoreManifest(archivePath) {
 		if s.worldDataDir == "" {
 			done("failed")
@@ -407,9 +429,17 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 			done("failed")
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restore backup: %w", rerr))
 		}
-	} else if _, err := files.ExtractArchive(ctx, archivePath, worldDataPath, nil); err != nil {
-		done("failed")
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to extract backup: %w", err))
+		verifyNote = "world verified against the archive's per-file sha256"
+	} else {
+		// Legacy archives restore through a clean staged swap: stale files
+		// never survive a successful restore, and a failed extract leaves the
+		// current world untouched.
+		count, xerr := files.ExtractArchiveAtomic(ctx, archivePath, worldDataPath)
+		if xerr != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to extract backup: %w", xerr))
+		}
+		verifyNote = fmt.Sprintf("world verified: %d files extracted with matching CRC and swapped in cleanly", count)
 	}
 
 	if wasRunning && server.ContainerID != "" && dockerCli != nil {
@@ -420,8 +450,24 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 		server.Status = storage.StatusStarting
 		_ = s.store.UpdateServer(ctx, server)
 	}
+
+	// Recovery evidence, not just a checksum: report how the world data was
+	// verified and whether players can join the restored server (OSS-235).
+	msg := "backup restored; " + verifyNote
+	if wasRunning && server.ContainerID != "" {
+		node, _ := s.store.GetNode(ctx, server.NodeID)
+		if node == nil {
+			node = &storage.Node{}
+		}
+		endpoint := gameEndpoint(server, node, 0)
+		if perr := waitForPlayable(ctx, endpoint, restorePlayabilityTimeout); perr != nil {
+			msg += fmt.Sprintf("; player connections not yet verified on %s (server may still be starting)", endpoint)
+		} else {
+			msg += "; accepting player connections on " + endpoint
+		}
+	}
 	done("complete")
-	return connect.NewResponse(&v1.RestoreBackupResponse{Success: true, Message: "backup restored"}), nil
+	return &v1.RestoreBackupResponse{Success: true, Message: msg}, nil
 }
 
 // requireLocalRestoreStorage prevents a controller-local archive extraction

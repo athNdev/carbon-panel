@@ -18,6 +18,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/command"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	"github.com/google/uuid"
@@ -120,9 +121,15 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 	name := fmt.Sprintf("pre-update-%s", timestamp)
 	archivePath := filepath.Join(baseSnapshotsDir, fmt.Sprintf("%s.zip", snapshotID))
 
-	// Pause world saves if server is currently running
-	resumeSaves := e.pauseWorldSaves(ctx, server)
-	defer resumeSaves()
+	// Freeze world saves through the shared quiesce rules; the consistency
+	// level says what this snapshot may claim, and a failed resume is
+	// recorded because a world left in save-off stops persisting progress.
+	resumeSaves, consistency := e.pauseWorldSaves(ctx, server)
+	defer func() {
+		if rerr := resumeSaves(); rerr != nil {
+			e.log.Error("%v", rerr)
+		}
+	}()
 
 	// Gather all files to include in volume snapshot
 	paths, err := gatherVolumePaths(server.DataPath)
@@ -130,7 +137,7 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 		return nil, fmt.Errorf("failed to gather volume files for snapshot: %w", err)
 	}
 
-	e.log.Info("Creating pre-update snapshot for server %s (%d files) -> %s", server.Name, len(paths), archivePath)
+	e.log.Info("Creating pre-update snapshot for server %s (%d files, consistency: %s) -> %s", server.Name, len(paths), consistency, archivePath)
 	count, err := files.CreateZipArchive(paths, server.DataPath, archivePath, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create snapshot archive: %w", err)
@@ -240,57 +247,77 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 		return fmt.Errorf("cannot safely rollback: snapshot archive failed integrity verification: %w", err)
 	}
 
-	// Lifecycle concurrency guard (prevent racing with user/reconciler operations)
-	transition, err := docker.TryBeginServerTransition(server.ID)
-	if err != nil {
-		return fmt.Errorf("cannot safely rollback: server %s is currently undergoing another transition", server.ID)
-	}
-	defer transition.Release()
-
-	wasRunning := server.Status == storage.StatusRunning || server.Status == storage.StatusStarting
-	dockerCli, err := e.resolveDocker(server.NodeID)
-	if err != nil {
-		// Abort before stopping the container or touching files: the snapshot must
-		// not be applied while the server's node cannot be reached.
-		return fmt.Errorf("cannot safely rollback: %w", err)
-	}
-
-	// Stop container if running - abort rollback if container fails to stop to avoid data corruption (DEP-2)
-	if wasRunning && server.ContainerID != "" {
-		if dockerCli == nil {
-			return fmt.Errorf("cannot safely rollback: container %s is running but docker client is unavailable", server.ContainerID)
+	// Journal the mutation window (OSS-229/OSS-235): the per-server active
+	// lock keeps this rollback from interleaving with other lifecycle
+	// writers of the same world, and startup recovery observes interrupted
+	// rollbacks instead of letting a retry guess.
+	return operation.RunJournaled(ctx, e.store, e.log, server, "snapshot-rollback", func() error {
+		// Lifecycle concurrency guard (prevent racing with user/reconciler operations)
+		transition, err := docker.TryBeginServerTransition(server.ID)
+		if err != nil {
+			return fmt.Errorf("cannot safely rollback: server %s is currently undergoing another transition", server.ID)
 		}
-		e.log.Info("Stopping container %s before rollback...", server.ContainerID)
-		if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
-			return fmt.Errorf("cannot safely rollback: failed to stop running container %s: %w", server.ContainerID, err)
+		defer transition.Release()
+
+		dockerCli, err := e.resolveDocker(server.NodeID)
+		if err != nil {
+			// Abort before stopping the container or touching files: the
+			// snapshot must not be applied while the server's node cannot be
+			// reached.
+			return fmt.Errorf("cannot safely rollback: %w", err)
 		}
-	}
 
-	e.log.Info("Rolling back server %s to snapshot %s (%s)...", server.Name, snapshot.ID, snapshot.Name)
-
-	// Extract snapshot files into server.DataPath
-	extracted, err := files.ExtractArchive(ctx, snapshot.FilePath, server.DataPath, nil)
-	if err != nil {
-		return fmt.Errorf("failed to extract snapshot archive: %w", err)
-	}
-
-	e.log.Info("Restored %d files to %s from snapshot %s", extracted, server.DataPath, snapshot.ID)
-
-	// Restart container if it was running before rollback
-	if wasRunning && dockerCli != nil && server.ContainerID != "" {
-		e.log.Info("Restarting container %s following snapshot rollback...", server.ContainerID)
-		if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
-			return fmt.Errorf("rollback succeeded but failed to restart container %s: %w", server.ContainerID, err)
+		// Establish the live container state before any write: the database
+		// status is not evidence of what the daemon is doing (OSS-235).
+		wasRunning := false
+		if server.ContainerID != "" {
+			if dockerCli == nil {
+				return fmt.Errorf("cannot safely rollback: container %s exists but docker client is unavailable", server.ContainerID)
+			}
+			status, serr := dockerCli.GetContainerStatus(ctx, server.ContainerID)
+			if serr != nil {
+				return fmt.Errorf("cannot safely rollback: cannot verify server state: %w", serr)
+			}
+			if status == storage.StatusError {
+				return fmt.Errorf("cannot safely rollback: server state is unknown")
+			}
+			if status == storage.StatusRunning || status == storage.StatusUnhealthy || status == storage.StatusStarting || status == storage.StatusPaused {
+				wasRunning = true
+				e.log.Info("Stopping container %s before rollback...", server.ContainerID)
+				if _, err := dockerCli.StopContainer(ctx, server.ContainerID); err != nil {
+					return fmt.Errorf("cannot safely rollback: failed to stop running container %s: %w", server.ContainerID, err)
+				}
+			}
 		}
-		server.Status = storage.StatusStarting
-		now := time.Now().UTC()
-		server.LastStarted = &now
-		if e.store != nil {
-			_ = e.store.UpdateServer(ctx, server)
-		}
-	}
 
-	return nil
+		e.log.Info("Rolling back server %s to snapshot %s (%s)...", server.Name, snapshot.ID, snapshot.Name)
+
+		// Restore through a clean staged swap: stale files from the current
+		// tree never survive the rollback, and a failed extract leaves it
+		// untouched (OSS-235).
+		extracted, err := files.ExtractArchiveAtomic(ctx, snapshot.FilePath, server.DataPath)
+		if err != nil {
+			return fmt.Errorf("failed to extract snapshot archive: %w", err)
+		}
+
+		e.log.Info("Restored %d files to %s from snapshot %s", extracted, server.DataPath, snapshot.ID)
+
+		// Restart container if it was running before rollback
+		if wasRunning && dockerCli != nil && server.ContainerID != "" {
+			e.log.Info("Restarting container %s following snapshot rollback...", server.ContainerID)
+			if err := dockerCli.StartContainer(ctx, server.ContainerID); err != nil {
+				return fmt.Errorf("rollback succeeded but failed to restart container %s: %w", server.ContainerID, err)
+			}
+			server.Status = storage.StatusStarting
+			now := time.Now().UTC()
+			server.LastStarted = &now
+			if e.store != nil {
+				_ = e.store.UpdateServer(ctx, server)
+			}
+		}
+
+		return nil
+	})
 }
 
 // ListSnapshots returns all snapshots for a server
@@ -428,34 +455,8 @@ func gatherVolumePaths(dataDir string) ([]string, error) {
 	return paths, err
 }
 
-// pauseWorldSaves disables auto-saving over RCON while archiving
-func (e *Engine) pauseWorldSaves(ctx context.Context, server *storage.Server) func() {
-	if e.sender == nil || server.Status != storage.StatusRunning || server.ContainerID == "" {
-		return func() {}
-	}
-
-	pauseCtx, pauseCancel := context.WithTimeout(ctx, 30*time.Second)
-	defer pauseCancel()
-
-	if _, err := e.sender.SendCommand(pauseCtx, server.ID, "save-off"); err != nil {
-		e.log.Warn("Snapshot: failed to disable world saves on server %s: %v", server.Name, err)
-		return func() {}
-	}
-
-	if _, err := e.sender.SendCommand(pauseCtx, server.ID, "save-all flush"); err != nil {
-		e.log.Warn("Snapshot: failed to flush world saves on server %s: %v", server.Name, err)
-	} else {
-		select {
-		case <-pauseCtx.Done():
-		case <-time.After(1 * time.Second):
-		}
-	}
-
-	return func() {
-		resumeCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if _, err := e.sender.SendCommand(resumeCtx, server.ID, "save-on"); err != nil {
-			e.log.Error("Snapshot: failed to re-enable world saves on server %s: %v", server.Name, err)
-		}
-	}
+// pauseWorldSaves freezes world saves through the shared quiesce rules
+// (QuiesceWorld); the consistency level says what the snapshot may claim.
+func (e *Engine) pauseWorldSaves(ctx context.Context, server *storage.Server) (func() error, Consistency) {
+	return QuiesceWorld(ctx, e.sender, e.log, server)
 }
