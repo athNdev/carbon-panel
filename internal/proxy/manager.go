@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package proxy
 
 import (
@@ -173,7 +172,7 @@ func (m *Manager) isLocalServer(server *db.Server) bool {
 	if err != nil || node == nil {
 		return true
 	}
-	return isLocalDockerNode(node)
+	return isLocalNode(node)
 }
 
 func (m *Manager) initDirectKnocksLocked() {
@@ -343,102 +342,140 @@ func (m *Manager) Stop() error {
 	return lastErr
 }
 
-// UpdateServerRoute updates or creates a route for a server
+// UpdateServerRoute derives a plan from the current server/node/listener state
+// and applies it. Store and Docker lookups happen before the manager lock.
 func (m *Manager) UpdateServerRoute(server *db.Server) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if server == nil {
 		return nil
 	}
+	plan := PlanFor(m.planInput(server))
+	if plan.BackendErr != nil && m.logger != nil {
+		m.logger.Error("Failed to resolve backend for %s: %v", server.Name, plan.BackendErr)
+	}
+	return m.Apply(context.Background(), plan)
+}
 
-	// Always handle direct port knocking for deep sleeping direct-port servers on the local node
-	if isDirectPortServer(server, m.config.Enabled) {
-		if server.Status == db.StatusDeepSleep && m.isLocalServer(server) {
-			if m.directKnocks != nil {
-				_ = m.directKnocks.StartKnock(server)
-			}
-		} else {
-			if m.directKnocks != nil {
-				m.directKnocks.StopKnock(server.ID)
-			}
+// planInput gathers the observations route policy needs. It deliberately does
+// no route mutation and takes no manager lock, so a slow store or Docker
+// inspection cannot serialise unrelated route updates.
+func (m *Manager) planInput(server *db.Server) PlanInput {
+	in := PlanInput{
+		Server:       server,
+		ProxyEnabled: m.config != nil && m.config.Enabled,
+		HasProxies:   m.hasProxies(),
+	}
+	if server == nil {
+		return in
+	}
+	if server.NodeID != "" && m.store != nil {
+		in.Node, _ = m.store.GetNode(context.Background(), server.NodeID)
+	}
+	in.Hostname = m.generateHostname(server)
+	if !in.ProxyEnabled || !in.HasProxies {
+		return in
+	}
+	if server.ProxyListenerID == "" || m.store == nil {
+		return in
+	}
+	listener, err := m.store.GetProxyListener(context.Background(), server.ProxyListenerID)
+	if err != nil {
+		in.ListenerErr = fmt.Errorf("failed to get proxy listener: %w", err)
+		return in
+	}
+	in.Listener = listener
+	if !listener.Enabled {
+		return in
+	}
+	if isRoutableStatus(server.Status) && server.ProxyHostname != "" {
+		in.Backend.Host, in.Backend.Port, in.BackendErr = m.resolveBackendFor(server, in.Node)
+	}
+	return in
+}
+
+func (m *Manager) hasProxies() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.proxies) > 0
+}
+
+func isRoutableStatus(status db.ServerStatus) bool {
+	return status == db.StatusRunning || status == db.StatusStarting ||
+		status == db.StatusPaused || status == db.StatusDeepSleep
+}
+
+// Apply executes a route plan. It performs no store reads; the only I/O is the
+// Valkey broadcast and the direct-knock listener.
+func (m *Manager) Apply(ctx context.Context, plan RoutePlan) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.applyLocked(ctx, plan)
+}
+
+func (m *Manager) applyLocked(ctx context.Context, plan RoutePlan) error {
+	switch plan.Knock {
+	case KnockStart:
+		if m.directKnocks != nil {
+			_ = m.directKnocks.StartKnock(plan.Server)
+		}
+	case KnockStop:
+		if m.directKnocks != nil {
+			m.directKnocks.StopKnock(plan.ServerID)
 		}
 	}
 
-	if len(m.proxies) == 0 || !m.config.Enabled {
-		return nil
+	if plan.ListenerErr != nil {
+		return plan.ListenerErr
+	}
+	if plan.BackendErr != nil {
+		return plan.BackendErr
 	}
 
-	// Get the listener for this server
-	if server.ProxyListenerID == "" {
-		return nil // No listener assigned
-	}
-
-	listener, err := m.store.GetProxyListener(context.Background(), server.ProxyListenerID)
-	if err != nil {
-		return fmt.Errorf("failed to get proxy listener: %w", err)
-	}
-
-	if !listener.Enabled {
-		return nil // Listener is disabled
-	}
-
-	// Get the proxy instance for this listener's port
-	proxy, ok := m.proxies[listener.Port]
-	if !ok {
-		return fmt.Errorf("no proxy instance for port %d", listener.Port)
-	}
-
-	hostname := m.generateHostname(server)
-	if hostname != "" {
+	proxy, hasProxy := m.proxies[plan.ListenerPort]
+	if plan.ListenerPort != 0 && plan.Hostname != "" && hasProxy {
 		if m.serverHostnames == nil {
 			m.serverHostnames = make(map[string]string)
 		}
-		m.serverHostnames[server.ID] = hostname
+		m.serverHostnames[plan.ServerID] = plan.Hostname
 	}
 
-	// Add or update route for servers that are starting, running, hibernated (paused), or deeply asleep with proxy hostname
-	if (server.Status == db.StatusRunning || server.Status == db.StatusStarting || server.Status == db.StatusPaused || server.Status == db.StatusDeepSleep) && server.ProxyHostname != "" {
-		backendHost, backendPort, err := m.resolveBackend(server)
-		if err != nil {
-			// A deeply-asleep backend has no address (stopped container,
-			// no IP) — retain a down route for MOTD + wake-on-login.
-			if server.Status == db.StatusDeepSleep {
-				m.ensureDownRoute(server, hostname, proxy)
-				return nil
-			}
-			m.logger.Error("Failed to resolve backend for %s: %v", server.Name, err)
-			return err
-		}
+	if plan.Action == PlanNone {
+		return nil
+	}
+	if !hasProxy {
+		return fmt.Errorf("no proxy instance for port %d", plan.ListenerPort)
+	}
 
+	switch plan.Action {
+	case PlanUpsert:
 		routes := proxy.GetRoutes()
-		if _, exists := routes[hostname]; exists {
-			proxy.UpdateRoute(hostname, backendHost, backendPort)
+		if _, exists := routes[plan.Hostname]; exists {
+			proxy.UpdateRoute(plan.Hostname, plan.Backend.Host, plan.Backend.Port)
 		} else {
-			proxy.AddRoute(server.ID, hostname, backendHost, backendPort)
+			proxy.AddRoute(plan.ServerID, plan.Hostname, plan.Backend.Host, plan.Backend.Port)
 		}
-		if server.Status == db.StatusPaused {
-			proxy.SetRouteHibernated(hostname, true)
-		} else {
-			proxy.SetRouteHibernated(hostname, false)
-		}
-		if server.Status == db.StatusDeepSleep {
-			proxy.SetRouteDown(hostname, true)
-		} else {
-			proxy.SetRouteDown(hostname, false)
-		}
+		proxy.SetRouteHibernated(plan.Hostname, plan.Hibernated)
+		proxy.SetRouteDown(plan.Hostname, plan.Down)
 		if m.valkeySync != nil {
-			_ = m.valkeySync.BroadcastRouteAdd(context.Background(), server.ID, hostname, backendHost, backendPort, listener.Port)
+			if err := m.valkeySync.BroadcastRouteAdd(ctx, plan.ServerID, plan.Hostname, plan.Backend.Host, plan.Backend.Port, plan.ListenerPort); err != nil && m.logger != nil {
+				m.logger.Warn("Failed to broadcast route add for %s: %v", plan.ServerName, err)
+			}
 		}
-		m.logger.Info("Updated route for server %s (%s -> %s:%d, paused=%v) on port %d", server.Name, hostname, backendHost, backendPort, server.Status == db.StatusPaused, listener.Port)
-	} else if server.Status == db.StatusStopped || server.Status == db.StatusStopping || server.Status == db.StatusError {
-		// Remove route if server is stopped, stopping, or in error
-		proxy.RemoveRoute(hostname)
+		if m.logger != nil {
+			m.logger.Info("Updated route for server %s (%s -> %s:%d, paused=%v) on port %d", plan.ServerName, plan.Hostname, plan.Backend.Host, plan.Backend.Port, plan.Hibernated, plan.ListenerPort)
+		}
+	case PlanDown:
+		m.ensureDownRoute(plan.Server, plan.Hostname, proxy)
+		if m.logger != nil {
+			m.logger.Info("Retained down route for deeply-asleep server %s (%s)", plan.ServerName, plan.Hostname)
+		}
+	case PlanRemove:
+		proxy.RemoveRoute(plan.Hostname)
 		if m.valkeySync != nil {
-			_ = m.valkeySync.BroadcastRouteRemove(context.Background(), hostname, listener.Port)
+			if err := m.valkeySync.BroadcastRouteRemove(ctx, plan.Hostname, plan.ListenerPort); err != nil && m.logger != nil {
+				m.logger.Warn("Failed to broadcast route remove for %s: %v", plan.ServerName, err)
+			}
 		}
 	}
-
 	return nil
 }
 
@@ -452,7 +489,6 @@ func (m *Manager) ensureDownRoute(server *db.Server, hostname string, proxy Prox
 	}
 	proxy.SetRouteHibernated(hostname, false)
 	proxy.SetRouteDown(hostname, true)
-	m.logger.Info("Retained down route for deeply-asleep server %s (%s)", server.Name, hostname)
 }
 
 // resolveBackend determines the backend host and port for a server.
@@ -482,20 +518,25 @@ func isLocalDockerNode(node *db.Node) bool {
 }
 
 func (m *Manager) resolveBackend(server *db.Server) (string, int, error) {
+	var node *db.Node
 	if server.NodeID != "" && m.store != nil {
-		node, err := m.store.GetNode(context.Background(), server.NodeID)
-		if err == nil && node != nil && !isLocalDockerNode(node) {
-			backendHost := node.AdvertisedIP
-			if backendHost == "" {
-				backendHost = node.Host
-			}
-			backendHost = dockerHostAddress(backendHost)
-			backendPort := server.Port
-			if backendPort == 0 {
-				backendPort = 25565
-			}
-			return backendHost, backendPort, nil
+		node, _ = m.store.GetNode(context.Background(), server.NodeID)
+	}
+	return m.resolveBackendFor(server, node)
+}
+
+func (m *Manager) resolveBackendFor(server *db.Server, node *db.Node) (string, int, error) {
+	if node != nil && !isLocalDockerNode(node) {
+		backendHost := node.AdvertisedIP
+		if backendHost == "" {
+			backendHost = node.Host
 		}
+		backendHost = dockerHostAddress(backendHost)
+		backendPort := server.Port
+		if backendPort == 0 {
+			backendPort = 25565
+		}
+		return backendHost, backendPort, nil
 	}
 
 	// Local node: resolve container IP
