@@ -30,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261027" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -580,12 +580,22 @@
                   </pattern>
                 </defs>
                 <rect x="0" y="0" width="640" height="520" fill="url(#arch-grid)" />
+                <ellipse class="a-glow" cx="328" cy="256" rx="200" ry="230" />
 
                 <!-- connection lines (scrubbed draw-in) -->
                 <path class="a-line a-draw" data-draw="in" pathLength="1" d="M192 176H240" />
                 <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 162 448 162" />
-                <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 318 448 318" />
+                <path id="a-fan-cloud" class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 318 448 318" />
                 <path class="a-line a-draw" data-draw="backup" pathLength="1" d="M400 346C428 346 424 442 448 442" />
+
+                <!-- connection packet (decorative) -->
+                <g class="a-anim" data-ap="1">
+                  <circle class="a-packet" r="3.5">
+                    <animateMotion dur="2.4s" repeatCount="indefinite">
+                      <mpath href="#a-fan-cloud" xlink:href="#a-fan-cloud" />
+                    </animateMotion>
+                  </circle>
+                </g>
 
                 <!-- players -->
                 <g class="a-anim" data-ap="0">
@@ -1036,6 +1046,6 @@
     </div>
   </footer>
 
-  <script src="./assets/script.js" defer></script>
+  <script src="./assets/script.js?v=20261027" defer></script>
 </body>
 </html>
