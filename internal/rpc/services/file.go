@@ -29,6 +29,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/auth"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/pkg/download"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -207,6 +208,34 @@ func (s *FileService) ListFiles(ctx context.Context, req *connect.Request[v1.Lis
 	}), nil
 }
 
+// storageFor resolves the node-aware accessor for a server's data root. Empty
+// node IDs are legacy single-node rows and use the local accessor; remote
+// nodes without an adapter are refused (ADR 0005).
+func (s *FileService) storageFor(ctx context.Context, server *storage.Server) (nodestorage.Accessor, error) {
+	info := nodestorage.NodeInfo{Name: "local", IsLocal: true}
+	if server.NodeID != "" {
+		node, err := s.store.GetNode(ctx, server.NodeID)
+		if err != nil {
+			return nil, err
+		}
+		info = nodestorage.NodeInfo{Name: node.Name, IsLocal: node.IsLocal}
+	}
+	return nodestorage.ForNode(info, server.DataPath)
+}
+
+// storageError maps accessor refusals onto connect errors: a remote node
+// without an adapter is unavailable, a bad path is an invalid request.
+func storageError(err error) error {
+	switch {
+	case nodestorage.IsUnavailable(err):
+		return connect.NewError(connect.CodeUnavailable, err)
+	case nodestorage.IsEscape(err):
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	default:
+		return connect.NewError(connect.CodeInternal, err)
+	}
+}
+
 // GetFile gets a file's content
 func (s *FileService) GetFile(ctx context.Context, req *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	msg := req.Msg
@@ -224,7 +253,12 @@ func (s *FileService) GetFile(ctx context.Context, req *connect.Request[v1.GetFi
 	}
 
 	// Check if file exists
-	info, err := os.Stat(fullPath)
+	acc, err := s.storageFor(ctx, server)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	defer func() { _ = acc.Close() }()
+	info, err := acc.Stat(msg.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("file not found"))
@@ -238,7 +272,7 @@ func (s *FileService) GetFile(ctx context.Context, req *connect.Request[v1.GetFi
 	}
 
 	// Read file content
-	content, err := os.ReadFile(fullPath)
+	content, err := acc.ReadFile(msg.Path)
 	if err != nil {
 		s.log.Error("Failed to read file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to read file"))
@@ -344,20 +378,17 @@ func (s *FileService) UpdateFile(ctx context.Context, req *connect.Request[v1.Up
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
-	// Refuse writing directly through a symlink
-	if fi, err := os.Lstat(fullPath); err == nil && fi.Mode()&os.ModeSymlink != 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot write through symbolic link"))
+	// Write through the node-aware accessor: confined to the data root and
+	// refusing symlink writes.
+	acc, err := s.storageFor(ctx, server)
+	if err != nil {
+		return nil, storageError(err)
 	}
-
-	// Create directories if needed
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		s.log.Error("Failed to create directory: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to create directory"))
-	}
-
-	// Write file
-	if err := os.WriteFile(fullPath, msg.Content, 0644); err != nil {
+	defer func() { _ = acc.Close() }()
+	if err := acc.WriteFile(msg.Path, msg.Content); err != nil {
+		if nodestorage.IsSymlink(err) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		s.log.Error("Failed to write file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update file"))
 	}
@@ -387,6 +418,8 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no paths specified"))
 	}
 
+	// Validate every path before touching storage so bad input surfaces as an
+	// invalid request regardless of node state.
 	for _, p := range paths {
 		fullPath := filepath.Join(server.DataPath, p)
 		if !files.WithinReal(server.DataPath, fullPath) {
@@ -395,8 +428,16 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 		if fullPath == server.DataPath {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot delete server root directory"))
 		}
+	}
 
-		info, err := os.Lstat(fullPath)
+	acc, err := s.storageFor(ctx, server)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	defer func() { _ = acc.Close() }()
+
+	for _, p := range paths {
+		info, err := acc.Stat(p)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue // Skip already-deleted files in bulk
@@ -405,9 +446,9 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 		}
 
 		if info.IsDir() {
-			err = os.RemoveAll(fullPath)
+			err = acc.RemoveAll(p)
 		} else {
-			err = os.Remove(fullPath)
+			err = acc.Remove(p)
 		}
 		if err != nil {
 			s.log.Error("Failed to delete %s: %v", p, err)
@@ -454,8 +495,14 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new path"))
 	}
 
+	acc, err := s.storageFor(ctx, server)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	defer func() { _ = acc.Close() }()
+
 	// Check if source exists
-	if _, err := os.Stat(oldFullPath); err != nil {
+	if _, err := acc.Stat(msg.Path); err != nil {
 		if os.IsNotExist(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("file not found"))
 		}
@@ -463,12 +510,15 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 	}
 
 	// Check if destination already exists
-	if _, err := os.Stat(newFullPath); err == nil {
+	if _, err := acc.Stat(newPath); err == nil {
 		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("a file or folder with that name already exists"))
 	}
 
-	// Rename
-	if err := os.Rename(oldFullPath, newFullPath); err != nil {
+	// Rename through the node-aware accessor (confined; refuses symlink targets)
+	if err := acc.Rename(msg.Path, newPath); err != nil {
+		if nodestorage.IsSymlink(err) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
 		s.log.Error("Failed to rename file: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to rename file"))
 	}
