@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -28,11 +27,12 @@ func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
 		return
 	}
 	for _, staged := range due {
-		if !docker.TryBeginServerTransition(staged.ServerID) {
+		transition, err := docker.TryBeginServerTransition(staged.ServerID)
+		if err != nil {
 			continue
 		}
 		applied, err := s.store.ApplyStagedConfigChange(ctx, staged.ID)
-		docker.EndServerTransition(staged.ServerID)
+		transition.Release()
 		if err != nil {
 			s.log.Error("Failed to apply staged config change %s for server %s: %v", staged.ID, staged.ServerID, err)
 			continue

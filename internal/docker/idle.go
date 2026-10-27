@@ -47,14 +47,14 @@ type idleMode struct {
 type idleTracker struct {
 	mu       sync.RWMutex
 	since    map[string]time.Time
-	inflight map[string]struct{}
+	inflight map[string]*Transition
 	players  func(serverID string) int
 }
 
 func newIdleTracker() *idleTracker {
 	return &idleTracker{
 		since:    make(map[string]time.Time),
-		inflight: make(map[string]struct{}),
+		inflight: make(map[string]*Transition),
 	}
 }
 
@@ -107,31 +107,35 @@ func (t *idleTracker) idleFor(serverID string, now time.Time) (time.Duration, bo
 // tryBegin claims a transition for serverID. It reports false, with a debug
 // line, when the server is already transitioning in either mode.
 func (t *idleTracker) tryBegin(serverID, op string, log *logger.Logger) bool {
-	if !TryBeginServerTransition(serverID) {
+	transition, err := TryBeginServerTransition(serverID)
+	if err != nil {
 		if log != nil {
-			log.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
+			log.Debug("Skipping %s for server %s: %v", op, serverID, err)
 		}
 		return false
 	}
 	t.mu.Lock()
 	if _, busy := t.inflight[serverID]; busy {
 		t.mu.Unlock()
-		EndServerTransition(serverID)
+		transition.Release()
 		if log != nil {
 			log.Debug("Skipping %s for server %s: transition already in flight", op, serverID)
 		}
 		return false
 	}
-	t.inflight[serverID] = struct{}{}
+	t.inflight[serverID] = transition
 	t.mu.Unlock()
 	return true
 }
 
 func (t *idleTracker) end(serverID string) {
 	t.mu.Lock()
+	transition := t.inflight[serverID]
 	delete(t.inflight, serverID)
 	t.mu.Unlock()
-	EndServerTransition(serverID)
+	if transition != nil {
+		transition.Release()
+	}
 }
 
 // transitioning reports whether an idle transition owns serverID.

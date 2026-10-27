@@ -237,10 +237,11 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	if err := requireLocalRestoreStorage(ctx, s.store, server.NodeID); err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, err)
 	}
-	if !docker.TryBeginServerTransition(server.ID) {
-		return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("server transition already in progress"))
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeAborted, err)
 	}
-	defer docker.EndServerTransition(server.ID)
+	defer transition.Release()
 
 	s.restoringMu.Lock()
 	if s.restoringServers == nil {

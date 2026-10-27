@@ -241,10 +241,11 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	}
 
 	// Lifecycle concurrency guard (prevent racing with user/reconciler operations)
-	if !docker.TryBeginServerTransition(server.ID) {
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
 		return fmt.Errorf("cannot safely rollback: server %s is currently undergoing another transition", server.ID)
 	}
-	defer docker.EndServerTransition(server.ID)
+	defer transition.Release()
 
 	wasRunning := server.Status == storage.StatusRunning || server.Status == storage.StatusStarting
 	dockerCli, err := e.resolveDocker(server.NodeID)

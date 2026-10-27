@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 // Package reconciler implements the level-triggered, self-healing reconciliation
 // engine for Carbon Panel (MINE-107, Layer 2.2 of the Resilient Container
 // Orchestrator epic, MINE-102).
@@ -452,10 +451,11 @@ func (r *Reconciler) ReconcileServer(ctx context.Context, serverID string) error
 	// of those transitions can observe a half-created or half-stopped container
 	// and persist a false state. Leave the current pass to the next Docker event
 	// or periodic sweep when another operation owns the server.
-	if !docker.TryBeginServerTransition(serverID) {
+	transition, err := docker.TryBeginServerTransition(serverID)
+	if err != nil {
 		return nil
 	}
-	defer docker.EndServerTransition(serverID)
+	defer transition.Release()
 
 	server, err := r.store.GetServer(ctx, serverID)
 	if err != nil || server == nil {
