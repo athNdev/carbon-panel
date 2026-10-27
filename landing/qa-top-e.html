@@ -2196,7 +2196,7 @@ table.compare .icon { width: 18px; height: 18px; }
 .f-carrier text { font-family: var(--mono); font-size: 9.5px; font-weight: 500; fill: var(--text-primary); }
 .f-carrier .f-carrier-dot { fill: var(--accent-text); }
 .f-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.5px; fill: var(--text-tertiary); }
-.f-backup { stroke: var(--accent-text); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.28; }
+.f-backup { stroke: var(--accent-text); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.36; }
 .f-bar { fill: rgba(38, 38, 38, 0.72); stroke: var(--border); stroke-width: 1; }
 .f-dot-ok { fill: var(--success); }
 
@@ -2391,7 +2391,46 @@ table.compare .icon { width: 18px; height: 18px; }
       </symbol>
     </defs>
   </svg>
-    <main><section class="hero">
+    <main><header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="Carbon Panel home">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="7" fill="#0f62fe"/>
+          <path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M8 10.5l8 4.5 8-4.5M16 15v9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        <span class="wordmark">Carbon<b>Panel</b></span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#fleet">Fleet</a>
+        <a href="#how">How it works</a>
+        <a href="#compare">Compare</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="gh-star" href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">
+          <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+          <span>Star</span>
+          <span class="count" data-star-count hidden></span>
+        </a>
+        <a class="btn btn-primary" href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">Get started</a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+          <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============================================================
+         HERO
+         ============================================================ -->
+    <section class="hero">
       <div class="container hero-grid">
         <div class="hero-copy">
           <div class="hero-badge">
@@ -2539,5 +2578,10 @@ table.compare .icon { width: 18px; height: 18px; }
           <span class="ticker-item">Floodgate</span>
         </div>
       </div>
-    </section></main>
+    </section>
+
+    <!-- ============================================================
+         STATS STRIP
+         ============================================================ -->
+    </main>
     </body></html>
