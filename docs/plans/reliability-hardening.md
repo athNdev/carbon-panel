@@ -4,6 +4,16 @@ Status: active
 Scope: runtime, persistence, Docker orchestration, APIs, UI, packaging, upgrades,
 and supported operating systems.
 
+## Current implementation handoff
+
+The 2026-10-22 follow-up is tracked in Plane **MINE-249** and the detailed
+[OSS runtime reliability and feature-completeness plan](oss-runtime-reliability-and-feature-completeness.md).
+It includes 21 source-backed follow-up packages, reuse of MINE-224 integration
+coverage, 60 future fault scenarios, and a
+[32-feature local/remote capability matrix](oss-feature-completeness-matrix.md).
+Existing protections and historical fixes below remain credited; the new audit
+does not claim live reproduction, test execution or implementation completion.
+
 ## Audit findings and work order
 
 | Priority | Surface | Finding | State |
