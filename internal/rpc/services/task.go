@@ -357,7 +357,7 @@ func (s *TaskService) CreateTask(ctx context.Context, req *connect.Request[v1.Cr
 		Timeout:           int(msg.Timeout),
 		RetryCount:        int(msg.RetryCount),
 		RetryDelay:        int(msg.RetryDelay),
-		RequireOnline:     msg.RequireOnline,
+		RequireOnline:     msg.RequireOnline || msg.TaskType == v1.TaskType_TASK_TYPE_COMMAND,
 		EventTriggers:     eventTriggers,
 		ParentTaskID:      msg.ParentTaskId,
 		StepOrder:         int(msg.StepOrder),

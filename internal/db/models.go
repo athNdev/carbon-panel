@@ -595,7 +595,7 @@ type ScheduledTask struct {
 	Timeout       int  `json:"timeout" gorm:"default:300"`          // Timeout in seconds (default 5 min)
 	RetryCount    int  `json:"retry_count" gorm:"default:0"`        // Number of retries on failure
 	RetryDelay    int  `json:"retry_delay" gorm:"default:60"`       // Delay between retries in seconds
-	RequireOnline bool `json:"require_online" gorm:"default:true"`  // Only run if server is online
+	RequireOnline bool `json:"require_online"`  // Only run if server is online
 	FailureNotify bool `json:"failure_notify" gorm:"default:false"` // Notify on failure (future feature)
 
 	// Chain settings (MINE-142): tasks with the same ParentTaskID run in
