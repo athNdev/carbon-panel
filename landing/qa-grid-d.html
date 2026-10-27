@@ -2289,13 +2289,22 @@ table.compare .icon { width: 18px; height: 18px; }
 }
 
 </style>
-  
+  <script>document.documentElement.classList.add('js');</script>
 <style>
-      .reveal { opacity: 1 !important; transform: none !important; }
-      *, *::before, *::after { transition: none !important; }
-    </style></head><body>
-    <div class="page-grid" aria-hidden="true"></div>
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    .reveal { opacity: 1 !important; transform: none !important; }
+    *, *::before, *::after { transition: none !important; }
+    .arch-beat, .arch-stage .a-anim { opacity: 1 !important; }
+  </style></head>
+<body>
+
+  <!-- Fixed structural lattice; every section sits on it. -->
+  <div class="page-grid" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       SVG icon sprite (single source, recolored per state via
+       currentColor). Outline is the default; fills mark brand marks.
+       ============================================================ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
       <symbol id="i-cube" viewBox="0 0 32 32">
         <path d="M16 4l11 6v12l-11 6-11-6V10l11-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2391,7 +2400,413 @@ table.compare .icon { width: 18px; height: 18px; }
       </symbol>
     </defs>
   </svg>
-    <main><section class="arch" id="architecture" aria-label="How Carbon Panel fits your machines">
+
+  <!-- ============================================================
+       NAV
+       ============================================================ -->
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="Carbon Panel home">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="7" fill="#0f62fe"/>
+          <path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M8 10.5l8 4.5 8-4.5M16 15v9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        <span class="wordmark">Carbon<b>Panel</b></span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#fleet">Fleet</a>
+        <a href="#how">How it works</a>
+        <a href="#compare">Compare</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="gh-star" href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">
+          <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+          <span>Star</span>
+          <span class="count" data-star-count hidden></span>
+        </a>
+        <a class="btn btn-primary" href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">Get started</a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+          <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============================================================
+         HERO
+         ============================================================ -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="hero-badge">
+            <span class="tag"><span class="dot"></span>Open source</span>
+            <span class="sep">·</span>
+            <span>MPL-2.0</span>
+            <span class="sep">·</span>
+            <span>self-hosted</span>
+          </div>
+
+          <h1>Minecraft servers,<br /><span class="grad">run like production.</span></h1>
+
+          <p class="hero-sub">
+            Carbon Panel is the open-source, Docker-native control plane for Minecraft
+            servers. Every server in its own container — on your home machine or in the
+            cloud — players routed by hostname, and modpacks shipped straight from
+            CurseForge and Modrinth.
+          </p>
+
+          <div class="hero-cta">
+            <a class="btn btn-primary btn-lg" href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">
+              Get started
+              <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+            </a>
+            <a class="btn btn-ghost btn-lg" href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">
+              <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+              View on GitHub
+            </a>
+          </div>
+
+          <div class="install">
+            <code id="install-cmd"><span class="prompt">$</span> git clone https://github.com/athNdev/carbon-panel && cd carbon-panel</code>
+            <button class="copy-btn" data-copy="install-cmd" aria-label="Copy install command">
+              <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hero product mockup -->
+        <div class="hero-visual reveal">
+          <div class="mock" role="img" aria-label="Carbon Panel dashboard showing server status, node health and a live console">
+            <div class="mock-bar">
+              <div class="dots"><i></i><i></i><i></i></div>
+              <div class="url">carbon-panel · cluster / overview</div>
+            </div>
+            <div class="mock-body">
+              <div class="mock-rail">
+                <div class="r-icon active"><svg class="icon"><use href="#i-layout"/></svg></div>
+                <div class="r-icon"><svg class="icon"><use href="#i-server"/></svg></div>
+                <div class="r-icon"><svg class="icon"><use href="#i-route"/></svg></div>
+                <div class="r-icon"><svg class="icon"><use href="#i-puzzle"/></svg></div>
+                <div class="r-icon"><svg class="icon"><use href="#i-database"/></svg></div>
+                <div class="r-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
+              </div>
+              <div class="mock-main">
+                <div class="mock-stats">
+                  <div class="mock-stat">
+                    <div class="k">Players</div>
+                    <div class="v">42<small> / 120</small></div>
+                  </div>
+                  <div class="mock-stat">
+                    <div class="k">TPS</div>
+                    <div class="v">19.9</div>
+                  </div>
+                  <div class="mock-stat">
+                    <div class="k">Nodes</div>
+                    <div class="v">3<small> online</small></div>
+                  </div>
+                </div>
+
+                <div class="mock-servers">
+                  <div class="mock-server">
+                    <span class="s-dot on"></span>
+                    <span class="s-name">survival-01</span>
+                    <span class="s-badge">Paper 1.21</span>
+                    <span class="s-meta">24 players · 6 GB</span>
+                  </div>
+                  <div class="mock-server">
+                    <span class="s-dot idle"></span>
+                    <span class="s-name">creative</span>
+                    <span class="s-badge">Fabric</span>
+                    <span class="s-meta">starting… · 4 GB</span>
+                  </div>
+                  <div class="mock-server">
+                    <span class="s-dot sleep"></span>
+                    <span class="s-name">modded-forge</span>
+                    <span class="s-badge">NeoForge</span>
+                    <span class="s-meta">deep-sleep · 0 B</span>
+                  </div>
+                </div>
+
+                <div class="mock-console">
+                  <div><span class="c-ts">12:04:18</span> <span class="c-ok">✔</span> proxy: routed <span class="c-info">survival.mc.example.com</span> → survival-01</div>
+                  <div><span class="c-ts">12:04:19</span> <span class="c-info">➜</span> rcon: whitelisted player <span class="c-ok">alex</span></div>
+                  <div><span class="c-ts">12:04:21</span> <span class="c-warn">◇</span> backup: world snapshot queued (s3://offsite)<span class="caret"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mock-chip chip-a">
+            <svg class="icon"><use href="#i-box"/></svg>
+            isolated containers
+          </div>
+          <div class="mock-chip chip-b">
+            <svg class="icon"><use href="#i-zap"/></svg>
+            wake-on-connect
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Server type ticker -->
+    <section class="ticker" aria-label="Supported server types and platforms">
+      <div class="ticker-track">
+        <div class="ticker-group">
+          <span class="ticker-item">Vanilla</span>
+          <span class="ticker-item">Paper</span>
+          <span class="ticker-item">Purpur</span>
+          <span class="ticker-item">Spigot</span>
+          <span class="ticker-item">Bukkit</span>
+          <span class="ticker-item">Fabric</span>
+          <span class="ticker-item">Quilt</span>
+          <span class="ticker-item">Forge</span>
+          <span class="ticker-item">NeoForge</span>
+          <span class="ticker-item">Folia</span>
+          <span class="ticker-item">Pufferfish</span>
+          <span class="ticker-item">Bedrock</span>
+          <span class="ticker-item">Geyser</span>
+          <span class="ticker-item">Floodgate</span>
+        </div>
+        <div class="ticker-group" aria-hidden="true">
+          <span class="ticker-item">Vanilla</span>
+          <span class="ticker-item">Paper</span>
+          <span class="ticker-item">Purpur</span>
+          <span class="ticker-item">Spigot</span>
+          <span class="ticker-item">Bukkit</span>
+          <span class="ticker-item">Fabric</span>
+          <span class="ticker-item">Quilt</span>
+          <span class="ticker-item">Forge</span>
+          <span class="ticker-item">NeoForge</span>
+          <span class="ticker-item">Folia</span>
+          <span class="ticker-item">Pufferfish</span>
+          <span class="ticker-item">Bedrock</span>
+          <span class="ticker-item">Geyser</span>
+          <span class="ticker-item">Floodgate</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         STATS STRIP
+         ============================================================ -->
+    <section class="stats" aria-label="Key figures">
+      <div class="container">
+        <div class="stats-grid">
+          <div class="stat reveal">
+            <div class="num">11<span class="unit">+</span></div>
+            <div class="label">Server types</div>
+            <div class="sub">vanilla → paper, fabric, forge</div>
+          </div>
+          <div class="stat reveal">
+            <div class="num">0<span class="unit"> B</span></div>
+            <div class="label">Idle RAM with deep-sleep</div>
+            <div class="sub">wakes when a player connects</div>
+          </div>
+          <div class="stat reveal">
+            <div class="num">∞</div>
+            <div class="label">Machines, one panel</div>
+            <div class="sub">home machine, homelab, cloud VPS</div>
+          </div>
+          <div class="stat reveal">
+            <div class="num">MPL<span class="unit">-2.0</span></div>
+            <div class="label">Permanently open</div>
+            <div class="sub">free as in cost and speech</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PROBLEM FRAMING
+         ============================================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head center reveal">
+          <h2>Hosting servers shouldn't feel like babysitting.</h2>
+          <p>
+            One flaky plugin, one forgotten backup, one accidental <code>rm -rf</code> — and
+            the whole night is gone. Carbon Panel treats your worlds the way production
+            teams treat state: isolated, observable, and recoverable.
+          </p>
+        </div>
+
+        <div class="problem-grid">
+          <div class="problem-card pain reveal">
+            <div class="p-head">
+              <div class="p-icon"><svg class="icon"><use href="#i-x"/></svg></div>
+              <h3>The usual way</h3>
+            </div>
+            <p>Hand-rolled scripts and bare JVM processes on a shared host.</p>
+            <ul>
+              <li><svg class="icon"><use href="#i-x"/></svg> One bad mod corrupts every world sharing the host</li>
+              <li><svg class="icon"><use href="#i-x"/></svg> Port-forwarding a new server means editing firewall rules</li>
+              <li><svg class="icon"><use href="#i-x"/></svg> Backups are a cron job nobody has ever restored from</li>
+              <li><svg class="icon"><use href="#i-x"/></svg> Idle servers burn RAM all night, every night</li>
+            </ul>
+          </div>
+
+          <div class="problem-card model reveal">
+            <div class="p-head">
+              <div class="p-icon"><svg class="icon"><use href="#i-check"/></svg></div>
+              <h3>The Carbon way</h3>
+            </div>
+            <p>Every server is a Docker container with real limits, routes and history.</p>
+            <ul>
+              <li><svg class="icon"><use href="#i-check"/></svg> Blast radius is one container, never the host</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> New server = new hostname, routed automatically</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> World-aware backups with retention and offsite copies</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> Deep-sleep to zero RAM, wakes when a player connects</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FEATURE BENTO
+         ============================================================ -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-head center reveal">
+          <h2>A control plane, not a start button.</h2>
+          <p>
+            From container orchestration to modpack distribution, Carbon Panel ships the
+            whole toolchain — opinionated where it matters, self-hosted everywhere.
+          </p>
+        </div>
+
+        <div class="bento">
+          <!-- Anchor: server management -->
+          <div class="tile feature-anchor reveal">
+            <div class="anchor-copy">
+              <div class="t-icon"><svg class="icon"><use href="#i-box"/></svg></div>
+              <h3>Docker-native server management</h3>
+              <p>
+                Deploy vanilla, Paper, Purpur, Fabric, Quilt, Forge, NeoForge and Bedrock
+                in seconds — each in its own container with CPU and RAM limits, automatic
+                Java selection, and Aikar-tuned JVM presets.
+              </p>
+            </div>
+            <div class="anchor-visual" aria-hidden="true">
+              <div class="row"><span class="arrow">▸</span> node-eu-1 <span class="arrow">·</span> docker</div>
+              <div class="av-rows">
+                <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">survival-01</span> <span class="ip">172.18.0.2 · 6 GB</span></span></div>
+                <div class="row"><span class="arrow">├─</span> <span class="node"><span class="nm">creative</span> <span class="ip">172.18.0.3 · 4 GB</span></span></div>
+                <div class="row"><span class="arrow">└─</span> <span class="node"><span class="nm">proxy</span> <span class="ip">:25565 → 2 containers</span></span></div>
+              </div>
+              <div class="row av-foot"><span class="av-dot"></span> limits · auto-restart · aikar flags</div>
+            </div>
+          </div>
+
+          <!-- Reverse proxy -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-route"/></svg></div>
+            <h3>One port, every server</h3>
+            <p>
+              A handshake-aware reverse proxy routes players by hostname through a single
+              ingress — with Velocity forwarding, PROXY protocol, and Bedrock UDP built in.
+            </p>
+            <div class="route-map" aria-hidden="true">
+              <div class="rm-head"><span class="arrow">▸</span> :25565 ingress</div>
+              <div class="rm-row"><span class="rm-stem">├─</span><span class="rm-host">survival.mc.yourdomain.com</span><span class="rm-arrow">→</span><span class="rm-target">survival-01</span></div>
+              <div class="rm-row"><span class="rm-stem">├─</span><span class="rm-host">creative.mc.yourdomain.com</span><span class="rm-arrow">→</span><span class="rm-target">creative</span></div>
+              <div class="rm-row"><span class="rm-stem">└─</span><span class="rm-host">modded.mc.yourdomain.com</span><span class="rm-arrow">→</span><span class="rm-target">modded-forge</span></div>
+            </div>
+          </div>
+
+          <!-- Modpack studio -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-puzzle"/></svg></div>
+            <h3>Modpack Studio</h3>
+            <p>
+              Search CurseForge and Modrinth without an API key, resolve dependencies and
+              loader versions automatically, and export to <code>.mrpack</code> or packwiz.
+            </p>
+            <div class="t-tags"><span>CurseForge</span><span>Modrinth</span><span>packwiz</span></div>
+          </div>
+
+          <!-- Console -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-terminal"/></svg></div>
+            <h3>Live console &amp; RCON</h3>
+            <p>Stream ANSI-rendered logs over WebSocket with command history and an interactive RCON shell.</p>
+            <div class="t-tags"><span>WebSocket</span><span>ANSI</span><span>mclo.gs</span></div>
+          </div>
+
+          <!-- File manager -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-folder"/></svg></div>
+            <h3>Full file manager</h3>
+            <p>Browse, edit, zip and bulk-download files with resumable uploads and SHA-256 verified remote pulls.</p>
+            <div class="t-tags"><span>resumable</span><span>zip/unzip</span></div>
+          </div>
+
+          <!-- Backups -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-database"/></svg></div>
+            <h3>Backups that restore</h3>
+            <p>World-aware snapshots pause saves via RCON, respect retention rules, and push offsite to S3-compatible storage.</p>
+            <div class="t-tags"><span>S3 / MinIO</span><span>retention</span></div>
+          </div>
+
+          <!-- Multi-machine -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-server"/></svg></div>
+            <h3>Your machines, one panel</h3>
+            <p>Add your home machine, a homelab box, or a cloud VPS as a node — then place each server wherever it makes sense. Routes and state stay in sync.</p>
+            <div class="t-tags"><span>home lab</span><span>cloud VPS</span><span>placement</span></div>
+          </div>
+
+          <!-- Automation -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-clock"/></svg></div>
+            <h3>Automation &amp; scheduling</h3>
+            <p>Cron, interval and event-driven task chains — commands, backups, webhooks, even Chunky pre-generation and Git modpack updates.</p>
+            <div class="t-tags"><span>cron</span><span>chains</span><span>webhooks</span></div>
+          </div>
+
+          <!-- Security -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
+            <h3>Security &amp; access</h3>
+            <p>Role-based access control, OIDC single sign-on, scoped API tokens, invite links, and an audit log of everything.</p>
+            <div class="t-tags"><span>RBAC</span><span>OIDC</span><span>audit</span></div>
+          </div>
+
+          <!-- API -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-code"/></svg></div>
+            <h3>Typed, observable API</h3>
+            <p>Protocol Buffers over Connect RPC &amp; gRPC, with a live OpenAPI viewer, reflection, and Prometheus metrics endpoints.</p>
+            <div class="t-tags"><span>Connect RPC</span><span>OpenAPI</span><span>Prometheus</span></div>
+          </div>
+
+          <!-- Deep sleep -->
+          <div class="tile reveal">
+            <div class="t-icon"><svg class="icon"><use href="#i-zap"/></svg></div>
+            <h3>Sleep, freeze, wake on join</h3>
+            <p>Empty servers can freeze in place at ~0% CPU, or stop entirely at zero RAM while the proxy keeps answering pings. Either way, a player joining brings them back — nothing to start by hand.</p>
+            <div class="sleep-cycle" aria-hidden="true">
+              <span class="sc-pill sc-1"><span class="sc-dot"></span>running · 6 GB</span>
+              <span class="sc-pill sc-2"><span class="sc-dot"></span>deep-sleep · 0 B</span>
+              <span class="sc-pill sc-3"><span class="sc-dot"></span>player joins · waking</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         ARCHITECTURE — scroll-driven
+         ============================================================ -->
+    <section class="arch" id="architecture" aria-label="How Carbon Panel fits your machines">
       <div class="arch-track">
         <div class="arch-stage" data-beat="0" style="--p: 0">
           <div class="container arch-inner">
@@ -2567,15 +2982,15 @@ table.compare .icon { width: 18px; height: 18px; }
             <ellipse cx="600" cy="320" rx="560" ry="300" fill="url(#fleet-glow)" opacity="0.6" />
 
             <!-- move routes -->
-            <path id="f-migrate" class="f-arc" d="M210 180Q405 20 600 180" />
-            <path class="f-arc f-arc-idle" d="M600 180Q795 20 990 180" />
-            <circle class="f-anchor" cx="210" cy="180" r="3" />
+            <path id="f-migrate" class="f-arc" d="M170 180Q385 20 600 180" />
+            <path class="f-arc f-arc-idle" d="M600 180Q815 20 1030 180" />
+            <circle class="f-anchor" cx="170" cy="180" r="3" />
             <circle class="f-anchor" cx="600" cy="180" r="3" />
-            <circle class="f-anchor" cx="990" cy="180" r="3" opacity="0.35" />
-            <text class="f-label" x="405" y="150" text-anchor="middle">live migration</text>
+            <circle class="f-anchor" cx="1030" cy="180" r="3" opacity="0.35" />
+            <text class="f-label" x="385" y="150" text-anchor="middle">live migration</text>
 
             <g class="f-carrier" opacity="0">
-              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.14;0.84;1" dur="7s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.82;1" dur="7s" repeatCount="indefinite" />
               <rect x="-52" y="-13" width="104" height="26" rx="13" />
               <circle class="f-carrier-dot" cx="-35" cy="0" r="3" />
               <text x="-24" y="4">survival-01</text>
@@ -2586,27 +3001,27 @@ table.compare .icon { width: 18px; height: 18px; }
 
             <!-- node: home -->
             <g>
-              <rect class="f-node f-node-hot" x="40" y="180" width="340" height="320" rx="14" />
-              <text class="f-nodetitle" x="64" y="220">home machine</text>
-              <text class="f-role" x="64" y="240">AT HOME</text>
-              <text class="f-val f-val-hot" x="356" y="220" text-anchor="end">15.0 / 16 GB</text>
-              <rect class="f-track" x="64" y="252" width="292" height="5" rx="2.5" />
-              <rect class="f-fill f-fill-hot" x="64" y="252" width="274" height="5" rx="2.5" />
+              <rect class="f-node f-node-hot" x="0" y="180" width="340" height="320" rx="14" />
+              <text class="f-nodetitle" x="24" y="220">home machine</text>
+              <text class="f-role" x="24" y="240">AT HOME</text>
+              <text class="f-val f-val-hot" x="316" y="220" text-anchor="end">15.0 / 16 GB</text>
+              <rect class="f-track" x="24" y="252" width="292" height="5" rx="2.5" />
+              <rect class="f-fill f-fill-hot" x="24" y="252" width="274" height="5" rx="2.5" />
 
-              <rect class="f-chip f-chip-hot" x="64" y="276" width="292" height="40" rx="8" />
-              <text class="f-name" x="80" y="301">survival-01</text>
-              <text class="f-meta" x="340" y="301" text-anchor="end">6 GB · migrating</text>
+              <rect class="f-chip f-chip-hot" x="24" y="276" width="292" height="40" rx="8" />
+              <text class="f-name" x="40" y="301">survival-01</text>
+              <text class="f-meta" x="300" y="301" text-anchor="end">6 GB · migrating</text>
 
-              <rect class="f-chip" x="64" y="326" width="292" height="40" rx="8" />
-              <text class="f-name" x="80" y="351">creative</text>
-              <text class="f-meta" x="340" y="351" text-anchor="end">4 GB · 6 players</text>
+              <rect class="f-chip" x="24" y="326" width="292" height="40" rx="8" />
+              <text class="f-name" x="40" y="351">creative</text>
+              <text class="f-meta" x="300" y="351" text-anchor="end">4 GB · 6 players</text>
 
-              <rect class="f-chip" x="64" y="376" width="292" height="40" rx="8" />
-              <text class="f-name" x="80" y="401">modded-01</text>
-              <text class="f-meta" x="340" y="401" text-anchor="end">5 GB · 2 players</text>
+              <rect class="f-chip" x="24" y="376" width="292" height="40" rx="8" />
+              <text class="f-name" x="40" y="401">modded-01</text>
+              <text class="f-meta" x="300" y="401" text-anchor="end">5 GB · 2 players</text>
 
-              <line class="f-hr" x1="64" y1="440" x2="356" y2="440" />
-              <text class="f-foot" x="64" y="464">3 servers · 1 migrating</text>
+              <line class="f-hr" x1="24" y1="440" x2="316" y2="440" />
+              <text class="f-foot" x="24" y="464">3 servers · 1 migrating</text>
             </g>
 
             <!-- node: homelab -->
@@ -2636,40 +3051,40 @@ table.compare .icon { width: 18px; height: 18px; }
 
             <!-- node: cloud -->
             <g>
-              <rect class="f-node" x="820" y="180" width="340" height="320" rx="14" />
-              <text class="f-nodetitle" x="844" y="220">cloud vps</text>
-              <text class="f-role" x="844" y="240">IN THE CLOUD</text>
-              <text class="f-val" x="1136" y="220" text-anchor="end">1.4 / 8 GB</text>
-              <rect class="f-track" x="844" y="252" width="292" height="5" rx="2.5" />
-              <rect class="f-fill" x="844" y="252" width="51" height="5" rx="2.5" />
+              <rect class="f-node" x="860" y="180" width="340" height="320" rx="14" />
+              <text class="f-nodetitle" x="884" y="220">cloud vps</text>
+              <text class="f-role" x="884" y="240">IN THE CLOUD</text>
+              <text class="f-val" x="1176" y="220" text-anchor="end">1.4 / 8 GB</text>
+              <rect class="f-track" x="884" y="252" width="292" height="5" rx="2.5" />
+              <rect class="f-fill" x="884" y="252" width="51" height="5" rx="2.5" />
 
-              <rect class="f-chip f-chip-sleep" x="844" y="276" width="292" height="40" rx="8" />
-              <text class="f-name" x="860" y="301">lobby-01</text>
-              <text class="f-meta" x="1120" y="301" text-anchor="end">asleep · 0 B</text>
+              <rect class="f-chip f-chip-sleep" x="884" y="276" width="292" height="40" rx="8" />
+              <text class="f-name" x="900" y="301">lobby-01</text>
+              <text class="f-meta" x="1160" y="301" text-anchor="end">asleep · 0 B</text>
 
-              <rect class="f-chip" x="844" y="326" width="292" height="40" rx="8" />
-              <text class="f-name" x="860" y="351">proxy</text>
-              <text class="f-meta" x="1120" y="351" text-anchor="end">0.4 GB · ingress</text>
+              <rect class="f-chip" x="884" y="326" width="292" height="40" rx="8" />
+              <text class="f-name" x="900" y="351">proxy</text>
+              <text class="f-meta" x="1160" y="351" text-anchor="end">0.4 GB · ingress</text>
 
-              <rect class="f-chip f-chip-sleep" x="844" y="376" width="292" height="40" rx="8" />
-              <text class="f-name" x="860" y="401">events-2</text>
-              <text class="f-meta" x="1120" y="401" text-anchor="end">asleep · 0 B</text>
+              <rect class="f-chip f-chip-sleep" x="884" y="376" width="292" height="40" rx="8" />
+              <text class="f-name" x="900" y="401">events-2</text>
+              <text class="f-meta" x="1160" y="401" text-anchor="end">asleep · 0 B</text>
 
-              <line class="f-hr" x1="844" y1="440" x2="1136" y2="440" />
-              <text class="f-foot" x="844" y="464">2 asleep · wake on join</text>
+              <line class="f-hr" x1="884" y1="440" x2="1176" y2="440" />
+              <text class="f-foot" x="884" y="464">2 asleep · wake on join</text>
             </g>
 
             <!-- offsite -->
-            <line class="f-backup" x1="210" y1="500" x2="210" y2="540" />
+            <line class="f-backup" x1="170" y1="500" x2="170" y2="540" />
             <line class="f-backup" x1="600" y1="500" x2="600" y2="540" />
-            <line class="f-backup" x1="990" y1="500" x2="990" y2="540" />
+            <line class="f-backup" x1="930" y1="500" x2="930" y2="540" />
 
-            <rect class="f-bar" x="40" y="540" width="1120" height="70" rx="12" />
-            <text class="f-name" x="64" y="570">offsite backups</text>
-            <text class="f-meta" x="64" y="590">S3 · MinIO · any compatible endpoint</text>
-            <text class="f-meta" x="1136" y="570" text-anchor="end">world snapshots · versioned · retention</text>
-            <circle class="f-dot-ok" cx="1016" cy="587" r="3" />
-            <text class="f-meta" x="1136" y="590" text-anchor="end">last ship · 4m ago</text>
+            <rect class="f-bar" x="0" y="540" width="1200" height="70" rx="12" />
+            <text class="f-name" x="24" y="570">offsite backups</text>
+            <text class="f-meta" x="24" y="590">S3 · MinIO · any compatible endpoint</text>
+            <text class="f-meta" x="1176" y="570" text-anchor="end">world snapshots · versioned · retention</text>
+            <circle class="f-dot-ok" cx="1056" cy="587" r="3" />
+            <text class="f-meta" x="1176" y="590" text-anchor="end">last ship · 4m ago</text>
           </svg>
         </div>
 
@@ -2696,5 +3111,566 @@ table.compare .icon { width: 18px; height: 18px; }
           </div>
         </div>
       </div>
-    </section></main>
-    </body></html>
+    </section>
+
+    <!-- ============================================================
+         HOW IT WORKS
+         ============================================================ -->
+    <section class="section" id="how">
+      <div class="container">
+        <div class="section-head center reveal">
+          <h2>From clone to players in minutes.</h2>
+          <p>No cloud account, no license key, no control plane phoning home. Just Docker and a browser.</p>
+        </div>
+
+        <div class="steps">
+          <div class="step reveal">
+            <div class="step-num">1</div>
+            <h3>Install the panel</h3>
+            <p>Clone the repo and bring the stack up with Docker Compose. SQLite and the proxy are configured out of the box.</p>
+            <code id="step-1"><span class="prompt">$</span> docker compose up -d</code>
+            <div class="step-connect"></div>
+          </div>
+          <div class="step reveal">
+            <div class="step-num">2</div>
+            <h3>Create a server</h3>
+            <p>Pick a loader and version, set CPU/RAM limits and JVM flags. Carbon provisions the container and its data volume.</p>
+            <code id="step-2"><span class="prompt">›</span> survival-01 · Paper 1.21 · 6 GB</code>
+            <div class="step-connect"></div>
+          </div>
+          <div class="step reveal">
+            <div class="step-num">3</div>
+            <h3>Point players at it</h3>
+            <p>Set a wildcard DNS record once. Every new server becomes a hostname — routed automatically on the single ingress port.</p>
+            <code id="step-3"><span class="prompt">›</span> survival.mc.yourdomain.com</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         DEEP DIVE — isolation & security
+         ============================================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="deepdive reveal">
+          <div class="deepdive-grid">
+            <div class="deepdive-copy">
+              <h2>Trust it with your worlds.</h2>
+              <p>
+                Every player connection crosses a checked boundary before it reaches a
+                container — and every container is fenced from the rest of your cluster.
+              </p>
+              <ul class="deepdive-list">
+                <li>
+                  <div class="di"><svg class="icon"><use href="#i-route"/></svg></div>
+                  <div>
+                    <h4>Handshake-aware ingress</h4>
+                    <p>Routes resolve from the Minecraft handshake itself, with per-IP rate limiting.</p>
+                  </div>
+                </li>
+                <li>
+                  <div class="di"><svg class="icon"><use href="#i-box"/></svg></div>
+                  <div>
+                    <h4>Container isolation</h4>
+                    <p>Resource limits, mounted data volumes, no host dependency sprawl.</p>
+                  </div>
+                </li>
+                <li>
+                  <div class="di"><svg class="icon"><use href="#i-shield"/></svg></div>
+                  <div>
+                    <h4>Fail-closed access</h4>
+                    <p>Casbin-backed RBAC, OIDC SSO, JWT sessions and a recovery key for offline admin.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="deepdive-visual" aria-hidden="true">
+              <div class="flow-node">
+                <div class="fn-title"><svg class="icon"><use href="#i-route"/></svg> player handshake :25565</div>
+                <div class="fn-sub">survival.mc.example.com</div>
+              </div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-node gated">
+                <div class="fn-title"><svg class="icon"><use href="#i-shield"/></svg> rate-limit + route lookup</div>
+                <div class="fn-sub">✔ allowed · route → survival-01</div>
+              </div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-node">
+                <div class="fn-title"><svg class="icon"><use href="#i-box"/></svg> container survival-01</div>
+                <div class="fn-sub">isolated · 6 GB · /data volume</div>
+              </div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-node blocked">
+                <div class="fn-title"><svg class="icon"><use href="#i-x"/></svg> cross-container access</div>
+                <div class="fn-sub">✘ denied — no shared runtime</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         COMPARISON
+         ============================================================ -->
+    <section class="section" id="compare">
+      <div class="container">
+        <div class="section-head center reveal">
+          <h2>Purpose-built for Minecraft servers.</h2>
+          <p>A quick look at how Carbon Panel compares with the common alternatives.</p>
+        </div>
+
+        <div class="compare-wrap reveal">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col" class="hl">
+                  <span class="prod">
+                    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0f62fe"/><path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+                    Carbon Panel
+                  </span>
+                </th>
+                <th scope="col">Raw Docker Compose</th>
+                <th scope="col">Typical free panel</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Per-server container isolation</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Built-in</span></td>
+                <td><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Manual</span></td>
+                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Sometimes</span></td>
+              </tr>
+              <tr>
+                <td>Hostname-based player routing</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> One port</span></td>
+                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> DIY</span></td>
+                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> Rare</span></td>
+              </tr>
+              <tr>
+                <td>Modpack studio (CurseForge / Modrinth)</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Keyless</span></td>
+                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> —</span></td>
+                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Add-ons</span></td>
+              </tr>
+              <tr>
+                <td>Multi-node clustering</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> First-class</span></td>
+                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> DIY</span></td>
+                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Paid tiers</span></td>
+              </tr>
+              <tr>
+                <td>Deep-sleep &amp; wake-on-connect</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Zero-RAM idle</span></td>
+                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> —</span></td>
+                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> —</span></td>
+              </tr>
+              <tr>
+                <td>Typed API &amp; Prometheus metrics</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Connect RPC</span></td>
+                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> Shell</span></td>
+                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Varies</span></td>
+              </tr>
+              <tr>
+                <td>Open source &amp; self-hosted</td>
+                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> MPL-2.0</span></td>
+                <td><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Yours</span></td>
+                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Varies</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="compare-note">
+          Comparison reflects publicly documented, commonly available capabilities and is a
+          general guide — evaluate each option against your own requirements.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         OPEN SOURCE BAND
+         ============================================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="oss reveal">
+          <div class="oss-grid">
+            <div>
+              <h2>Free as in cost.<br />Free as in speech.</h2>
+              <p>
+                Carbon Panel is MPL-2.0 licensed, built in the open, and never phones
+                home. Your worlds, your database, your infrastructure — no telemetry, no
+                account, no lock-in.
+              </p>
+              <div class="oss-cta">
+                <a class="btn btn-primary" href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">
+                  <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+                  Star on GitHub
+                </a>
+                <a class="btn btn-ghost" href="https://github.com/athNdev/carbon-panel/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">
+                  Contributing guide
+                  <svg class="icon" aria-hidden="true"><use href="#i-ext"/></svg>
+                </a>
+              </div>
+            </div>
+
+            <div class="oss-points">
+              <div class="oss-point">
+                <svg class="icon"><use href="#i-cloud"/></svg>
+                <h4>Self-hosted, always</h4>
+                <p>Runs on your hardware, your homelab, your VPS. No external control plane.</p>
+              </div>
+              <div class="oss-point">
+                <svg class="icon"><use href="#i-file"/></svg>
+                <h4>Your data is yours</h4>
+                <p>Worlds and databases live in plain folders and volumes you can back up yourself.</p>
+              </div>
+              <div class="oss-point">
+                <svg class="icon"><use href="#i-key"/></svg>
+                <h4>No key required</h4>
+                <p>CurseForge &amp; Modrinth search works without you supplying an API key.</p>
+              </div>
+              <div class="oss-point">
+                <svg class="icon"><use href="#i-gauge"/></svg>
+                <h4>Observable</h4>
+                <p>Prometheus metrics, an audit log and typed RPCs — instrument it like real infra.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FAQ
+         ============================================================ -->
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-head center reveal">
+          <h2>Good to know.</h2>
+        </div>
+
+        <div class="faq reveal">
+          <details class="faq-item">
+            <summary>Is Carbon Panel really free?<span class="plus"></span></summary>
+            <div class="faq-body">
+              Yes. It's open source under the MPL-2.0 license — free to use, modify
+              and self-host. There are no paid tiers, no seats, and no cloud account required.
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Where are my worlds and data stored?<span class="plus"></span></summary>
+            <div class="faq-body">
+              In plain directories and Docker volumes on your own storage — including an SQLite
+              control database and per-server data volumes. Nothing leaves your machine unless
+              you configure offsite backups to S3-compatible storage.
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Which server types and loaders are supported?<span class="plus"></span></summary>
+            <div class="faq-body">
+              Vanilla, Paper, Purpur, Spigot, Bukkit, Fabric, Quilt, Forge, NeoForge, Folia and
+              Pufferfish for Java Edition, plus Bedrock support through built-in Geyser/Floodgate
+              modules. Java runtimes (8, 11, 17, 21+) are selected automatically.
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Do I need to port-forward every server?<span class="plus"></span></summary>
+            <div class="faq-body">
+              No. Carbon Panel's built-in proxy multiplexes traffic through a single port (25565)
+              and routes players by hostname — so <code>survival.yourdomain.com</code> and
+              <code>creative.yourdomain.com</code> can reach different containers with one DNS setup.
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Can I run it alongside other Docker workloads?<span class="plus"></span></summary>
+            <div class="faq-body">
+              Yes. Carbon Panel orchestrates its own isolated server containers and can manage
+              remote Docker nodes too. Because each server is fenced in its own container, it
+              won't collide with your other services.
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>How do I get started?<span class="plus"></span></summary>
+            <div class="faq-body">
+              Clone the repository and run it with Docker Compose, or build from source with Go
+              and Bun. The
+              <a href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">getting-started guide</a>
+              walks through Docker Compose, Proxmox LXC, prebuilt binaries and source builds.
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FINAL CTA
+         ============================================================ -->
+    <section class="section">
+      <div class="container">
+        <div class="final-cta reveal">
+          <h2>Give your servers a control plane.</h2>
+          <p>
+            Self-hosted, Docker-native, and open from the first commit. Spin up your first
+            server today.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary btn-lg" href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">
+              Get started
+              <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+            </a>
+            <a class="btn btn-ghost btn-lg" href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">
+              <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+              View on GitHub
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="#top" aria-label="Carbon Panel home">
+            <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="7" fill="#0f62fe"/>
+              <path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M8 10.5l8 4.5 8-4.5M16 15v9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+            <span class="wordmark">Carbon<b>Panel</b></span>
+          </a>
+          <p>
+            The modern, self-hosted Minecraft server management platform — free, open
+            source, and yours to run.
+          </p>
+          <div class="footer-social">
+            <a href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener" aria-label="GitHub">
+              <svg class="icon"><use href="#i-github"/></svg>
+            </a>
+            <a href="https://github.com/athNdev/carbon-panel/discussions" target="_blank" rel="noopener" aria-label="Community">
+              <svg class="icon"><use href="#i-discord"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#compare">Comparison</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Docs</h4>
+          <ul>
+            <li><a href="https://github.com/athNdev/carbon-panel#getting-started" target="_blank" rel="noopener">Getting started</a></li>
+            <li><a href="https://github.com/athNdev/carbon-panel/blob/main/config.example.yaml" target="_blank" rel="noopener">Configuration</a></li>
+            <li><a href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">API reference</a></li>
+            <li><a href="https://github.com/athNdev/carbon-panel/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://github.com/athNdev/carbon-panel" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://github.com/athNdev/carbon-panel/issues" target="_blank" rel="noopener">Issues</a></li>
+            <li><a href="https://github.com/athNdev/carbon-panel/discussions" target="_blank" rel="noopener">Discussions</a></li>
+            <li><a href="https://github.com/athNdev/carbon-panel/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© <span id="year">2026</span> Carbon Panel contributors.</p>
+        <p class="lic">
+          Licensed
+          <span class="badge">MPL-2.0</span>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+// SPDX-License-Identifier: MPL-2.0
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+// Carbon Panel landing page — progressive enhancement only.
+// Everything on the page works without JS; this adds nav state,
+// staggered scroll-reveal and copy-to-clipboard affordances.
+
+(function () {
+  "use strict";
+
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // --- Sticky nav: solidify after scrolling past the hero top ---
+  const nav = document.querySelector(".nav");
+  if (nav) {
+    const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
+
+  // --- Mobile nav toggle ---
+  const toggle = document.querySelector(".nav-toggle");
+  const links = document.querySelector(".nav-links");
+  if (toggle && links) {
+    toggle.addEventListener("click", () => {
+      const open = links.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", String(open));
+    });
+    links.addEventListener("click", (e) => {
+      if (e.target.closest("a")) {
+        links.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  // --- Scroll reveal with ~100ms sibling stagger ---
+  // Implemented with synchronous rect checks (not IntersectionObserver) so it
+  // runs reliably in every environment and content is never left invisible.
+  const revealEls = Array.from(document.querySelectorAll(".reveal"));
+
+  function revealInView() {
+    const vh = window.innerHeight || 0;
+    revealEls.forEach((el) => {
+      if (el.classList.contains("in")) return;
+      const rect = el.getBoundingClientRect();
+      // Reveal once the element crosses into the lower 88% of the viewport.
+      // Elements already scrolled past also match (their top is negative), so
+      // jump-scrolling or deep-linking never leaves content hidden.
+      if (rect.top < vh * 0.88) {
+        const parent = el.parentElement;
+        const siblings = parent
+          ? Array.from(parent.children).filter((c) => c.classList.contains("reveal"))
+          : [el];
+        const idx = Math.max(0, siblings.indexOf(el));
+        el.style.setProperty("--reveal-delay", `${Math.min(idx, 6) * 90}ms`);
+        el.classList.add("in");
+      }
+    });
+  }
+
+  if (prefersReduced) {
+    revealEls.forEach((el) => el.classList.add("in"));
+  } else if (revealEls.length) {
+    revealInView(); // reveal whatever is already on screen
+    let ticking = false;
+    const schedule = () => {
+      if (ticking) return;
+      ticking = true;
+      window.setTimeout(() => {
+        ticking = false;
+        revealInView();
+      }, 80);
+    };
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    window.addEventListener("load", revealInView);
+  }
+
+  // --- Scroll-driven architecture section ---
+  // Maps the pinned track's scroll progress to a data-beat state machine
+  // plus a continuous --p for scrubbed line drawing.
+  const arch = document.querySelector(".arch");
+  if (arch && !prefersReduced) {
+    const stage = arch.querySelector(".arch-stage");
+    const track = arch.querySelector(".arch-track");
+    const bar = arch.querySelector(".arch-progress-bar");
+    let archTicking = false;
+    const updateArch = () => {
+      const rect = track.getBoundingClientRect();
+      const total = track.offsetHeight - window.innerHeight;
+      const p = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 1;
+      stage.style.setProperty("--p", p.toFixed(4));
+      if (bar) bar.style.transform = `scaleX(${p.toFixed(4)})`;
+      const beat = p < 0.18 ? 0 : p < 0.38 ? 1 : p < 0.58 ? 2 : p < 0.78 ? 3 : 4;
+      if (stage.dataset.beat !== String(beat)) stage.dataset.beat = String(beat);
+      archTicking = false;
+    };
+    const scheduleArch = () => {
+      if (archTicking) return;
+      archTicking = true;
+      window.requestAnimationFrame(updateArch);
+    };
+    window.addEventListener("scroll", scheduleArch, { passive: true });
+    window.addEventListener("resize", scheduleArch);
+    window.addEventListener("load", updateArch);
+    updateArch();
+  }
+
+  // --- Footer year ---
+  const yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+  // --- Live GitHub star count (graceful fallback: hidden if unavailable) ---
+  const starEl = document.querySelector("[data-star-count]");
+  if (starEl && window.fetch) {
+    fetch("https://api.github.com/repos/athNdev/carbon-panel")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.stargazers_count === "number" && data.stargazers_count > 0) {
+          starEl.textContent = data.stargazers_count.toLocaleString("en-US");
+          starEl.hidden = false;
+        }
+      })
+      .catch(() => {
+        /* offline or rate-limited; leave the button without a count */
+      });
+  }
+
+  // --- Copy-to-clipboard for install / code blocks ---
+  const COPY_ICON =
+    '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+  const CHECK_ICON =
+    '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  document.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const target = document.getElementById(btn.getAttribute("data-copy"));
+      if (!target) return;
+      const text = target.innerText.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+        } catch (_) {
+          /* clipboard unavailable; leave button state unchanged */
+        }
+        document.body.removeChild(ta);
+      }
+      btn.classList.add("copied");
+      const original = btn.innerHTML;
+      btn.innerHTML = CHECK_ICON + "<span>Copied</span>";
+      window.setTimeout(() => {
+        btn.classList.remove("copied");
+        btn.innerHTML = original;
+      }, 1800);
+    });
+  });
+})();
+
+</script>
+</body>
+</html>
