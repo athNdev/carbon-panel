@@ -306,6 +306,12 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	blueprintService := services.NewBlueprintService(s.store, s.log)
 	backupService := services.NewBackupService(s.store, s.docker, s.clientPool, s.config.Storage.S3, s.log)
 	backupService.SetWorldDataDir(s.config.Storage.DataDir)
+	if err := backupService.SetBackupEncryption(s.config.Storage.BackupEncryption.KeyID, s.config.Storage.BackupEncryption.Key); err != nil {
+		// Never silently run unencrypted (OSS-236): a misconfigured key fails
+		// backup tasks through the scheduler's per-backup resolution and
+		// refuses encrypted restores here until it is fixed.
+		s.log.Error("Backup encryption is misconfigured; backup tasks and encrypted restores will fail until it is fixed: %v", err)
+	}
 	// Backup delete/restore/lock carry a backup id rather than a server id, so
 	// the interceptor cannot scope them per-server. Inject the enforcer so the
 	// service can resolve the owning server and enforce against it; without

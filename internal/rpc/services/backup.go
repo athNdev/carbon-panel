@@ -17,6 +17,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/athNdev/carbon-panel/internal/auth"
+	"github.com/athNdev/carbon-panel/internal/backupcrypt"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -45,6 +46,9 @@ type BackupService struct {
 	restoringMu      sync.Mutex
 	restoringServers map[string]bool
 	worldDataDir     string
+	// backupKey is the authenticated-encryption key for backup artifacts
+	// (OSS-236). Nil is the explicit disabled-encryption state.
+	backupKey *backupcrypt.Key
 	// remoteDelete overrides the S3 delete in tests. Production leaves it nil.
 	remoteDelete func(ctx context.Context, key string) error
 }
@@ -84,6 +88,18 @@ func NewBackupService(store *storage.Store, dockerCli *docker.Client, pool *dock
 // backup records. Kept as a setter so the constructor signature (and therefore
 // every existing call site) stays stable.
 // SetWorldDataDir configures the world-data seam for manifest'd backups:
+
+// SetBackupEncryption configures the authenticated-encryption key for backup
+// artifacts (OSS-236). Empty key material is the explicit disabled state.
+func (s *BackupService) SetBackupEncryption(keyID, key string) error {
+	resolved, err := backupcrypt.ResolveKey(keyID, key)
+	if err != nil {
+		return err
+	}
+	s.backupKey = resolved
+	return nil
+}
+
 // the controller data directory that owns installation identity and the
 // worldstore journal. Production must set it; without it, restores of
 // worldstore-format archives are refused rather than silently degraded.
@@ -338,6 +354,35 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("backup archive checksum mismatch: expected %s, got %s", rec.SHA256, sum))
 		}
 	}
+
+	// Authenticated-encrypted artifacts decrypt and authenticate before any
+	// world mutation (OSS-236). Wrong or missing keys are refused up front and
+	// plaintext only ever lands in secure staging.
+	if isEnc, _ := backupcrypt.IsEncrypted(archivePath); isEnc {
+		if s.backupKey == nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeFailedPrecondition, backupcrypt.ErrKeyMissing)
+		}
+		plainPath, cleanupPlain, perr := newBackupDownloadPath()
+		if perr != nil {
+			done("failed")
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create secure backup staging path: %w", perr))
+		}
+		if derr := backupcrypt.DecryptFile(archivePath, plainPath, s.backupKey); derr != nil {
+			cleanupPlain()
+			done("failed")
+			return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("cannot decrypt backup: %w", derr))
+		}
+		previousCleanup := cleanupDownloaded
+		cleanupDownloaded = func() {
+			if previousCleanup != nil {
+				previousCleanup()
+			}
+			cleanupPlain()
+		}
+		archivePath = plainPath
+	}
+
 	if err := files.VerifyZipArchive(archivePath); err != nil {
 		done("failed")
 		return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("backup archive corrupt or invalid: %w", err))

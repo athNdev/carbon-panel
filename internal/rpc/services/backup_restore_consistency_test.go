@@ -14,6 +14,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/internal/auth"
+	"github.com/athNdev/carbon-panel/internal/backupcrypt"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/rbac"
@@ -94,6 +95,90 @@ func TestRestoreBackupLegacyZipPurgesStaleFiles(t *testing.T) {
 	}
 	if !strings.Contains(resp.Msg.Message, "swapped in cleanly") || !strings.Contains(resp.Msg.Message, "world verified") {
 		t.Fatalf("restore must report verified recovery evidence, got %q", resp.Msg.Message)
+	}
+}
+
+// TestRestoreBackupEncryptedArtifact verifies the full pipeline (OSS-236
+// repro): an encrypted artifact restores with the right key and is rejected
+// with wrong or missing keys before any data mutation.
+func TestRestoreBackupEncryptedArtifact(t *testing.T) {
+	svc, store, serverID, serverDataDir := restoreFixture(t)
+	ctx := restoreContext(t)
+
+	key := strings.Repeat("ab", 32)
+	srcDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, "server.properties"), []byte("motd=Secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plainZip := filepath.Join(t.TempDir(), "plain.zip")
+	if _, err := files.CreateZipArchive([]string{"server.properties"}, srcDir, plainZip, true); err != nil {
+		t.Fatal(err)
+	}
+
+	backupDir := t.TempDir()
+	artifact := filepath.Join(backupDir, "secret.zip")
+	testKey, err := backupcrypt.ParseKey("key-2026", key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := backupcrypt.EncryptFile(plainZip, artifact, testKey); err != nil {
+		t.Fatal(err)
+	}
+	sum, err := files.SHA256File(artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wrong and missing keys must be refused before any data mutation.
+	rec := newBackupRecord("b-secret", serverID, artifact)
+	rec.SHA256 = sum
+	rec.Encrypted = true
+	rec.EncryptionKeyID = "key-2026"
+	if err := store.CreateBackupRecord(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(serverDataDir, "stale.txt"), []byte("untouched"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Missing key.
+	_, err = svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-secret"}))
+	if err == nil || connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("missing key must be refused with CodeFailedPrecondition, got %v", err)
+	}
+	assertUntouched := func(stage string) {
+		t.Helper()
+		data, rerr := os.ReadFile(filepath.Join(serverDataDir, "stale.txt"))
+		if rerr != nil || string(data) != "untouched" {
+			t.Fatalf("%s: world must be untouched, got %q, %v", stage, data, rerr)
+		}
+	}
+	assertUntouched("missing key")
+
+	// Wrong key.
+	if err := svc.SetBackupEncryption("key-2026", strings.Repeat("cd", 32)); err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-secret"}))
+	if err == nil {
+		t.Fatal("wrong key must be refused")
+	}
+	assertUntouched("wrong key")
+
+	// Right key restores the world.
+	if err := svc.SetBackupEncryption("key-2026", key); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-secret"}))
+	if err != nil || !resp.Msg.Success {
+		t.Fatalf("restore with the right key failed: %v %+v", err, resp)
+	}
+	data, err := os.ReadFile(filepath.Join(serverDataDir, "server.properties"))
+	if err != nil || string(data) != "motd=Secret\n" {
+		t.Fatalf("restored content = %q, %v", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(serverDataDir, "stale.txt")); !os.IsNotExist(err) {
+		t.Fatalf("stale file survived the encrypted restore, stat err = %v", err)
 	}
 }
 
