@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+<meta charset="utf-8">
+<title>Arch diagnosis</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #161616; --layer-01: #262626; --term-bg: #0d0d0d; --border: #393939;
+  --border-strong: #525252; --text-primary: #f4f4f4; --text-secondary: #c6c6c6;
+  --text-tertiary: #8d8d8d; --accent: #0f62fe; --accent-text: #78a9ff;
+  --sans: "IBM Plex Sans", sans-serif; --mono: "IBM Plex Mono", monospace;
+  --ease: cubic-bezier(0.2, 0, 0.38, 0.9); --dur-med: 240ms; --p: 0.5;
+}
+body { margin: 0; background: var(--bg); color: var(--text-secondary); font-family: var(--sans); }
+h2, h3 { color: var(--text-primary); }
+.js .arch-track { height: auto !important; }
+.js .arch-stage { position: static !important; height: auto !important; padding: 24px 0 48px !important; }
+.container { max-width: 1312px; margin: 0 auto; padding: 0 32px; }
+#diag { font-family: var(--mono); font-size: 15px; padding: 24px; line-height: 2; }
+#diag b { color: var(--accent-text); }
+/* ============ ARCH-SECTION-START ============ */
+/* ---------- Architecture (scroll-driven) ---------- */
+.arch {
+  position: relative;
+}
+.arch-track {
+  position: relative;
+}
+.arch-stage {
+  padding: 96px 0;
+}
+.arch-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 56px;
+  align-items: center;
+}
+.arch-copy h2 {
+  font-size: clamp(30px, 3.6vw, 44px);
+  line-height: 1.14;
+  margin-bottom: 16px;
+}
+.arch-sub {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 46ch;
+  margin-bottom: 32px;
+}
+.arch-beats {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0 0 32px;
+  padding: 0;
+}
+.arch-beat h3 {
+  font-size: 17px;
+  margin-bottom: 6px;
+}
+.arch-beat h3::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  background: var(--accent);
+  margin-right: 10px;
+  vertical-align: middle;
+}
+.arch-beat p {
+  font-size: 14.5px;
+  color: var(--text-tertiary);
+  max-width: 44ch;
+}
+.arch-progress {
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.arch-progress-bar {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+/* diagram */
+.arch-visual {
+  min-width: 0;
+}
+.arch-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.a-chip { fill: var(--term-bg); stroke: var(--border-strong); stroke-width: 1; }
+.a-panel-box { fill: rgba(15, 98, 254, 0.06); stroke: var(--accent); stroke-width: 1.5; }
+.a-sub-box { fill: var(--layer-01); stroke: var(--border); stroke-width: 1; transition: stroke var(--dur-med) var(--ease); }
+.a-card { fill: var(--layer-01); stroke: var(--border-strong); stroke-width: 1; }
+.a-mini { fill: var(--term-bg); stroke: var(--border); stroke-width: 1; }
+.a-title { font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--text-primary); }
+.a-mono { font-family: var(--mono); font-size: 11px; font-weight: 500; fill: var(--text-secondary); }
+.a-mini-t { font-family: var(--mono); font-size: 10px; fill: var(--text-secondary); }
+.a-sub { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2px; fill: var(--text-tertiary); }
+.a-cap { font-family: var(--mono); font-size: 9px; letter-spacing: 1px; fill: var(--accent-text); }
+.a-dot { fill: var(--accent-text); opacity: 0.7; }
+.a-line { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+
+/* Pinned + scrubbed presentation: JS only, motion OK, wide viewports.
+   Everything else degrades to the static layout above. */
+@media (prefers-reduced-motion: no-preference) and (min-width: 901px) {
+  .js .arch-track {
+    height: 320vh;
+  }
+  .js .arch-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 0;
+  }
+  .js .arch-inner {
+    width: 100%;
+  }
+
+  /* text beats crossfade */
+  .js .arch-beats {
+    position: relative;
+    display: block;
+    height: 132px;
+  }
+  .js .arch-beat {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
+  }
+  .js .arch-stage[data-beat="0"] .arch-beat[data-beat-for="0"],
+  .js .arch-stage[data-beat="1"] .arch-beat[data-beat-for="1"],
+  .js .arch-stage[data-beat="2"] .arch-beat[data-beat-for="2"],
+  .js .arch-stage[data-beat="3"] .arch-beat[data-beat-for="3"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* diagram element gating (appear-level data-ap) */
+  .js .arch-stage .a-anim {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
+  }
+  .js .arch-stage[data-beat="0"] [data-ap="0"],
+  .js .arch-stage[data-beat="1"] [data-ap="0"],
+  .js .arch-stage[data-beat="2"] [data-ap="0"],
+  .js .arch-stage[data-beat="3"] [data-ap="0"],
+  .js .arch-stage[data-beat="1"] [data-ap="1"],
+  .js .arch-stage[data-beat="2"] [data-ap="1"],
+  .js .arch-stage[data-beat="3"] [data-ap="1"],
+  .js .arch-stage[data-beat="2"] [data-ap="2"],
+  .js .arch-stage[data-beat="3"] [data-ap="2"],
+  .js .arch-stage[data-beat="3"] [data-ap="3"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* active-state highlights */
+  .js .arch-stage[data-beat="1"] .a-proxy-box {
+    stroke: var(--accent);
+  }
+  .js .arch-stage[data-beat="3"] .a-control-box {
+    stroke: var(--accent);
+    filter: drop-shadow(0 0 6px rgba(15, 98, 254, 0.35));
+  }
+
+  /* scrubbed line draws */
+  .js .arch-stage .a-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.03) * 6, 1));
+  }
+  .js .arch-stage .a-draw[data-draw="fan"] {
+    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.26) * 4.5, 1));
+  }
+  .js .arch-stage .a-draw[data-draw="backup"] {
+    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.74) * 6, 1));
+  }
+
+  .js .arch-progress-bar {
+    transform: scaleX(var(--p, 0));
+    transition: transform 100ms linear;
+  }
+}
+
+@media (max-width: 900px) {
+  .arch-inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .arch-visual {
+    overflow-x: auto;
+  }
+  .arch-svg {
+    min-width: 560px;
+  }
+}
+
+</style>
+</head>
+<body>
+<div id="diag">diagnosing…</div>
+<section class="arch" id="architecture" aria-label="How Carbon Panel fits your machines">
+      <div class="arch-track">
+        <div class="arch-stage" data-beat="0" style="--p: 0.12">
+          <div class="container arch-inner">
+            <div class="arch-copy">
+              <h2>One panel. Every machine.</h2>
+              <p class="arch-sub">
+                Carbon Panel runs Minecraft servers wherever you have machines — the PC
+                in your room, a box in the closet, a VPS in the cloud — and manages them
+                as one fleet behind one address.
+              </p>
+              <ol class="arch-beats">
+                <li class="arch-beat" data-beat-for="0">
+                  <h3>Players get one address.</h3>
+                  <p>survival.yourdomain.com is all they ever type — one DNS record and one port, no juggling.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="1">
+                  <h3>The proxy routes every connection.</h3>
+                  <p>The handshake names the destination, so Carbon Panel sends each player to the right container on the right machine.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="2">
+                  <h3>Servers run where you have machines.</h3>
+                  <p>Keep the always-on survival at home and burst event servers into the cloud — or the other way around.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="3">
+                  <h3>One control plane keeps it in sync.</h3>
+                  <p>Schedules, backups, routes and consoles work the same across every machine — and idle servers deep-sleep at zero RAM.</p>
+                </li>
+              </ol>
+              <div class="arch-progress" aria-hidden="true"><span class="arch-progress-bar"></span></div>
+            </div>
+
+            <div class="arch-visual">
+              <svg class="arch-svg" viewBox="0 0 640 520" role="img" aria-label="Architecture diagram: players connect through one address to Carbon Panel, which routes them to servers on your home machine and a cloud VPS, with one control plane handling schedules and offsite backups">
+                <defs>
+                  <pattern id="arch-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <path d="M32 0H0V32" fill="none" stroke="rgba(244,244,244,0.05)" stroke-width="1" />
+                  </pattern>
+                </defs>
+                <rect x="0" y="0" width="640" height="520" fill="url(#arch-grid)" />
+
+                <!-- connection lines (scrubbed draw-in) -->
+                <path class="a-line a-draw" data-draw="in" pathLength="1" d="M192 176H240" />
+                <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 162 448 162" />
+                <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 318 448 318" />
+                <path class="a-line a-draw" data-draw="backup" pathLength="1" d="M400 346C428 346 424 442 448 442" />
+
+                <!-- players -->
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-chip" x="16" y="140" width="176" height="72" rx="10" />
+                  <text class="a-title" x="36" y="168">players</text>
+                  <text class="a-sub" x="36" y="190">survival.yourdomain.com</text>
+                  <circle class="a-dot" cx="168" cy="152" r="4" />
+                  <circle class="a-dot" cx="152" cy="152" r="4" />
+                </g>
+
+                <!-- carbon panel -->
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-panel-box" x="240" y="96" width="176" height="320" rx="14" />
+                  <text class="a-title" x="256" y="124">Carbon Panel</text>
+                </g>
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-sub-box a-proxy-box" x="256" y="140" width="144" height="76" rx="8" />
+                  <text class="a-mono" x="272" y="170">proxy :25565</text>
+                  <text class="a-sub" x="272" y="190">handshake-aware</text>
+                </g>
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-sub-box a-control-box" x="256" y="296" width="144" height="100" rx="8" />
+                  <text class="a-mono" x="272" y="326">control plane</text>
+                </g>
+                <g class="a-anim" data-ap="3">
+                  <text class="a-sub" x="272" y="348">schedules · backups</text>
+                  <text class="a-sub" x="272" y="366">routes · console · API</text>
+                </g>
+
+                <!-- machines -->
+                <g class="a-anim" data-ap="2">
+                  <rect class="a-card" x="448" y="104" width="176" height="116" rx="12" />
+                  <text class="a-title" x="464" y="132">Home machine</text>
+                  <text class="a-cap" x="464" y="150">AT HOME</text>
+                  <rect class="a-mini" x="464" y="158" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="174">survival-01 · 6 GB</text>
+                  <rect class="a-mini" x="464" y="188" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="204">creative · 4 GB</text>
+                </g>
+                <g class="a-anim" data-ap="2">
+                  <rect class="a-card" x="448" y="260" width="176" height="116" rx="12" />
+                  <text class="a-title" x="464" y="288">Cloud VPS</text>
+                  <text class="a-cap" x="464" y="306">IN THE CLOUD</text>
+                  <rect class="a-mini" x="464" y="314" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="330">event-01 · 8 GB</text>
+                  <rect class="a-mini" x="464" y="344" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="360">lobby-01 · 4 GB</text>
+                </g>
+
+                <!-- offsite backups -->
+                <g class="a-anim" data-ap="3">
+                  <rect class="a-card" x="448" y="416" width="176" height="52" rx="10" />
+                  <text class="a-mono" x="464" y="440">S3 · offsite backups</text>
+                  <text class="a-sub" x="464" y="458">world snapshots</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+<script>
+(function () {
+  const out = [];
+  const mq = window.matchMedia("(prefers-reduced-motion: no-preference) and (min-width: 901px)");
+  out.push("media compound matches: <b>" + mq.matches + "</b>");
+  out.push("prefers reduce: <b>" + window.matchMedia("(prefers-reduced-motion: reduce)").matches + "</b>");
+  out.push("innerWidth: <b>" + window.innerWidth + "</b>");
+  let ruleCount = -1;
+  try { ruleCount = document.styleSheets[document.styleSheets.length - 1].cssRules.length; } catch (e) { ruleCount = "ERR " + e.message; }
+  out.push("last stylesheet rule count: <b>" + ruleCount + "</b>");
+  const stage = document.querySelector(".arch-stage");
+  out.push("stage data-beat: <b>" + stage.dataset.beat + "</b> --p=<b>" + stage.style.getPropertyValue("--p") + "</b>");
+  const beat0 = document.querySelector('.arch-beat[data-beat-for="0"]');
+  const beat1 = document.querySelector('.arch-beat[data-beat-for="1"]');
+  const cs0 = getComputedStyle(beat0), cs1 = getComputedStyle(beat1);
+  out.push("beat0 (should be opacity 1): opacity=<b>" + cs0.opacity + "</b> position=" + cs0.position + " transition=" + cs0.transitionProperty + " / " + cs0.transitionDuration);
+  out.push("beat1 (should be opacity 0): opacity=<b>" + cs1.opacity + "</b> position=" + cs1.position);
+  const g2 = document.querySelector('[data-ap="2"]');
+  out.push("data-ap=2 group (should be opacity 0): opacity=<b>" + getComputedStyle(g2).opacity + "</b> transform=" + getComputedStyle(g2).transform);
+  const draw = document.querySelector('.a-draw[data-draw="fan"]');
+  const dcs = getComputedStyle(draw);
+  out.push("fan line: dasharray=<b>" + dcs.strokeDasharray + "</b> dashoffset=<b>" + dcs.strokeDashoffset + "</b>");
+  document.getElementById("diag").innerHTML = out.join("<br>");
+})();
+</script>
+</body>
+</html>
