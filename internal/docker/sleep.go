@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -71,13 +70,9 @@ type DeepSleepManager struct {
 	store              SleeperStore
 	refresher          RouteRefresher
 	logger             *logger.Logger
-	idleTracker        map[string]time.Time
-	trackerMu          sync.RWMutex
+	idle               *idleTracker
 	mu                 sync.Mutex
-	playerCount        func(serverID string) int
 	wakePreparer       WakePreparer
-	inflight           map[string]struct{}
-	inflightMu         sync.Mutex
 	ctx                context.Context
 	cancel             context.CancelFunc
 }
@@ -86,13 +81,12 @@ type DeepSleepManager struct {
 // may be nil (RCON flush and route refresh are then skipped).
 func NewDeepSleepManager(controller SleepController, store SleeperStore, commander SleepCommander, refresher RouteRefresher, log *logger.Logger) *DeepSleepManager {
 	return &DeepSleepManager{
-		controller:  controller,
-		commander:   commander,
-		store:       store,
-		refresher:   refresher,
-		logger:      log,
-		idleTracker: make(map[string]time.Time),
-		inflight:    make(map[string]struct{}),
+		controller: controller,
+		commander:  commander,
+		store:      store,
+		refresher:  refresher,
+		logger:     log,
+		idle:       newIdleTracker(),
 	}
 }
 
@@ -130,9 +124,7 @@ func (m *DeepSleepManager) getController(nodeID string) (SleepController, error)
 // SetPlayerCountProvider configures the online-player source of truth (same
 // rationale as HibernationManager: store rows never persist PlayersOnline).
 func (m *DeepSleepManager) SetPlayerCountProvider(provider func(serverID string) int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.playerCount = provider
+	m.idle.SetPlayerCountProvider(provider)
 }
 
 // SetWakePreparer installs the staged-configuration preflight for cold wakes.
@@ -142,50 +134,17 @@ func (m *DeepSleepManager) SetWakePreparer(preparer WakePreparer) {
 	m.wakePreparer = preparer
 }
 
-func (m *DeepSleepManager) onlinePlayers(srv *db.Server) int {
-	m.mu.Lock()
-	provider := m.playerCount
-	m.mu.Unlock()
-	if provider != nil {
-		return provider(srv.ID)
-	}
-	return srv.PlayersOnline
-}
-
 func (m *DeepSleepManager) tryBeginTransition(serverID, op string) bool {
-	if !TryBeginServerTransition(serverID) {
-		if m.logger != nil {
-			m.logger.Debug("Deep sleep: skipping %s for server %s: transition already in flight", op, serverID)
-		}
-		return false
-	}
-	m.inflightMu.Lock()
-	if _, busy := m.inflight[serverID]; busy {
-		m.inflightMu.Unlock()
-		EndServerTransition(serverID)
-		if m.logger != nil {
-			m.logger.Debug("Deep sleep: skipping %s for server %s: transition already in flight", op, serverID)
-		}
-		return false
-	}
-	m.inflight[serverID] = struct{}{}
-	m.inflightMu.Unlock()
-	return true
+	return m.idle.tryBegin(serverID, op, m.logger)
 }
 
 func (m *DeepSleepManager) endTransition(serverID string) {
-	m.inflightMu.Lock()
-	delete(m.inflight, serverID)
-	m.inflightMu.Unlock()
-	EndServerTransition(serverID)
+	m.idle.end(serverID)
 }
 
 // IsTransitioning returns whether the server is currently transitioning (sleeping or waking).
 func (m *DeepSleepManager) IsTransitioning(serverID string) bool {
-	m.inflightMu.Lock()
-	defer m.inflightMu.Unlock()
-	_, busy := m.inflight[serverID]
-	return busy
+	return m.idle.transitioning(serverID)
 }
 
 // Start begins the background idle-checker routine.
@@ -224,9 +183,7 @@ func (m *DeepSleepManager) Stop() {
 
 // RecordActivity marks a server as recently active, resetting its idle countdown.
 func (m *DeepSleepManager) RecordActivity(serverID string) {
-	m.trackerMu.Lock()
-	defer m.trackerMu.Unlock()
-	delete(m.idleTracker, serverID)
+	m.idle.RecordActivity(serverID)
 }
 
 // CheckIdleServers evaluates all running deep-sleep-enabled servers and stops idle ones.
@@ -240,50 +197,14 @@ func (m *DeepSleepManager) CheckIdleServers(ctx context.Context) error {
 		return fmt.Errorf("failed to list servers: %w", err)
 	}
 
-	now := time.Now()
-
-	for _, srv := range servers {
-		if !srv.AutoDeepSleep || srv.Status != db.StatusRunning || srv.ContainerID == "" {
-			m.trackerMu.Lock()
-			delete(m.idleTracker, srv.ID)
-			m.trackerMu.Unlock()
-			continue
-		}
-
-		if m.onlinePlayers(srv) > 0 {
-			m.trackerMu.Lock()
-			delete(m.idleTracker, srv.ID)
-			m.trackerMu.Unlock()
-			continue
-		}
-
-		timeoutMinutes := srv.DeepSleepTimeoutMinutes
-		if timeoutMinutes <= 0 {
-			timeoutMinutes = 30
-		}
-		idleDuration := time.Duration(timeoutMinutes) * time.Minute
-
-		m.trackerMu.Lock()
-		idleSince, tracked := m.idleTracker[srv.ID]
-		if !tracked {
-			m.idleTracker[srv.ID] = now
-			m.trackerMu.Unlock()
-			continue
-		}
-		m.trackerMu.Unlock()
-
-		if now.Sub(idleSince) >= idleDuration {
-			if m.logger != nil {
-				m.logger.Info("Server %s (%s) idle for %v, deep-sleeping container %s (full stop)...",
-					srv.Name, srv.ID, now.Sub(idleSince), srv.ContainerID)
-			}
-			if err := m.SleepServer(ctx, srv.ID); err != nil {
-				if m.logger != nil {
-					m.logger.Error("Failed to deep-sleep server %s: %v", srv.Name, err)
-				}
-			}
-		}
-	}
+	m.idle.sweep(ctx, servers, idleMode{
+		DefaultTimeoutMinutes: 30,
+		Eligible:              func(s *db.Server) bool { return s.AutoDeepSleep },
+		TimeoutMinutes:        func(s *db.Server) int { return s.DeepSleepTimeoutMinutes },
+		Sleep:                 m.SleepServer,
+		IdleLogFormat:         "Server %s (%s) idle for %v, deep-sleeping container %s (full stop)...",
+		ErrorLogFormat:        "Failed to deep-sleep server %s: %v",
+	}, m.logger)
 
 	return nil
 }
@@ -513,9 +434,7 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 		return errors.Join(fmt.Errorf("cannot confirm deep sleep for server %s in container status %s", serverID, status), rollbackErr)
 	}
 
-	m.trackerMu.Lock()
-	delete(m.idleTracker, serverID)
-	m.trackerMu.Unlock()
+	m.idle.RecordActivity(serverID)
 
 	if m.refresher != nil {
 		m.refresher(serverID)
@@ -630,9 +549,7 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 		return errors.Join(persistErr, rollbackErr)
 	}
 
-	m.trackerMu.Lock()
-	delete(m.idleTracker, serverID)
-	m.trackerMu.Unlock()
+	m.idle.RecordActivity(serverID)
 
 	if m.refresher != nil {
 		m.refresher(serverID)

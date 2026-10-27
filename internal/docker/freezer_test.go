@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -224,9 +223,7 @@ func TestHibernationManager_CheckIdleServers(t *testing.T) {
 	assert.Empty(t, freezer.pauseCalls)
 
 	// Artificially age the idle tracker entry
-	mgr.trackerMu.Lock()
-	mgr.idleTracker["srv-idle"] = time.Now().Add(-2 * time.Minute)
-	mgr.trackerMu.Unlock()
+	mgr.idle.markIdleSince("srv-idle", time.Now().Add(-2*time.Minute))
 
 	// Second pass: idle server should be paused, active server should remain running
 	err = mgr.CheckIdleServers(ctx)
@@ -269,9 +266,7 @@ func TestHibernationManager_PlayerCountProvider(t *testing.T) {
 	})
 
 	require.NoError(t, mgr.CheckIdleServers(ctx))
-	mgr.trackerMu.Lock()
-	mgr.idleTracker["srv-busy"] = time.Now().Add(-2 * time.Minute)
-	mgr.trackerMu.Unlock()
+	mgr.idle.markIdleSince("srv-busy", time.Now().Add(-2*time.Minute))
 
 	require.NoError(t, mgr.CheckIdleServers(ctx))
 	assert.NotContains(t, freezer.pauseCalls, "cnt-busy")
@@ -308,13 +303,7 @@ func TestHibernationManager_SingleFlight(t *testing.T) {
 
 	// Wait until the first transition holds the in-flight slot.
 	deadline := time.Now().Add(5 * time.Second)
-	for {
-		mgr.inflightMu.Lock()
-		_, busy := mgr.inflight["srv-race"]
-		mgr.inflightMu.Unlock()
-		if busy {
-			break
-		}
+	for !mgr.idle.transitioning("srv-race") {
 		if time.Now().After(deadline) {
 			t.Fatal("timed out waiting for first hibernate to go in-flight")
 		}

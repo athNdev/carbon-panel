@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -166,9 +165,7 @@ func TestDeepSleepManager_SleepAndWake(t *testing.T) {
 
 	// Idle past timeout → graceful stop + deepsleep status.
 	require.NoError(t, mgr.CheckIdleServers(ctx))
-	mgr.trackerMu.Lock()
-	mgr.idleTracker["srv-sleep"] = time.Now().Add(-2 * time.Minute)
-	mgr.trackerMu.Unlock()
+	mgr.idle.markIdleSince("srv-sleep", time.Now().Add(-2*time.Minute))
 	require.NoError(t, mgr.CheckIdleServers(ctx))
 
 	commander.mu.Lock()
@@ -269,9 +266,7 @@ func TestDeepSleepManager_PlayersBlockSleep(t *testing.T) {
 	mgr.SetPlayerCountProvider(func(serverID string) int { return 2 })
 
 	require.NoError(t, mgr.CheckIdleServers(ctx))
-	mgr.trackerMu.Lock()
-	mgr.idleTracker["srv-sleep"] = time.Now().Add(-2 * time.Minute)
-	mgr.trackerMu.Unlock()
+	mgr.idle.markIdleSince("srv-sleep", time.Now().Add(-2*time.Minute))
 	require.NoError(t, mgr.CheckIdleServers(ctx))
 
 	srv, err := store.GetServer(ctx, "srv-sleep")
@@ -297,13 +292,7 @@ func TestDeepSleepManager_WakeSingleFlight(t *testing.T) {
 	}()
 
 	deadline := time.Now().Add(5 * time.Second)
-	for {
-		mgr.inflightMu.Lock()
-		_, busy := mgr.inflight["srv-sleep"]
-		mgr.inflightMu.Unlock()
-		if busy {
-			break
-		}
+	for !mgr.idle.transitioning("srv-sleep") {
 		if time.Now().After(deadline) {
 			t.Fatal("timed out waiting for wake to go in-flight")
 		}
