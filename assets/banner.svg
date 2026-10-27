@@ -29,8 +29,9 @@
   <rect x="0" y="150" width="1280" height="410" fill="url(#pool)" />
 
   <!-- structural lattice -->
-  <g stroke="#f4f4f4" stroke-opacity="0.055" stroke-width="1">
+  <g stroke="#f4f4f4" stroke-opacity="0.075" stroke-width="1">
     <path d="M40 0V560M120 0V560M200 0V560M280 0V560M360 0V560M440 0V560M520 0V560M600 0V560M680 0V560M760 0V560M840 0V560M920 0V560M1000 0V560M1080 0V560M1160 0V560M1240 0V560" />
+    <path d="M0 418H1280" stroke-opacity="0.09" />
   </g>
 
   <!-- brand -->
@@ -43,8 +44,6 @@
   <text x="640" y="372" text-anchor="middle" fill="#c6c6c6"
         font-family="IBM Plex Sans, Inter, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
         font-size="27" font-weight="400">Minecraft servers, run like production.</text>
-
-  <path d="M560 418H720" stroke="#f4f4f4" stroke-opacity="0.16" stroke-width="1" />
 
   <text x="640" y="462" text-anchor="middle" fill="#8d8d8d"
         font-family="IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
