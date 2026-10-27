@@ -232,6 +232,49 @@ func MapDataPath(node NodeInfo, dataRoot string) (string, error) {
 	return filepath.Join(root, filepath.Base(dataRoot)), nil
 }
 
+// relUnder returns the cleaned path of p relative to dataRoot. It reports
+// false for paths outside the data root.
+func relUnder(dataRoot, p string) (string, bool) {
+	rel, err := filepath.Rel(dataRoot, p)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return rel, true
+}
+
+// MapPath maps an arbitrary path under a server data root to its
+// controller-side location (see MapDataPath). Paths outside the data root and
+// nodes without reachable storage are returned unchanged.
+func MapPath(node NodeInfo, dataRoot, p string) string {
+	if node.IsLocal {
+		return p
+	}
+	root := sharedStorageRoot(node)
+	if root == "" {
+		return p
+	}
+	rel, ok := relUnder(dataRoot, p)
+	if !ok {
+		return p
+	}
+	return filepath.Join(root, filepath.Base(dataRoot), rel)
+}
+
+// NodePath maps an arbitrary path under a server data root to the node-side
+// location that holds it: the Docker bind source for containers on that node.
+// Local nodes and nodes without a declared storage root see identical paths
+// on both sides, so the path is returned unchanged.
+func NodePath(node NodeInfo, dataRoot, p string) string {
+	if node.IsLocal || node.StorageRoot == "" {
+		return p
+	}
+	rel, ok := relUnder(dataRoot, p)
+	if !ok {
+		return p
+	}
+	return filepath.Join(node.StorageRoot, filepath.Base(dataRoot), rel)
+}
+
 // EnsureDataRoot resolves the mapped data root like MapDataPath and creates
 // the server directory under it when missing, so restore can target a fresh
 // directory on shared storage. The controller-side storage root itself must

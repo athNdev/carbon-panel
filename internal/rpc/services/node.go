@@ -271,11 +271,14 @@ func (s *NodeService) UpdateNode(ctx context.Context, req *connect.Request[v1.Up
 	if msg.Enabled != nil {
 		node.Enabled = *msg.Enabled
 	}
-	if msg.StorageRoot != nil {
+	storageChanged := false
+	if msg.StorageRoot != nil && *msg.StorageRoot != node.StorageRoot {
 		node.StorageRoot = *msg.StorageRoot
+		storageChanged = true
 	}
-	if msg.ControllerStorageRoot != nil {
+	if msg.ControllerStorageRoot != nil && *msg.ControllerStorageRoot != node.ControllerStorageRoot {
 		node.ControllerStorageRoot = *msg.ControllerStorageRoot
+		storageChanged = true
 	}
 
 	if err := s.store.UpdateNode(ctx, node); err != nil {
@@ -283,7 +286,7 @@ func (s *NodeService) UpdateNode(ctx context.Context, req *connect.Request[v1.Up
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update node: %w", err))
 	}
 
-	if hostOrTLSChanged && s.pool != nil {
+	if (hostOrTLSChanged || storageChanged) && s.pool != nil {
 		_ = s.pool.RemoveNode(node.ID)
 	}
 

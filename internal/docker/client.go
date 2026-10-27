@@ -30,6 +30,7 @@ import (
 
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/utils"
@@ -202,6 +203,22 @@ func TranslateToHostPath(containerPath string) string {
 	return filepath.Join(hostDataPath, filepath.FromSlash(relPath))
 }
 
+// bindSource translates a bind source for the daemon this client talks to.
+// A node that declares a storage root sees its own layout (ADR 0005): paths
+// under the server data root map to the node-side storage root. Other
+// daemons keep the panel-in-container translation. ok reports whether the
+// source can be represented on the daemon at all: sources outside the server
+// data root cannot be mapped onto a node with its own storage layout.
+func (c *Client) bindSource(serverDataPath, source string) (string, bool) {
+	if c.nodeStorage.IsLocal || c.nodeStorage.StorageRoot == "" {
+		return TranslateToHostPath(source), true
+	}
+	if mapped := nodestorage.NodePath(c.nodeStorage, serverDataPath, source); mapped != source {
+		return mapped, true
+	}
+	return source, false
+}
+
 // Fetches the docker images manifest from itzg
 func fetchDockerImages() ([]DockerImageTag, error) {
 	// Check cache first
@@ -319,6 +336,9 @@ type Client struct {
 	// gameStop overrides the rcon-cli stop used before Docker's timeout.
 	// Production leaves it nil.
 	gameStop func(ctx context.Context, containerID string) error
+	// nodeStorage is the owning node's storage mapping (ADR 0005). A node
+	// that declares a storage root sees bind sources in its own layout.
+	nodeStorage nodestorage.NodeInfo
 }
 
 // IsRemote reports whether this client talks to a Docker daemon whose
@@ -855,8 +875,9 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	// the port is marked public (MINE-205).
 	maps.Copy(portBindings, additionalPortBindings(server.AdditionalPorts, useProxy))
 
-	// Handle path translation when Carbon Panel runs in a container
-	dataPath := TranslateToHostPath(server.DataPath)
+	// Handle path translation for the owning node's storage layout (ADR 0005)
+	// and when Carbon Panel runs in a container.
+	dataPath, _ := c.bindSource(server.DataPath, server.DataPath)
 
 	// A remote daemon owns the bind source path. Creating it in the panel
 	// process would only create an unrelated local directory with the same

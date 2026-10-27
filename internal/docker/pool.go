@@ -597,10 +597,11 @@ func NewClientForNode(node *models.Node, log *logger.Logger, baseConfig ClientCo
 	}
 
 	c := &Client{
-		docker: dockerCli,
-		host:   host,
-		log:    log,
-		config: baseConfig,
+		docker:      dockerCli,
+		host:        host,
+		log:         log,
+		config:      baseConfig,
+		nodeStorage: node.StorageInfo(),
 	}
 
 	go func() {

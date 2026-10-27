@@ -215,3 +215,42 @@ func TestIsLegacyLocalNodeID(t *testing.T) {
 		}
 	}
 }
+
+func TestMapPathAndNodePath(t *testing.T) {
+	dataRoot := filepath.Join("var", "data", "servers", "mc")
+	sub := filepath.Join(dataRoot, "plugins", "x.jar")
+	outside := filepath.Join("var", "data", "backups", "nightly.zip")
+
+	local := NodeInfo{Name: "local", IsLocal: true, StorageRoot: "/mnt/shared"}
+	if got := MapPath(local, dataRoot, sub); got != sub {
+		t.Errorf("MapPath(local) = %q, want unchanged", got)
+	}
+	if got := NodePath(local, dataRoot, sub); got != sub {
+		t.Errorf("NodePath(local) = %q, want unchanged", got)
+	}
+
+	shared := NodeInfo{Name: "r1", StorageRoot: filepath.Join("srv", "shared")}
+	if got, want := MapPath(shared, dataRoot, dataRoot), filepath.Join("srv", "shared", "mc"); got != want {
+		t.Errorf("MapPath(root) = %q, want %q", got, want)
+	}
+	if got, want := MapPath(shared, dataRoot, sub), filepath.Join("srv", "shared", "mc", "plugins", "x.jar"); got != want {
+		t.Errorf("MapPath(sub) = %q, want %q", got, want)
+	}
+	if got := MapPath(shared, dataRoot, outside); got != outside {
+		t.Errorf("MapPath(outside) = %q, want unchanged", got)
+	}
+	if got, want := NodePath(shared, dataRoot, sub), filepath.Join("srv", "shared", "mc", "plugins", "x.jar"); got != want {
+		t.Errorf("NodePath(sub) = %q, want %q", got, want)
+	}
+	if got := NodePath(shared, dataRoot, outside); got != outside {
+		t.Errorf("NodePath(outside) = %q, want unchanged", got)
+	}
+
+	bare := NodeInfo{Name: "r2"}
+	if got := MapPath(bare, dataRoot, sub); got != sub {
+		t.Errorf("MapPath(no roots) = %q, want unchanged", got)
+	}
+	if got := NodePath(bare, dataRoot, sub); got != sub {
+		t.Errorf("NodePath(no roots) = %q, want unchanged", got)
+	}
+}
