@@ -58,6 +58,8 @@ func shouldAutoStartOnBoot(server *storage.Server) bool {
 
 func main() {
 	var configPath = flag.String("config", "./config.yaml", "Path to configuration file")
+	restorePanelBackup := flag.String("restore-panel-backup", "",
+		"Restore the panel database from a snapshot and exit; the panel must be stopped")
 	printRecoveryKey := flag.Bool("print-recovery-key", false,
 		"Print the recovery key to stderr on startup (off by default: the key bypasses authentication)")
 	flag.Parse()
@@ -85,6 +87,15 @@ func main() {
 	log := logger.NewWithConfig(logConfig)
 	defer log.Close()
 	docker.SetTransitionWarner(log.Warn)
+
+	// Offline maintenance: restore the panel database from a snapshot and exit.
+	if *restorePanelBackup != "" {
+		if err := storage.RestorePanelDatabase(cfg.Database.Path, *restorePanelBackup); err != nil {
+			log.Fatal("Panel database restore failed: %v", err)
+		}
+		log.Info("Panel database restored from %s (previous database kept at %s.pre-restore)", *restorePanelBackup, cfg.Database.Path)
+		return
+	}
 
 	// Refuse to start with no authentication provider unless the operator
 	// explicitly opted in. Without this guard the panel would synthesise an
