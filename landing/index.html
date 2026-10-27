@@ -152,6 +152,7 @@
 
       <nav class="nav-links" aria-label="Primary">
         <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
         <a href="#how">How it works</a>
         <a href="#compare">Compare</a>
         <a href="#faq">FAQ</a>
@@ -191,8 +192,9 @@
 
           <p class="hero-sub">
             Carbon Panel is the open-source, Docker-native control plane for Minecraft
-            servers. Every server in its own container, players routed by hostname, and
-            modpacks shipped straight from CurseForge and Modrinth.
+            servers. Every server in its own container — on your home machine or in the
+            cloud — players routed by hostname, and modpacks shipped straight from
+            CurseForge and Modrinth.
           </p>
 
           <div class="hero-cta">
@@ -337,14 +339,14 @@
             <div class="sub">vanilla → paper, fabric, forge</div>
           </div>
           <div class="stat reveal">
-            <div class="num">1</div>
-            <div class="label">Public port for it all</div>
-            <div class="sub">25565, hostname-routed</div>
+            <div class="num">0<span class="unit"> B</span></div>
+            <div class="label">Idle RAM with deep-sleep</div>
+            <div class="sub">wakes when a player connects</div>
           </div>
           <div class="stat reveal">
-            <div class="num">0</div>
-            <div class="label">Cloud accounts</div>
-            <div class="sub">runs on your own hardware</div>
+            <div class="num">∞</div>
+            <div class="label">Machines, one panel</div>
+            <div class="sub">home machine, homelab, cloud VPS</div>
           </div>
           <div class="stat reveal">
             <div class="num">MPL<span class="unit">-2.0</span></div>
@@ -488,12 +490,12 @@
             <div class="t-tags"><span>S3 / MinIO</span><span>retention</span></div>
           </div>
 
-          <!-- Multi-node -->
+          <!-- Multi-machine -->
           <div class="tile reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-server"/></svg></div>
-            <h3>Multi-node clustering</h3>
-            <p>Spread servers across remote Docker nodes with latency-aware placement, TLS client certs, and synced proxy routes.</p>
-            <div class="t-tags"><span>remote Docker</span><span>placement</span></div>
+            <h3>Your machines, one panel</h3>
+            <p>Add your home machine, a homelab box, or a cloud VPS as a node — then place each server wherever it makes sense. Routes and state stay in sync.</p>
+            <div class="t-tags"><span>home lab</span><span>cloud VPS</span><span>placement</span></div>
           </div>
 
           <!-- Automation -->
@@ -529,6 +531,117 @@
               <span class="sc-pill sc-1"><span class="sc-dot"></span>running · 6 GB</span>
               <span class="sc-pill sc-2"><span class="sc-dot"></span>deep-sleep · 0 B</span>
               <span class="sc-pill sc-3"><span class="sc-dot"></span>player connects · waking</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         ARCHITECTURE — scroll-driven
+         ============================================================ -->
+    <section class="arch" id="architecture" aria-label="How Carbon Panel fits your machines">
+      <div class="arch-track">
+        <div class="arch-stage" data-beat="0" style="--p: 0">
+          <div class="container arch-inner">
+            <div class="arch-copy">
+              <h2>One panel. Every machine.</h2>
+              <p class="arch-sub">
+                Carbon Panel runs Minecraft servers wherever you have machines — the PC
+                in your room, a box in the closet, a VPS in the cloud — and manages them
+                as one fleet behind one address.
+              </p>
+              <ol class="arch-beats">
+                <li class="arch-beat" data-beat-for="0">
+                  <h3>Players get one address.</h3>
+                  <p>survival.yourdomain.com is all they ever type — one DNS record and one port, no juggling.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="1">
+                  <h3>The proxy routes every connection.</h3>
+                  <p>The handshake names the destination, so Carbon Panel sends each player to the right container on the right machine.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="2">
+                  <h3>Servers run where you have machines.</h3>
+                  <p>Keep the always-on survival at home and burst event servers into the cloud — or the other way around.</p>
+                </li>
+                <li class="arch-beat" data-beat-for="3">
+                  <h3>One control plane keeps it in sync.</h3>
+                  <p>Schedules, backups, routes and consoles work the same across every machine — and idle servers deep-sleep at zero RAM.</p>
+                </li>
+              </ol>
+              <div class="arch-progress" aria-hidden="true"><span class="arch-progress-bar"></span></div>
+            </div>
+
+            <div class="arch-visual">
+              <svg class="arch-svg" viewBox="0 0 640 520" role="img" aria-label="Architecture diagram: players connect through one address to Carbon Panel, which routes them to servers on your home machine and a cloud VPS, with one control plane handling schedules and offsite backups">
+                <defs>
+                  <pattern id="arch-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <path d="M32 0H0V32" fill="none" stroke="rgba(244,244,244,0.05)" stroke-width="1" />
+                  </pattern>
+                </defs>
+                <rect x="0" y="0" width="640" height="520" fill="url(#arch-grid)" />
+
+                <!-- connection lines (scrubbed draw-in) -->
+                <path class="a-line a-draw" data-draw="in" pathLength="1" d="M192 176H240" />
+                <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 162 448 162" />
+                <path class="a-line a-draw" data-draw="fan" pathLength="1" d="M400 178C424 178 428 318 448 318" />
+                <path class="a-line a-draw" data-draw="backup" pathLength="1" d="M400 346C428 346 424 442 448 442" />
+
+                <!-- players -->
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-chip" x="16" y="140" width="176" height="72" rx="10" />
+                  <text class="a-title" x="36" y="168">players</text>
+                  <text class="a-sub" x="36" y="190">survival.yourdomain.com</text>
+                  <circle class="a-dot" cx="168" cy="152" r="4" />
+                  <circle class="a-dot" cx="152" cy="152" r="4" />
+                </g>
+
+                <!-- carbon panel -->
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-panel-box" x="240" y="96" width="176" height="320" rx="14" />
+                  <text class="a-title" x="256" y="124">Carbon Panel</text>
+                </g>
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-sub-box a-proxy-box" x="256" y="140" width="144" height="76" rx="8" />
+                  <text class="a-mono" x="272" y="170">proxy :25565</text>
+                  <text class="a-sub" x="272" y="190">handshake-aware</text>
+                </g>
+                <g class="a-anim" data-ap="0">
+                  <rect class="a-sub-box a-control-box" x="256" y="296" width="144" height="100" rx="8" />
+                  <text class="a-mono" x="272" y="326">control plane</text>
+                </g>
+                <g class="a-anim" data-ap="3">
+                  <text class="a-sub" x="272" y="348">schedules · backups</text>
+                  <text class="a-sub" x="272" y="366">routes · console · API</text>
+                </g>
+
+                <!-- machines -->
+                <g class="a-anim" data-ap="2">
+                  <rect class="a-card" x="448" y="104" width="176" height="116" rx="12" />
+                  <text class="a-title" x="464" y="132">Home machine</text>
+                  <text class="a-cap" x="464" y="150">AT HOME</text>
+                  <rect class="a-mini" x="464" y="158" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="174">survival-01 · 6 GB</text>
+                  <rect class="a-mini" x="464" y="188" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="204">creative · 4 GB</text>
+                </g>
+                <g class="a-anim" data-ap="2">
+                  <rect class="a-card" x="448" y="260" width="176" height="116" rx="12" />
+                  <text class="a-title" x="464" y="288">Cloud VPS</text>
+                  <text class="a-cap" x="464" y="306">IN THE CLOUD</text>
+                  <rect class="a-mini" x="464" y="314" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="330">event-01 · 8 GB</text>
+                  <rect class="a-mini" x="464" y="344" width="144" height="24" rx="6" />
+                  <text class="a-mini-t" x="474" y="360">lobby-01 · 4 GB</text>
+                </g>
+
+                <!-- offsite backups -->
+                <g class="a-anim" data-ap="3">
+                  <rect class="a-card" x="448" y="416" width="176" height="52" rx="10" />
+                  <text class="a-mono" x="464" y="440">S3 · offsite backups</text>
+                  <text class="a-sub" x="464" y="458">world snapshots</text>
+                </g>
+              </svg>
             </div>
           </div>
         </div>
@@ -640,7 +753,7 @@
     <section class="section" id="compare">
       <div class="container">
         <div class="section-head center reveal">
-          <h2>Built for Minecraft, not just containers.</h2>
+          <h2>Purpose-built for Minecraft servers.</h2>
           <p>A quick look at how Carbon Panel compares with the common alternatives.</p>
         </div>
 

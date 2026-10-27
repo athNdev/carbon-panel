@@ -79,6 +79,36 @@
     window.addEventListener("load", revealInView);
   }
 
+  // --- Scroll-driven architecture section ---
+  // Maps the pinned track's scroll progress to a data-beat state machine
+  // plus a continuous --p for scrubbed line drawing.
+  const arch = document.querySelector(".arch");
+  if (arch && !prefersReduced) {
+    const stage = arch.querySelector(".arch-stage");
+    const track = arch.querySelector(".arch-track");
+    const bar = arch.querySelector(".arch-progress-bar");
+    let archTicking = false;
+    const updateArch = () => {
+      const rect = track.getBoundingClientRect();
+      const total = track.offsetHeight - window.innerHeight;
+      const p = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 1;
+      stage.style.setProperty("--p", p.toFixed(4));
+      if (bar) bar.style.transform = `scaleX(${p.toFixed(4)})`;
+      const beat = p < 0.24 ? 0 : p < 0.52 ? 1 : p < 0.76 ? 2 : 3;
+      if (stage.dataset.beat !== String(beat)) stage.dataset.beat = String(beat);
+      archTicking = false;
+    };
+    const scheduleArch = () => {
+      if (archTicking) return;
+      archTicking = true;
+      window.requestAnimationFrame(updateArch);
+    };
+    window.addEventListener("scroll", scheduleArch, { passive: true });
+    window.addEventListener("resize", scheduleArch);
+    window.addEventListener("load", updateArch);
+    updateArch();
+  }
+
   // --- Footer year ---
   const yearEl = document.getElementById("year");
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
