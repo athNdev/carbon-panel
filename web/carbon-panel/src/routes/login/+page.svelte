@@ -489,7 +489,7 @@ one at https://mozilla.org/MPL/2.0/.
 			<div class="mt-6 border-t border-[#393939] pt-4 text-center">
 				<button
 					type="button"
-					class="inline-flex cursor-pointer items-center gap-1.5 rounded-none text-xs text-[#8d8d8d] transition-colors hover:text-[#f4f4f4]"
+					class="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-none px-2 py-1 text-xs text-[#8d8d8d] transition-colors hover:text-[#f4f4f4]"
 					onclick={() => (showRecovery = true)}
 				>
 					<KeyRound class="h-3.5 w-3.5" />

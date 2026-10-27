@@ -191,7 +191,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			<!-- Brand Logo & Name -->
 			<a
 				href={resolve('/')}
-				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-[#0f62fe]"
+				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-accent-text"
 			>
 				<img src="/carbon_panel_logo.png" alt="Carbon Panel" class="h-6 w-6 rounded-sm" />
 				<span class="font-semibold tracking-wide">Carbon Panel</span>
