@@ -585,6 +585,16 @@ body > footer {
   color: var(--text-secondary);
   overflow-x: auto;
   white-space: nowrap;
+  /* scroll shadows: the fades only show where a long command runs off */
+  background-image:
+    linear-gradient(to right, var(--term-bg) 30%, rgba(13, 13, 13, 0)),
+    linear-gradient(to left, var(--term-bg) 30%, rgba(13, 13, 13, 0)),
+    linear-gradient(to right, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0)),
+    linear-gradient(to left, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  background-size: 32px 100%, 32px 100%, 16px 100%, 16px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 .install code .prompt {
   color: var(--accent-text);
@@ -1489,9 +1499,10 @@ body > footer {
   }
   .arch-visual {
     overflow-x: auto;
+    overscroll-behavior-x: contain;
   }
   .arch-svg {
-    min-width: 560px;
+    min-width: 540px;
   }
 }
 /* ============ ARCH-SECTION-END ============ */
@@ -1673,6 +1684,7 @@ body > footer {
   border-radius: var(--radius-lg);
   overflow: hidden;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 table.compare {
   width: 100%;
@@ -2031,6 +2043,8 @@ table.compare .icon { width: 18px; height: 18px; }
 @media (max-width: 1080px) {
   .hero-grid { grid-template-columns: 1fr; gap: 56px; }
   .hero-sub { max-width: 60ch; }
+  .mock-chip.chip-a { right: 0; }
+  .mock-chip.chip-b { left: 0; }
   .mock-chip.chip-a { right: 8px; }
   .mock-chip.chip-b { left: 8px; }
   .deepdive-grid { grid-template-columns: 1fr; }
@@ -2088,6 +2102,7 @@ table.compare .icon { width: 18px; height: 18px; }
   .mock-rail { flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); }
   .mock-stats { grid-template-columns: 1fr 1fr; }
   .mock-chip { display: none; }
+  .install code { font-size: 12px; }
   .bento { grid-template-columns: 1fr; }
   .tile.feature-anchor { grid-column: span 1; }
   .route-map .rm-row { flex-wrap: wrap; row-gap: 4px; }
@@ -2213,6 +2228,128 @@ table.compare .icon { width: 18px; height: 18px; }
 .f-bar { fill: rgba(38, 38, 38, 0.72); stroke: var(--border); stroke-width: 1; }
 .f-dot-ok { fill: var(--success); }
 
+/* ---------- Stacked board: the wide diagram's stand-in on small screens ---------- */
+.fleet-stack { display: none; }
+.fs-node,
+.fs-bar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--layer-01);
+  padding: 16px;
+}
+.fs-bar {
+  background: rgba(38, 38, 38, 0.72);
+  border-radius: var(--radius-md);
+}
+.fs-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fs-name {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.fs-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.fs-val-hot { color: var(--warning); }
+.fs-meter {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(244, 244, 244, 0.07);
+  margin: 12px 0 14px;
+  overflow: hidden;
+}
+.fs-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent-text);
+  opacity: 0.5;
+}
+.fs-fill.hot { background: var(--warning); opacity: 0.7; }
+.fs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fs-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--term-bg);
+}
+.fs-chip b {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.fs-chip span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: right;
+}
+.fs-chip.hot { background: rgba(15, 98, 254, 0.1); border-color: rgba(120, 169, 255, 0.48); }
+.fs-chip.rep { background: rgba(15, 98, 254, 0.04); border-color: rgba(120, 169, 255, 0.34); border-style: dashed; }
+.fs-chip.sleep { border-style: dashed; }
+.fs-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grid-line);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  color: var(--text-tertiary);
+}
+.fs-foot + .fs-foot {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: none;
+}
+.fs-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  margin-right: 2px;
+}
+.fs-move {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+.fs-move::before,
+.fs-move::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed rgba(120, 169, 255, 0.3);
+}
+.fs-move-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+  color: var(--accent-text);
+  border: 1px solid rgba(120, 169, 255, 0.3);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .f-carrier { display: none; }
 }
@@ -2286,18 +2423,27 @@ table.compare .icon { width: 18px; height: 18px; }
   .fleet-board {
     overflow-x: auto;
     overflow-y: hidden;
+    overscroll-behavior-x: contain;
     margin-right: -32px;
     padding-right: 32px;
   }
   .fleet-svg { min-width: 880px; }
 }
-@media (max-width: 640px) {
+/* below this the diagram cannot stay legible, so the stacked board takes over */
+@media (max-width: 860px) {
   .fleet-board { display: none; }
+  .fleet-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
 }
 
 </style>
   <script>document.documentElement.classList.add('js');</script>
 <style>
+    html { scroll-behavior: auto !important; }
     .reveal { opacity: 1 !important; transform: none !important; }
     *, *::before, *::after { transition: none !important; }
   </style></head><body>
@@ -3096,6 +3242,62 @@ table.compare .icon { width: 18px; height: 18px; }
             <circle class="f-dot-ok" cx="1056" cy="587" r="3" />
             <text class="f-meta" x="1176" y="590" text-anchor="end">last ship · 4m ago</text>
           </svg>
+        </div>
+
+        <!-- Stacked node board for phones, where the wide diagram cannot read -->
+        <div class="fleet-stack" aria-hidden="true">
+          <div class="fs-node">
+            <div class="fs-top">
+              <span class="fs-name">home machine</span>
+              <span class="fs-val fs-val-hot">15.0 / 16 GB</span>
+            </div>
+            <div class="fs-meter"><i class="fs-fill hot" style="width: 94%"></i></div>
+            <ul class="fs-list">
+              <li class="fs-chip hot"><b>survival-01</b><span>6 GB · migrating</span></li>
+              <li class="fs-chip"><b>creative</b><span>4 GB · 6 players</span></li>
+              <li class="fs-chip"><b>modded-01</b><span>5 GB · 2 players</span></li>
+            </ul>
+            <div class="fs-foot">3 servers · 1 migrating</div>
+          </div>
+
+          <div class="fs-move"><span class="fs-move-label">survival-01 · live migration</span></div>
+
+          <div class="fs-node">
+            <div class="fs-top">
+              <span class="fs-name">homelab</span>
+              <span class="fs-val">8.2 / 32 GB</span>
+            </div>
+            <div class="fs-meter"><i class="fs-fill" style="width: 26%"></i></div>
+            <ul class="fs-list">
+              <li class="fs-chip rep"><b>survival-01</b><span>standby · synced</span></li>
+              <li class="fs-chip"><b>event-01</b><span>8 GB · 22 players</span></li>
+              <li class="fs-chip sleep"><b>archive</b><span>parked · 0 B</span></li>
+            </ul>
+            <div class="fs-foot">standby replica · ready</div>
+          </div>
+
+          <div class="fs-node">
+            <div class="fs-top">
+              <span class="fs-name">cloud vps</span>
+              <span class="fs-val">1.4 / 8 GB</span>
+            </div>
+            <div class="fs-meter"><i class="fs-fill" style="width: 18%"></i></div>
+            <ul class="fs-list">
+              <li class="fs-chip sleep"><b>lobby-01</b><span>asleep · 0 B</span></li>
+              <li class="fs-chip"><b>proxy</b><span>0.4 GB · ingress</span></li>
+              <li class="fs-chip sleep"><b>events-2</b><span>asleep · 0 B</span></li>
+            </ul>
+            <div class="fs-foot">2 asleep · wake on join</div>
+          </div>
+
+          <div class="fs-bar">
+            <div class="fs-top">
+              <span class="fs-name">offsite backups</span>
+              <span class="fs-val"><span class="fs-dot"></span> 4m ago</span>
+            </div>
+            <div class="fs-foot">S3 · MinIO · any compatible endpoint</div>
+            <div class="fs-foot">world snapshots · versioned · retention</div>
+          </div>
         </div>
 
         <div class="fleet-cards">
