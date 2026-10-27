@@ -46,7 +46,7 @@ var ErrTaskAlreadyRunning = errors.New("task is already running")
 type Scheduler struct {
 	store         *storage.Store
 	docker        *docker.Client
-	sender        *command.Sender
+	sender        snapshot.CommandSender
 	appConfig     *appconfig.Config
 	metrics       *metrics.Collector
 	log           *logger.Logger

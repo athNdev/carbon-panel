@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package snapshot
 
 import (
@@ -12,10 +11,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/pkg/logger"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,10 +165,10 @@ func TestSnapshot_Rollback_RunningContainerRequiresStop(t *testing.T) {
 	// Overwrite file with modifications
 	require.NoError(t, os.WriteFile(testFile, []byte("port=25577\nmodified=true\n"), 0644))
 
-	// Attempt rollback: must fail because container cannot be stopped safely (DEP-2)
+	// Attempt rollback: must fail because container state cannot be verified safely (DEP-2)
 	err = engine.Rollback(ctx, server, snap.ID)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cannot safely rollback: container container-xyz-123 is running but docker client is unavailable")
+	assert.Contains(t, err.Error(), "cannot safely rollback: container container-xyz-123 exists but docker client is unavailable")
 
 	// Verify file was NOT overwritten by rollback extraction
 	content, err := os.ReadFile(testFile)

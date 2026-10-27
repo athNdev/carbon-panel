@@ -33,6 +33,12 @@ import (
 // source. Package-level so tests can shorten it.
 var migrationPlayabilityTimeout = 5 * time.Minute
 
+// restorePlayabilityTimeout bounds the playability probe after a restore
+// restarts the server. Restore cannot roll back once the world is swapped,
+// so an unverified timeout is reported honestly instead of failing the
+// restore (OSS-235).
+var restorePlayabilityTimeout = 2 * time.Minute
+
 const migrationPlayabilityPoll = 5 * time.Second
 
 // migrateServerNow performs one journaled migration attempt: quiesce the
