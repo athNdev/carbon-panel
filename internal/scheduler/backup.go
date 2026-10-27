@@ -21,6 +21,7 @@ import (
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/internal/worldstore"
 	"github.com/athNdev/carbon-panel/pkg/files"
@@ -75,12 +76,29 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		return "", fmt.Errorf("server has no data directory")
 	}
 
+	// Server data lives on the owning node; resolve the controller-side root
+	// once for both the world-data seam and the legacy zip pipeline (ADR 0005).
+	// Nodes without reachable storage fail the task rather than archiving a
+	// controller-local path that is not the server's data.
+	worldDataPath := server.DataPath
+	if !nodestorage.IsLegacyLocalNodeID(server.NodeID) {
+		node, nerr := s.store.GetNode(ctx, server.NodeID)
+		if nerr != nil {
+			return "", fmt.Errorf("resolve storage node %q: %w", server.NodeID, nerr)
+		}
+		mapped, merr := nodestorage.MapDataPath(node.StorageInfo(), server.DataPath)
+		if merr != nil {
+			return "", merr
+		}
+		worldDataPath = mapped
+	}
+
 	// Explicit path requests validate their configured paths up front; the
 	// default backup covers the full state tree through the world-data seam.
 	var paths, missing []string
 	if len(config.Paths) > 0 {
 		var pathErr error
-		paths, missing, pathErr = resolveBackupPaths(server.DataPath, config.Paths)
+		paths, missing, pathErr = resolveBackupPaths(worldDataPath, config.Paths)
 		if pathErr != nil {
 			return "", pathErr
 		}
@@ -136,7 +154,7 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 			return "", fmt.Errorf("installation identity: %w", oerr)
 		}
 		ws, werr := worldstore.OpenServerWorlds(owner, server.ID, server.NodeID,
-			filepath.Join(s.appConfig.Storage.DataDir, "worldstore-journal"), server.DataPath)
+			filepath.Join(s.appConfig.Storage.DataDir, "worldstore-journal"), worldDataPath)
 		if werr != nil {
 			return "", fmt.Errorf("open world store: %w", werr)
 		}
@@ -161,7 +179,7 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 		// Explicit path requests keep the legacy zip pipeline so existing
 		// custom-path tasks behave exactly as before (ADR 0004).
 		var cerr error
-		count, cerr = files.CreateZipArchive(paths, server.DataPath, destPath, config.Compress, func(rel string) bool {
+		count, cerr = files.CreateZipArchive(paths, worldDataPath, destPath, config.Compress, func(rel string) bool {
 			return files.PathExcluded(rel, excludes)
 		})
 		if cerr != nil {

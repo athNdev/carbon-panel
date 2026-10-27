@@ -208,17 +208,13 @@ func (s *FileService) ListFiles(ctx context.Context, req *connect.Request[v1.Lis
 	}), nil
 }
 
-// storageFor resolves the node-aware accessor for a server's data root. Empty
-// node IDs are legacy single-node rows and use the local accessor; remote
-// nodes without an adapter are refused (ADR 0005).
+// storageFor resolves the node-aware accessor for a server's data root.
+// Legacy single-node rows use the local accessor; remote nodes without a
+// storage adapter are refused (ADR 0005).
 func (s *FileService) storageFor(ctx context.Context, server *storage.Server) (nodestorage.Accessor, error) {
-	info := nodestorage.NodeInfo{Name: "local", IsLocal: true}
-	if server.NodeID != "" {
-		node, err := s.store.GetNode(ctx, server.NodeID)
-		if err != nil {
-			return nil, err
-		}
-		info = nodestorage.NodeInfo{Name: node.Name, IsLocal: node.IsLocal}
+	info, err := storageNodeInfo(ctx, s.store, server.NodeID)
+	if err != nil {
+		return nil, err
 	}
 	return nodestorage.ForNode(info, server.DataPath)
 }

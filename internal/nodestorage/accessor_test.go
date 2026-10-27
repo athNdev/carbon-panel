@@ -98,3 +98,120 @@ func TestForNodeRefusesRemoteWithoutAdapter(t *testing.T) {
 		t.Fatalf("remote node must be refused with ErrUnavailable, got %v", err)
 	}
 }
+
+func TestMapDataPath(t *testing.T) {
+	tests := []struct {
+		name string
+		node NodeInfo
+		want string
+		ref  bool
+	}{
+		{
+			name: "local keeps the data root",
+			node: NodeInfo{Name: "local", IsLocal: true, StorageRoot: "/mnt/shared"},
+			want: filepath.Join("var", "data", "servers", "mc"),
+		},
+		{
+			name: "remote shared storage defaults to the node-side root",
+			node: NodeInfo{Name: "r1", StorageRoot: filepath.Join("mnt", "shared")},
+			want: filepath.Join("mnt", "shared", "mc"),
+		},
+		{
+			name: "controller mount wins when set",
+			node: NodeInfo{Name: "r2", StorageRoot: "/srv/nfs", ControllerStorageRoot: filepath.Join("mnt", "nfs")},
+			want: filepath.Join("mnt", "nfs", "mc"),
+		},
+		{
+			name: "controller mount alone is enough to serve files",
+			node: NodeInfo{Name: "r3", ControllerStorageRoot: filepath.Join("mnt", "nfs")},
+			want: filepath.Join("mnt", "nfs", "mc"),
+		},
+		{
+			name: "remote without roots is refused",
+			node: NodeInfo{Name: "r4"},
+			ref:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := MapDataPath(tt.node, filepath.Join("var", "data", "servers", "mc"))
+			if tt.ref {
+				if err == nil || !IsUnavailable(err) {
+					t.Fatalf("want ErrUnavailable, got %q, %v", got, err)
+				}
+				return
+			}
+			if err != nil || got != tt.want {
+				t.Fatalf("MapDataPath = %q, %v; want %q", got, err, tt.want)
+			}
+		})
+	}
+}
+
+func TestForNodeMapsRemoteSharedStorage(t *testing.T) {
+	base := t.TempDir()
+	mount := filepath.Join(base, "shared")
+	if err := os.MkdirAll(mount, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	node := NodeInfo{Name: "r1", StorageRoot: mount}
+	dataRoot := filepath.Join("var", "data", "servers", "mc")
+
+	acc, err := ForNode(node, dataRoot)
+	if err != nil {
+		t.Fatalf("ForNode: %v", err)
+	}
+	defer func() { _ = acc.Close() }()
+
+	wantRoot := filepath.Join(mount, "mc")
+	if acc.Root() != wantRoot {
+		t.Fatalf("Root() = %q, want %q", acc.Root(), wantRoot)
+	}
+	if err := acc.WriteFile("server.properties", []byte("p")); err != nil {
+		t.Fatalf("WriteFile through mapped root: %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(wantRoot, "server.properties")); err != nil || string(got) != "p" {
+		t.Fatalf("file must land in the mapped root: %q, %v", got, err)
+	}
+}
+
+func TestEnsureDataRootRequiresExistingMount(t *testing.T) {
+	base := t.TempDir()
+	mount := filepath.Join(base, "not-mounted")
+	node := NodeInfo{Name: "r1", StorageRoot: mount}
+
+	if _, err := EnsureDataRoot(node, filepath.Join("var", "data", "servers", "mc")); err == nil || !IsUnavailable(err) {
+		t.Fatalf("missing mount must be refused with ErrUnavailable, got %v", err)
+	}
+	if _, err := os.Stat(mount); !os.IsNotExist(err) {
+		t.Fatalf("a missing storage root must never be created (hidden mount guard), stat err = %v", err)
+	}
+
+	if err := os.MkdirAll(mount, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := EnsureDataRoot(node, filepath.Join("var", "data", "servers", "mc"))
+	if err != nil {
+		t.Fatalf("EnsureDataRoot with mounted root: %v", err)
+	}
+	want := filepath.Join(mount, "mc")
+	if got != want {
+		t.Fatalf("EnsureDataRoot = %q, want %q", got, want)
+	}
+	if fi, err := os.Stat(want); err != nil || !fi.IsDir() {
+		t.Fatalf("server directory must be created under the mount: %v", err)
+	}
+}
+
+func TestIsLegacyLocalNodeID(t *testing.T) {
+	for _, id := range []string{"", "local", "default"} {
+		if !IsLegacyLocalNodeID(id) {
+			t.Errorf("IsLegacyLocalNodeID(%q) = false", id)
+		}
+	}
+	for _, id := range []string{"node-1", "remote", "LOCAL"} {
+		if IsLegacyLocalNodeID(id) {
+			t.Errorf("IsLegacyLocalNodeID(%q) = true", id)
+		}
+	}
+}
