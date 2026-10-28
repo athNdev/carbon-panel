@@ -64,9 +64,10 @@ func main() {
 	printRecoveryKey := flag.Bool("print-recovery-key", false,
 		"Print the recovery key to stderr on startup (off by default: the key bypasses authentication)")
 	operationsCommand := flag.String("operations", "",
-		"Maintenance command, then exit: list or resolve. resolve releases a lifecycle lock and does not change containers")
+		"Maintenance command, then exit: list, resolve, ports, or release-port. resolve releases a lifecycle lock and does not change containers. release-port frees host ports left by a detached server and does not stop containers or delete files")
 	operationID := flag.String("operation-id", "", "Operation id for -operations resolve")
 	operationNote := flag.String("operation-note", "", "Note stored when -operations resolve releases a lock")
+	serverID := flag.String("server-id", "", "Server id for -operations release-port")
 	flag.Parse()
 
 	// Load configuration
@@ -134,7 +135,7 @@ func main() {
 
 	ctx := context.Background()
 	if maintenance {
-		if err := runOperationsCommand(ctx, store, *operationsCommand, *operationID, *operationNote, os.Stdout); err != nil {
+		if err := runOperationsCommand(ctx, store, *operationsCommand, *operationID, *operationNote, *serverID, os.Stdout); err != nil {
 			log.Fatal("%v", err)
 		}
 		return

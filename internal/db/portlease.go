@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
@@ -86,6 +85,41 @@ func (s *Store) ReserveBackendPortPair(ctx context.Context, nodeID, serverID str
 // ReleaseBackendPorts drops every lease held by serverID.
 func (s *Store) ReleaseBackendPorts(ctx context.Context, serverID string) error {
 	return s.db.WithContext(ctx).Where("server_id = ?", serverID).Delete(&BackendPortLease{}).Error
+}
+
+// ListBackendPortLeases returns every host port reserved for a server.
+func (s *Store) ListBackendPortLeases(ctx context.Context) ([]BackendPortLease, error) {
+	var leases []BackendPortLease
+	err := s.db.WithContext(ctx).Order("node_id, port").Find(&leases).Error
+	return leases, err
+}
+
+// ReleaseDetachedBackendPorts drops leases whose server row is already gone.
+// A row that still exists keeps its ports. The world directory and containers
+// are not touched.
+func (s *Store) ReleaseDetachedBackendPorts(ctx context.Context, serverID string) ([]BackendPortLease, error) {
+	serverID = strings.TrimSpace(serverID)
+	if serverID == "" {
+		return nil, errors.New("server id is required")
+	}
+	var released []BackendPortLease
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int64
+		if err := tx.Model(&Server{}).Where("id = ?", serverID).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return fmt.Errorf("server %s still has a panel row", serverID)
+		}
+		if err := tx.Where("server_id = ?", serverID).Order("port").Find(&released).Error; err != nil {
+			return err
+		}
+		if len(released) == 0 {
+			return nil
+		}
+		return tx.Where("server_id = ?", serverID).Delete(&BackendPortLease{}).Error
+	})
+	return released, err
 }
 
 func usedBackendPorts(tx *gorm.DB, nodeID, exceptServerID string) (map[int]bool, error) {

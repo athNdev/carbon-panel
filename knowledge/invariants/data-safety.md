@@ -43,7 +43,9 @@ losing a world is not recoverable by rebuilding the controller.
   leaves the world directory where it is. The audit row records that path.
 - `DeleteServer` with `detach` leaves the container and the world directory
   and keeps that server's host port lease. The audit row records the
-  container id and the path.
+  container id and the path. `-operations release-port` frees that lease
+  only after the panel row is gone, and it does not stop the container or
+  delete the world.
 
 # Review
 
