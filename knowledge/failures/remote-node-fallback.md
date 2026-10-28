@@ -28,8 +28,9 @@ cannot be resolved, and a module records the server's node ID.
 
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
-- Remote file, Minecraft and backup archive paths still read the controller
-  filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- Mod installation and packwiz still address the controller copy of a server
+  data path. Deleting a server still removes that stored path. Creating a
+  server and scheduled backup archives use the node's mapped storage root.
 
 # Detection
 

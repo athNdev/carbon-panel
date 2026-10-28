@@ -21,8 +21,9 @@ sources:
   follow the node its server runs on.
 - `internal/docker/freezer.go` takes a `ContainerFreezer` seam, but
   `cmd/carbon-panel` wires it to the local client unconditionally.
-- Remote file, Minecraft and backup archive paths still read the controller
-  filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- Mod installation and packwiz still address the controller copy of a server
+  data path. Deleting a server still removes that stored path. Creating a
+  server and scheduled backup archives use the node's mapped storage root.
 
 # How to use this
 

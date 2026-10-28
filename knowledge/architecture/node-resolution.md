@@ -33,13 +33,17 @@ wrong host. That is a data-safety bug, not a degraded mode.
   server's node ID.
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
-- Minecraft and backup archive paths still read the controller filesystem.
-  This is tracked as the remote archive path gap.
 - Disk usage measures the node's mapped world root. A remote node without
   reachable storage is left unmeasured.
 - File read, update, delete, and rename resolve that mapped root before
   checking the path. A controller copy of the data path is not consulted.
   The latest-log upload uses that same root.
+- Creating a server writes the world directory on that mapped root and copies
+  a manual modpack archive there. A remote node with no reachable storage is
+  refused, so no controller-local world directory is created.
+- Scheduled backup archives resolve the mapped root before reading the world.
+- Mod installation and packwiz still address the stored data path on the
+  controller. Deleting a server still removes that stored path.
 
 # How to check
 
