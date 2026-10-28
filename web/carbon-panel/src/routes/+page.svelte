@@ -12,6 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
+	import { beginLifecycleRequest } from '$lib/lifecycle-request';
 	import { formatBytes, getStringForEnum } from '$lib/utils';
 	import {
 		Server,
@@ -64,12 +65,19 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	async function handleServerAction(action: 'start' | 'stop', server: ServerType) {
+		const attempt = beginLifecycleRequest(server.id, action);
 		try {
 			if (action === 'start') {
-				await rpcClient.server.startServer({ id: server.id });
+				await rpcClient.server.startServer({
+					id: server.id,
+					requestId: attempt.requestId
+				});
 				toast.success(`Starting ${server.name}...`);
 			} else {
-				await rpcClient.server.stopServer({ id: server.id });
+				await rpcClient.server.stopServer({
+					id: server.id,
+					requestId: attempt.requestId
+				});
 				toast.success(`Stopping ${server.name}...`);
 			}
 			await loadDashboardData();
@@ -77,6 +85,8 @@ one at https://mozilla.org/MPL/2.0/.
 			toast.error(
 				`Failed to ${action} server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
+		} finally {
+			attempt.finish();
 		}
 	}
 

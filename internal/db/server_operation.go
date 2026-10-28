@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,9 @@ const (
 	ServerOperationFailed    = "failed"
 	ServerOperationRecovered = "recovered"
 )
+
+// ServerOperationRetention is how long a finished lifecycle journal row is kept.
+const ServerOperationRetention = 30 * 24 * time.Hour
 
 // ServerOperation retains uncertain external effects across controller restarts.
 // ActiveServer is released only by an explicit successful finalization or recovery.
@@ -94,4 +98,58 @@ func (s *Store) AssertNoServerOperation(ctx context.Context, serverID string) er
 		return err
 	}
 	return fmt.Errorf("server operation %s (%s, phase %s) requires completion or recovery", op.ID, op.Kind, op.Phase)
+}
+
+// GetServerOperation returns one journal row by id.
+func (s *Store) GetServerOperation(ctx context.Context, id string) (*ServerOperation, error) {
+	var op ServerOperation
+	err := s.db.WithContext(ctx).Where("id = ?", id).First(&op).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("operation %s not found", id)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &op, nil
+}
+
+// ListServerOperations returns the journal, oldest first, including finished rows.
+func (s *Store) ListServerOperations(ctx context.Context) ([]ServerOperation, error) {
+	var ops []ServerOperation
+	err := s.db.WithContext(ctx).Order("created_at asc").Find(&ops).Error
+	return ops, err
+}
+
+// ResolveServerOperation releases an active lifecycle lock without touching Docker.
+// An already-released operation is left unchanged.
+func (s *Store) ResolveServerOperation(ctx context.Context, id, note string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return errors.New("operation id is required")
+	}
+	note = strings.TrimSpace(note)
+	if note == "" {
+		note = "operator released the lifecycle lock without changing containers"
+	}
+	if len(note) > 500 {
+		note = note[:500]
+	}
+	op, err := s.GetServerOperation(ctx, id)
+	if err != nil {
+		return err
+	}
+	if op.ActiveServer == nil {
+		return nil
+	}
+	return s.AdvanceServerOperation(ctx, op.ID, op.Phase, ServerOperationRecovered, note)
+}
+
+// PruneServerOperations deletes finished journal rows last updated before olderThan.
+// Rows that still hold a server lock are kept.
+func (s *Store) PruneServerOperations(ctx context.Context, olderThan time.Time) (int64, error) {
+	res := s.db.WithContext(ctx).Where("active_server IS NULL AND updated_at < ?", olderThan).Delete(&ServerOperation{})
+	if res.Error != nil {
+		return 0, res.Error
+	}
+	return res.RowsAffected, nil
 }

@@ -536,11 +536,14 @@ message UpdateModuleRequest {
   optional string init_command = 22;
   optional int32 init_command_delay = 23;
   optional bool restart_after_init = 24;
+  // When set, record the change on the server's open update batch and leave the live module alone.
+  bool stage = 25;
 }
 
 // UpdateModuleResponse contains the updated module.
 message UpdateModuleResponse {
   Module module = 1;
+  bool staged = 2;
 }
 
 // DeleteModuleRequest specifies which module to delete.

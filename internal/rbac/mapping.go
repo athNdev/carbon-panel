@@ -74,6 +74,8 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	// â”€â”€ ConfigService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	"/carbonpanel.v1.ConfigService/GetServerConfig":             {Resource: ResourceServerConfig, Action: ActionRead, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.ConfigService/UpdateServerConfig":          {Resource: ResourceServerConfig, Action: ActionUpdate, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.ConfigService/GetUpdateBatch":              {Resource: ResourceServerConfig, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.ConfigService/DiscardUpdateBatch":          {Resource: ResourceServerConfig, Action: ActionUpdate, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.ConfigService/GetGlobalSettings":           {Resource: ResourceSettings, Action: ActionRead},
 	"/carbonpanel.v1.ConfigService/UpdateGlobalSettings":        {Resource: ResourceSettings, Action: ActionUpdate},
 	"/carbonpanel.v1.ConfigService/SyncGlobalSettingsToServers": {Resource: ResourceSettings, Action: ActionUpdate},

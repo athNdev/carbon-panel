@@ -3,12 +3,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package reconciler
 
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -383,6 +383,113 @@ func TestWatcherRun_ClosesOutOnCancel(t *testing.T) {
 // sanity: filters.Args is used in stream(); ensure import compiles cleanly
 // via a trivial construction (guards against accidental removal leaving an
 // unused import that a future edit re-adds incorrectly).
+type scriptedWatcher struct {
+	out chan ContainerEvent
+	ev  ContainerEvent
+}
+
+func (w *scriptedWatcher) Run(ctx context.Context) {
+	select {
+	case w.out <- w.ev:
+	case <-ctx.Done():
+		close(w.out)
+		return
+	}
+	<-ctx.Done()
+	close(w.out)
+}
+
+func (w *scriptedWatcher) Out() <-chan ContainerEvent { return w.out }
+
+func TestSupervisorSyncAddsAndDropsNodes(t *testing.T) {
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent, 4),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			if nodeID == "bad" {
+				return nil, errors.New("no client")
+			}
+			return &scriptedWatcher{
+				out: make(chan ContainerEvent, 1),
+				ev:  ContainerEvent{NodeID: nodeID, Action: "start"},
+			}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := sup.Sync([]string{"node-a", "node-a", ""}); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case ev := <-sup.Events():
+		if ev.NodeID != "node-a" || ev.Action != "start" {
+			t.Fatalf("event = %+v", ev)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for node-a event")
+	}
+
+	if err := sup.Sync([]string{"node-b", "bad"}); err == nil {
+		t.Fatal("expected an unresolved node to be reported")
+	}
+	sup.mu.Lock()
+	defer sup.mu.Unlock()
+	if _, ok := sup.running["node-a"]; ok {
+		t.Fatal("removed node is still watched")
+	}
+	if _, ok := sup.running["node-b"]; !ok {
+		t.Fatal("added node is not watched")
+	}
+	if _, ok := sup.running["bad"]; ok {
+		t.Fatal("unresolved node was watched")
+	}
+	if len(sup.running) != 1 {
+		t.Fatalf("running nodes = %d, want 1", len(sup.running))
+	}
+}
+
+func TestWatchMembershipReplacesNodes(t *testing.T) {
+	var calls atomic.Int32
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent, 4),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			return &scriptedWatcher{
+				out: make(chan ContainerEvent, 1),
+				ev:  ContainerEvent{NodeID: nodeID, Action: "start"},
+			}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	go sup.WatchMembership(ctx, 15*time.Millisecond, func(context.Context) ([]string, error) {
+		if calls.Add(1) == 1 {
+			return []string{"a"}, nil
+		}
+		return []string{"b"}, nil
+	})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		sup.mu.Lock()
+		_, hasA := sup.running["a"]
+		_, hasB := sup.running["b"]
+		sup.mu.Unlock()
+		if hasB && !hasA {
+			return
+		}
+		time.Sleep(15 * time.Millisecond)
+	}
+	t.Fatal("membership did not move from a to b")
+}
+
 func TestFiltersArgsCompiles(t *testing.T) {
 	args := make(client.Filters)
 	args.Add("type", "container")

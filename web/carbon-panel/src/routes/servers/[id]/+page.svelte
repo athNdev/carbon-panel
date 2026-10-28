@@ -12,6 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { rpcClient, silentCallOptions, wasRpcErrorToasted } from '$lib/api/rpc-client';
+	import { beginLifecycleRequest } from '$lib/lifecycle-request';
 	import { serversStore } from '$lib/stores/servers';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -194,22 +195,32 @@ one at https://mozilla.org/MPL/2.0/.
 		if (!server) return;
 
 		actionLoading = true;
+		const attempt = action === 'recreate' ? null : beginLifecycleRequest(server.id, action);
 		try {
 			switch (action) {
 				case 'start': {
-					const startRequest = create(StartServerRequestSchema, { id: server.id });
+					const startRequest = create(StartServerRequestSchema, {
+						id: server.id,
+						requestId: attempt?.requestId ?? ''
+					});
 					await rpcClient.server.startServer(startRequest);
 					toast.success('Server is starting...');
 					break;
 				}
 				case 'stop': {
-					const stopRequest = create(StopServerRequestSchema, { id: server.id });
+					const stopRequest = create(StopServerRequestSchema, {
+						id: server.id,
+						requestId: attempt?.requestId ?? ''
+					});
 					await rpcClient.server.stopServer(stopRequest);
 					toast.success('Server is stopping...');
 					break;
 				}
 				case 'restart': {
-					const restartRequest = create(RestartServerRequestSchema, { id: server.id });
+					const restartRequest = create(RestartServerRequestSchema, {
+						id: server.id,
+						requestId: attempt?.requestId ?? ''
+					});
 					await rpcClient.server.restartServer(restartRequest);
 					toast.success('Server is restarting...');
 					break;
@@ -228,6 +239,7 @@ one at https://mozilla.org/MPL/2.0/.
 			);
 			await loadServer(true);
 		} finally {
+			attempt?.finish();
 			actionLoading = false;
 		}
 	}
@@ -242,8 +254,12 @@ one at https://mozilla.org/MPL/2.0/.
 	async function confirmDeleteServer() {
 		if (!server) return;
 		actionLoading = true;
+		const attempt = beginLifecycleRequest(server.id, 'delete');
 		try {
-			const deleteRequest = create(DeleteServerRequestSchema, { id: server.id });
+			const deleteRequest = create(DeleteServerRequestSchema, {
+				id: server.id,
+				requestId: attempt.requestId
+			});
 			await rpcClient.server.deleteServer(deleteRequest);
 			serversStore.removeServer(server.id);
 			toast.success('Server deleted successfully');
@@ -253,6 +269,7 @@ one at https://mozilla.org/MPL/2.0/.
 				`Failed to delete server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
 		} finally {
+			attempt.finish();
 			actionLoading = false;
 		}
 	}

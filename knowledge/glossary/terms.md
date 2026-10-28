@@ -30,6 +30,9 @@ containers. Not the managed Cloud control plane.
 
 **World** — persistent Minecraft map data. It outlives containers.
 
+**Staged update** — a config diff or content edit on a server's one open batch.
+Recording it does not restart the server or write the live tree.
+
 # Boundary
 
 Carbon Cloud has additional terms (hosting instance, allocation, worker node).

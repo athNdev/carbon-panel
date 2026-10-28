@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 // Package reconciler contains the event-source foundation for a future
 // self-healing reconciler (MINE-107). This file (events.go) implements a
 // multi-node Docker Events API watcher: it connects to each node's Docker
@@ -264,26 +263,34 @@ func (w *Watcher) stream(ctx context.Context) error {
 	}
 }
 
+// eventWatcher is the stream a Supervisor runs for one node.
+type eventWatcher interface {
+	Run(ctx context.Context)
+	Out() <-chan ContainerEvent
+}
+
+// supervisedNode is one node's watcher and the cancel that stops it.
+type supervisedNode struct {
+	cancel context.CancelFunc
+}
+
 // Supervisor manages one Watcher per node and fans their output into a
-// single merged event channel.
-//
-// Known limitation: the set of nodes watched is fixed at Start() time.
-// Nodes added to or removed from the ClientPool while the Supervisor is
-// running are not picked up dynamically — restart the Supervisor to observe
-// membership changes. Dynamic membership tracking is left as follow-up
-// scope (expected to land alongside or after MINE-107).
+// single merged event channel. Sync and WatchMembership add and remove
+// nodes while the supervisor is running.
 type Supervisor struct {
 	log *logger.Logger
 
-	nodeIDs  []string
-	resolver func(nodeID string) (*docker.Client, error)
+	nodeIDs []string
+	factory func(nodeID string) (eventWatcher, error)
 
 	merged chan ContainerEvent
 
-	mu       sync.Mutex
-	started  bool
-	watchers []*Watcher
-	wg       sync.WaitGroup
+	mu          sync.Mutex
+	reconcileMu sync.Mutex
+	started     bool
+	parent      context.Context
+	running     map[string]*supervisedNode
+	wg          sync.WaitGroup
 }
 
 // NewSupervisor constructs a Supervisor for an explicit set of node IDs,
@@ -295,19 +302,25 @@ func NewSupervisor(nodeIDs []string, resolve func(nodeID string) (*docker.Client
 	ids := make([]string, len(nodeIDs))
 	copy(ids, nodeIDs)
 	return &Supervisor{
-		log:      log,
-		nodeIDs:  ids,
-		resolver: resolve,
-		merged:   make(chan ContainerEvent, 256),
+		log:     log,
+		nodeIDs: ids,
+		merged:  make(chan ContainerEvent, 256),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			cli, err := resolve(nodeID)
+			if err != nil {
+				return nil, err
+			}
+			return NewWatcher(nodeID, cli, log), nil
+		},
 	}
 }
 
 // NewSupervisorFromNodeStore constructs a Supervisor that auto-discovers
 // its node set from store.ListNodes (the same NodeStore backing pool; see
 // internal/docker.NodeStore) and resolves each node's client via
-// pool.GetClientStrict. Only enabled nodes are included. Discovery happens
-// once, at call time — see the Supervisor doc comment for the static
-// node-set limitation.
+// pool.GetClientStrict. Only enabled nodes are included. The initial set is
+// read at call time; WatchMembership picks up nodes added or disabled later.
 func NewSupervisorFromNodeStore(ctx context.Context, pool *docker.ClientPool, store docker.NodeStore, log *logger.Logger) (*Supervisor, error) {
 	nodes, err := store.ListNodes(ctx)
 	if err != nil {
@@ -342,67 +355,195 @@ func (s *Supervisor) Events() <-chan ContainerEvent {
 //
 // Start returns once all watchers are launched; it does not block for the
 // lifetime of the supervisor. Cancel ctx to stop all watchers and close
-// Events().
+// Events(). Sync may change membership until then.
 func (s *Supervisor) Start(ctx context.Context) error {
+	s.reconcileMu.Lock()
+	defer s.reconcileMu.Unlock()
+
 	s.mu.Lock()
 	if s.started {
 		s.mu.Unlock()
 		return nil
 	}
 	s.started = true
+	s.parent = ctx
+	if s.running == nil {
+		s.running = map[string]*supervisedNode{}
+	}
+	ids := append([]string(nil), s.nodeIDs...)
+	s.mu.Unlock()
+
+	go s.closeWhenDone(ctx)
+	return s.apply(ids)
+}
+
+// Sync sets the watched node set. Before Start it only records the set.
+// After Start it starts watchers for new nodes and stops watchers for
+// nodes that disappeared. A node that fails to resolve is skipped and the
+// first such error is returned; nodes that are already running stay up.
+func (s *Supervisor) Sync(nodeIDs []string) error {
+	s.reconcileMu.Lock()
+	defer s.reconcileMu.Unlock()
+
+	s.mu.Lock()
+	started := s.started
+	s.mu.Unlock()
+	if !started {
+		s.mu.Lock()
+		s.nodeIDs = uniqueIDs(nodeIDs)
+		s.mu.Unlock()
+		return nil
+	}
+	return s.apply(nodeIDs)
+}
+
+// WatchMembership refreshes the watched set on every interval until ctx is
+// cancelled. A failed listing keeps the previous watchers.
+func (s *Supervisor) WatchMembership(ctx context.Context, every time.Duration, list func(context.Context) ([]string, error)) {
+	if every <= 0 {
+		every = 15 * time.Second
+	}
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			ids, err := list(ctx)
+			if err != nil {
+				if s.log != nil {
+					s.log.Warn("reconciler: node membership refresh failed: %v", err)
+				}
+				continue
+			}
+			if err := s.Sync(ids); err != nil && s.log != nil {
+				s.log.Warn("reconciler: node membership update failed: %v", err)
+			}
+		}
+	}
+}
+
+func (s *Supervisor) closeWhenDone(ctx context.Context) {
+	<-ctx.Done()
+	s.reconcileMu.Lock()
+	defer s.reconcileMu.Unlock()
+	s.mu.Lock()
+	for _, rw := range s.running {
+		rw.cancel()
+	}
+	s.mu.Unlock()
+	s.wg.Wait()
+	close(s.merged)
+}
+
+func (s *Supervisor) apply(nodeIDs []string) error {
+	if s.parent != nil && s.parent.Err() != nil {
+		return s.parent.Err()
+	}
+	ordered := uniqueIDs(nodeIDs)
+	desired := make(map[string]struct{}, len(ordered))
+	for _, id := range ordered {
+		desired[id] = struct{}{}
+	}
+
+	s.mu.Lock()
+	if s.running == nil {
+		s.running = map[string]*supervisedNode{}
+	}
+	for id, rw := range s.running {
+		if _, ok := desired[id]; !ok {
+			rw.cancel()
+			delete(s.running, id)
+		}
+	}
+	var missing []string
+	for _, id := range ordered {
+		if _, ok := s.running[id]; !ok {
+			missing = append(missing, id)
+		}
+	}
+	factory := s.factory
+	s.nodeIDs = ordered
 	s.mu.Unlock()
 
 	var firstErr error
-	for _, nodeID := range s.nodeIDs {
-		cli, err := s.resolver(nodeID)
+	for _, id := range missing {
+		if s.parent != nil && s.parent.Err() != nil {
+			if firstErr == nil {
+				firstErr = s.parent.Err()
+			}
+			break
+		}
+		w, err := factory(id)
 		if err != nil {
 			if s.log != nil {
-				s.log.Error("reconciler: failed to resolve Docker client for node %q: %v", nodeID, err)
+				s.log.Error("reconciler: failed to resolve Docker client for node %q: %v", id, err)
 			}
 			if firstErr == nil {
 				firstErr = err
 			}
 			continue
 		}
+		if s.parent != nil && s.parent.Err() != nil {
+			if firstErr == nil {
+				firstErr = s.parent.Err()
+			}
+			break
+		}
+		s.startWatcher(id, w)
+	}
+	return firstErr
+}
 
-		w := NewWatcher(nodeID, cli, s.log)
-		s.mu.Lock()
-		s.watchers = append(s.watchers, w)
-		s.mu.Unlock()
-
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			w.Run(ctx)
-		}()
-
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			for {
-				select {
-				case ev, ok := <-w.Out():
-					if !ok {
-						return
-					}
-					select {
-					case s.merged <- ev:
-					case <-ctx.Done():
-						return
-					}
-				case <-ctx.Done():
+func (s *Supervisor) startWatcher(id string, w eventWatcher) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.parent != nil && s.parent.Err() != nil {
+		return
+	}
+	if _, exists := s.running[id]; exists {
+		return
+	}
+	nodeCtx, cancel := context.WithCancel(s.parent)
+	s.running[id] = &supervisedNode{cancel: cancel}
+	s.wg.Add(2)
+	go func() {
+		defer s.wg.Done()
+		w.Run(nodeCtx)
+	}()
+	go func() {
+		defer s.wg.Done()
+		for {
+			select {
+			case ev, ok := <-w.Out():
+				if !ok {
 					return
 				}
+				select {
+				case s.merged <- ev:
+				case <-nodeCtx.Done():
+					return
+				}
+			case <-nodeCtx.Done():
+				return
 			}
-		}()
-	}
-
-	// Close the merged channel once every watcher and fan-in goroutine
-	// has exited (i.e. once ctx is cancelled and everything drains).
-	go func() {
-		s.wg.Wait()
-		close(s.merged)
+		}
 	}()
+}
 
-	return firstErr
+func uniqueIDs(ids []string) []string {
+	seen := make(map[string]struct{}, len(ids))
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
 }

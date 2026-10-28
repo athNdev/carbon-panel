@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
@@ -255,4 +254,53 @@ func TestStagedConfigChange_Rollback(t *testing.T) {
 	_, err = store.RollbackStagedConfigChange(ctx, appliedEmptyPrev.ID)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no recorded previous state")
+}
+
+func TestApplyRefusesFieldThatMovedAfterStaging(t *testing.T) {
+	ctx := context.Background()
+	store := newStagedTestStore(t, "srv-moved")
+	staged, err := store.StageConfigChange(ctx, "srv-moved", map[string]any{"motd": "staged"}, StagedApplyOnRestart, "")
+	require.NoError(t, err)
+
+	live, err := store.GetServerConfig(ctx, "srv-moved")
+	require.NoError(t, err)
+	moved := "edited since"
+	live.MOTD = &moved
+	require.NoError(t, store.SaveServerConfig(ctx, live))
+
+	_, err = store.ApplyStagedConfigChange(ctx, staged.ID)
+	require.ErrorIs(t, err, ErrStagedConfigMoved)
+	got, err := store.GetStagedConfigChange(ctx, staged.ID)
+	require.NoError(t, err)
+	assert.Equal(t, StagedStatusStaged, got.Status)
+	live, err = store.GetServerConfig(ctx, "srv-moved")
+	require.NoError(t, err)
+	assert.Equal(t, "edited since", *live.MOTD)
+}
+
+func TestStageServerConfigUpdateSharesOneWindow(t *testing.T) {
+	ctx := context.Background()
+	store := newStagedTestStore(t, "srv-window")
+	first, err := store.StageServerConfigUpdate(ctx, "srv-window", map[string]any{"motd": "soon"}, UpdateWindowNextRestart, nil, 0)
+	require.NoError(t, err)
+	when := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
+	second, err := store.StageServerConfigUpdate(ctx, "srv-window", map[string]any{"difficulty": "hard"}, UpdateWindowAtTime, &when, 0)
+	require.NoError(t, err)
+	assert.Equal(t, first.BatchID, second.BatchID)
+	assert.NotEmpty(t, first.BatchID)
+
+	listed, err := store.ListStagedConfigChanges(ctx, "srv-window", StagedStatusStaged)
+	require.NoError(t, err)
+	require.Len(t, listed, 2)
+	for _, row := range listed {
+		assert.Equal(t, StagedApplyAtTime, row.ApplyMode)
+		require.NotNil(t, row.ApplyAt)
+		assert.True(t, row.ApplyAt.Equal(when))
+	}
+	live, err := store.GetServerConfig(ctx, "srv-window")
+	require.NoError(t, err)
+	assert.Equal(t, "original", *live.MOTD)
+
+	_, err = store.StageServerConfigUpdate(ctx, "srv-window", map[string]any{"motd": "idle"}, UpdateWindowIdle, nil, 0)
+	require.Error(t, err)
 }

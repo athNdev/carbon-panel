@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -16,17 +15,19 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/athNdev/carbon-panel/internal/alias"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/proxy"
+	"github.com/athNdev/carbon-panel/internal/staging"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 	"github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1/carbonpanelv1connect"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -720,6 +721,23 @@ func (s *ModuleService) UpdateModule(ctx context.Context, req *connect.Request[v
 	}
 
 	needsRecreate := false
+	before := moduleScalars{
+		Name:                  module.Name,
+		Config:                module.Config,
+		EnvOverrides:          module.EnvOverrides,
+		VolumeOverrides:       module.VolumeOverrides,
+		Memory:                module.Memory,
+		CPULimit:              module.CPULimit,
+		CmdOverride:           module.CmdOverride,
+		UID:                   module.UID,
+		GID:                   module.GID,
+		AutoStart:             module.AutoStart,
+		FollowServerLifecycle: module.FollowServerLifecycle,
+		Detached:              module.Detached,
+		InitCommand:           module.InitCommand,
+		InitCommandDelay:      module.InitCommandDelay,
+		RestartAfterInit:      module.RestartAfterInit,
+	}
 
 	// Update fields if provided
 	if msg.Name != nil {
@@ -835,6 +853,34 @@ func (s *ModuleService) UpdateModule(ctx context.Context, req *connect.Request[v
 		module.RestartAfterInit = *msg.RestartAfterInit
 	}
 
+	if msg.GetStage() {
+		if len(msg.Ports) > 0 || len(msg.Dependencies) > 0 || len(msg.EventHooks) > 0 || len(msg.Metadata) > 0 || len(msg.AccessUrls) > 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage this module change without ports, dependencies, hooks, metadata, or access URLs"))
+		}
+		fields := stagedModuleFields(before, module)
+		if len(fields) == 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no stageable module change"))
+		}
+		server, err := s.store.GetServer(ctx, module.ServerID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get server: %w", err))
+		}
+		if _, err := staging.StageModuleChange(ctx, s.store, server, module.ID, "module "+module.Name, needsRecreate, fields); err != nil {
+			if nodestorage.IsUnavailable(err) {
+				return nil, connect.NewError(connect.CodeUnavailable, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		fresh, err := s.store.GetModule(ctx, module.ID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		return connect.NewResponse(&v1.UpdateModuleResponse{
+			Module: s.moduleProto(ctx, fresh),
+			Staged: true,
+		}), nil
+	}
+
 	if err := s.store.UpdateModule(ctx, module); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update module: %w", err))
 	}
@@ -865,6 +911,88 @@ func (s *ModuleService) UpdateModule(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(&v1.UpdateModuleResponse{
 		Module: dbModuleToProto(module, serverName, templateName, serverProxyHostname, createdByUsername),
 	}), nil
+}
+
+type moduleScalars struct {
+	Name                  string
+	Config                string
+	EnvOverrides          string
+	VolumeOverrides       string
+	Memory                int
+	CPULimit              float64
+	CmdOverride           string
+	UID                   string
+	GID                   string
+	AutoStart             bool
+	FollowServerLifecycle bool
+	Detached              bool
+	InitCommand           string
+	InitCommandDelay      int
+	RestartAfterInit      bool
+}
+
+func stagedModuleFields(before moduleScalars, module *storage.Module) map[string]staging.ModuleField {
+	fields := map[string]staging.ModuleField{}
+	if before.Name != module.Name {
+		fields["name"] = staging.ModuleField{Base: before.Name, Value: module.Name}
+	}
+	if before.Config != module.Config {
+		fields["config"] = staging.ModuleField{Base: before.Config, Value: module.Config}
+	}
+	if before.EnvOverrides != module.EnvOverrides {
+		fields["env_overrides"] = staging.ModuleField{Base: before.EnvOverrides, Value: module.EnvOverrides}
+	}
+	if before.VolumeOverrides != module.VolumeOverrides {
+		fields["volume_overrides"] = staging.ModuleField{Base: before.VolumeOverrides, Value: module.VolumeOverrides}
+	}
+	if before.Memory != module.Memory {
+		fields["memory"] = staging.ModuleField{Base: before.Memory, Value: module.Memory}
+	}
+	if before.CPULimit != module.CPULimit {
+		fields["cpu_limit"] = staging.ModuleField{Base: before.CPULimit, Value: module.CPULimit}
+	}
+	if before.CmdOverride != module.CmdOverride {
+		fields["cmd_override"] = staging.ModuleField{Base: before.CmdOverride, Value: module.CmdOverride}
+	}
+	if before.UID != module.UID {
+		fields["uid"] = staging.ModuleField{Base: before.UID, Value: module.UID}
+	}
+	if before.GID != module.GID {
+		fields["gid"] = staging.ModuleField{Base: before.GID, Value: module.GID}
+	}
+	if before.AutoStart != module.AutoStart {
+		fields["auto_start"] = staging.ModuleField{Base: before.AutoStart, Value: module.AutoStart}
+	}
+	if before.FollowServerLifecycle != module.FollowServerLifecycle {
+		fields["follow_server_lifecycle"] = staging.ModuleField{Base: before.FollowServerLifecycle, Value: module.FollowServerLifecycle}
+	}
+	if before.Detached != module.Detached {
+		fields["detached"] = staging.ModuleField{Base: before.Detached, Value: module.Detached}
+	}
+	if before.InitCommand != module.InitCommand {
+		fields["init_command"] = staging.ModuleField{Base: before.InitCommand, Value: module.InitCommand}
+	}
+	if before.InitCommandDelay != module.InitCommandDelay {
+		fields["init_command_delay"] = staging.ModuleField{Base: before.InitCommandDelay, Value: module.InitCommandDelay}
+	}
+	if before.RestartAfterInit != module.RestartAfterInit {
+		fields["restart_after_init"] = staging.ModuleField{Base: before.RestartAfterInit, Value: module.RestartAfterInit}
+	}
+	return fields
+}
+
+func (s *ModuleService) moduleProto(ctx context.Context, module *storage.Module) *v1.Module {
+	serverName := ""
+	serverProxyHostname := ""
+	if server, err := s.store.GetServer(ctx, module.ServerID); err == nil {
+		serverName = server.Name
+		serverProxyHostname = server.ProxyHostname
+	}
+	templateName := ""
+	if template, err := s.store.GetModuleTemplate(ctx, module.TemplateID); err == nil {
+		templateName = template.Name
+	}
+	return dbModuleToProto(module, serverName, templateName, serverProxyHostname, s.resolveCreatedByUsername(ctx, module.CreatedBy))
 }
 
 func (s *ModuleService) DeleteModule(ctx context.Context, req *connect.Request[v1.DeleteModuleRequest]) (*connect.Response[v1.DeleteModuleResponse], error) {
