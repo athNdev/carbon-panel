@@ -20,7 +20,7 @@ import type { Message } from '@bufbuild/protobuf';
 export const file_carbonpanel_v1_config: GenFile =
 	/*@__PURE__*/
 	fileDesc(
-		'ChtjYXJib25wYW5lbC92MS9jb25maWcucHJvdG8SDmNhcmJvbnBhbmVsLnYxIuMBCg5Db25maWdQcm9wZXJ0eRILCgNrZXkYASABKAkSDQoFbGFiZWwYAiABKAkSDQoFdmFsdWUYAyABKAkSGgoNZGVmYXVsdF92YWx1ZRgEIAEoCUgAiAEBEgwKBHR5cGUYBSABKAkSEwoLZGVzY3JpcHRpb24YBiABKAkSEAoIcmVxdWlyZWQYByABKAgSDgoGc3lzdGVtGAggASgIEhEKCWVwaGVtZXJhbBgJIAEoCBIPCgdlbnZfdmFyGAogASgJEg8KB29wdGlvbnMYCyADKAlCEAoOX2RlZmF1bHRfdmFsdWUiUgoOQ29uZmlnQ2F0ZWdvcnkSDAoEbmFtZRgBIAEoCRIyCgpwcm9wZXJ0aWVzGAIgAygLMh4uY2FyYm9ucGFuZWwudjEuQ29uZmlnUHJvcGVydHkiKwoWR2V0U2VydmVyQ29uZmlnUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiTQoXR2V0U2VydmVyQ29uZmlnUmVzcG9uc2USMgoKY2F0ZWdvcmllcxgBIAMoCzIeLmNhcmJvbnBhbmVsLnYxLkNvbmZpZ0NhdGVnb3J5IpYCChlVcGRhdGVTZXJ2ZXJDb25maWdSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRJHCgd1cGRhdGVzGAIgAygLMjYuY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyQ29uZmlnUmVxdWVzdC5VcGRhdGVzRW50cnkSDQoFc3RhZ2UYAyABKAgSMQoGd2luZG93GAQgASgOMiEuY2FyYm9ucGFuZWwudjEuQ29uZmlnQXBwbHlXaW5kb3cSFQoNYXBwbHlfYXRfdW5peBgFIAEoAxIUCgxpZGxlX21pbnV0ZXMYBiABKAUaLgoMVXBkYXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiYAoaVXBkYXRlU2VydmVyQ29uZmlnUmVzcG9uc2USMgoKY2F0ZWdvcmllcxgBIAMoCzIeLmNhcmJvbnBhbmVsLnYxLkNvbmZpZ0NhdGVnb3J5Eg4KBnN0YWdlZBgCIAEoCCIaChhHZXRHbG9iYWxTZXR0aW5nc1JlcXVlc3QiTwoZR2V0R2xvYmFsU2V0dGluZ3NSZXNwb25zZRIyCgpjYXRlZ29yaWVzGAEgAygLMh4uY2FyYm9ucGFuZWwudjEuQ29uZmlnQ2F0ZWdvcnkimAEKG1VwZGF0ZUdsb2JhbFNldHRpbmdzUmVxdWVzdBJJCgd1cGRhdGVzGAEgAygLMjguY2FyYm9ucGFuZWwudjEuVXBkYXRlR2xvYmFsU2V0dGluZ3NSZXF1ZXN0LlVwZGF0ZXNFbnRyeRouCgxVcGRhdGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJSChxVcGRhdGVHbG9iYWxTZXR0aW5nc1Jlc3BvbnNlEjIKCmNhdGVnb3JpZXMYASADKAsyHi5jYXJib25wYW5lbC52MS5Db25maWdDYXRlZ29yeSJECiJTeW5jR2xvYmFsU2V0dGluZ3NUb1NlcnZlcnNSZXF1ZXN0Eh4KFm9wc19hbmRfd2hpdGVsaXN0X29ubHkYASABKAgiVQojU3luY0dsb2JhbFNldHRpbmdzVG9TZXJ2ZXJzUmVzcG9uc2USHQoVdXBkYXRlZF9zZXJ2ZXJzX2NvdW50GAEgASgFEg8KB21lc3NhZ2UYAiABKAkqnQEKEUNvbmZpZ0FwcGx5V2luZG93EiMKH0NPTkZJR19BUFBMWV9XSU5ET1dfVU5TUEVDSUZJRUQQABIkCiBDT05GSUdfQVBQTFlfV0lORE9XX05FWFRfUkVTVEFSVBABEh8KG0NPTkZJR19BUFBMWV9XSU5ET1dfQVRfVElNRRACEhwKGENPTkZJR19BUFBMWV9XSU5ET1dfSURMRRADMsYECg1Db25maWdTZXJ2aWNlEmIKD0dldFNlcnZlckNvbmZpZxImLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlckNvbmZpZ1JlcXVlc3QaJy5jYXJib25wYW5lbC52MS5HZXRTZXJ2ZXJDb25maWdSZXNwb25zZRJrChJVcGRhdGVTZXJ2ZXJDb25maWcSKS5jYXJib25wYW5lbC52MS5VcGRhdGVTZXJ2ZXJDb25maWdSZXF1ZXN0GiouY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyQ29uZmlnUmVzcG9uc2USaAoRR2V0R2xvYmFsU2V0dGluZ3MSKC5jYXJib25wYW5lbC52MS5HZXRHbG9iYWxTZXR0aW5nc1JlcXVlc3QaKS5jYXJib25wYW5lbC52MS5HZXRHbG9iYWxTZXR0aW5nc1Jlc3BvbnNlEnEKFFVwZGF0ZUdsb2JhbFNldHRpbmdzEisuY2FyYm9ucGFuZWwudjEuVXBkYXRlR2xvYmFsU2V0dGluZ3NSZXF1ZXN0GiwuY2FyYm9ucGFuZWwudjEuVXBkYXRlR2xvYmFsU2V0dGluZ3NSZXNwb25zZRKGAQobU3luY0dsb2JhbFNldHRpbmdzVG9TZXJ2ZXJzEjIuY2FyYm9ucGFuZWwudjEuU3luY0dsb2JhbFNldHRpbmdzVG9TZXJ2ZXJzUmVxdWVzdBozLmNhcmJvbnBhbmVsLnYxLlN5bmNHbG9iYWxTZXR0aW5nc1RvU2VydmVyc1Jlc3BvbnNlQkhaRmdpdGh1Yi5jb20vYXRoTmRldi9jYXJib24tcGFuZWwvcGtnL3Byb3RvL2NhcmJvbnBhbmVsL3YxO2NhcmJvbnBhbmVsdjFiBnByb3RvMw'
+		'ChtjYXJib25wYW5lbC92MS9jb25maWcucHJvdG8SDmNhcmJvbnBhbmVsLnYxIuMBCg5Db25maWdQcm9wZXJ0eRILCgNrZXkYASABKAkSDQoFbGFiZWwYAiABKAkSDQoFdmFsdWUYAyABKAkSGgoNZGVmYXVsdF92YWx1ZRgEIAEoCUgAiAEBEgwKBHR5cGUYBSABKAkSEwoLZGVzY3JpcHRpb24YBiABKAkSEAoIcmVxdWlyZWQYByABKAgSDgoGc3lzdGVtGAggASgIEhEKCWVwaGVtZXJhbBgJIAEoCBIPCgdlbnZfdmFyGAogASgJEg8KB29wdGlvbnMYCyADKAlCEAoOX2RlZmF1bHRfdmFsdWUiUgoOQ29uZmlnQ2F0ZWdvcnkSDAoEbmFtZRgBIAEoCRIyCgpwcm9wZXJ0aWVzGAIgAygLMh4uY2FyYm9ucGFuZWwudjEuQ29uZmlnUHJvcGVydHkiKwoWR2V0U2VydmVyQ29uZmlnUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiTQoXR2V0U2VydmVyQ29uZmlnUmVzcG9uc2USMgoKY2F0ZWdvcmllcxgBIAMoCzIeLmNhcmJvbnBhbmVsLnYxLkNvbmZpZ0NhdGVnb3J5IpYCChlVcGRhdGVTZXJ2ZXJDb25maWdSZXF1ZXN0EhEKCXNlcnZlcl9pZBgBIAEoCRJHCgd1cGRhdGVzGAIgAygLMjYuY2FyYm9ucGFuZWwudjEuVXBkYXRlU2VydmVyQ29uZmlnUmVxdWVzdC5VcGRhdGVzRW50cnkSDQoFc3RhZ2UYAyABKAgSMQoGd2luZG93GAQgASgOMiEuY2FyYm9ucGFuZWwudjEuQ29uZmlnQXBwbHlXaW5kb3cSFQoNYXBwbHlfYXRfdW5peBgFIAEoAxIUCgxpZGxlX21pbnV0ZXMYBiABKAUaLgoMVXBkYXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiYAoaVXBkYXRlU2VydmVyQ29uZmlnUmVzcG9uc2USMgoKY2F0ZWdvcmllcxgBIAMoCzIeLmNhcmJvbnBhbmVsLnYxLkNvbmZpZ0NhdGVnb3J5Eg4KBnN0YWdlZBgCIAEoCCIaChhHZXRHbG9iYWxTZXR0aW5nc1JlcXVlc3QiTwoZR2V0R2xvYmFsU2V0dGluZ3NSZXNwb25zZRIyCgpjYXRlZ29yaWVzGAEgAygLMh4uY2FyYm9ucGFuZWwudjEuQ29uZmlnQ2F0ZWdvcnkimAEKG1VwZGF0ZUdsb2JhbFNldHRpbmdzUmVxdWVzdBJJCgd1cGRhdGVzGAEgAygLMjguY2FyYm9ucGFuZWwudjEuVXBkYXRlR2xvYmFsU2V0dGluZ3NSZXF1ZXN0LlVwZGF0ZXNFbnRyeRouCgxVcGRhdGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJSChxVcGRhdGVHbG9iYWxTZXR0aW5nc1Jlc3BvbnNlEjIKCmNhdGVnb3JpZXMYASADKAsyHi5jYXJib25wYW5lbC52MS5Db25maWdDYXRlZ29yeSJECiJTeW5jR2xvYmFsU2V0dGluZ3NUb1NlcnZlcnNSZXF1ZXN0Eh4KFm9wc19hbmRfd2hpdGVsaXN0X29ubHkYASABKAgiVQojU3luY0dsb2JhbFNldHRpbmdzVG9TZXJ2ZXJzUmVzcG9uc2USHQoVdXBkYXRlZF9zZXJ2ZXJzX2NvdW50GAEgASgFEg8KB21lc3NhZ2UYAiABKAkiTQoQU3RhZ2VkVXBkYXRlSXRlbRIKCgJpZBgBIAEoCRIMCgRraW5kGAIgASgJEg4KBmFjdGlvbhgDIAEoCRIPCgdzdW1tYXJ5GAQgASgJIioKFUdldFVwZGF0ZUJhdGNoUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkitwEKFkdldFVwZGF0ZUJhdGNoUmVzcG9uc2USDAoEb3BlbhgBIAEoCBIxCgZ3aW5kb3cYAiABKA4yIS5jYXJib25wYW5lbC52MS5Db25maWdBcHBseVdpbmRvdxIVCg1hcHBseV9hdF91bml4GAMgASgDEhQKDGlkbGVfbWludXRlcxgEIAEoBRIvCgVpdGVtcxgFIAMoCzIgLmNhcmJvbnBhbmVsLnYxLlN0YWdlZFVwZGF0ZUl0ZW0iPwoZRGlzY2FyZFVwZGF0ZUJhdGNoUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkSDwoHaXRlbV9pZBgCIAEoCSIcChpEaXNjYXJkVXBkYXRlQmF0Y2hSZXNwb25zZSqdAQoRQ29uZmlnQXBwbHlXaW5kb3cSIwofQ09ORklHX0FQUExZX1dJTkRPV19VTlNQRUNJRklFRBAAEiQKIENPTkZJR19BUFBMWV9XSU5ET1dfTkVYVF9SRVNUQVJUEAESHwobQ09ORklHX0FQUExZX1dJTkRPV19BVF9USU1FEAISHAoYQ09ORklHX0FQUExZX1dJTkRPV19JRExFEAMylAYKDUNvbmZpZ1NlcnZpY2USYgoPR2V0U2VydmVyQ29uZmlnEiYuY2FyYm9ucGFuZWwudjEuR2V0U2VydmVyQ29uZmlnUmVxdWVzdBonLmNhcmJvbnBhbmVsLnYxLkdldFNlcnZlckNvbmZpZ1Jlc3BvbnNlEmsKElVwZGF0ZVNlcnZlckNvbmZpZxIpLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZVNlcnZlckNvbmZpZ1JlcXVlc3QaKi5jYXJib25wYW5lbC52MS5VcGRhdGVTZXJ2ZXJDb25maWdSZXNwb25zZRJfCg5HZXRVcGRhdGVCYXRjaBIlLmNhcmJvbnBhbmVsLnYxLkdldFVwZGF0ZUJhdGNoUmVxdWVzdBomLmNhcmJvbnBhbmVsLnYxLkdldFVwZGF0ZUJhdGNoUmVzcG9uc2USawoSRGlzY2FyZFVwZGF0ZUJhdGNoEikuY2FyYm9ucGFuZWwudjEuRGlzY2FyZFVwZGF0ZUJhdGNoUmVxdWVzdBoqLmNhcmJvbnBhbmVsLnYxLkRpc2NhcmRVcGRhdGVCYXRjaFJlc3BvbnNlEmgKEUdldEdsb2JhbFNldHRpbmdzEiguY2FyYm9ucGFuZWwudjEuR2V0R2xvYmFsU2V0dGluZ3NSZXF1ZXN0GikuY2FyYm9ucGFuZWwudjEuR2V0R2xvYmFsU2V0dGluZ3NSZXNwb25zZRJxChRVcGRhdGVHbG9iYWxTZXR0aW5ncxIrLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZUdsb2JhbFNldHRpbmdzUmVxdWVzdBosLmNhcmJvbnBhbmVsLnYxLlVwZGF0ZUdsb2JhbFNldHRpbmdzUmVzcG9uc2UShgEKG1N5bmNHbG9iYWxTZXR0aW5nc1RvU2VydmVycxIyLmNhcmJvbnBhbmVsLnYxLlN5bmNHbG9iYWxTZXR0aW5nc1RvU2VydmVyc1JlcXVlc3QaMy5jYXJib25wYW5lbC52MS5TeW5jR2xvYmFsU2V0dGluZ3NUb1NlcnZlcnNSZXNwb25zZUJIWkZnaXRodWIuY29tL2F0aE5kZXYvY2FyYm9uLXBhbmVsL3BrZy9wcm90by9jYXJib25wYW5lbC92MTtjYXJib25wYW5lbHYxYgZwcm90bzM'
 	);
 
 /**
@@ -370,6 +370,135 @@ export const SyncGlobalSettingsToServersResponseSchema: GenMessage<SyncGlobalSet
 	messageDesc(file_carbonpanel_v1_config, 11);
 
 /**
+ * One staged config diff or content edit.
+ *
+ * @generated from message carbonpanel.v1.StagedUpdateItem
+ */
+export type StagedUpdateItem = Message<'carbonpanel.v1.StagedUpdateItem'> & {
+	/**
+	 * @generated from field: string id = 1;
+	 */
+	id: string;
+
+	/**
+	 * @generated from field: string kind = 2;
+	 */
+	kind: string;
+
+	/**
+	 * @generated from field: string action = 3;
+	 */
+	action: string;
+
+	/**
+	 * @generated from field: string summary = 4;
+	 */
+	summary: string;
+};
+
+/**
+ * Describes the message carbonpanel.v1.StagedUpdateItem.
+ * Use `create(StagedUpdateItemSchema)` to create a new message.
+ */
+export const StagedUpdateItemSchema: GenMessage<StagedUpdateItem> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_config, 12);
+
+/**
+ * @generated from message carbonpanel.v1.GetUpdateBatchRequest
+ */
+export type GetUpdateBatchRequest = Message<'carbonpanel.v1.GetUpdateBatchRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
+};
+
+/**
+ * Describes the message carbonpanel.v1.GetUpdateBatchRequest.
+ * Use `create(GetUpdateBatchRequestSchema)` to create a new message.
+ */
+export const GetUpdateBatchRequestSchema: GenMessage<GetUpdateBatchRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_config, 13);
+
+/**
+ * @generated from message carbonpanel.v1.GetUpdateBatchResponse
+ */
+export type GetUpdateBatchResponse = Message<'carbonpanel.v1.GetUpdateBatchResponse'> & {
+	/**
+	 * @generated from field: bool open = 1;
+	 */
+	open: boolean;
+
+	/**
+	 * @generated from field: carbonpanel.v1.ConfigApplyWindow window = 2;
+	 */
+	window: ConfigApplyWindow;
+
+	/**
+	 * @generated from field: int64 apply_at_unix = 3;
+	 */
+	applyAtUnix: bigint;
+
+	/**
+	 * @generated from field: int32 idle_minutes = 4;
+	 */
+	idleMinutes: number;
+
+	/**
+	 * @generated from field: repeated carbonpanel.v1.StagedUpdateItem items = 5;
+	 */
+	items: StagedUpdateItem[];
+};
+
+/**
+ * Describes the message carbonpanel.v1.GetUpdateBatchResponse.
+ * Use `create(GetUpdateBatchResponseSchema)` to create a new message.
+ */
+export const GetUpdateBatchResponseSchema: GenMessage<GetUpdateBatchResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_config, 14);
+
+/**
+ * @generated from message carbonpanel.v1.DiscardUpdateBatchRequest
+ */
+export type DiscardUpdateBatchRequest = Message<'carbonpanel.v1.DiscardUpdateBatchRequest'> & {
+	/**
+	 * @generated from field: string server_id = 1;
+	 */
+	serverId: string;
+
+	/**
+	 * Empty discards the whole open batch.
+	 *
+	 * @generated from field: string item_id = 2;
+	 */
+	itemId: string;
+};
+
+/**
+ * Describes the message carbonpanel.v1.DiscardUpdateBatchRequest.
+ * Use `create(DiscardUpdateBatchRequestSchema)` to create a new message.
+ */
+export const DiscardUpdateBatchRequestSchema: GenMessage<DiscardUpdateBatchRequest> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_config, 15);
+
+/**
+ * @generated from message carbonpanel.v1.DiscardUpdateBatchResponse
+ */
+export type DiscardUpdateBatchResponse = Message<'carbonpanel.v1.DiscardUpdateBatchResponse'> & {};
+
+/**
+ * Describes the message carbonpanel.v1.DiscardUpdateBatchResponse.
+ * Use `create(DiscardUpdateBatchResponseSchema)` to create a new message.
+ */
+export const DiscardUpdateBatchResponseSchema: GenMessage<DiscardUpdateBatchResponse> =
+	/*@__PURE__*/
+	messageDesc(file_carbonpanel_v1_config, 16);
+
+/**
  * When a staged config edit should be applied. Unspecified with stage=false
  * saves the live config and recreates the container.
  *
@@ -429,6 +558,26 @@ export const ConfigService: GenService<{
 		methodKind: 'unary';
 		input: typeof UpdateServerConfigRequestSchema;
 		output: typeof UpdateServerConfigResponseSchema;
+	};
+	/**
+	 * Read the server's one open staged batch.
+	 *
+	 * @generated from rpc carbonpanel.v1.ConfigService.GetUpdateBatch
+	 */
+	getUpdateBatch: {
+		methodKind: 'unary';
+		input: typeof GetUpdateBatchRequestSchema;
+		output: typeof GetUpdateBatchResponseSchema;
+	};
+	/**
+	 * Drop one staged item, or the whole batch when item_id is empty.
+	 *
+	 * @generated from rpc carbonpanel.v1.ConfigService.DiscardUpdateBatch
+	 */
+	discardUpdateBatch: {
+		methodKind: 'unary';
+		input: typeof DiscardUpdateBatchRequestSchema;
+		output: typeof DiscardUpdateBatchResponseSchema;
 	};
 	/**
 	 * Fetch system-wide defaults

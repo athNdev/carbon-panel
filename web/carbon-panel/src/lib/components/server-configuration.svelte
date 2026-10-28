@@ -53,6 +53,11 @@ one at https://mozilla.org/MPL/2.0/.
 	let loading = $state(false);
 	let saving = $state(false);
 	let syncing = $state(false);
+	let applyWindow = $state<'next' | 'time' | 'idle'>('next');
+	let applyAtLocal = $state('');
+	let idleMinutes = $state(15);
+	let batchOpen = $state(false);
+	let batchItems = $state<Array<{ id: string; kind: string; action: string; summary: string }>>([]);
 	let categories = $state<ConfigCategory[]>([]);
 	let activeCategory = $state<string>('');
 	let highlightedField = $state<string | null>(null);
@@ -223,9 +228,42 @@ one at https://mozilla.org/MPL/2.0/.
 	// Initialize URL hash handling
 	onMount(() => {
 		checkUrlHash();
+		void loadBatch();
 		window.addEventListener('hashchange', checkUrlHash);
 		return () => window.removeEventListener('hashchange', checkUrlHash);
 	});
+
+	async function loadBatch() {
+		if (!server) return;
+		try {
+			const batch = await rpcClient.config.getUpdateBatch({ serverId: server.id });
+			batchOpen = batch.open;
+			batchItems = batch.items ?? [];
+			if (batch.window === ConfigApplyWindow.AT_TIME) applyWindow = 'time';
+			else if (batch.window === ConfigApplyWindow.IDLE) applyWindow = 'idle';
+			else if (batch.open) applyWindow = 'next';
+			if (batch.idleMinutes > 0) idleMinutes = batch.idleMinutes;
+			if (batch.applyAtUnix) {
+				const when = new Date(Number(batch.applyAtUnix) * 1000);
+				const pad = (n: number) => String(n).padStart(2, '0');
+				applyAtLocal = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T${pad(when.getHours())}:${pad(when.getMinutes())}`;
+			}
+		} catch (error) {
+			console.error(error);
+		}
+	}
+
+	async function discardStaged(itemId: string) {
+		if (!server) return;
+		try {
+			await rpcClient.config.discardUpdateBatch({ serverId: server.id, itemId });
+			await loadBatch();
+			toast.success(itemId ? 'Staged item discarded' : 'Staged batch discarded');
+		} catch (error) {
+			toast.error('Failed to discard the staged update');
+			console.error(error);
+		}
+	}
 
 	// React to config prop changes (for global settings)
 	let previousConfig = $state<ConfigCategory[] | undefined>(undefined);
@@ -245,6 +283,7 @@ one at https://mozilla.org/MPL/2.0/.
 			untrack(() => {
 				previousServerId = server!.id;
 				loadServerConfig();
+				void loadBatch();
 			});
 		}
 	});
@@ -318,6 +357,20 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 
 		const stageUpdate = !!server && stage;
+		if (stageUpdate && applyWindow === 'time' && !applyAtLocal) {
+			toast.error('Choose when the batch should apply');
+			return;
+		}
+		if (stageUpdate && applyWindow === 'idle' && idleMinutes < 1) {
+			toast.error('Idle minutes must be at least 1');
+			return;
+		}
+		const windowValue =
+			applyWindow === 'time'
+				? ConfigApplyWindow.AT_TIME
+				: applyWindow === 'idle'
+					? ConfigApplyWindow.IDLE
+					: ConfigApplyWindow.NEXT_RESTART;
 		saving = true;
 		try {
 			const updates: Record<string, string> = {};
@@ -338,14 +391,26 @@ one at https://mozilla.org/MPL/2.0/.
 					serverId: server.id,
 					updates,
 					stage: stageUpdate,
-					window: stageUpdate ? ConfigApplyWindow.NEXT_RESTART : ConfigApplyWindow.UNSPECIFIED
+					window: stageUpdate ? windowValue : ConfigApplyWindow.UNSPECIFIED,
+					applyAtUnix:
+						stageUpdate && applyWindow === 'time'
+							? BigInt(Math.floor(new Date(applyAtLocal).getTime() / 1000))
+							: 0n,
+					idleMinutes: stageUpdate && applyWindow === 'idle' ? idleMinutes : 0
 				});
 				processConfig(response.categories);
+				await loadBatch();
 			}
 
 			toast.success(stageUpdate ? 'Configuration staged' : 'Configuration saved');
 			if (stageUpdate) {
-				toast.info('The server was not restarted. These changes apply on the next restart.');
+				const when =
+					applyWindow === 'time'
+						? 'at the chosen time'
+						: applyWindow === 'idle'
+							? `after ${idleMinutes} idle minutes`
+							: 'on the next restart';
+				toast.info(`The server was not restarted. These changes apply ${when}.`);
 			}
 		} catch (error) {
 			toast.error(stageUpdate ? 'Failed to stage configuration' : 'Failed to save configuration');
@@ -895,10 +960,79 @@ one at https://mozilla.org/MPL/2.0/.
 			</div>
 
 			{#if server}
-				<div class="rounded-none border-t border-[#393939] bg-[#262626] p-4">
+				<div class="space-y-3 rounded-none border-t border-[#393939] bg-[#262626] p-4">
+					<div class="flex flex-wrap items-end gap-3">
+						<label class="flex flex-col gap-1 font-mono text-xs text-[#c6c6c6]">
+							Apply window
+							<select
+								bind:value={applyWindow}
+								class="h-8 border border-[#393939] bg-[#161616] px-2 text-[#f4f4f4]"
+							>
+								<option value="next">On next restart</option>
+								<option value="time">At a time</option>
+								<option value="idle">After idle</option>
+							</select>
+						</label>
+						{#if applyWindow === 'time'}
+							<label class="flex flex-col gap-1 font-mono text-xs text-[#c6c6c6]">
+								UTC is stored from this local time
+								<input
+									type="datetime-local"
+									bind:value={applyAtLocal}
+									class="h-8 border border-[#393939] bg-[#161616] px-2 text-[#f4f4f4]"
+								/>
+							</label>
+						{/if}
+						{#if applyWindow === 'idle'}
+							<label class="flex flex-col gap-1 font-mono text-xs text-[#c6c6c6]">
+								Minutes with nobody online
+								<input
+									type="number"
+									min="1"
+									value={idleMinutes}
+									oninput={(event) => {
+										const target = event.currentTarget as HTMLInputElement;
+										idleMinutes = Number(target.value) || 0;
+									}}
+									class="h-8 w-24 border border-[#393939] bg-[#161616] px-2 text-[#f4f4f4]"
+								/>
+							</label>
+						{/if}
+					</div>
+					{#if batchOpen}
+						<ul class="space-y-1">
+							{#each batchItems as item (item.id)}
+								<li class="flex items-center justify-between gap-3 font-mono text-xs text-[#f4f4f4]">
+									<span>{item.summary}</span>
+									<button
+										type="button"
+										onclick={() => discardStaged(item.id)}
+										class="h-7 cursor-pointer border border-[#393939] px-2 text-[#c6c6c6] hover:text-white"
+									>
+										Discard
+									</button>
+								</li>
+							{/each}
+						</ul>
+						<button
+							type="button"
+							onclick={() => discardStaged('')}
+							class="h-8 cursor-pointer border border-[#393939] px-3 font-mono text-xs text-[#c6c6c6] hover:text-white"
+						>
+							Discard batch
+						</button>
+					{/if}
 					<p class="font-mono text-xs text-[#c6c6c6]">
-						Stage keeps the server as it is, including while it is frozen or in deep sleep. The
-						diff applies on the next restart. Apply now restarts the container.
+						Stage keeps the server as it is, including while it is frozen or in deep sleep.
+						{#if applyWindow === 'time'}
+							The batch applies at the chosen time, even if that time passed while the panel was down.
+						{:else if applyWindow === 'idle'}
+							The batch applies after the server has had nobody online for the chosen minutes. A player
+							joining starts that wait over. Deep sleep stays stopped. A frozen server restarts once.
+						{:else}
+							The batch applies on the next restart.
+						{/if}
+						Apply now restarts the container.
 					</p>
 				</div>
 			{/if}

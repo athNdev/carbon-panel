@@ -764,6 +764,284 @@ func (x *SyncGlobalSettingsToServersResponse) GetMessage() string {
 	return ""
 }
 
+// One staged config diff or content edit.
+type StagedUpdateItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Action        string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
+	Summary       string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StagedUpdateItem) Reset() {
+	*x = StagedUpdateItem{}
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StagedUpdateItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StagedUpdateItem) ProtoMessage() {}
+
+func (x *StagedUpdateItem) ProtoReflect() protoreflect.Message {
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StagedUpdateItem.ProtoReflect.Descriptor instead.
+func (*StagedUpdateItem) Descriptor() ([]byte, []int) {
+	return file_carbonpanel_v1_config_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *StagedUpdateItem) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StagedUpdateItem) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *StagedUpdateItem) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *StagedUpdateItem) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+type GetUpdateBatchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUpdateBatchRequest) Reset() {
+	*x = GetUpdateBatchRequest{}
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUpdateBatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUpdateBatchRequest) ProtoMessage() {}
+
+func (x *GetUpdateBatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUpdateBatchRequest.ProtoReflect.Descriptor instead.
+func (*GetUpdateBatchRequest) Descriptor() ([]byte, []int) {
+	return file_carbonpanel_v1_config_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetUpdateBatchRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+type GetUpdateBatchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Open          bool                   `protobuf:"varint,1,opt,name=open,proto3" json:"open,omitempty"`
+	Window        ConfigApplyWindow      `protobuf:"varint,2,opt,name=window,proto3,enum=carbonpanel.v1.ConfigApplyWindow" json:"window,omitempty"`
+	ApplyAtUnix   int64                  `protobuf:"varint,3,opt,name=apply_at_unix,json=applyAtUnix,proto3" json:"apply_at_unix,omitempty"`
+	IdleMinutes   int32                  `protobuf:"varint,4,opt,name=idle_minutes,json=idleMinutes,proto3" json:"idle_minutes,omitempty"`
+	Items         []*StagedUpdateItem    `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUpdateBatchResponse) Reset() {
+	*x = GetUpdateBatchResponse{}
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUpdateBatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUpdateBatchResponse) ProtoMessage() {}
+
+func (x *GetUpdateBatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUpdateBatchResponse.ProtoReflect.Descriptor instead.
+func (*GetUpdateBatchResponse) Descriptor() ([]byte, []int) {
+	return file_carbonpanel_v1_config_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetUpdateBatchResponse) GetOpen() bool {
+	if x != nil {
+		return x.Open
+	}
+	return false
+}
+
+func (x *GetUpdateBatchResponse) GetWindow() ConfigApplyWindow {
+	if x != nil {
+		return x.Window
+	}
+	return ConfigApplyWindow_CONFIG_APPLY_WINDOW_UNSPECIFIED
+}
+
+func (x *GetUpdateBatchResponse) GetApplyAtUnix() int64 {
+	if x != nil {
+		return x.ApplyAtUnix
+	}
+	return 0
+}
+
+func (x *GetUpdateBatchResponse) GetIdleMinutes() int32 {
+	if x != nil {
+		return x.IdleMinutes
+	}
+	return 0
+}
+
+func (x *GetUpdateBatchResponse) GetItems() []*StagedUpdateItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type DiscardUpdateBatchRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	ServerId string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	// Empty discards the whole open batch.
+	ItemId        string `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DiscardUpdateBatchRequest) Reset() {
+	*x = DiscardUpdateBatchRequest{}
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DiscardUpdateBatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DiscardUpdateBatchRequest) ProtoMessage() {}
+
+func (x *DiscardUpdateBatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DiscardUpdateBatchRequest.ProtoReflect.Descriptor instead.
+func (*DiscardUpdateBatchRequest) Descriptor() ([]byte, []int) {
+	return file_carbonpanel_v1_config_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *DiscardUpdateBatchRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *DiscardUpdateBatchRequest) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+type DiscardUpdateBatchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DiscardUpdateBatchResponse) Reset() {
+	*x = DiscardUpdateBatchResponse{}
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DiscardUpdateBatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DiscardUpdateBatchResponse) ProtoMessage() {}
+
+func (x *DiscardUpdateBatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_carbonpanel_v1_config_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DiscardUpdateBatchResponse.ProtoReflect.Descriptor instead.
+func (*DiscardUpdateBatchResponse) Descriptor() ([]byte, []int) {
+	return file_carbonpanel_v1_config_proto_rawDescGZIP(), []int{16}
+}
+
 var File_carbonpanel_v1_config_proto protoreflect.FileDescriptor
 
 const file_carbonpanel_v1_config_proto_rawDesc = "" +
@@ -827,15 +1105,34 @@ const file_carbonpanel_v1_config_proto_rawDesc = "" +
 	"\x16ops_and_whitelist_only\x18\x01 \x01(\bR\x13opsAndWhitelistOnly\"s\n" +
 	"#SyncGlobalSettingsToServersResponse\x122\n" +
 	"\x15updated_servers_count\x18\x01 \x01(\x05R\x13updatedServersCount\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage*\x9d\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"h\n" +
+	"\x10StagedUpdateItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x12\x18\n" +
+	"\asummary\x18\x04 \x01(\tR\asummary\"4\n" +
+	"\x15GetUpdateBatchRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\"\xe6\x01\n" +
+	"\x16GetUpdateBatchResponse\x12\x12\n" +
+	"\x04open\x18\x01 \x01(\bR\x04open\x129\n" +
+	"\x06window\x18\x02 \x01(\x0e2!.carbonpanel.v1.ConfigApplyWindowR\x06window\x12\"\n" +
+	"\rapply_at_unix\x18\x03 \x01(\x03R\vapplyAtUnix\x12!\n" +
+	"\fidle_minutes\x18\x04 \x01(\x05R\vidleMinutes\x126\n" +
+	"\x05items\x18\x05 \x03(\v2 .carbonpanel.v1.StagedUpdateItemR\x05items\"Q\n" +
+	"\x19DiscardUpdateBatchRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x17\n" +
+	"\aitem_id\x18\x02 \x01(\tR\x06itemId\"\x1c\n" +
+	"\x1aDiscardUpdateBatchResponse*\x9d\x01\n" +
 	"\x11ConfigApplyWindow\x12#\n" +
 	"\x1fCONFIG_APPLY_WINDOW_UNSPECIFIED\x10\x00\x12$\n" +
 	" CONFIG_APPLY_WINDOW_NEXT_RESTART\x10\x01\x12\x1f\n" +
 	"\x1bCONFIG_APPLY_WINDOW_AT_TIME\x10\x02\x12\x1c\n" +
-	"\x18CONFIG_APPLY_WINDOW_IDLE\x10\x032\xc6\x04\n" +
+	"\x18CONFIG_APPLY_WINDOW_IDLE\x10\x032\x94\x06\n" +
 	"\rConfigService\x12b\n" +
 	"\x0fGetServerConfig\x12&.carbonpanel.v1.GetServerConfigRequest\x1a'.carbonpanel.v1.GetServerConfigResponse\x12k\n" +
-	"\x12UpdateServerConfig\x12).carbonpanel.v1.UpdateServerConfigRequest\x1a*.carbonpanel.v1.UpdateServerConfigResponse\x12h\n" +
+	"\x12UpdateServerConfig\x12).carbonpanel.v1.UpdateServerConfigRequest\x1a*.carbonpanel.v1.UpdateServerConfigResponse\x12_\n" +
+	"\x0eGetUpdateBatch\x12%.carbonpanel.v1.GetUpdateBatchRequest\x1a&.carbonpanel.v1.GetUpdateBatchResponse\x12k\n" +
+	"\x12DiscardUpdateBatch\x12).carbonpanel.v1.DiscardUpdateBatchRequest\x1a*.carbonpanel.v1.DiscardUpdateBatchResponse\x12h\n" +
 	"\x11GetGlobalSettings\x12(.carbonpanel.v1.GetGlobalSettingsRequest\x1a).carbonpanel.v1.GetGlobalSettingsResponse\x12q\n" +
 	"\x14UpdateGlobalSettings\x12+.carbonpanel.v1.UpdateGlobalSettingsRequest\x1a,.carbonpanel.v1.UpdateGlobalSettingsResponse\x12\x86\x01\n" +
 	"\x1bSyncGlobalSettingsToServers\x122.carbonpanel.v1.SyncGlobalSettingsToServersRequest\x1a3.carbonpanel.v1.SyncGlobalSettingsToServersResponseBHZFgithub.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1;carbonpanelv1b\x06proto3"
@@ -853,7 +1150,7 @@ func file_carbonpanel_v1_config_proto_rawDescGZIP() []byte {
 }
 
 var file_carbonpanel_v1_config_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_carbonpanel_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_carbonpanel_v1_config_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_carbonpanel_v1_config_proto_goTypes = []any{
 	(ConfigApplyWindow)(0),                      // 0: carbonpanel.v1.ConfigApplyWindow
 	(*ConfigProperty)(nil),                      // 1: carbonpanel.v1.ConfigProperty
@@ -868,33 +1165,44 @@ var file_carbonpanel_v1_config_proto_goTypes = []any{
 	(*UpdateGlobalSettingsResponse)(nil),        // 10: carbonpanel.v1.UpdateGlobalSettingsResponse
 	(*SyncGlobalSettingsToServersRequest)(nil),  // 11: carbonpanel.v1.SyncGlobalSettingsToServersRequest
 	(*SyncGlobalSettingsToServersResponse)(nil), // 12: carbonpanel.v1.SyncGlobalSettingsToServersResponse
-	nil, // 13: carbonpanel.v1.UpdateServerConfigRequest.UpdatesEntry
-	nil, // 14: carbonpanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
+	(*StagedUpdateItem)(nil),                    // 13: carbonpanel.v1.StagedUpdateItem
+	(*GetUpdateBatchRequest)(nil),               // 14: carbonpanel.v1.GetUpdateBatchRequest
+	(*GetUpdateBatchResponse)(nil),              // 15: carbonpanel.v1.GetUpdateBatchResponse
+	(*DiscardUpdateBatchRequest)(nil),           // 16: carbonpanel.v1.DiscardUpdateBatchRequest
+	(*DiscardUpdateBatchResponse)(nil),          // 17: carbonpanel.v1.DiscardUpdateBatchResponse
+	nil,                                         // 18: carbonpanel.v1.UpdateServerConfigRequest.UpdatesEntry
+	nil,                                         // 19: carbonpanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
 }
 var file_carbonpanel_v1_config_proto_depIdxs = []int32{
 	1,  // 0: carbonpanel.v1.ConfigCategory.properties:type_name -> carbonpanel.v1.ConfigProperty
 	2,  // 1: carbonpanel.v1.GetServerConfigResponse.categories:type_name -> carbonpanel.v1.ConfigCategory
-	13, // 2: carbonpanel.v1.UpdateServerConfigRequest.updates:type_name -> carbonpanel.v1.UpdateServerConfigRequest.UpdatesEntry
+	18, // 2: carbonpanel.v1.UpdateServerConfigRequest.updates:type_name -> carbonpanel.v1.UpdateServerConfigRequest.UpdatesEntry
 	0,  // 3: carbonpanel.v1.UpdateServerConfigRequest.window:type_name -> carbonpanel.v1.ConfigApplyWindow
 	2,  // 4: carbonpanel.v1.UpdateServerConfigResponse.categories:type_name -> carbonpanel.v1.ConfigCategory
 	2,  // 5: carbonpanel.v1.GetGlobalSettingsResponse.categories:type_name -> carbonpanel.v1.ConfigCategory
-	14, // 6: carbonpanel.v1.UpdateGlobalSettingsRequest.updates:type_name -> carbonpanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
+	19, // 6: carbonpanel.v1.UpdateGlobalSettingsRequest.updates:type_name -> carbonpanel.v1.UpdateGlobalSettingsRequest.UpdatesEntry
 	2,  // 7: carbonpanel.v1.UpdateGlobalSettingsResponse.categories:type_name -> carbonpanel.v1.ConfigCategory
-	3,  // 8: carbonpanel.v1.ConfigService.GetServerConfig:input_type -> carbonpanel.v1.GetServerConfigRequest
-	5,  // 9: carbonpanel.v1.ConfigService.UpdateServerConfig:input_type -> carbonpanel.v1.UpdateServerConfigRequest
-	7,  // 10: carbonpanel.v1.ConfigService.GetGlobalSettings:input_type -> carbonpanel.v1.GetGlobalSettingsRequest
-	9,  // 11: carbonpanel.v1.ConfigService.UpdateGlobalSettings:input_type -> carbonpanel.v1.UpdateGlobalSettingsRequest
-	11, // 12: carbonpanel.v1.ConfigService.SyncGlobalSettingsToServers:input_type -> carbonpanel.v1.SyncGlobalSettingsToServersRequest
-	4,  // 13: carbonpanel.v1.ConfigService.GetServerConfig:output_type -> carbonpanel.v1.GetServerConfigResponse
-	6,  // 14: carbonpanel.v1.ConfigService.UpdateServerConfig:output_type -> carbonpanel.v1.UpdateServerConfigResponse
-	8,  // 15: carbonpanel.v1.ConfigService.GetGlobalSettings:output_type -> carbonpanel.v1.GetGlobalSettingsResponse
-	10, // 16: carbonpanel.v1.ConfigService.UpdateGlobalSettings:output_type -> carbonpanel.v1.UpdateGlobalSettingsResponse
-	12, // 17: carbonpanel.v1.ConfigService.SyncGlobalSettingsToServers:output_type -> carbonpanel.v1.SyncGlobalSettingsToServersResponse
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	0,  // 8: carbonpanel.v1.GetUpdateBatchResponse.window:type_name -> carbonpanel.v1.ConfigApplyWindow
+	13, // 9: carbonpanel.v1.GetUpdateBatchResponse.items:type_name -> carbonpanel.v1.StagedUpdateItem
+	3,  // 10: carbonpanel.v1.ConfigService.GetServerConfig:input_type -> carbonpanel.v1.GetServerConfigRequest
+	5,  // 11: carbonpanel.v1.ConfigService.UpdateServerConfig:input_type -> carbonpanel.v1.UpdateServerConfigRequest
+	14, // 12: carbonpanel.v1.ConfigService.GetUpdateBatch:input_type -> carbonpanel.v1.GetUpdateBatchRequest
+	16, // 13: carbonpanel.v1.ConfigService.DiscardUpdateBatch:input_type -> carbonpanel.v1.DiscardUpdateBatchRequest
+	7,  // 14: carbonpanel.v1.ConfigService.GetGlobalSettings:input_type -> carbonpanel.v1.GetGlobalSettingsRequest
+	9,  // 15: carbonpanel.v1.ConfigService.UpdateGlobalSettings:input_type -> carbonpanel.v1.UpdateGlobalSettingsRequest
+	11, // 16: carbonpanel.v1.ConfigService.SyncGlobalSettingsToServers:input_type -> carbonpanel.v1.SyncGlobalSettingsToServersRequest
+	4,  // 17: carbonpanel.v1.ConfigService.GetServerConfig:output_type -> carbonpanel.v1.GetServerConfigResponse
+	6,  // 18: carbonpanel.v1.ConfigService.UpdateServerConfig:output_type -> carbonpanel.v1.UpdateServerConfigResponse
+	15, // 19: carbonpanel.v1.ConfigService.GetUpdateBatch:output_type -> carbonpanel.v1.GetUpdateBatchResponse
+	17, // 20: carbonpanel.v1.ConfigService.DiscardUpdateBatch:output_type -> carbonpanel.v1.DiscardUpdateBatchResponse
+	8,  // 21: carbonpanel.v1.ConfigService.GetGlobalSettings:output_type -> carbonpanel.v1.GetGlobalSettingsResponse
+	10, // 22: carbonpanel.v1.ConfigService.UpdateGlobalSettings:output_type -> carbonpanel.v1.UpdateGlobalSettingsResponse
+	12, // 23: carbonpanel.v1.ConfigService.SyncGlobalSettingsToServers:output_type -> carbonpanel.v1.SyncGlobalSettingsToServersResponse
+	17, // [17:24] is the sub-list for method output_type
+	10, // [10:17] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_carbonpanel_v1_config_proto_init() }
@@ -909,7 +1217,7 @@ func file_carbonpanel_v1_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_carbonpanel_v1_config_proto_rawDesc), len(file_carbonpanel_v1_config_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -9,6 +9,8 @@ code_refs:
   - internal/db/staged_content.go
   - internal/rpc/services/stage_content.go
   - internal/staging
+  - internal/rpc/services/update_batch.go
+  - web/carbon-panel/src/lib/components/server-configuration.svelte
 sources:
   - title: Staged update research
     resource: ../../docs/research/staged-update-application.md
@@ -40,3 +42,7 @@ the JVM. A running server is saved and restarted once. A frozen server gets a
 real stop and start and is left running. If that publish fails, the previous
 files and config are restored and the batch stays open. A live config field
 that moved after it was staged stops the publish before anything is written.
+
+The server configuration screen reads that open batch. From there an admin
+chooses next restart, a UTC timestamp, or idle minutes, and can discard one
+item or the whole batch. Apply now still restarts the container.
