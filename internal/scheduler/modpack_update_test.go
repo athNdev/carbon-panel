@@ -225,7 +225,7 @@ func TestModpackUpdate_StageIntoBatchLeavesLiveTree(t *testing.T) {
 			staged = true
 		}
 		return nil
-	})
+	}))
 	assert.True(t, staged)
 	stored, err := store.GetServer(ctx, server.ID)
 	require.NoError(t, err)
