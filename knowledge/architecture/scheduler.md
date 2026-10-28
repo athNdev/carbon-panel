@@ -39,6 +39,9 @@ streamed through the WebSocket hub.
   remaining steps were not run.
 - A console command runs once. A configured retry is not repeated, because
   the command may already have been delivered.
+- A scheduled backup holds the server lifecycle transition until the archive
+  finishes. Restore and wake wait, and a backup refuses to start while that
+  transition is already held.
 - Validate cron expressions before persisting them.
 
 # How to check

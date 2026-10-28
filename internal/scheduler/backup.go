@@ -61,8 +61,10 @@ var defaultBackupExcludes = []string{
 }
 
 // Archives server data into the configured backup directory.
-// When the server is running, world saves are paused and flushed over RCON
-// first so the files on disk are consistent, then re-enabled afterwards.
+// The archive holds the server's lifecycle transition for its whole window,
+// including save pause, an optional stop, and the restart. Restore and
+// wake take the same transition, so they cannot mutate this world until
+// the backup releases it.
 func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Server, task *storage.ScheduledTask) (output string, err error) {
 	var config BackupTaskConfig
 	if task.Config != "" {
@@ -121,6 +123,12 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	}
 	prefix := files.SanitizePathName(backupName)
 	destPath := filepath.Join(destDir, fmt.Sprintf("%s_%s.zip", prefix, time.Now().UTC().Format("20060102-150405")))
+
+	transition, terr := docker.TryBeginServerTransition(server.ID)
+	if terr != nil {
+		return "", fmt.Errorf("backup refused while another lifecycle operation owns the server: %w", terr)
+	}
+	defer transition.Release()
 
 	restart := false
 	resumeSaves, consistency := s.pauseWorldSaves(ctx, server)
