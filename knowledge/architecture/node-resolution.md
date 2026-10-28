@@ -38,6 +38,9 @@ wrong host. That is a data-safety bug, not a degraded mode.
 - The first successful daemon observation stores that daemon id. A later
   observation with a different id is refused, the cached client is dropped,
   and the accepted id stays in place until an operator update replaces it.
+- `GetClient` does not serve a named node from the local daemon, including
+  when the historical fallback flag is set. Local aliases still use the
+  controller client.
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
 - Remote file, Minecraft and backup archive paths still read the controller

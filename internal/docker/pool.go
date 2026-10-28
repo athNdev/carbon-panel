@@ -139,10 +139,10 @@ func (p *ClientPool) RegisterClient(nodeID string, cli *Client) {
 	}
 }
 
-// SetFallbackEnabled controls whether GetClient may fall back to the default client
-// when a specific requested node cannot be found or fails to connect.
-// By default, fallback is disabled for security and correctness so that operations
-// targeted to a specific remote node are never silently executed on the local daemon.
+// SetFallbackEnabled records the historical fallback flag. A named node is never
+// served by the local daemon, whether or not the flag is set. Local aliases
+// ("", "local", the default node id, and a node marked local) still use the
+// controller client.
 func (p *ClientPool) SetFallbackEnabled(enabled bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -184,19 +184,10 @@ func (p *ClientPool) Stats() PoolStats {
 	}
 }
 
-// GetClient retrieves the Docker client for the given nodeID.
-// If the node cannot be found, the store is unavailable, or its client cannot be
-// created, it gracefully falls back to the default client (typically the local
-// Docker daemon), logging only a Warn. This fallback is convenient but dangerous
-// for multi-node correctness: if a remote node blips, callers can silently end up
-// operating against the LOCAL daemon instead of the intended remote node (e.g.
-// creating a "remote" container locally by mistake).
-//
-// Prefer GetClientStrict for any operation where acting on the wrong node would
-// be a correctness or safety problem (container create/start/stop/remove,
-// recreate, etc.). Only use GetClient where a best-effort fallback to local is
-// truly acceptable (e.g. read-only status checks where local UI needs to
-// degrade gracefully) and other code may already depend on this behavior.
+// GetClient retrieves the Docker client for the given nodeID. A named node
+// that cannot be resolved returns an error. It is not served by the local
+// daemon. Empty, "local", the default node id, and a node marked local use
+// the controller client.
 func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	atomic.AddUint64(&p.stats.totalRequests, 1)
 
@@ -216,26 +207,15 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 		atomic.AddUint64(&p.stats.cacheHits, 1)
 		return cached, nil
 	}
-	allowFallback := p.IsFallbackEnabled()
 
 	atomic.AddUint64(&p.stats.cacheMisses, 1)
 
 	if p.store == nil {
-		if allowFallback && p.defaultClient != nil {
-			atomic.AddUint64(&p.stats.fallbacks, 1)
-			p.log.Warn("NodeStore is nil; falling back to default Docker client for node: %s", nodeID)
-			return p.defaultClient, nil
-		}
 		return nil, fmt.Errorf("node store is nil and client not found for node: %s", nodeID)
 	}
 
 	node, err := p.store.GetNode(context.Background(), nodeID)
 	if err != nil {
-		if allowFallback && p.defaultClient != nil {
-			atomic.AddUint64(&p.stats.fallbacks, 1)
-			p.log.Warn("Node %q not found in store (%v); falling back to default Docker client", nodeID, err)
-			return p.defaultClient, nil
-		}
 		return nil, fmt.Errorf("node %s not found in store: %w", nodeID, err)
 	}
 
@@ -254,11 +234,6 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	newCli, err := p.createClientForNode(node)
 	if err != nil {
 		atomic.AddUint64(&p.stats.createErrors, 1)
-		if allowFallback && p.defaultClient != nil {
-			atomic.AddUint64(&p.stats.fallbacks, 1)
-			p.log.Warn("Failed to create client for node %q (%v); falling back to default Docker client", nodeID, err)
-			return p.defaultClient, nil
-		}
 		return nil, fmt.Errorf("failed to create client for node %s: %w", nodeID, err)
 	}
 

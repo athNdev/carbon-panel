@@ -112,18 +112,15 @@ func TestClientPool_Fallback(t *testing.T) {
 		t.Fatalf("expected error requesting unknown node with fallback disabled, got nil")
 	}
 
-	// Enabling fallback allows GetClient to gracefully fall back to default
+	// A named node still fails when the historical fallback flag is set.
 	pool.SetFallbackEnabled(true)
 	if !pool.IsFallbackEnabled() {
-		t.Fatalf("expected fallback to be enabled after SetFallbackEnabled(true)")
+		t.Fatalf("expected fallback flag to be stored after SetFallbackEnabled(true)")
 	}
 
 	fallbackCli, err := pool.GetClient("nonexistent-node-123")
-	if err != nil {
-		t.Fatalf("expected graceful fallback when enabled, got error: %v", err)
-	}
-	if fallbackCli != mockClient {
-		t.Fatalf("expected default client on fallback, got %v", fallbackCli)
+	if err == nil || fallbackCli == mockClient {
+		t.Fatalf("named node returned the local client with fallback enabled: %v %v", fallbackCli, err)
 	}
 
 	// Strict get should ALWAYS fail and NOT fall back, regardless of allowFallback setting
@@ -165,11 +162,11 @@ func TestClientPool_RegisterAndRemoveNode(t *testing.T) {
 		t.Fatalf("expected error requesting removed node with fallback disabled, got nil")
 	}
 
-	// With fallback enabled, it falls back to default
+	// A removed named node is not served by the local client.
 	pool.SetFallbackEnabled(true)
 	afterRemove, err := pool.GetClient("custom-node")
-	if err != nil || afterRemove != defaultCli {
-		t.Fatalf("expected fallback to default after removal when enabled, got %v (err: %v)", afterRemove, err)
+	if err == nil || afterRemove == defaultCli {
+		t.Fatalf("removed node returned the local client: %v %v", afterRemove, err)
 	}
 }
 
@@ -429,12 +426,12 @@ func TestClientPool_Stats(t *testing.T) {
 		t.Fatalf("expected 2 requests, 2 hits, got %+v", stats)
 	}
 
-	// Request nonexistent (fallback)
+	// A missing named node is a miss, not a fallback to the local daemon.
 	pool.SetFallbackEnabled(true)
 	_, _ = pool.GetClient("nonexistent")
 	stats = pool.Stats()
-	if stats.TotalRequests != 3 || stats.CacheMisses != 1 || stats.Fallbacks != 1 {
-		t.Fatalf("expected 3 requests, 1 miss, 1 fallback, got %+v", stats)
+	if stats.TotalRequests != 3 || stats.CacheMisses != 1 || stats.Fallbacks != 0 {
+		t.Fatalf("expected 3 requests, 1 miss, 0 fallbacks, got %+v", stats)
 	}
 }
 
