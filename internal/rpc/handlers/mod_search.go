@@ -20,7 +20,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/auth"
 	storage "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
@@ -196,21 +196,7 @@ func (m *ModOnlineManager) handleSearch(w http.ResponseWriter, r *http.Request, 
 		side = "server"
 	}
 
-	modsDir := ""
-	if server != nil {
-		modsDir = minecraft.GetModsPath(server.DataPath, server.ModLoader)
-	}
-	installedMods := make(map[string]bool)
-	if modsDir != "" {
-		if files, err := os.ReadDir(modsDir); err == nil {
-			for _, f := range files {
-				if !f.IsDir() && strings.HasSuffix(f.Name(), ".jar") {
-					lower := strings.ToLower(f.Name())
-					installedMods[lower] = true
-				}
-			}
-		}
-	}
+	installedMods := installedModJars(r.Context(), m.store, server)
 
 	globalSettings, _, _ := m.store.GetGlobalSettings(r.Context())
 
@@ -908,7 +894,17 @@ func (m *ModOnlineManager) handleCurseForgeVersions(w http.ResponseWriter, r *ht
 }
 
 func (m *ModOnlineManager) handleInstall(w http.ResponseWriter, r *http.Request, server *storage.Server) {
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	modsDir, err := modsDirectory(r.Context(), m.store, server, true)
+	if err != nil {
+		if nodestorage.IsUnavailable(err) {
+			m.log.Error("mod install refused: %v", err)
+			http.Error(w, "node storage is not available", http.StatusServiceUnavailable)
+			return
+		}
+		m.log.Error("mod install storage: %v", err)
+		http.Error(w, "failed to resolve mods directory", http.StatusInternalServerError)
+		return
+	}
 	if modsDir == "" {
 		http.Error(w, "server does not support mods", http.StatusBadRequest)
 		return

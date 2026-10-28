@@ -214,15 +214,19 @@ func (s *FileService) ListFiles(ctx context.Context, req *connect.Request[v1.Lis
 	}), nil
 }
 
-// storageFor resolves the node-aware accessor for a server's data root.
-// Legacy single-node rows use the local accessor; remote nodes without a
-// storage adapter are refused (ADR 0005).
-func (s *FileService) storageFor(ctx context.Context, server *storage.Server) (nodestorage.Accessor, error) {
-	info, err := storageNodeInfo(ctx, s.store, server.NodeID)
+// openMappedStorage resolves the owning node's data root and opens an accessor
+// there. The controller copy of server.DataPath is not consulted. A remote
+// node without reachable storage is refused before any path check.
+func (s *FileService) openMappedStorage(ctx context.Context, server *storage.Server, write bool) (string, nodestorage.Accessor, error) {
+	root, err := dataRootFor(ctx, s.store, server, write)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	return nodestorage.ForNode(info, server.DataPath)
+	acc, err := nodestorage.NewLocal(root)
+	if err != nil {
+		return "", nil, err
+	}
+	return root, acc, nil
 }
 
 // storageError maps accessor refusals onto connect errors: a remote node
@@ -248,18 +252,17 @@ func (s *FileService) GetFile(ctx context.Context, req *connect.Request[v1.GetFi
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	// Clean and validate path
-	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.WithinReal(server.DataPath, fullPath) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
-	}
-
-	// Check if file exists
-	acc, err := s.storageFor(ctx, server)
+	// Resolve the owning node's root before any path check, so a controller
+	// copy of the data path cannot reject or stand in for the world.
+	root, acc, err := s.openMappedStorage(ctx, server, false)
 	if err != nil {
 		return nil, storageError(err)
 	}
 	defer func() { _ = acc.Close() }()
+	fullPath := filepath.Join(root, msg.Path)
+	if !files.WithinReal(root, fullPath) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
+	}
 	info, err := acc.Stat(msg.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -380,9 +383,12 @@ func (s *FileService) UpdateFile(ctx context.Context, req *connect.Request[v1.Up
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	// Clean and validate path
-	fullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.WithinReal(server.DataPath, fullPath) {
+	root, err := dataRootFor(ctx, s.store, server, !msg.GetStage())
+	if err != nil {
+		return nil, storageError(err)
+	}
+	fullPath := filepath.Join(root, msg.Path)
+	if !files.WithinReal(root, fullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
@@ -397,9 +403,9 @@ func (s *FileService) UpdateFile(ctx context.Context, req *connect.Request[v1.Up
 		}), nil
 	}
 
-	// Write through the node-aware accessor: confined to the data root and
+	// Write through the node-aware accessor: confined to the mapped root and
 	// refusing symlink writes.
-	acc, err := s.storageFor(ctx, server)
+	acc, err := nodestorage.NewLocal(root)
 	if err != nil {
 		return nil, storageError(err)
 	}
@@ -437,14 +443,18 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no paths specified"))
 	}
 
-	// Validate every path before touching storage so bad input surfaces as an
-	// invalid request regardless of node state.
+	// Validate every path against the owning node's root. A missing adapter
+	// refuses before a controller-local directory is inspected.
+	root, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
 	for _, p := range paths {
-		fullPath := filepath.Join(server.DataPath, p)
-		if !files.WithinReal(server.DataPath, fullPath) {
+		fullPath := filepath.Join(root, p)
+		if !files.WithinReal(root, fullPath) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid path: %s", p))
 		}
-		if fullPath == server.DataPath {
+		if filepath.Clean(fullPath) == filepath.Clean(root) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot delete server root directory"))
 		}
 	}
@@ -458,7 +468,7 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 		return connect.NewResponse(&v1.DeleteFileResponse{}), nil
 	}
 
-	acc, err := s.storageFor(ctx, server)
+	acc, err := nodestorage.NewLocal(root)
 	if err != nil {
 		return nil, storageError(err)
 	}
@@ -507,27 +517,24 @@ func (s *FileService) RenameFile(ctx context.Context, req *connect.Request[v1.Re
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
 	}
 
-	// Clean and validate old path
-	oldFullPath := filepath.Join(server.DataPath, msg.Path)
-	if !files.WithinReal(server.DataPath, oldFullPath) {
+	root, acc, err := s.openMappedStorage(ctx, server, false)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	defer func() { _ = acc.Close() }()
+
+	oldFullPath := filepath.Join(root, msg.Path)
+	if !files.WithinReal(root, oldFullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
 	// Build new path
 	dir := filepath.Dir(msg.Path)
 	newPath := filepath.Join(dir, msg.NewName)
-	newFullPath := filepath.Join(server.DataPath, newPath)
-
-	// Validate new path
-	if !files.WithinReal(server.DataPath, newFullPath) {
+	newFullPath := filepath.Join(root, newPath)
+	if !files.WithinReal(root, newFullPath) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new path"))
 	}
-
-	acc, err := s.storageFor(ctx, server)
-	if err != nil {
-		return nil, storageError(err)
-	}
-	defer func() { _ = acc.Close() }()
 
 	// Check if source exists
 	if _, err := acc.Stat(msg.Path); err != nil {

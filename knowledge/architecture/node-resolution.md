@@ -9,6 +9,8 @@ code_refs:
   - internal/module
   - internal/snapshot
   - internal/docker/freezer.go
+  - internal/metrics
+  - internal/nodestorage
 sources:
   - title: Fail-closed node resolution change
     resource: https://github.com/athNdev/carbon-panel/pull/225
@@ -31,8 +33,26 @@ wrong host. That is a data-safety bug, not a degraded mode.
   server's node ID.
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
-- Remote file, Minecraft and backup archive paths still read the controller
-  filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- Disk usage measures the node's mapped world root. A remote node without
+  reachable storage is left unmeasured.
+- File read, update, delete, and rename resolve that mapped root before
+  checking the path. A controller copy of the data path is not consulted.
+  The latest-log upload uses that same root.
+- Creating a server writes the world directory on that mapped root and copies
+  a manual modpack archive there. A remote node with no reachable storage is
+  refused, so no controller-local world directory is created.
+- Scheduled backup archives resolve the mapped root before reading the world.
+- Mod installation and packwiz bake write the mods folder on that mapped
+  root. A remote node with no reachable storage is refused, and a controller
+  copy is not treated as the installed set.
+- Snapshot create and restore archive that mapped root. A remote node with
+  no reachable storage is refused before a controller copy is archived.
+- Scheduled modpack sync clones and copies onto that mapped root. A remote
+  node with no reachable storage is refused before a controller directory
+  is created.
+- Deleting a server removes the world on the node's mapped storage root
+  before the panel row. A remote node with no reachable storage is refused,
+  and a controller-local directory of the same name is left in place.
 
 # How to check
 

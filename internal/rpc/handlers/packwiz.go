@@ -20,7 +20,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/auth"
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/packwiz"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -767,8 +767,22 @@ func (h *PackwizHandler) handleDeploy(w http.ResponseWriter, r *http.Request, pa
 		return
 	}
 
-	// Mode B: Bake directly to Server Data (/data/mods)
-	modsDir := minecraft.GetModsPath(server.DataPath, server.ModLoader)
+	// Mode B: bake into the mods folder on the node's mapped storage.
+	modsDir, err := modsDirectory(r.Context(), h.store, server, true)
+	if err != nil {
+		if nodestorage.IsUnavailable(err) {
+			h.log.Error("packwiz bake refused: %v", err)
+			http.Error(w, "node storage is not available", http.StatusServiceUnavailable)
+			return
+		}
+		h.log.Error("packwiz bake storage: %v", err)
+		http.Error(w, "failed to resolve mods directory", http.StatusInternalServerError)
+		return
+	}
+	if modsDir == "" {
+		http.Error(w, "server does not support mods", http.StatusBadRequest)
+		return
+	}
 	installedCount, err := h.manager.BakeToServer(packID, modsDir)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to bake to server: %v", err), http.StatusInternalServerError)

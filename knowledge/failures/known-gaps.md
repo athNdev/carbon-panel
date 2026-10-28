@@ -21,8 +21,9 @@ sources:
   follow the node its server runs on.
 - `internal/docker/freezer.go` takes a `ContainerFreezer` seam, but
   `cmd/carbon-panel` wires it to the local client unconditionally.
-- Remote file, Minecraft and backup archive paths still read the controller
-  filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- A remote node that does not share a filesystem mount has no transport
+  adapter. Those operations are refused instead of using the controller's
+  copy of the path.
 
 # How to use this
 

@@ -18,6 +18,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/command"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -103,13 +104,19 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 	if server == nil || server.DataPath == "" {
 		return nil, fmt.Errorf("server data path cannot be empty")
 	}
+	worldRoot, err := e.worldRoot(ctx, server, false)
+	if err != nil {
+		return nil, err
+	}
 
-	// Determine snapshot storage directory
+	// Determine snapshot storage directory. The archive of a remote world is
+	// taken from the mapped root. When no backup directory is configured, the
+	// archive stays inside that same root.
 	baseSnapshotsDir := ""
 	if e.backupDir != "" {
 		baseSnapshotsDir = filepath.Join(e.backupDir, filepath.Base(server.DataPath), "snapshots")
 	} else {
-		baseSnapshotsDir = filepath.Join(server.DataPath, ".carbon-panel_snapshots")
+		baseSnapshotsDir = filepath.Join(worldRoot, ".carbon-panel_snapshots")
 	}
 
 	if err := os.MkdirAll(baseSnapshotsDir, 0755); err != nil {
@@ -132,13 +139,13 @@ func (e *Engine) CreatePreUpdateSnapshot(ctx context.Context, server *storage.Se
 	}()
 
 	// Gather all files to include in volume snapshot
-	paths, err := gatherVolumePaths(server.DataPath)
+	paths, err := gatherVolumePaths(worldRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to gather volume files for snapshot: %w", err)
 	}
 
 	e.log.Info("Creating pre-update snapshot for server %s (%d files, consistency: %s) -> %s", server.Name, len(paths), consistency, archivePath)
-	count, err := files.CreateZipArchive(paths, server.DataPath, archivePath, true)
+	count, err := files.CreateZipArchive(paths, worldRoot, archivePath, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create snapshot archive: %w", err)
 	}
@@ -247,6 +254,11 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 		return fmt.Errorf("cannot safely rollback: snapshot archive failed integrity verification: %w", err)
 	}
 
+	worldRoot, err := e.worldRoot(ctx, server, true)
+	if err != nil {
+		return fmt.Errorf("cannot safely rollback: %w", err)
+	}
+
 	// Journal the mutation window (OSS-229/OSS-235): the per-server active
 	// lock keeps this rollback from interleaving with other lifecycle
 	// writers of the same world, and startup recovery observes interrupted
@@ -295,12 +307,12 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 		// Restore through a clean staged swap: stale files from the current
 		// tree never survive the rollback, and a failed extract leaves it
 		// untouched (OSS-235).
-		extracted, err := files.ExtractArchiveAtomic(ctx, snapshot.FilePath, server.DataPath)
+		extracted, err := files.ExtractArchiveAtomic(ctx, snapshot.FilePath, worldRoot)
 		if err != nil {
 			return fmt.Errorf("failed to extract snapshot archive: %w", err)
 		}
 
-		e.log.Info("Restored %d files to %s from snapshot %s", extracted, server.DataPath, snapshot.ID)
+		e.log.Info("Restored %d files to %s from snapshot %s", extracted, worldRoot, snapshot.ID)
 
 		// Restart container if it was running before rollback
 		if wasRunning && dockerCli != nil && server.ContainerID != "" {
@@ -420,6 +432,26 @@ func (e *Engine) PruneAllSnapshots(ctx context.Context) (int, error) {
 		}
 	}
 	return totalPruned, firstErr
+}
+
+// worldRoot is the controller-side directory that holds this server's files.
+// Local nodes keep DataPath. Remote nodes use the shared-storage mount, and
+// a remote node with no reachable storage is refused.
+func (e *Engine) worldRoot(ctx context.Context, server *storage.Server, write bool) (string, error) {
+	if nodestorage.IsLegacyLocalNodeID(server.NodeID) {
+		return server.DataPath, nil
+	}
+	if e.store == nil {
+		return "", fmt.Errorf("store is required to resolve node storage")
+	}
+	node, err := e.store.GetNode(ctx, server.NodeID)
+	if err != nil {
+		return "", fmt.Errorf("resolve storage node %q: %w", server.NodeID, err)
+	}
+	if write {
+		return nodestorage.EnsureDataRoot(node.StorageInfo(), server.DataPath)
+	}
+	return nodestorage.MapDataPath(node.StorageInfo(), server.DataPath)
 }
 
 // gatherVolumePaths collects paths inside dataDir relative to dataDir, skipping temp/git caches

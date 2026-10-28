@@ -13,6 +13,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
@@ -87,5 +88,154 @@ func TestFileServiceListFilesRefusesUnreachableRemoteNode(t *testing.T) {
 	connectErr, ok := err.(*connect.Error)
 	if !ok || connectErr.Code() != connect.CodeUnavailable {
 		t.Fatalf("expected CodeUnavailable, got %v", err)
+	}
+}
+
+func TestGetFileReadsTheMappedRootWhenTheControllerCopyIsASymlink(t *testing.T) {
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	mount := filepath.Join(dir, "mount")
+	mapped := filepath.Join(mount, "srv-data")
+	if err := os.MkdirAll(mapped, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(mapped, "server.properties"), []byte("from-mount"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(dir, "outside", "secret.txt")
+	if err := os.MkdirAll(filepath.Dir(outside), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(outside, []byte("secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	controller := filepath.Join(dir, "controller", "srv-data")
+	if err := os.MkdirAll(controller, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(controller, "server.properties")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := store.CreateNode(ctx, &db.Node{ID: "remote-1", Name: "remote-1", Host: "tcp://10.0.0.5:2375", Enabled: true, StorageRoot: mount}); err != nil {
+		t.Fatal(err)
+	}
+	server := &db.Server{ID: "srv-get", Name: "srv-get", DataPath: controller, NodeID: "remote-1"}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewFileService(store, nil, nil, nil, logger.New())
+	t.Cleanup(svc.Stop)
+
+	resp, err := svc.GetFile(ctx, connect.NewRequest(&v1.GetFileRequest{ServerId: server.ID, Path: "server.properties"}))
+	if err != nil {
+		t.Fatalf("GetFile: %v", err)
+	}
+	if string(resp.Msg.Content) != "from-mount" {
+		t.Fatalf("content = %q, want the mapped world", resp.Msg.Content)
+	}
+
+	if _, err := svc.UpdateFile(ctx, connect.NewRequest(&v1.UpdateFileRequest{
+		ServerId: server.ID, Path: "server.properties", Content: []byte("updated-mount"),
+	})); err != nil {
+		t.Fatalf("UpdateFile: %v", err)
+	}
+	body, err := os.ReadFile(filepath.Join(mapped, "server.properties"))
+	if err != nil || string(body) != "updated-mount" {
+		t.Fatalf("mapped file = %q, %v", body, err)
+	}
+	secret, err := os.ReadFile(outside)
+	if err != nil || string(secret) != "secret" {
+		t.Fatalf("controller symlink target = %q, %v", secret, err)
+	}
+}
+
+func TestGetFileRefusesAnUnreachableRemoteBeforeTheControllerCopy(t *testing.T) {
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	outside := filepath.Join(dir, "outside", "secret.txt")
+	if err := os.MkdirAll(filepath.Dir(outside), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(outside, []byte("secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	controller := filepath.Join(dir, "controller", "srv-data")
+	if err := os.MkdirAll(controller, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(controller, "server.properties")); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateNode(ctx, &db.Node{ID: "remote-bare", Name: "remote-bare", Host: "tcp://10.0.0.6:2375", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	server := &db.Server{ID: "srv-bare", Name: "srv-bare", DataPath: controller, NodeID: "remote-bare"}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewFileService(store, nil, nil, nil, logger.New())
+	t.Cleanup(svc.Stop)
+
+	_, err := svc.GetFile(ctx, connect.NewRequest(&v1.GetFileRequest{ServerId: server.ID, Path: "server.properties"}))
+	if connect.CodeOf(err) != connect.CodeUnavailable {
+		t.Fatalf("GetFile error = %v, want unavailable", err)
+	}
+}
+
+func TestServerLatestLogReadsTheMappedRoot(t *testing.T) {
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	mount := filepath.Join(dir, "mount", "srv-data", "logs")
+	if err := os.MkdirAll(mount, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(mount, "latest.log"), []byte("from-mount"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	controller := filepath.Join(dir, "controller", "srv-data", "logs")
+	if err := os.MkdirAll(controller, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(controller, "latest.log"), []byte("from-controller"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateNode(ctx, &db.Node{
+		ID: "remote-log", Name: "remote-log", Host: "tcp://10.0.0.10:2375", Enabled: true,
+		StorageRoot: filepath.Join(dir, "mount"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	server := &db.Server{
+		ID: "srv-log", Name: "srv-log", NodeID: "remote-log",
+		DataPath: filepath.Join(dir, "controller", "srv-data"),
+	}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+
+	body, err := serverLatestLog(ctx, store, server)
+	if err != nil || string(body) != "from-mount" {
+		t.Fatalf("log = %q, %v", body, err)
+	}
+
+	bare := &db.Server{ID: "srv-log-bare", Name: "bare", NodeID: "remote-bare-log", DataPath: server.DataPath}
+	if err := store.CreateNode(ctx, &db.Node{ID: "remote-bare-log", Name: "remote-bare-log", Host: "tcp://10.0.0.11:2375", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateServer(ctx, bare); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := serverLatestLog(ctx, store, bare); !nodestorage.IsUnavailable(err) {
+		t.Fatalf("unreachable log error = %v, want unavailable", err)
 	}
 }

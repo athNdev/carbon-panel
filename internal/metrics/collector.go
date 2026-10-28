@@ -23,6 +23,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
@@ -457,14 +458,19 @@ func (c *Collector) collectDiskUsage() {
 		if server.DataPath == "" {
 			continue
 		}
+		root, err := c.worldDiskRoot(ctx, server)
+		if err != nil {
+			c.log.Debug("Metrics collector: skipping disk usage for %s: %v", server.ID, err)
+			continue
+		}
 
-		totalSize, err := files.CalculateDirSize(server.DataPath)
+		totalSize, err := files.CalculateDirSize(root)
 		if err != nil {
 			continue
 		}
 
 		// Calculate world directory size, including dimension worlds
-		worldPaths, err := files.FindWorldDirs(server.DataPath)
+		worldPaths, err := files.FindWorldDirs(root)
 		if err != nil {
 			continue
 		}
@@ -478,13 +484,32 @@ func (c *Collector) collectDiskUsage() {
 			totalWorldSize += size
 		}
 
+		serverDiskTotal := diskTotal
+		if space, serr := files.GetDiskSpace(root); serr == nil {
+			serverDiskTotal = space
+		}
 		c.updateMetrics(server.ID, func(m *ServerMetrics) {
 			m.DiskUsage = totalSize
-			m.DiskTotal = diskTotal
+			m.DiskTotal = serverDiskTotal
 			m.WorldSize = totalWorldSize
 			m.LastUpdated = time.Now()
 		})
 	}
+}
+
+// worldDiskRoot is the directory whose bytes belong to the server. A remote
+// node is measured through its shared-storage mount. A remote node without
+// that mount is refused so a controller-local directory is not reported as
+// the world.
+func (c *Collector) worldDiskRoot(ctx context.Context, server *storage.Server) (string, error) {
+	if nodestorage.IsLegacyLocalNodeID(server.NodeID) {
+		return server.DataPath, nil
+	}
+	node, err := c.store.GetNode(ctx, server.NodeID)
+	if err != nil {
+		return "", err
+	}
+	return nodestorage.MapDataPath(node.StorageInfo(), server.DataPath)
 }
 
 // Updates metrics for a server
