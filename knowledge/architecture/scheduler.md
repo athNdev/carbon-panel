@@ -37,6 +37,8 @@ streamed through the WebSocket hub.
   one due check runs the task once and stores the next future time.
 - When a chain stops at a step, that execution names the step and says the
   remaining steps were not run.
+- A console command runs once. A configured retry is not repeated, because
+  the command may already have been delivered.
 - Validate cron expressions before persisting them.
 
 # How to check

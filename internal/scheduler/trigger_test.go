@@ -196,6 +196,56 @@ func TestTryClaimTaskRefusesWhenTheRunningCheckFails(t *testing.T) {
 	}
 }
 
+type failCommandSender struct {
+	n int
+}
+
+func (f *failCommandSender) SendCommand(context.Context, string, string) (string, error) {
+	f.n++
+	return "", errors.New("rcon closed")
+}
+
+func TestCommandTaskDoesNotRepeatAFailedSend(t *testing.T) {
+	s, store := newTriggerTestScheduler(t)
+	ctx := context.Background()
+	sender := &failCommandSender{}
+	s.sender = sender
+
+	server := &storage.Server{
+		ID:          "srv-cmd",
+		Name:        "cmd",
+		Status:      storage.StatusRunning,
+		ContainerID: "container-1",
+	}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatalf("create server: %v", err)
+	}
+	task := &storage.ScheduledTask{
+		ID:         "task-cmd-once",
+		ServerID:   server.ID,
+		Name:       "say",
+		TaskType:   storage.TaskTypeCommand,
+		Status:     storage.TaskStatusEnabled,
+		Schedule:   storage.ScheduleTypeOnce,
+		Config:     `{"command":"say hi"}`,
+		RetryCount: 3,
+	}
+	if err := store.CreateScheduledTask(ctx, task); err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	execution, err := s.executeTask(ctx, task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
+	if err == nil {
+		t.Fatal("expected the command send to fail")
+	}
+	if sender.n != 1 {
+		t.Fatalf("command sends = %d, want 1", sender.n)
+	}
+	if execution == nil || !strings.Contains(execution.Output, "command was not retried") {
+		t.Fatalf("output = %q", executionOutput(execution))
+	}
+}
+
 func TestDueCronRunsOnceWhenSeveralSlotsWereMissed(t *testing.T) {
 	s, store := newTriggerTestScheduler(t)
 	ctx := context.Background()

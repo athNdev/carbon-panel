@@ -561,13 +561,19 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 
 	s.log.Info("Task %s: executing on server %s (trigger: %s)", task.Name, server.Name, trigger)
 
-	// Execute the task based on type, retrying on failure if configured
+	// Execute the task based on type, retrying on failure if configured.
+	// A console command is attempted once: a failed send may already have
+	// been delivered, and repeating it is not safe.
 	var output string
 	var execErr error
+	retries := task.RetryCount
+	if task.TaskType == storage.TaskTypeCommand {
+		retries = 0
+	}
 
 	for attempt := 0; ; attempt++ {
 		output, execErr = s.runTaskType(execCtx, server, task, eventType, eventData)
-		if execErr == nil || attempt >= task.RetryCount || execCtx.Err() != nil {
+		if execErr == nil || attempt >= retries || execCtx.Err() != nil {
 			break
 		}
 
@@ -585,6 +591,12 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 			break
 		}
 		execution.RetryNum = attempt + 1
+	}
+	if execErr != nil && task.TaskType == storage.TaskTypeCommand && task.RetryCount > 0 {
+		if output != "" {
+			output += "\n"
+		}
+		output += "command was not retried because it may already have been delivered"
 	}
 
 	// Update execution record
