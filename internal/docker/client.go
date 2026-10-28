@@ -333,6 +333,8 @@ type Client struct {
 	logStreamer ContainerLogStreamer
 	log         *logger.Logger
 	firewall    *FirewallManager
+	// pulls coalesces concurrent pulls of one reference on this client.
+	pulls imagePulls
 	// gameStop overrides the rcon-cli stop used before Docker's timeout.
 	// Production leaves it nil.
 	gameStop func(ctx context.Context, containerID string) error
@@ -738,28 +740,27 @@ func additionalPortBindings(ports []*v1.AdditionalPort, useProxy bool) network.P
 
 // serverImageName resolves the Docker image for a server: an explicit tag
 // when configured, otherwise the loader/version-derived itzg image.
-func serverImageName(server *models.Server) string {
-	if server.DockerImage != "" {
-		return "itzg/minecraft-server:" + server.DockerImage
+func serverImageName(server *models.Server) (string, error) {
+	if server == nil {
+		return "", errors.New("server is required")
 	}
-	return getDockerImage(server.ModLoader, server.MCVersion)
+	if strings.TrimSpace(server.DockerImage) == "" {
+		return getDockerImage(server.ModLoader, server.MCVersion), nil
+	}
+	return ResolveServerImage(server.DockerImage)
 }
 
 // ensureServerImage makes the server's image available on the daemon (MINE-125).
 // If the image is already present locally, the remote registry check is
 // skipped to avoid blocking / stalling during 'Creating' state on network
-// latency or Docker Hub rate limits.
+// latency or Docker Hub rate limits. A pull is not success until the daemon
+// reports the image present.
 func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) error {
-	imageName := serverImageName(server)
-	if _, err := c.docker.ImageInspect(ctx, imageName); err != nil {
-		c.log.Info("Image %s not present locally, pulling...", imageName)
-		if pullErr := c.pullImage(ctx, imageName); pullErr != nil {
-			return fmt.Errorf("failed to pull image %s: %w", imageName, pullErr)
-		}
-		return nil
+	imageName, err := serverImageName(server)
+	if err != nil {
+		return err
 	}
-	c.log.Debug("Image %s exists locally, skipping pull", imageName)
-	return nil
+	return c.ensureImage(ctx, imageName)
 }
 
 func (c *Client) CreateContainer(ctx context.Context, server *models.Server, serverConfig *models.ServerConfig) (string, error) {
@@ -772,10 +773,13 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		return "", err
 	}
 
-	imageName := serverImageName(server)
+	imageName, err := serverImageName(server)
+	if err != nil {
+		return "", err
+	}
 
 	// Ensure image is available locally before creating container (MINE-125).
-	if err := c.ensureServerImage(ctx, server); err != nil {
+	if err := c.ensureImage(ctx, imageName); err != nil {
 		return "", err
 	}
 

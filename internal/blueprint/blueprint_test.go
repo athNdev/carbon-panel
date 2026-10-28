@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package blueprint
 
 import (
@@ -13,6 +12,7 @@ import (
 
 	"github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 )
 
 func testStore(t *testing.T) *storage.Store {
@@ -69,5 +69,24 @@ func TestInitIdempotent(t *testing.T) {
 	}
 	if string(bp.ModLoader) != "paper" {
 		t.Fatalf("wrong loader: %s", bp.ModLoader)
+	}
+}
+
+func TestBuiltinBlueprintImagesStayOnAllowedRepositories(t *testing.T) {
+	for _, seed := range Seed() {
+		if seed.DockerImage == "" {
+			continue
+		}
+		stored, err := docker.CanonicalServerImage(seed.DockerImage)
+		if err != nil {
+			t.Fatalf("seed %s image %q: %v", seed.ID, seed.DockerImage, err)
+		}
+		resolved, err := docker.ResolveServerImage(stored)
+		if err != nil {
+			t.Fatalf("seed %s resolved image: %v", seed.ID, err)
+		}
+		if resolved != "itzg/minecraft-bedrock-server:latest" {
+			t.Fatalf("seed %s resolves to %q", seed.ID, resolved)
+		}
 	}
 }

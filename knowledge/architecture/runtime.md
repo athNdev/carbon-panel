@@ -43,6 +43,14 @@ placeholder when the frontend is not built. Production builds run
 The controller holds a Docker client for the local socket or for a remote node.
 Never assume it is local; see [node resolution](node-resolution.md).
 
+A Minecraft server image is a tag on `itzg/minecraft-server`, or a full
+reference to `itzg/minecraft-server` or `itzg/minecraft-bedrock-server`.
+Other repositories are rejected. A tag stays a tag in the database so the
+image picker still matches it. An image that is already on the daemon is
+used without a registry check. Concurrent pulls of the same reference on
+one client share one request, and a pull is success only after the daemon
+reports that image present.
+
 # How to check
 
 ```sh

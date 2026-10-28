@@ -974,10 +974,17 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Determine Docker image if not specified
+	// Determine Docker image if not specified. A provided reference is
+	// normalized here so a full itzg name is not prefixed again later.
 	dockerImage := msg.DockerImage
 	if dockerImage == "" {
 		dockerImage = docker.GetOptimalDockerTag(msg.McVersion, modLoader, false)
+	} else {
+		canonical, err := docker.CanonicalServerImage(dockerImage)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		dockerImage = canonical
 	}
 
 	// Validate additional ports
@@ -1427,6 +1434,13 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	originalModLoader := server.ModLoader
 	originalMCVersion := server.MCVersion
 	originalDockerImage := server.DockerImage
+	if msg.DockerImage != "" && msg.DockerImage != originalDockerImage {
+		canonical, imageErr := docker.CanonicalServerImage(msg.DockerImage)
+		if imageErr != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, imageErr)
+		}
+		msg.DockerImage = canonical
+	}
 	capacityLockHeld := false
 	defer func() {
 		if capacityLockHeld {
