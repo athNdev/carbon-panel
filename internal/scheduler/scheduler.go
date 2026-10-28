@@ -515,7 +515,8 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 		// Skipped steps still fan out to children (each child applies its
 		// own online gate), so chains degrade to per-step skip records.
 		if depth < maxChainDepth {
-			s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+			stopped, chainErr := s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+			s.recordChainStop(ctx, execution, stopped, chainErr)
 		}
 
 		// Update next run time if not already updated at dispatch
@@ -617,7 +618,8 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 	// Each child runs through the normal path, so RequireOnline and retries
 	// apply per step.
 	if depth < maxChainDepth && (execErr == nil || task.ContinueOnFailure) {
-		s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+		stopped, chainErr := s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+		s.recordChainStop(ctx, execution, stopped, chainErr)
 	}
 
 	// Update next run time if not already updated at dispatch
@@ -628,12 +630,14 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 	return execution, execErr
 }
 
-// runChildChain executes a task's children sequentially.
-func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) {
+// runChildChain executes a task's children sequentially. The returned step is
+// the child where the chain stopped; later children were not started. A
+// non-nil error means the child list itself could not be read.
+func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) (string, error) {
 	children, err := s.store.ListChildTasks(ctx, parent.ID)
 	if err != nil {
 		s.log.Error("Task %s: failed to list child tasks: %v", parent.Name, err)
-		return
+		return "", err
 	}
 	for _, child := range children {
 		if child.TimeOffsetSecs > 0 {
@@ -645,15 +649,33 @@ func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.Scheduled
 			case <-ctx.Done():
 				timer.Stop()
 				s.log.Info("Task %s: chain cancelled while waiting before step %s", parent.Name, child.Name)
-				return
+				return child.Name, nil
 			case <-timer.C:
 			}
 		}
 		_, childErr := s.executeTaskAtDepth(ctx, child, trigger, eventType, eventData, depth+1)
 		if childErr != nil && !child.ContinueOnFailure {
 			s.log.Warn("Task %s: chain aborted at step %s: %v", parent.Name, child.Name, childErr)
-			return
+			return child.Name, nil
 		}
+	}
+	return "", nil
+}
+
+func (s *Scheduler) recordChainStop(ctx context.Context, execution *storage.TaskExecution, stopped string, chainErr error) {
+	if execution == nil || (chainErr == nil && stopped == "") {
+		return
+	}
+	note := "chain stopped because the next steps could not be listed"
+	if chainErr == nil {
+		note = fmt.Sprintf("chain stopped at %s; remaining steps were not run", stopped)
+	}
+	if execution.Output != "" {
+		execution.Output += "\n"
+	}
+	execution.Output += note
+	if err := s.store.UpdateTaskExecution(ctx, execution); err != nil {
+		s.log.Error("Task execution %s: failed to record chain stop: %v", execution.ID, err)
 	}
 }
 

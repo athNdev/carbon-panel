@@ -35,6 +35,8 @@ streamed through the WebSocket hub.
   treated as running.
 - Cron runs in the controller's local time. A missed slot is not replayed:
   one due check runs the task once and stores the next future time.
+- When a chain stops at a step, that execution names the step and says the
+  remaining steps were not run.
 - Validate cron expressions before persisting them.
 
 # How to check
