@@ -379,12 +379,10 @@ func endpointChanged(cached, current *models.Node) bool {
 	if cached == nil || current == nil {
 		return false
 	}
-	return cached.Host != current.Host ||
-		cached.TLSEnabled != current.TLSEnabled ||
-		cached.TLSSkipVerify != current.TLSSkipVerify ||
-		cached.TLSCACert != current.TLSCACert ||
-		cached.TLSCert != current.TLSCert ||
-		cached.TLSKey != current.TLSKey
+	if !cached.SameEndpoint(current) {
+		return true
+	}
+	return cached.EndpointGeneration != current.EndpointGeneration
 }
 
 func cloneNode(node *models.Node) *models.Node {

@@ -26,18 +26,20 @@ const ServerOperationRetention = 30 * 24 * time.Hour
 // ServerOperation retains uncertain external effects across controller restarts.
 // ActiveServer is released only by an explicit successful finalization or recovery.
 type ServerOperation struct {
-	ID           string `gorm:"primaryKey"`
-	ServerID     string `gorm:"uniqueIndex:server_operation_request"`
-	RequestKey   string `gorm:"uniqueIndex:server_operation_request"`
-	NodeID       string
-	ContainerID  string
-	Kind         string
-	PayloadHash  string
-	Phase        string
-	LastError    string
-	ActiveServer *string `gorm:"uniqueIndex"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID         string `gorm:"primaryKey"`
+	ServerID   string `gorm:"uniqueIndex:server_operation_request"`
+	RequestKey string `gorm:"uniqueIndex:server_operation_request"`
+	NodeID     string
+	// EndpointGeneration is the node endpoint this operation was bound to.
+	EndpointGeneration int64
+	ContainerID        string
+	Kind               string
+	PayloadHash        string
+	Phase              string
+	LastError          string
+	ActiveServer       *string `gorm:"uniqueIndex"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (s *Store) BeginServerOperation(ctx context.Context, serverID, nodeID, containerID, key, kind, digest string) (*ServerOperation, bool, error) {
@@ -47,21 +49,40 @@ func (s *Store) BeginServerOperation(ctx context.Context, serverID, nodeID, cont
 	var op ServerOperation
 	reused := false
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := tx.Where("server_id = ? AND request_key = ?", serverID, key).First(&op).Error
-		if err == nil {
-			if op.PayloadHash != digest || op.Kind != kind || op.NodeID != nodeID || op.ContainerID != containerID {
+		lookupErr := tx.Where("server_id = ? AND request_key = ?", serverID, key).First(&op).Error
+		generation, genErr := endpointGeneration(tx, nodeID)
+		if genErr != nil {
+			return genErr
+		}
+		if lookupErr == nil {
+			if op.PayloadHash != digest || op.Kind != kind || op.NodeID != nodeID || op.ContainerID != containerID || op.EndpointGeneration != generation {
 				return errors.New("idempotency key conflicts with existing operation identity or payload")
 			}
 			reused = true
 			return nil
 		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+		if !errors.Is(lookupErr, gorm.ErrRecordNotFound) {
+			return lookupErr
 		}
-		op = ServerOperation{ID: uuid.NewString(), ServerID: serverID, NodeID: nodeID, ContainerID: containerID, RequestKey: key, Kind: kind, PayloadHash: digest, Phase: ServerOperationPrepared, ActiveServer: &serverID}
+		op = ServerOperation{ID: uuid.NewString(), ServerID: serverID, NodeID: nodeID, ContainerID: containerID, EndpointGeneration: generation, RequestKey: key, Kind: kind, PayloadHash: digest, Phase: ServerOperationPrepared, ActiveServer: &serverID}
 		return tx.Create(&op).Error
 	})
 	return &op, reused, err
+}
+
+func endpointGeneration(tx *gorm.DB, nodeID string) (int64, error) {
+	if strings.TrimSpace(nodeID) == "" {
+		return 0, nil
+	}
+	var node Node
+	err := tx.Where("id = ?", nodeID).First(&node).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return node.EndpointGeneration, nil
 }
 
 func (s *Store) AdvanceServerOperation(ctx context.Context, id, from, to, detail string) error {

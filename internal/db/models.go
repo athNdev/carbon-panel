@@ -950,10 +950,14 @@ type Node struct {
 	StorageRoot string `json:"storage_root,omitempty" gorm:"column:storage_root"`
 	// ControllerStorageRoot is where the controller mounts that same storage.
 	// Empty means the paths are identical on both sides (defaults to StorageRoot).
-	ControllerStorageRoot string     `json:"controller_storage_root,omitempty" gorm:"column:controller_storage_root"`
-	LastHeartbeat         *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
-	CreatedAt             time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt             time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	ControllerStorageRoot string `json:"controller_storage_root,omitempty" gorm:"column:controller_storage_root"`
+	// EndpointGeneration increases when the Docker host or TLS material changes.
+	// An operation records the value it observed so a later endpoint is not
+	// mistaken for this one.
+	EndpointGeneration int64      `json:"endpoint_generation" gorm:"column:endpoint_generation;default:1"`
+	LastHeartbeat      *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
+	CreatedAt          time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt          time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 
 	// Runtime stats (not persisted to DB)
 	AllocatedMemoryMB int64 `json:"allocated_memory_mb" gorm:"-"`
@@ -961,6 +965,20 @@ type Node struct {
 	RunningCount      int   `json:"running_count" gorm:"-"`
 	TotalMemoryMB     int64 `json:"total_memory_mb" gorm:"-"`
 	AvailableMemoryMB int64 `json:"available_memory_mb" gorm:"-"`
+}
+
+// SameEndpoint reports whether both nodes address the same Docker daemon
+// configuration. Generation is compared separately.
+func (n *Node) SameEndpoint(other *Node) bool {
+	if n == nil || other == nil {
+		return false
+	}
+	return n.Host == other.Host &&
+		n.TLSEnabled == other.TLSEnabled &&
+		n.TLSSkipVerify == other.TLSSkipVerify &&
+		n.TLSCACert == other.TLSCACert &&
+		n.TLSCert == other.TLSCert &&
+		n.TLSKey == other.TLSKey
 }
 
 // StorageInfo returns the node's storage mapping view for node-aware file

@@ -1307,7 +1307,10 @@ func (s *Store) CreateNode(ctx context.Context, node *Node) error {
 	if node.Status == "" {
 		node.Status = NodeStatusOffline
 	}
-	err := s.db.WithContext(ctx).Select("ID", "Name", "Host", "AdvertisedIP", "TLSCACert", "TLSCert", "TLSKey", "TLSEnabled", "TLSSkipVerify", "MaxMemoryMB", "MaxServers", "Enabled", "Status", "IsLocal", "StorageRoot", "ControllerStorageRoot", "LastHeartbeat", "CreatedAt", "UpdatedAt").Create(node).Error
+	if node.EndpointGeneration == 0 {
+		node.EndpointGeneration = 1
+	}
+	err := s.db.WithContext(ctx).Select("ID", "Name", "Host", "AdvertisedIP", "TLSCACert", "TLSCert", "TLSKey", "TLSEnabled", "TLSSkipVerify", "MaxMemoryMB", "MaxServers", "Enabled", "Status", "IsLocal", "StorageRoot", "ControllerStorageRoot", "EndpointGeneration", "LastHeartbeat", "CreatedAt", "UpdatedAt").Create(node).Error
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}
@@ -1333,6 +1336,25 @@ func (s *Store) ListNodes(ctx context.Context) ([]*Node, error) {
 }
 
 func (s *Store) UpdateNode(ctx context.Context, node *Node) error {
+	if node == nil || node.ID == "" {
+		return errors.New("node id is required")
+	}
+	var current Node
+	err := s.db.WithContext(ctx).Where("id = ?", node.ID).First(&current).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if node.EndpointGeneration == 0 {
+			node.EndpointGeneration = 1
+		}
+		return s.db.WithContext(ctx).Save(node).Error
+	}
+	if err != nil {
+		return err
+	}
+	if !current.SameEndpoint(node) {
+		node.EndpointGeneration = current.EndpointGeneration + 1
+	} else {
+		node.EndpointGeneration = current.EndpointGeneration
+	}
 	return s.db.WithContext(ctx).Save(node).Error
 }
 

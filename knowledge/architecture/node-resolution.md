@@ -29,9 +29,12 @@ wrong host. That is a data-safety bug, not a degraded mode.
 
 - Module, snapshot and deep-sleep helpers were made fail-closed and record the
   server's node ID.
-- A cached Docker client is dropped when that node's host or TLS material
-  changes. The next lookup builds a client for the current endpoint. A client
-  registered without a recorded endpoint is left in place.
+- A cached Docker client is dropped when that node's host, TLS material, or
+  endpoint generation changes. The next lookup builds a client for the current
+  endpoint. A client registered without a recorded endpoint is left in place.
+- Creating a node starts its endpoint generation at 1. Changing the host or
+  TLS material increases that generation. A lifecycle operation records the
+  generation it observed.
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
 - Remote file, Minecraft and backup archive paths still read the controller

@@ -205,6 +205,34 @@ func TestGetClientStrictDropsAClientWhenTheEndpointChanges(t *testing.T) {
 	}
 }
 
+func TestGetClientStrictDropsAClientWhenTheGenerationChanges(t *testing.T) {
+	log := logger.New()
+	stale := &Client{log: log, host: "tcp://10.0.0.2:2375"}
+	store := newMockNodeStore(&models.Node{
+		ID: "remote-b", Name: "B", Host: "tcp://10.0.0.2:2375", Enabled: true, EndpointGeneration: 1,
+	})
+	pool := NewClientPool(store, &Client{log: log}, log)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	pool.mu.Lock()
+	pool.clients["remote-b"] = stale
+	recorded := *store.nodes["remote-b"]
+	pool.nodeConfigs["remote-b"] = &recorded
+	pool.mu.Unlock()
+
+	store.mu.Lock()
+	store.nodes["remote-b"].EndpointGeneration = 2
+	store.mu.Unlock()
+
+	got, err := pool.GetClientStrict("remote-b")
+	if err != nil {
+		t.Fatalf("rebuild after generation change: %v", err)
+	}
+	if got == stale {
+		t.Fatal("generation change reused the cached client")
+	}
+}
+
 func TestResolveTLSCertFiles(t *testing.T) {
 	// Case 1: Empty TLS fields
 	nodeEmpty := &models.Node{ID: "node-empty"}
