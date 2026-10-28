@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package logger
 
 import (
@@ -17,9 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moby/moby/client"
-	stdcopy "github.com/moby/moby/api/pkg/stdcopy"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
+	"github.com/moby/moby/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -231,7 +229,7 @@ func (ls *LogStreamer) streamLogs(ctx context.Context, stream *ContainerLogStrea
 		pr, pw := io.Pipe()
 		go func() {
 			defer pw.Close()
-			_, err := stdcopy.StdCopy(pw, pw, reader)
+			_, err := CopyDockerLogs(pw, pw, reader)
 			if err != nil && err != io.EOF {
 				ls.log.Error("Error demultiplexing logs for container %s: %v", stream.containerID, err)
 			}
