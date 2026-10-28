@@ -33,6 +33,10 @@ bun run test
 
 - Keep the Carbon geometry, typography and token usage consistent with the
   existing shell.
+- Use the approved artwork in [brand assets](../../assets/branding/README.md)
+  for product-owned marks; preserve third-party and server-provided icons.
+- Run `python scripts/check_brand_assets.py` from the repository root to check
+  deployable logo copies and raster dimensions after a brand update.
 - Loading, empty and error states are part of the change, not follow-up work.
 - A frontend-only fix must not bypass an authorization check in the backend.
 

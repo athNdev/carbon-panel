@@ -36,9 +36,15 @@ when a fixed-size raster image is required.
   Inter for explanatory sheet labels. Those fonts are not included in this
   repository; opening the native source without them may substitute fonts.
   The outlined SVGs preserve the approved shapes without a runtime font.
-- SVGs and PNGs were exported from VectorCraft. Preserve the source and
-  review a regenerated export at the intended size and on its intended
-  background before replacing a product asset.
+- The master SVGs and size-specific lockups were exported from VectorCraft.
+  Product favicon PNGs are generated from `mark-dark.svg` by
+  `python scripts/generate_brand_icons.py` using Pillow 12.3.0. Run the same
+  command with `--check` to compare the outputs without writing files.
+  `python scripts/sync_brand_assets.py` copies the vector masters to the
+  independently built surfaces. `python scripts/check_brand_assets.py` checks
+  those copies and key image dimensions using only the Python standard library.
+- Preserve the source and review a regenerated export at the intended size
+  and on its intended background before replacing a product asset.
 
-The homepage redesign and repository-wide adoption are separate planned work;
-these files do not change the current application or site by themselves.
+The application, landing page and documentation each contain deployable
+copies of the approved artwork; update those copies when the master changes.

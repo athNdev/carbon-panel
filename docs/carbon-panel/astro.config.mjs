@@ -17,6 +17,11 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Carbon Panel',
+			logo: {
+				dark: './public/brand-mark-light.svg',
+				light: './public/brand-mark-dark.svg',
+				alt: '',
+			},
 			customCss: ['./src/styles/custom.css'],
 			favicon: '/favicon.png',
 			social: [

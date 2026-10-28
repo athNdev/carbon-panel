@@ -1,7 +1,14 @@
 # Carbon Panel homepage and brand rollout plan
 
-**Status:** Proposal for review; implementation and deployment are not part of
-this change.
+**Status:** Implementation is in progress on the brand redesign branch.
+Deployment remains a separate step and the shared Pages hosting configuration
+still needs to be confirmed.
+
+The branch now includes the landing-page update, distributed brand assets,
+application and documentation replacements, and scripts for synchronizing and
+checking artwork. Full interactive application journeys, accessibility checks,
+CI and live deployment still need verification. The `landing/qa-*.html` pages
+are historical review fixtures and are excluded from the published artifact.
 
 **Baseline:** `main` at `97a9e151e79cacc8687eff2d16ab9fd602600511`.
 
@@ -24,8 +31,9 @@ are in scope for brand replacement, not a wholesale redesign of their
 workflows. Preserve the project's self-hosted identity: the landing page must
 not imply that a hosted service or managed cloud is required.
 
-The logo files have been added in a separate commit. No existing homepage,
-application, documentation, favicon, or deployment has been changed yet.
+The logo files were added in a separate commit. The implementation updates the
+homepage and repository-owned brand surfaces; the baseline observations below
+describe the state before those changes.
 
 ## 2. Current state and constraints
 

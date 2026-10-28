@@ -27,12 +27,12 @@
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Carbon Panel: Minecraft servers, run like production." />
+  <meta property="og:image:alt" content="Carbon Panel: Your Minecraft servers. Your infrastructure." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Carbon Panel — Open-source Minecraft server management" />
   <meta name="twitter:description" content="The open-source, Docker-native control panel for Minecraft servers. Deploy, orchestrate, and scale every server from one panel." />
   <meta name="twitter:image" content="https://athn.dev/carbonpanel/assets/og.png" />
-  <meta name="twitter:image:alt" content="Carbon Panel: Minecraft servers, run like production." />
+  <meta name="twitter:image:alt" content="Carbon Panel: Your Minecraft servers. Your infrastructure." />
 
   <script type="application/ld+json">
   {
@@ -87,14 +87,14 @@
   }
   </script>
 
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f62fe'/%3E%3Cpath d='M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M8 10.5l8 4.5 8-4.5M16 15v9' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/png" href="./assets/favicon.png" />
 
   <!-- IBM Plex -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261028k" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261029a" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -209,12 +209,7 @@
   <header class="nav">
     <div class="nav-inner">
       <a class="brand" href="#top" aria-label="Carbon Panel home">
-        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-          <rect width="32" height="32" rx="7" fill="#0f62fe"/>
-          <path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M8 10.5l8 4.5 8-4.5M16 15v9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-        </svg>
-        <span class="wordmark">Carbon<b>Panel</b></span>
+        <img class="brand-lockup" src="./assets/brand-horizontal-light.svg" alt="" />
       </a>
 
       <nav class="nav-links" aria-label="Primary">
@@ -222,7 +217,7 @@
         <a href="#architecture">Architecture</a>
         <a href="#fleet">Fleet</a>
         <a href="#how">How it works</a>
-        <a href="#compare">Compare</a>
+        <a href="#compare">Why Carbon</a>
         <a href="#faq">FAQ</a>
       </nav>
 
@@ -256,7 +251,7 @@
             <span>self-hosted</span>
           </div>
 
-          <h1>Minecraft servers,<br />run like <span class="grad">production</span>.</h1>
+          <h1>Your Minecraft servers.<br /><span class="grad">Your infrastructure.</span></h1>
 
           <p class="hero-sub">
             Carbon Panel is the open-source, Docker-native control plane for Minecraft
@@ -286,10 +281,10 @@
 
         <!-- Hero product mockup -->
         <div class="hero-visual reveal">
-          <div class="mock" role="img" aria-label="Carbon Panel dashboard showing server status, node health and a live console">
+          <div class="mock" role="img" aria-label="Illustration of a Carbon Panel dashboard with example server and node status">
             <div class="mock-bar">
               <div class="dots"><i></i><i></i><i></i></div>
-              <div class="url">carbon-panel · cluster / overview</div>
+              <div class="url">carbon-panel · example interface</div>
             </div>
             <div class="mock-body">
               <div class="mock-rail">
@@ -408,11 +403,11 @@
           </div>
           <div class="stat reveal">
             <div class="num">0<span class="unit"> B</span></div>
-            <div class="label">Idle RAM with deep-sleep</div>
+            <div class="label">Server process RAM in deep-sleep</div>
             <div class="sub">wakes when a player connects</div>
           </div>
           <div class="stat reveal">
-            <div class="num">∞</div>
+            <div class="num">Nodes</div>
             <div class="label">Machines, one panel</div>
             <div class="sub">home machine, homelab, cloud VPS</div>
           </div>
@@ -447,7 +442,7 @@
             </div>
             <p>Hand-rolled scripts and bare JVM processes on a shared host.</p>
             <ul>
-              <li><svg class="icon"><use href="#i-x"/></svg> One bad mod corrupts every world sharing the host</li>
+              <li><svg class="icon"><use href="#i-x"/></svg> Shared environments can make failures harder to isolate</li>
               <li><svg class="icon"><use href="#i-x"/></svg> Port-forwarding a new server means editing firewall rules</li>
               <li><svg class="icon"><use href="#i-x"/></svg> Backups are a cron job nobody has ever restored from</li>
               <li><svg class="icon"><use href="#i-x"/></svg> Idle servers burn RAM all night, every night</li>
@@ -461,10 +456,10 @@
             </div>
             <p>Every server is a Docker container with real limits, routes and history.</p>
             <ul>
-              <li><svg class="icon"><use href="#i-check"/></svg> Blast radius is one container, never the host</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> Each server runs in an isolated container</li>
               <li><svg class="icon"><use href="#i-check"/></svg> New server = new hostname, routed automatically</li>
               <li><svg class="icon"><use href="#i-check"/></svg> World-aware backups with retention and offsite copies</li>
-              <li><svg class="icon"><use href="#i-check"/></svg> Deep-sleep to zero RAM, wakes when a player connects</li>
+              <li><svg class="icon"><use href="#i-check"/></svg> Stop idle server processes and wake on connection</li>
             </ul>
           </div>
         </div>
@@ -607,7 +602,7 @@
           <div class="tile span-3 reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-zap"/></svg></div>
             <h3>Sleep, freeze, wake on join</h3>
-            <p>Empty servers can freeze in place at ~0% CPU, or stop entirely at zero RAM while the proxy keeps answering pings. Either way, a player joining brings them back — nothing to start by hand.</p>
+            <p>Empty servers can freeze or stop their server process while the proxy continues answering pings. A player connection can wake the server again.</p>
             <div class="sleep-cycle" aria-hidden="true">
               <span class="sc-pill sc-1"><span class="sc-dot"></span>running · 6 GB</span>
               <span class="sc-pill sc-2"><span class="sc-dot"></span>deep-sleep · 0 B</span>
@@ -650,8 +645,8 @@
                   <p>Routes, consoles and a typed API work identically across every machine — one panel, one view.</p>
                 </li>
                 <li class="arch-beat" data-beat-for="4">
-                  <h3>Every world stays one join away.</h3>
-                  <p>Only the servers people are using hold memory. The rest wait at zero RAM and wake on their own when a player connects — a whole rotation of worlds on one machine.</p>
+                  <h3>Let idle servers rest.</h3>
+                  <p>Stop idle server processes and wake them when players connect. The panel, proxy and host continue to use their own resources.</p>
                 </li>
               </ol>
               <div class="arch-progress" aria-hidden="true"><span class="arch-progress-bar"></span></div>
@@ -777,213 +772,30 @@
     <section class="section fleet" id="fleet">
       <div class="container">
         <div class="section-head reveal">
-          <h2>Run Minecraft servers across a cluster</h2>
-          <p>
-            Put each world on the machine that suits it — the PC in your room, a box in the
-            closet, a VPS in the cloud — and let one panel hold the lot together. Spread the
-            load across the hardware you already own, keep worlds available when a machine
-            goes down, and move anything between nodes as your players change.
-          </p>
+          <h2>Your machines, one view.</h2>
+          <p>Bring your own hardware and manage Minecraft servers through one
+            self-hosted panel. Choose the machine that suits each workload.</p>
         </div>
-
-        <div class="fleet-board reveal">
-          <svg class="fleet-svg" viewBox="0 0 1200 640" role="img" aria-label="Three nodes — home, homelab and cloud — with a server migrating from one to another, a warm standby replica of its world, and snapshots shipping to offsite storage">
-            <defs>
-              <radialGradient id="fleet-glow">
-                <stop offset="0" stop-color="#0f62fe" stop-opacity="0.2" />
-                <stop offset="1" stop-color="#0f62fe" stop-opacity="0" />
-              </radialGradient>
-            </defs>
-
-            <ellipse cx="600" cy="320" rx="560" ry="300" fill="url(#fleet-glow)" opacity="0.6" />
-
-            <!-- move routes -->
-            <path id="f-migrate" class="f-arc" d="M170 180Q385 20 600 180" />
-            <path class="f-arc f-arc-idle" d="M600 180Q815 20 1030 180" />
-            <circle class="f-anchor" cx="170" cy="180" r="3" />
-            <circle class="f-anchor" cx="600" cy="180" r="3" />
-            <circle class="f-anchor" cx="1030" cy="180" r="3" opacity="0.35" />
-            <text class="f-label" x="385" y="150" text-anchor="middle">live migration</text>
-
-            <!-- node: home -->
-            <g>
-              <rect class="f-node f-node-hot" x="0" y="180" width="340" height="320" rx="14" />
-              <text class="f-nodetitle" x="24" y="220">home machine</text>
-              <text class="f-role" x="24" y="240">AT HOME</text>
-              <text class="f-val f-val-hot" x="316" y="220" text-anchor="end">15.0 / 16 GB</text>
-              <rect class="f-track" x="24" y="252" width="292" height="5" rx="2.5" />
-              <rect class="f-fill f-fill-hot" x="24" y="252" width="274" height="5" rx="2.5" />
-
-              <rect class="f-chip f-chip-hot" x="24" y="276" width="292" height="40" rx="8" />
-              <text class="f-name" x="40" y="301">survival-01</text>
-              <text class="f-meta" x="300" y="301" text-anchor="end">6 GB · migrating</text>
-
-              <rect class="f-chip" x="24" y="326" width="292" height="40" rx="8" />
-              <text class="f-name" x="40" y="351">creative</text>
-              <text class="f-meta" x="300" y="351" text-anchor="end">4 GB · 6 players</text>
-
-              <rect class="f-chip" x="24" y="376" width="292" height="40" rx="8" />
-              <text class="f-name" x="40" y="401">modded-01</text>
-              <text class="f-meta" x="300" y="401" text-anchor="end">5 GB · 2 players</text>
-
-              <line class="f-hr" x1="24" y1="440" x2="316" y2="440" />
-              <text class="f-foot" x="24" y="464">3 servers · 1 migrating</text>
-            </g>
-
-            <!-- node: homelab -->
-            <g>
-              <rect class="f-node" x="430" y="180" width="340" height="320" rx="14" />
-              <text class="f-nodetitle" x="454" y="220">homelab</text>
-              <text class="f-role" x="454" y="240">IN THE CLOSET</text>
-              <text class="f-val" x="746" y="220" text-anchor="end">8.2 / 32 GB</text>
-              <rect class="f-track" x="454" y="252" width="292" height="5" rx="2.5" />
-              <rect class="f-fill" x="454" y="252" width="75" height="5" rx="2.5" />
-
-              <rect class="f-chip f-chip-rep" x="454" y="276" width="292" height="40" rx="8" />
-              <text class="f-name" x="470" y="301">survival-01</text>
-              <text class="f-meta" x="730" y="301" text-anchor="end">standby · synced</text>
-
-              <rect class="f-chip" x="454" y="326" width="292" height="40" rx="8" />
-              <text class="f-name" x="470" y="351">event-01</text>
-              <text class="f-meta" x="730" y="351" text-anchor="end">8 GB · 22 players</text>
-
-              <rect class="f-chip f-chip-sleep" x="454" y="376" width="292" height="40" rx="8" />
-              <text class="f-name" x="470" y="401">archive</text>
-              <text class="f-meta" x="730" y="401" text-anchor="end">parked · 0 B</text>
-
-              <line class="f-hr" x1="454" y1="440" x2="746" y2="440" />
-              <text class="f-foot" x="454" y="464">standby replica · ready</text>
-            </g>
-
-            <!-- node: cloud -->
-            <g>
-              <rect class="f-node" x="860" y="180" width="340" height="320" rx="14" />
-              <text class="f-nodetitle" x="884" y="220">cloud vps</text>
-              <text class="f-role" x="884" y="240">IN THE CLOUD</text>
-              <text class="f-val" x="1176" y="220" text-anchor="end">1.4 / 8 GB</text>
-              <rect class="f-track" x="884" y="252" width="292" height="5" rx="2.5" />
-              <rect class="f-fill" x="884" y="252" width="51" height="5" rx="2.5" />
-
-              <rect class="f-chip f-chip-sleep" x="884" y="276" width="292" height="40" rx="8" />
-              <text class="f-name" x="900" y="301">lobby-01</text>
-              <text class="f-meta" x="1160" y="301" text-anchor="end">asleep · 0 B</text>
-
-              <rect class="f-chip" x="884" y="326" width="292" height="40" rx="8" />
-              <text class="f-name" x="900" y="351">proxy</text>
-              <text class="f-meta" x="1160" y="351" text-anchor="end">0.4 GB · ingress</text>
-
-              <rect class="f-chip f-chip-sleep" x="884" y="376" width="292" height="40" rx="8" />
-              <text class="f-name" x="900" y="401">events-2</text>
-              <text class="f-meta" x="1160" y="401" text-anchor="end">asleep · 0 B</text>
-
-              <line class="f-hr" x1="884" y1="440" x2="1176" y2="440" />
-              <text class="f-foot" x="884" y="464">2 asleep · wake on join</text>
-            </g>
-
-            <!-- the server in flight, drawn over the nodes -->
-            <g class="f-carrier" opacity="0">
-              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.86;1" dur="9s" repeatCount="indefinite" />
-              <circle class="f-carrier-glow" cx="0" cy="0" r="26" />
-              <rect x="-52" y="-13" width="104" height="26" rx="13" />
-              <circle class="f-carrier-dot" cx="-35" cy="0" r="3" />
-              <text x="-24" y="4">survival-01</text>
-              <animateMotion dur="9s" repeatCount="indefinite" rotate="0" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.25 0.1 0.25 1">
-                <mpath href="#f-migrate" xlink:href="#f-migrate" />
-              </animateMotion>
-            </g>
-
-            <!-- offsite -->
-            <line class="f-backup" x1="170" y1="500" x2="170" y2="540" />
-            <line class="f-backup" x1="600" y1="500" x2="600" y2="540" />
-            <line class="f-backup" x1="930" y1="500" x2="930" y2="540" />
-
-            <rect class="f-bar" x="0" y="540" width="1200" height="70" rx="12" />
-            <text class="f-name" x="24" y="570">offsite backups</text>
-            <text class="f-meta" x="24" y="590">S3 · MinIO · any compatible endpoint</text>
-            <text class="f-meta" x="1176" y="570" text-anchor="end">world snapshots · versioned · retention</text>
-            <circle class="f-dot-ok" cx="1056" cy="587" r="3" />
-            <text class="f-meta" x="1176" y="590" text-anchor="end">last ship · 4m ago</text>
-          </svg>
+        <div class="brand-fleet-grid">
+          <article class="brand-fleet-node">
+            <span class="brand-fleet-index">01 / HOME</span>
+            <h3>A machine at home</h3>
+            <p>Start with the computer or server you already run.</p>
+          </article>
+          <article class="brand-fleet-node">
+            <span class="brand-fleet-index">02 / HOMELAB</span>
+            <h3>Room to grow</h3>
+            <p>Organise server workloads across your own Docker nodes.</p>
+          </article>
+          <article class="brand-fleet-node">
+            <span class="brand-fleet-index">03 / CLOUD</span>
+            <h3>Infrastructure you choose</h3>
+            <p>Add a compatible remote machine when your setup needs it.</p>
+          </article>
         </div>
-
-        <!-- Stacked node board for phones, where the wide diagram cannot read -->
-        <div class="fleet-stack">
-          <div class="fs-node">
-            <div class="fs-top">
-              <span class="fs-name">home machine</span>
-              <span class="fs-val fs-val-hot">15.0 / 16 GB</span>
-            </div>
-            <div class="fs-meter"><i class="fs-fill hot" style="width: 94%"></i></div>
-            <ul class="fs-list">
-              <li class="fs-chip hot"><b>survival-01</b><span>6 GB · migrating</span></li>
-              <li class="fs-chip"><b>creative</b><span>4 GB · 6 players</span></li>
-              <li class="fs-chip"><b>modded-01</b><span>5 GB · 2 players</span></li>
-            </ul>
-            <div class="fs-foot">3 servers · 1 migrating</div>
-          </div>
-
-          <div class="fs-move"><span class="fs-move-label">survival-01 · live migration</span></div>
-
-          <div class="fs-node">
-            <div class="fs-top">
-              <span class="fs-name">homelab</span>
-              <span class="fs-val">8.2 / 32 GB</span>
-            </div>
-            <div class="fs-meter"><i class="fs-fill" style="width: 26%"></i></div>
-            <ul class="fs-list">
-              <li class="fs-chip rep"><b>survival-01</b><span>standby · synced</span></li>
-              <li class="fs-chip"><b>event-01</b><span>8 GB · 22 players</span></li>
-              <li class="fs-chip sleep"><b>archive</b><span>parked · 0 B</span></li>
-            </ul>
-            <div class="fs-foot">standby replica · ready</div>
-          </div>
-
-          <div class="fs-node">
-            <div class="fs-top">
-              <span class="fs-name">cloud vps</span>
-              <span class="fs-val">1.4 / 8 GB</span>
-            </div>
-            <div class="fs-meter"><i class="fs-fill" style="width: 18%"></i></div>
-            <ul class="fs-list">
-              <li class="fs-chip sleep"><b>lobby-01</b><span>asleep · 0 B</span></li>
-              <li class="fs-chip"><b>proxy</b><span>0.4 GB · ingress</span></li>
-              <li class="fs-chip sleep"><b>events-2</b><span>asleep · 0 B</span></li>
-            </ul>
-            <div class="fs-foot">2 asleep · wake on join</div>
-          </div>
-
-          <div class="fs-bar">
-            <div class="fs-top">
-              <span class="fs-name">offsite backups</span>
-              <span class="fs-val"><span class="fs-dot"></span> 4m ago</span>
-            </div>
-            <div class="fs-foot">S3 · MinIO · any compatible endpoint</div>
-            <div class="fs-foot">world snapshots · versioned · retention</div>
-          </div>
-        </div>
-
-        <div class="fleet-cards">
-          <div class="fleet-card reveal">
-            <svg class="icon f-icon" aria-hidden="true"><use href="#i-route"/></svg>
-            <h3>Live migration</h3>
-            <p>Move a server to another node from the panel. The world transfers, the route is repointed and the container starts on the target — same hostname the whole way.</p>
-          </div>
-          <div class="fleet-card reveal">
-            <svg class="icon f-icon" aria-hidden="true"><use href="#i-server"/></svg>
-            <h3>Standby replicas</h3>
-            <p>Keep a copy of a world warm on a second machine. Promote it and players are back on the same address with the last state that reached the replica.</p>
-          </div>
-          <div class="fleet-card reveal">
-            <svg class="icon f-icon" aria-hidden="true"><use href="#i-database"/></svg>
-            <h3>Scheduled backups</h3>
-            <p>Snapshots run on a cron or interval schedule, flush saves through RCON first, respect retention rules, and upload to any S3-compatible bucket.</p>
-          </div>
-          <div class="fleet-card reveal">
-            <svg class="icon f-icon" aria-hidden="true"><use href="#i-gauge"/></svg>
-            <h3>Capacity guard</h3>
-            <p>Every placement is measured against the target node's real memory headroom, so a migration or a wake never oversubscribes a machine.</p>
-          </div>
-        </div>
+        <p class="brand-fleet-note">Node access, storage and recovery depend on
+          your configuration. Review the documentation before moving or
+          restoring world data.</p>
       </div>
     </section>
 
@@ -994,7 +806,7 @@
       <div class="container">
         <div class="section-head center reveal">
           <h2>From clone to players in minutes.</h2>
-          <p>No cloud account, no license key, no control plane phoning home. Just Docker and a browser.</p>
+          <p>Run the panel on your own infrastructure with Docker and a browser.</p>
         </div>
 
         <div class="steps">
@@ -1091,76 +903,28 @@
          ============================================================ -->
     <section class="section" id="compare">
       <div class="container">
-        <div class="section-head center reveal">
-          <h2>Purpose-built for Minecraft servers.</h2>
-          <p>A quick look at how Carbon Panel compares with the common alternatives.</p>
+        <div class="section-head reveal">
+          <h2>Built for the way you host.</h2>
+          <p>Choose your infrastructure, manage the servers you need, and keep
+            your configuration in one place.</p>
         </div>
-
-        <div class="compare-wrap reveal">
-          <table class="compare">
-            <thead>
-              <tr>
-                <th scope="col">Capability</th>
-                <th scope="col" class="hl">
-                  <span class="prod">
-                    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0f62fe"/><path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
-                    Carbon Panel
-                  </span>
-                </th>
-                <th scope="col">Raw Docker Compose</th>
-                <th scope="col">Typical free panel</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Per-server container isolation</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Built-in</span></td>
-                <td><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Manual</span></td>
-                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Sometimes</span></td>
-              </tr>
-              <tr>
-                <td>Hostname-based player routing</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> One port</span></td>
-                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> DIY</span></td>
-                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> Rare</span></td>
-              </tr>
-              <tr>
-                <td>Modpack studio (CurseForge / Modrinth)</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Keyless</span></td>
-                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> —</span></td>
-                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Add-ons</span></td>
-              </tr>
-              <tr>
-                <td>Multi-node clustering</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> First-class</span></td>
-                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> DIY</span></td>
-                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Paid tiers</span></td>
-              </tr>
-              <tr>
-                <td>Deep-sleep &amp; wake-on-connect</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Zero-RAM idle</span></td>
-                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> —</span></td>
-                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> —</span></td>
-              </tr>
-              <tr>
-                <td>Typed API &amp; Prometheus metrics</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Connect RPC</span></td>
-                <td><span class="cell no"><svg class="icon"><use href="#i-x"/></svg> Shell</span></td>
-                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Varies</span></td>
-              </tr>
-              <tr>
-                <td>Open source &amp; self-hosted</td>
-                <td class="col-hl"><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> MPL-2.0</span></td>
-                <td><span class="cell yes"><svg class="icon"><use href="#i-check"/></svg> Yours</span></td>
-                <td><span class="cell partial"><svg class="icon"><use href="#i-minus"/></svg> Varies</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="brand-fleet-grid">
+          <article class="brand-fleet-node">
+            <span class="brand-fleet-index">01 / CONTROL</span>
+            <h3>Your infrastructure</h3>
+            <p>Run the panel and server containers on infrastructure you manage.</p>
+          </article>
+          <article class="brand-fleet-node">
+            <span class="brand-fleet-index">02 / PLAY</span>
+            <h3>Different worlds</h3>
+            <p>Manage server types and modpacks for different communities.</p>
+          </article>
+          <article class="brand-fleet-node">
+            <span class="brand-fleet-index">03 / OPERATE</span>
+            <h3>Tools for operators</h3>
+            <p>Use a web console, routing, schedules and backup controls.</p>
+          </article>
         </div>
-        <p class="compare-note">
-          Comparison reflects publicly documented, commonly available capabilities and is a
-          general guide — evaluate each option against your own requirements.
-        </p>
       </div>
     </section>
 
@@ -1174,9 +938,8 @@
             <div>
               <h2>Free as in cost.<br />Free as in speech.</h2>
               <p>
-                Carbon Panel is MPL-2.0 licensed, built in the open, and never phones
-                home. Your worlds, your database, your infrastructure — no telemetry, no
-                account, no lock-in.
+                Carbon Panel is built in the open and can be self-hosted. Your worlds,
+                your database and your infrastructure remain under your control.
               </p>
               <div class="oss-cta">
                 <a class="btn btn-primary" href="https://github.com/athNdev/carbonpanel" target="_blank" rel="noopener">
@@ -1238,8 +1001,7 @@
             <summary>Where are my worlds and data stored?<span class="plus"></span></summary>
             <div class="faq-body">
               In plain directories and Docker volumes on your own storage — including an SQLite
-              control database and per-server data volumes. Nothing leaves your machine unless
-              you configure offsite backups to S3-compatible storage.
+              control database and per-server data volumes. Review configured integrations and offsite backups to understand where data is sent.
             </div>
           </details>
           <details class="faq-item">
@@ -1262,8 +1024,7 @@
             <summary>Can I run it alongside other Docker workloads?<span class="plus"></span></summary>
             <div class="faq-body">
               Yes. Carbon Panel orchestrates its own isolated server containers and can manage
-              remote Docker nodes too. Because each server is fenced in its own container, it
-              won't collide with your other services.
+              remote Docker nodes too. Each server runs in a container; review ports, storage and resource limits for your environment.
             </div>
           </details>
           <details class="faq-item">
@@ -1313,12 +1074,7 @@
       <div class="footer-grid">
         <div class="footer-brand">
           <a class="brand" href="#top" aria-label="Carbon Panel home">
-            <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="7" fill="#0f62fe"/>
-              <path d="M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-              <path d="M8 10.5l8 4.5 8-4.5M16 15v9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-            </svg>
-            <span class="wordmark">Carbon<b>Panel</b></span>
+            <img class="brand-lockup" src="./assets/brand-horizontal-light.svg" alt="" />
           </a>
           <p>
             The modern, self-hosted Minecraft server management platform — free, open
@@ -1339,7 +1095,7 @@
           <ul>
             <li><a href="#features">Features</a></li>
             <li><a href="#how">How it works</a></li>
-            <li><a href="#compare">Comparison</a></li>
+            <li><a href="#compare">Why Carbon</a></li>
             <li><a href="#faq">FAQ</a></li>
           </ul>
         </div>

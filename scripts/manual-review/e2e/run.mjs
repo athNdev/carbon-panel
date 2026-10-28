@@ -166,7 +166,7 @@ async function run() {
     const txt = header ? header.innerText : "";
     return {
       hasCarbonUIBadge: /carbon\s*ui/i.test(txt),
-      hasLegacyLogo: !!document.querySelector('header img[alt*="Carbon"]'),
+      hasLegacyLogo: !!document.querySelector('header img[src*="g1_"]'),
     };
   });
   await shot(page, "E3-topbar");
