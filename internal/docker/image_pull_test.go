@@ -125,6 +125,95 @@ func TestEnsureImageFailsWhenThePullDoesNotLeaveAnImage(t *testing.T) {
 	}
 }
 
+func TestEnsureImageRejectsAMismatchedCachedArchitecture(t *testing.T) {
+	var pulls atomic.Int32
+	c, cleanup := newImagePullTestClient(t, platformImageHandler(t, "amd64", "linux", "arm64", "linux", false, &pulls, nil))
+	t.Cleanup(cleanup)
+
+	_, err := c.ensureImage(context.Background(), "example:latest")
+	if err == nil || !strings.Contains(err.Error(), "arm64") || !strings.Contains(err.Error(), "amd64") {
+		t.Fatalf("ensureImage() error = %v, want an architecture mismatch", err)
+	}
+	if pulls.Load() != 1 {
+		t.Fatalf("pulls = %d, want 1", pulls.Load())
+	}
+}
+
+func TestEnsureImageAcceptsTheDaemonArchitectureName(t *testing.T) {
+	var pulls atomic.Int32
+	var infoHits atomic.Int32
+	c, cleanup := newImagePullTestClient(t, platformImageHandler(t, "x86_64", "linux", "amd64", "linux", false, &pulls, &infoHits))
+	t.Cleanup(cleanup)
+
+	id, err := c.ensureImage(context.Background(), "example:latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != "sha256:fixture" {
+		t.Fatalf("image id = %q", id)
+	}
+	if infoHits.Load() == 0 {
+		t.Fatal("daemon info was not requested")
+	}
+	if pulls.Load() != 0 {
+		t.Fatalf("pulls = %d, want 0 for a matching x86_64 daemon", pulls.Load())
+	}
+}
+
+func TestEnsureImagePullsUntilTheArchitectureMatches(t *testing.T) {
+	var pulls atomic.Int32
+	c, cleanup := newImagePullTestClient(t, platformImageHandler(t, "amd64", "linux", "arm64", "linux", true, &pulls, nil))
+	t.Cleanup(cleanup)
+
+	id, err := c.ensureImage(context.Background(), "example:latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != "sha256:matched" {
+		t.Fatalf("image id = %q, want the image pulled for the daemon", id)
+	}
+	if pulls.Load() != 1 {
+		t.Fatalf("pulls = %d, want 1", pulls.Load())
+	}
+}
+
+func platformImageHandler(t *testing.T, daemonArch, daemonOS, imageArch, imageOS string, matchAfterPull bool, pulls, infoHits *atomic.Int32) http.Handler {
+	t.Helper()
+	var pulled atomic.Bool
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/_ping":
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
+		case strings.HasSuffix(r.URL.Path, "/info"):
+			if infoHits != nil {
+				infoHits.Add(1)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"OSType":"` + daemonOS + `","Architecture":"` + daemonArch + `"}`))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/images/") && strings.HasSuffix(r.URL.Path, "/json"):
+			arch, osName, id := imageArch, imageOS, "sha256:fixture"
+			if matchAfterPull && pulled.Load() {
+				arch, osName, id = daemonArch, daemonOS, "sha256:matched"
+				if daemonArch == "x86_64" {
+					arch = "amd64"
+				}
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"Id":"` + id + `","Os":"` + osName + `","Architecture":"` + arch + `"}`))
+		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/images/create"):
+			pulls.Add(1)
+			pulled.Store(true)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"status":"Pull complete"}` + "\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
 func TestEnsureImageCoalescesConcurrentPulls(t *testing.T) {
 	var pulls atomic.Int32
 	started := make(chan struct{})

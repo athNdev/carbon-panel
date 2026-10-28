@@ -52,7 +52,9 @@ one client share one request, and a pull is success only after the daemon
 reports that image present. The image ID of the container that last came
 up stays recorded when a later pull or recreate fails. A tag change is
 written to the activity log with that ID and whether the running
-container moved to the new image.
+container moved to the new image. A cached image whose OS or CPU
+architecture differs from the daemon is pulled once; if it still does
+not match, creation stops before a container is made from it.
 
 # How to check
 

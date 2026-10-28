@@ -7,12 +7,14 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
 	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/containerd/errdefs"
+	"github.com/moby/moby/client"
 )
 
 // imagePulls shares one in-flight pull per image reference. A waiter that
@@ -69,18 +71,19 @@ func (p *imagePulls) waiterCount(image string) int {
 
 // ensureImage pulls imageName when the daemon does not already have it.
 // A local image skips the registry. Concurrent callers share one pull.
-// The returned ID is the daemon image identity. The pull is a failure when
-// the daemon still does not report that image.
+// The returned ID is the daemon image identity. A cached image for another
+// OS or architecture is pulled once; if it still does not match the daemon,
+// the pull is a failure and no container is created from it.
 func (c *Client) ensureImage(ctx context.Context, imageName string) (string, error) {
 	imageName = strings.TrimSpace(imageName)
 	if imageName == "" || strings.ContainsAny(imageName, " \t\r\n") {
 		return "", fmt.Errorf("invalid image reference %q", imageName)
 	}
-	id, present, err := c.imageIdentity(ctx, imageName)
-	if err != nil {
+	id, usable, err := c.usableImage(ctx, imageName)
+	if err != nil && !isImagePlatformMismatch(err) {
 		return "", err
 	}
-	if present {
+	if usable {
 		if c.log != nil {
 			c.log.Debug("Image %s exists locally, skipping pull", imageName)
 		}
@@ -90,21 +93,21 @@ func (c *Client) ensureImage(ctx context.Context, imageName string) (string, err
 		c.log.Info("Image %s not present locally, pulling...", imageName)
 	}
 	return c.pulls.do(ctx, imageName, func() (string, error) {
-		id, present, err := c.imageIdentity(ctx, imageName)
-		if err != nil {
+		id, usable, err := c.usableImage(ctx, imageName)
+		if err != nil && !isImagePlatformMismatch(err) {
 			return "", err
 		}
-		if present {
+		if usable {
 			return id, nil
 		}
 		if err := c.pullImage(ctx, imageName); err != nil {
 			return "", err
 		}
-		id, present, err = c.imageIdentity(ctx, imageName)
+		id, usable, err = c.usableImage(ctx, imageName)
 		if err != nil {
 			return "", err
 		}
-		if !present {
+		if !usable {
 			return "", fmt.Errorf("image %s is not present after pull", imageName)
 		}
 		return id, nil
@@ -112,31 +115,141 @@ func (c *Client) ensureImage(ctx context.Context, imageName string) (string, err
 }
 
 // ServerImageID is the daemon identity of the server's resolved image.
+// An image built for another OS or architecture is not that identity.
 func (c *Client) ServerImageID(ctx context.Context, server *models.Server) (string, error) {
 	imageName, err := serverImageName(server)
 	if err != nil {
 		return "", err
 	}
-	id, present, err := c.imageIdentity(ctx, imageName)
+	id, usable, err := c.usableImage(ctx, imageName)
 	if err != nil {
 		return "", err
 	}
-	if !present {
+	if !usable {
 		return "", fmt.Errorf("image %s is not present", imageName)
 	}
 	return id, nil
 }
 
-func (c *Client) imageIdentity(ctx context.Context, imageName string) (string, bool, error) {
+type imageRecord struct {
+	id   string
+	os   string
+	arch string
+}
+
+type imagePlatformError struct {
+	image      string
+	imageOS    string
+	imageArch  string
+	daemonOS   string
+	daemonArch string
+}
+
+func (e *imagePlatformError) Error() string {
+	return fmt.Sprintf("image %s platform %s does not match daemon platform %s", e.image, formatPlatform(e.imageOS, e.imageArch), formatPlatform(e.daemonOS, e.daemonArch))
+}
+
+func isImagePlatformMismatch(err error) bool {
+	var mismatch *imagePlatformError
+	return errors.As(err, &mismatch)
+}
+
+func formatPlatform(osName, arch string) string {
+	osName = strings.TrimSpace(osName)
+	arch = strings.TrimSpace(arch)
+	switch {
+	case osName != "" && arch != "":
+		return osName + "/" + arch
+	case arch != "":
+		return arch
+	case osName != "":
+		return osName
+	default:
+		return "unknown"
+	}
+}
+
+func (c *Client) usableImage(ctx context.Context, imageName string) (string, bool, error) {
+	rec, present, err := c.imageIdentity(ctx, imageName)
+	if err != nil || !present {
+		return "", false, err
+	}
+	if err := c.requirePlatform(ctx, imageName, rec); err != nil {
+		return "", false, err
+	}
+	return rec.id, true, nil
+}
+
+func (c *Client) imageIdentity(ctx context.Context, imageName string) (imageRecord, bool, error) {
 	inspected, err := c.docker.ImageInspect(ctx, imageName)
 	if err == nil {
 		if inspected.ID == "" {
-			return "", false, fmt.Errorf("image %s has no identity", imageName)
+			return imageRecord{}, false, fmt.Errorf("image %s has no identity", imageName)
 		}
-		return inspected.ID, true, nil
+		return imageRecord{id: inspected.ID, os: inspected.Os, arch: inspected.Architecture}, true, nil
 	}
 	if errdefs.IsNotFound(err) {
-		return "", false, nil
+		return imageRecord{}, false, nil
 	}
-	return "", false, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
+	return imageRecord{}, false, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
+}
+
+// daemonPlatform reads the daemon OS and architecture. A daemon that does
+// not report either is not a mismatch; the caller skips the comparison.
+func (c *Client) daemonPlatform(ctx context.Context) (osName, arch string, ok bool) {
+	info, err := c.docker.Info(ctx, client.InfoOptions{})
+	if err != nil {
+		if c.log != nil {
+			c.log.Debug("Image platform check skipped: %v", err)
+		}
+		return "", "", false
+	}
+	osName = strings.TrimSpace(info.Info.OSType)
+	arch = strings.TrimSpace(info.Info.Architecture)
+	if osName == "" && arch == "" {
+		return "", "", false
+	}
+	return osName, arch, true
+}
+
+func (c *Client) requirePlatform(ctx context.Context, imageName string, rec imageRecord) error {
+	osName, arch, ok := c.daemonPlatform(ctx)
+	if !ok {
+		return nil
+	}
+	if platformsMatch(osName, arch, rec.os, rec.arch) {
+		return nil
+	}
+	return &imagePlatformError{
+		image:      imageName,
+		imageOS:    rec.os,
+		imageArch:  rec.arch,
+		daemonOS:   osName,
+		daemonArch: arch,
+	}
+}
+
+func platformsMatch(daemonOS, daemonArch, imageOS, imageArch string) bool {
+	if daemonOS != "" && imageOS != "" && !strings.EqualFold(strings.TrimSpace(daemonOS), strings.TrimSpace(imageOS)) {
+		return false
+	}
+	if daemonArch != "" && imageArch != "" && normalizeArch(daemonArch) != normalizeArch(imageArch) {
+		return false
+	}
+	return true
+}
+
+func normalizeArch(arch string) string {
+	switch strings.ToLower(strings.TrimSpace(arch)) {
+	case "amd64", "x86_64":
+		return "amd64"
+	case "arm64", "aarch64":
+		return "arm64"
+	case "arm", "armhf", "armv7", "armv7l":
+		return "arm"
+	case "386", "i386", "i686":
+		return "386"
+	default:
+		return strings.ToLower(strings.TrimSpace(arch))
+	}
 }
