@@ -1356,11 +1356,20 @@ func (c *Client) StartContainer(ctx context.Context, containerID string) error {
 	return nil
 }
 
-// GetAllocatedHostPorts returns a set of host ports currently allocated/bound by running containers.
+// GetAllocatedHostPorts returns host ports published by running containers
+// for every protocol.
 func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error) {
+	return c.AllocatedHostPorts(ctx, "")
+}
+
+// AllocatedHostPorts returns host ports published with protocol.
+// protocol is "tcp" or "udp". An empty protocol includes every published port.
+// A UDP publish does not occupy the same number on TCP.
+func (c *Client) AllocatedHostPorts(ctx context.Context, protocol string) (map[int]bool, error) {
 	if c == nil || c.docker == nil {
 		return nil, nil
 	}
+	protocol = strings.ToLower(strings.TrimSpace(protocol))
 
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
@@ -1375,9 +1384,13 @@ func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error
 	allocated := make(map[int]bool)
 	for _, cont := range listResult.Items {
 		for _, port := range cont.Ports {
-			if port.PublicPort > 0 {
-				allocated[int(port.PublicPort)] = true
+			if port.PublicPort == 0 {
+				continue
 			}
+			if protocol != "" && !strings.EqualFold(port.Type, protocol) {
+				continue
+			}
+			allocated[int(port.PublicPort)] = true
 		}
 	}
 	return allocated, nil

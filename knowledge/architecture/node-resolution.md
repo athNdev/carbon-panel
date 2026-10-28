@@ -33,6 +33,10 @@ wrong host. That is a data-safety bug, not a degraded mode.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
 - Remote file, Minecraft and backup archive paths still read the controller
   filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- A host-port check asks the selected daemon which protocol is published. A
+  UDP publish does not occupy the same number on TCP, and a TCP publish does
+  not occupy it on UDP. The controller socket table is consulted only for the
+  local node, and only for the protocol being reserved.
 
 # How to check
 
