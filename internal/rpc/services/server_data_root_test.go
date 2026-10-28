@@ -76,6 +76,89 @@ func TestCreateServerWritesTheWorldOnSharedStorage(t *testing.T) {
 	}
 }
 
+func TestDeleteServerRemovesTheMappedWorldOnly(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := context.Background()
+	mount := t.TempDir()
+	registerRemoteCreateNode(t, svc, "remote-delete", mount)
+
+	logical := filepath.Join(t.TempDir(), "servers", "world-a")
+	if err := os.MkdirAll(logical, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lookalike := filepath.Join(logical, "level.dat")
+	if err := os.WriteFile(lookalike, []byte("controller"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mapped := filepath.Join(mount, "world-a")
+	if err := os.MkdirAll(mapped, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(mapped, "level.dat"), []byte("remote"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := &db.Server{
+		ID: "del-mapped", Name: "Del Mapped", NodeID: "remote-delete",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25582, Memory: 1024, Status: db.StatusStopped, DataPath: logical,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{Id: server.ID})); err != nil {
+		t.Fatalf("DeleteServer: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(mapped, "level.dat")); !os.IsNotExist(err) {
+		t.Fatalf("mapped world stat = %v, want removed", err)
+	}
+	if _, err := os.Stat(lookalike); err != nil {
+		t.Fatalf("controller lookalike stat = %v", err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err == nil {
+		t.Fatal("server row still exists")
+	}
+}
+
+func TestDeleteServerRefusesARemoteNodeWithNoStorage(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := context.Background()
+	if err := svc.store.CreateNode(ctx, &db.Node{
+		ID: "remote-nostorage", Name: "Remote No Storage", Host: "tcp://10.2.0.9:2375",
+		Enabled: true, Status: db.NodeStatusOnline,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	logical := filepath.Join(t.TempDir(), "servers", "world-b")
+	if err := os.MkdirAll(logical, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lookalike := filepath.Join(logical, "level.dat")
+	if err := os.WriteFile(lookalike, []byte("controller"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := &db.Server{
+		ID: "del-nostorage", Name: "Del No Storage", NodeID: "remote-nostorage",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25583, Memory: 1024, Status: db.StatusStopped, DataPath: logical,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{Id: server.ID}))
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeUnavailable {
+		t.Fatalf("DeleteServer error = %T %v, want CodeUnavailable", err, err)
+	}
+	if _, err := os.Stat(lookalike); err != nil {
+		t.Fatalf("controller lookalike stat = %v", err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err != nil {
+		t.Fatalf("server row was removed: %v", err)
+	}
+}
+
 func TestCreateServerRefusesARemoteNodeWithNoStorage(t *testing.T) {
 	svc, _ := newDockerPrivilegeTestService(t)
 	registerRemoteCreateNode(t, svc, "remote-bare", "")

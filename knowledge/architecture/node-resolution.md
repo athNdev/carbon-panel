@@ -50,7 +50,9 @@ wrong host. That is a data-safety bug, not a degraded mode.
 - Scheduled modpack sync clones and copies onto that mapped root. A remote
   node with no reachable storage is refused before a controller directory
   is created.
-- Deleting a server still removes the stored data path.
+- Deleting a server removes the world on the node's mapped storage root
+  before the panel row. A remote node with no reachable storage is refused,
+  and a controller-local directory of the same name is left in place.
 
 # How to check
 

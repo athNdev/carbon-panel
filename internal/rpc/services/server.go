@@ -1797,6 +1797,18 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
+	// Remove the world on the owning node's storage before the panel row. A
+	// remote node without shared storage is refused, and a controller-local
+	// directory of the same name is left alone. A failed removal keeps the row.
+	if err := s.removeServerData(ctx, server); err != nil {
+		s.log.Error("Failed to delete server data: %v", err)
+		code := connect.CodeInternal
+		if nodestorage.IsUnavailable(err) {
+			code = connect.CodeUnavailable
+		}
+		return nil, connect.NewError(code, fmt.Errorf("failed to delete server data: %w", err))
+	}
+
 	// Delete from database
 	if err := s.store.DeleteServer(ctx, req.Msg.Id); err != nil {
 		s.log.Error("Failed to delete server: %v", err)
@@ -1806,12 +1818,44 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	peerIP := req.Peer().Addr
 	s.auditServerLifecycle(ctx, peerIP, activity.EventServerDelete, server.ID)
 
-	// Delete data directory
-	if err := os.RemoveAll(server.DataPath); err != nil {
-		s.log.Error("Failed to delete server data: %v", err)
-	}
-
 	return connect.NewResponse(&v1.DeleteServerResponse{}), nil
+}
+
+func (s *ServerService) removeServerData(ctx context.Context, server *storage.Server) error {
+	if server == nil || strings.TrimSpace(server.DataPath) == "" {
+		return errors.New("server data path is empty")
+	}
+	mapped, err := dataRootFor(ctx, s.store, server, false)
+	if err != nil {
+		return err
+	}
+	if unsafeDataRemoval(mapped) {
+		return fmt.Errorf("refusing to delete unsafe server data path %q", mapped)
+	}
+	info, err := storageNodeInfo(ctx, s.store, server.NodeID)
+	if err != nil {
+		return err
+	}
+	if !info.IsLocal {
+		root := info.ControllerStorageRoot
+		if root == "" {
+			root = info.StorageRoot
+		}
+		if root != "" && filepath.Clean(mapped) == filepath.Clean(root) {
+			return fmt.Errorf("refusing to delete storage root %q", mapped)
+		}
+	}
+	return os.RemoveAll(mapped)
+}
+
+func unsafeDataRemoval(path string) bool {
+	cleaned := filepath.Clean(strings.TrimSpace(path))
+	if cleaned == "" || cleaned == "." || cleaned == string(filepath.Separator) {
+		return true
+	}
+	rest := strings.TrimPrefix(cleaned, filepath.VolumeName(cleaned))
+	rest = strings.Trim(rest, string(filepath.Separator))
+	return rest == ""
 }
 
 // StartServer starts a server

@@ -21,9 +21,9 @@ sources:
   follow the node its server runs on.
 - `internal/docker/freezer.go` takes a `ContainerFreezer` seam, but
   `cmd/carbon-panel` wires it to the local client unconditionally.
-- Deleting a server still removes the stored data path. Creating a server,
-  mod installation, packwiz bake, snapshot create/restore, scheduled backup
-  archives, and scheduled modpack sync use the node's mapped storage root.
+- A remote node that does not share a filesystem mount has no transport
+  adapter. Those operations are refused instead of using the controller's
+  copy of the path.
 
 # How to use this
 

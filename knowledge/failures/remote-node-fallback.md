@@ -28,9 +28,11 @@ cannot be resolved, and a module records the server's node ID.
 
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
-- Deleting a server still removes the stored data path. Creating a server,
-  mod installation, packwiz bake, snapshot create/restore, scheduled backup
-  archives, and scheduled modpack sync use the node's mapped storage root.
+- Creating a server, deleting it, mod installation, packwiz bake, snapshot
+  create/restore, scheduled backup archives, and scheduled modpack sync use
+  the node's mapped storage root. A remote node with no shared mount is
+  refused. There is no second transport for a node that does not share a
+  filesystem.
 
 # Detection
 
