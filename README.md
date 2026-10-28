@@ -25,7 +25,7 @@ one at https://mozilla.org/MPL/2.0/.
   </p>
 
   <p>
-    <a href="https://athNdev.github.io/carbon-panel/">Website</a> &bull;
+    <a href="https://athn.dev/carbonpanel/">Website</a> &bull;
     <a href="#quick-start">Quick start</a> &bull;
     <a href="#features">Features</a> &bull;
     <a href="#one-panel-every-machine">Fleet</a> &bull;
