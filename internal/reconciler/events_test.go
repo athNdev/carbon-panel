@@ -490,6 +490,48 @@ func TestWatchMembershipReplacesNodes(t *testing.T) {
 	t.Fatal("membership did not move from a to b")
 }
 
+func TestWatchGenerationsReplacesOnEndpointChange(t *testing.T) {
+	var lists atomic.Int32
+	var built atomic.Int32
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent, 4),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			built.Add(1)
+			return &scriptedWatcher{
+				out: make(chan ContainerEvent, 1),
+				ev:  ContainerEvent{NodeID: nodeID, Action: "start"},
+			}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	go sup.WatchGenerations(ctx, 15*time.Millisecond, func(context.Context) ([]WatchedNode, error) {
+		if lists.Add(1) == 1 {
+			return []WatchedNode{{ID: "node-a", Generation: 1}}, nil
+		}
+		return []WatchedNode{{ID: "node-a", Generation: 2}}, nil
+	})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if built.Load() >= 2 {
+			break
+		}
+		time.Sleep(15 * time.Millisecond)
+	}
+	if got := built.Load(); got != 2 {
+		t.Fatalf("watchers built = %d, want 2 after the generation change", got)
+	}
+	time.Sleep(40 * time.Millisecond)
+	if got := built.Load(); got != 2 {
+		t.Fatalf("watchers built after the new generation settled = %d, want 2", got)
+	}
+}
+
 func TestSyncGenerationsReplacesTheWatcher(t *testing.T) {
 	var calls atomic.Int32
 	sup := &Supervisor{

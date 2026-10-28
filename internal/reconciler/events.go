@@ -300,6 +300,10 @@ type Supervisor struct {
 	started     bool
 	parent      context.Context
 	running     map[string]*supervisedNode
+	// initial is the endpoint generation captured when the supervisor is built
+	// from the node store. Start records those generations so the first
+	// refresh does not replace every watcher.
+	initial []WatchedNode
 	// stale is the last resolve error for a desired node that has no watcher.
 	stale map[string]string
 	wg    sync.WaitGroup
@@ -340,18 +344,22 @@ func NewSupervisorFromNodeStore(ctx context.Context, pool *docker.ClientPool, st
 	}
 
 	nodeIDs := make([]string, 0, len(nodes))
+	initial := make([]WatchedNode, 0, len(nodes))
 	for _, n := range nodes {
 		if n == nil || !n.Enabled {
 			continue
 		}
 		nodeIDs = append(nodeIDs, n.ID)
+		initial = append(initial, WatchedNode{ID: n.ID, Generation: n.EndpointGeneration})
 	}
 
 	resolve := func(nodeID string) (*docker.Client, error) {
 		return pool.GetClientStrict(nodeID)
 	}
 
-	return NewSupervisor(nodeIDs, resolve, log), nil
+	supervisor := NewSupervisor(nodeIDs, resolve, log)
+	supervisor.initial = initial
+	return supervisor, nil
 }
 
 // Events returns the merged, fanned-in channel of ContainerEvent values
@@ -383,9 +391,13 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		s.running = map[string]*supervisedNode{}
 	}
 	ids := append([]string(nil), s.nodeIDs...)
+	initial := append([]WatchedNode(nil), s.initial...)
 	s.mu.Unlock()
 
 	go s.closeWhenDone(ctx)
+	if len(initial) > 0 {
+		return s.apply(initial, true)
+	}
 	return s.apply(watchedFromIDs(ids), false)
 }
 
@@ -438,6 +450,34 @@ func (s *Supervisor) StaleNodes() []string {
 		out = append(out, id)
 	}
 	return out
+}
+
+// WatchGenerations refreshes membership and endpoint generation until ctx is
+// cancelled. A failed listing keeps the previous watchers. A changed
+// generation replaces that node's watcher.
+func (s *Supervisor) WatchGenerations(ctx context.Context, every time.Duration, list func(context.Context) ([]WatchedNode, error)) {
+	if every <= 0 {
+		every = 15 * time.Second
+	}
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			nodes, err := list(ctx)
+			if err != nil {
+				if s.log != nil {
+					s.log.Warn("reconciler: node generation refresh failed: %v", err)
+				}
+				continue
+			}
+			if err := s.SyncGenerations(nodes); err != nil && s.log != nil {
+				s.log.Warn("reconciler: node generation update failed: %v", err)
+			}
+		}
+	}
 }
 
 // WatchMembership refreshes the watched set on every interval until ctx is
