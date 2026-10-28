@@ -540,6 +540,140 @@ func TestReconcileOOMKillIsReportedAsError(t *testing.T) {
 	}
 }
 
+type sequencedClient struct {
+	mu      sync.Mutex
+	summary *container.Summary
+	state   *docker.ContainerState
+}
+
+func (c *sequencedClient) set(summary *container.Summary, state *docker.ContainerState) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.summary = summary
+	c.state = state
+}
+
+func (c *sequencedClient) ResolveContainer(context.Context, string) (*container.Summary, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.summary == nil {
+		return nil, fmt.Errorf("%w: sequenced", docker.ErrContainerNotResolved)
+	}
+	return c.summary, nil
+}
+
+func (c *sequencedClient) ObserveContainer(context.Context, string) (*docker.ContainerState, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.state, nil
+}
+
+func (c *sequencedClient) StartContainer(context.Context, string) error { return nil }
+
+func (c *sequencedClient) StopContainerWithin(context.Context, string, time.Duration) (bool, error) {
+	return true, nil
+}
+
+func (c *sequencedClient) RecreateContainer(context.Context, string, *db.Server, *db.ServerConfig) (*docker.RecreateContainerResult, error) {
+	return &docker.RecreateContainerResult{NewContainerID: "recreated-container"}, nil
+}
+
+func TestSweepConvergesStatusRouteAndLogsWithoutTheEvent(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "c1", Port: 25565, Status: db.StatusRunning}
+	store := newFakeStore(server)
+	cli := &sequencedClient{}
+	cli.set(&container.Summary{ID: "c1"}, &docker.ContainerState{ContainerID: "c1", Status: db.StatusRunning})
+	proxy := &fakeProxy{}
+	migrator := &fakeLogMigrator{}
+
+	r := New(store, fakeResolver{cli: cli}, proxy, &fakeBus{}, migrator, nil, Config{
+		DebounceWindow: 5 * time.Millisecond,
+		SweepInterval:  20 * time.Millisecond,
+		Workers:        1,
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// No event is ever delivered. The startup pass and the sweep are the only
+	// way the panel can notice the container.
+	r.Start(ctx, nil)
+	t.Cleanup(func() {
+		r.Stop()
+		r.Wait()
+	})
+
+	waitFor := func(status db.ServerStatus, containerID string) {
+		t.Helper()
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			got, err := store.GetServer(context.Background(), server.ID)
+			if err == nil && got.Status == status && got.ContainerID == containerID {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		got, _ := store.GetServer(context.Background(), server.ID)
+		t.Fatalf("server = status %s container %s, want %s %s", got.Status, got.ContainerID, status, containerID)
+	}
+
+	waitFor(db.StatusRunning, "c1")
+	routesBefore := proxy.count()
+
+	cli.set(
+		&container.Summary{ID: "c2"},
+		&docker.ContainerState{ContainerID: "c2", Status: db.StatusStopped, HasExited: true, ExitCode: 0},
+	)
+	waitFor(db.StatusStopped, "c2")
+
+	calls := migrator.snapshot()
+	if len(calls) != 1 || calls[0].oldID != "c1" || calls[0].newID != "c2" {
+		t.Fatalf("log migration = %+v, want c1 -> c2", calls)
+	}
+	if proxy.count() <= routesBefore {
+		t.Fatalf("proxy route refreshes = %d, want a refresh after the dropped event (was %d)", proxy.count(), routesBefore)
+	}
+
+	// A later start event is absent too. The container is running again, and
+	// the sweep must adopt that instead of staying on the stopped status.
+	cli.set(&container.Summary{ID: "c2"}, &docker.ContainerState{ContainerID: "c2", Status: db.StatusRunning})
+	waitFor(db.StatusRunning, "c2")
+}
+
+func TestReorderedEventsFollowTheContainerNotTheEventOrder(t *testing.T) {
+	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "c1", Status: db.StatusStopped}
+	store := newFakeStore(server)
+	cli := &sequencedClient{}
+	cli.set(&container.Summary{ID: "c1"}, &docker.ContainerState{ContainerID: "c1", Status: db.StatusRunning})
+
+	r := New(store, fakeResolver{cli: cli}, &fakeProxy{}, &fakeBus{}, nil, nil, Config{
+		DebounceWindow: 15 * time.Millisecond,
+		SweepInterval:  time.Hour,
+		Workers:        1,
+	})
+	ch := make(chan ContainerEvent, 4)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r.Start(ctx, ch)
+	t.Cleanup(func() {
+		r.Stop()
+		r.Wait()
+	})
+
+	// die arrives before start, while the container is already running.
+	ch <- ContainerEvent{ServerID: "s1", Action: "die", ContainerID: "c1"}
+	ch <- ContainerEvent{ServerID: "s1", Action: "start", ContainerID: "c1"}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		got, err := store.GetServer(context.Background(), server.ID)
+		if err == nil && got.Status == db.StatusRunning {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	got, _ := store.GetServer(context.Background(), server.ID)
+	t.Fatalf("status after reordered events = %s, want running", got.Status)
+}
+
 func TestStartConsumesEventsAndConverges(t *testing.T) {
 	server := &db.Server{ID: "s1", Name: "Survival", NodeID: "default", ContainerID: "c1", Status: db.StatusRunning}
 	store := newFakeStore(server)
