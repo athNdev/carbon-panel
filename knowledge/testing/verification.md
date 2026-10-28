@@ -38,6 +38,15 @@ bun run test
 bash scripts/web-build.sh
 ```
 
+# Landing page
+
+```sh
+python3 -m unittest scripts.test_landing_page
+python3 scripts/check_brand_assets.py
+```
+
+CI runs these checks for the standalone landing page and distributed brand assets.
+
 # Proto
 
 ```sh

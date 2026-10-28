@@ -239,6 +239,18 @@ jobs:
       - name: Production Vite Build
         run: bun run build
 
+  test-landing:
+    name: Landing Page Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check landing page and brand assets
+        run: |
+          python3 -m unittest scripts.test_landing_page
+          python3 scripts/check_brand_assets.py
+
   knowledge:
     name: Knowledge Base
     runs-on: ubuntu-latest

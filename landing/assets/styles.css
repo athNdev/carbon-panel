@@ -434,7 +434,7 @@ body > footer {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: 88px 0 96px;
+  padding: 104px 0 112px;
 }
 
 /* Radial glow — fades into the bg var, not into black */
@@ -456,7 +456,7 @@ body > footer {
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
-  gap: 56px;
+  gap: clamp(48px, 5vw, 84px);
   align-items: center;
 }
 .hero-grid > * {
@@ -506,13 +506,13 @@ body > footer {
 }
 
 .hero h1 {
-  font-size: clamp(40px, 4.3vw, 56px);
-  line-height: 1.04;
-  letter-spacing: -0.025em;
+  font-size: clamp(42px, 4vw, 60px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
   margin-bottom: 22px;
 }
 .hero h1 .grad {
-  color: var(--accent-text);
+  color: #c9c9c7;
 }
 
 .hero-sub {
@@ -598,10 +598,14 @@ body > footer {
 .hero-visual { position: relative; }
 .mock {
   overflow: hidden;
+  width: 112%;
+  margin-left: -6%;
   border: 1px solid #525252;
   border-radius: 8px;
   background: #161616;
-  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 32px 60px -24px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.035);
+  transform: scale(0.88);
+  transform-origin: center;
   color: #f4f4f4;
 }
 .mock-header {
@@ -816,7 +820,7 @@ body > footer {
   grid-column: span 2;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--layer-01);
+  background: linear-gradient(155deg, #272727 0%, #1b1b1b 52%, #181818 100%);
   padding: 26px;
   display: flex;
   flex-direction: column;
@@ -968,7 +972,7 @@ body > footer {
   background: var(--layer-01);
 }
 .anchor-visual .node .nm { color: var(--text-primary); }
-.anchor-visual .node .ip { color: var(--text-tertiary); font-size: 10px; }
+.anchor-visual .node .ip { display: block; color: var(--text-tertiary); font-size: 10px; white-space: nowrap; }
 .anchor-visual .arrow {
   color: var(--accent-text);
 }
@@ -1280,8 +1284,8 @@ body > footer {
 
   /* diagram element gating (appear-level data-ap) */
   .js .arch-stage .a-anim {
-    opacity: 0;
-    transform: translateY(14px);
+    opacity: 0.62;
+    transform: none;
     will-change: transform, opacity;
     transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
   }
@@ -1317,16 +1321,9 @@ body > footer {
     filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 6px rgba(200, 200, 200, 0.122));
   }
 
-  /* scrubbed line draws */
+  /* Keep the full route legible while the active parts brighten. */
   .js .arch-stage .a-draw {
-    stroke-dasharray: 1;
-    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.02) * 7, 1));
-  }
-  .js .arch-stage .a-draw[data-draw="fan"] {
-    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.2) * 4.5, 1));
-  }
-  .js .arch-stage .a-draw[data-draw="backup"] {
-    stroke-dashoffset: calc(1 - clamp(0, (var(--p) - 0.8) * 6, 1));
+    stroke-dasharray: none;
   }
 
   .js .arch-progress-bar {
@@ -2089,6 +2086,7 @@ html:not(.js) .copy-btn { display: none; }
   .install { flex-direction: column; }
   .install .copy-btn { border-left: none; border-top: 1px solid var(--border); height: 46px; justify-content: center; }
   .mock-body { grid-template-columns: 1fr; }
+  .mock { width: auto; margin-left: 0; transform: none; }
   .mock-rail { display: none; }
   .mock-stats { grid-template-columns: 1fr 1fr; }
   .mock-panels { grid-template-columns: 1fr; }
@@ -2276,10 +2274,11 @@ html:not(.js) .copy-btn { display: none; }
 /* soft light pools; the grid reads through them */
 .hero::before {
   background:
-    radial-gradient(ellipse 42% 36% at 68% 42%, rgba(200, 200, 200, 0.119) 0%, transparent 68%),
-    radial-gradient(ellipse 62% 58% at 46% -6%, rgba(200, 200, 200, 0.140) 0%, rgba(200, 200, 200, 0.042) 36%, transparent 72%),
-    radial-gradient(ellipse 46% 40% at 92% 16%, rgba(220, 220, 220, 0.070) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 36% at 2% 68%, rgba(200, 200, 200, 0.056) 0%, transparent 70%);
+    linear-gradient(90deg, rgba(18, 18, 18, 0.93) 0%, rgba(18, 18, 18, 0.73) 45%, rgba(18, 18, 18, 0.45) 100%),
+    linear-gradient(0deg, var(--bg) 0%, transparent 40%),
+    url("./graphite-hero.webp") center / cover no-repeat;
+  inset: 0;
+  height: auto;
 }
 #features,
 #how,
@@ -2636,6 +2635,11 @@ html:not(.js) .copy-btn { display: none; }
 
 .hero-visual {
   isolation: isolate;
+  padding: clamp(12px, 1.6vw, 22px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(88, 88, 88, 0.34), rgba(29, 29, 29, 0.62) 40%, rgba(12, 12, 12, 0.85));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 35px 90px -40px rgba(0, 0, 0, 0.9);
 }
 .hero-visual::before {
   content: "";
@@ -2649,6 +2653,10 @@ html:not(.js) .copy-btn { display: none; }
   background:
     radial-gradient(ellipse 68% 58% at 50% 48%, rgba(200, 200, 200, 0.147) 0%, transparent 68%),
     radial-gradient(ellipse 36% 28% at 78% 18%, rgba(220, 220, 220, 0.084) 0%, transparent 72%);
+}
+
+@media (max-width: 620px) {
+  .hero-visual { padding: 12px; border-radius: 16px; }
 }
 
 .stat .num {
