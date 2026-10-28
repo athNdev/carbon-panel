@@ -28,10 +28,10 @@ A backup, snapshot, restore or retention change is being made.
 
 # Known gap
 
-Scheduled backup archives and snapshot create/restore use the mapped world
-root. Mod installation and packwiz bake write the mods folder on that same
-root. Scheduled modpack sync still copies into the stored data path, and
-deleting a server still removes that stored path.
+Scheduled backup archives, snapshot create/restore, and scheduled modpack
+sync use the mapped world root. Mod installation and packwiz bake write the
+mods folder on that same root. Deleting a server still removes the stored
+data path.
 
 Panel database snapshots and the offline restore command are specified in
 [ADR 0007](../../docs/adr/0007-panel-sqlite-snapshots.md) and

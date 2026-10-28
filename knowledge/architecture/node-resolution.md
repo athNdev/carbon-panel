@@ -47,8 +47,10 @@ wrong host. That is a data-safety bug, not a degraded mode.
   copy is not treated as the installed set.
 - Snapshot create and restore archive that mapped root. A remote node with
   no reachable storage is refused before a controller copy is archived.
-- Scheduled modpack sync still copies into the stored data path. Deleting a
-  server still removes that stored path.
+- Scheduled modpack sync clones and copies onto that mapped root. A remote
+  node with no reachable storage is refused before a controller directory
+  is created.
+- Deleting a server still removes the stored data path.
 
 # How to check
 

@@ -32,6 +32,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/snapshot"
 	"github.com/athNdev/carbon-panel/internal/staging"
 	"github.com/athNdev/carbon-panel/internal/webhook"
@@ -1354,8 +1355,15 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 		return "", err
 	}
 
-	// Prepare git repository clone directory inside server directory or app cache
-	cacheDir := filepath.Join(server.DataPath, ".carbon-panel_modpack_git")
+	// The clone cache and the synced world live on the node's storage. A remote
+	// node with no reachable mount is refused before a controller directory is
+	// created or copied into.
+	worldRoot, err := s.serverWorldRoot(ctx, server)
+	if err != nil {
+		return "", err
+	}
+
+	cacheDir := filepath.Join(worldRoot, ".carbon-panel_modpack_git")
 	gitURL := cfg.GitURL
 	if cfg.AuthToken != "" && strings.HasPrefix(gitURL, "https://") {
 		// Embed auth token into clone URL
@@ -1455,7 +1463,7 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 
 		// Stage configuration updates if requested
 		if cfg.StageConfigUpdates {
-			stagedDir := filepath.Join(server.DataPath, ".carbon-panel_modpack_staged")
+			stagedDir := filepath.Join(worldRoot, ".carbon-panel_modpack_staged")
 			_ = os.MkdirAll(stagedDir, 0755)
 			manifest := map[string]any{
 				"from_commit":   currentHash,
@@ -1478,21 +1486,21 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			return updateSummary, err
 		}
 
-		// Sync files into server.DataPath (excluding internal directories)
-		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
+		// Sync files into the mapped world (excluding internal directories)
+		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, worldRoot)
 		cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
 			"--exclude=.git",
 			"--exclude=.carbon-panel_modpack_git",
 			"--exclude=.carbon-panel_modpack_staged",
 			"--exclude=.carbon-panel_snapshots",
-			srcDir+"/", server.DataPath+"/")
+			srcDir+"/", worldRoot+"/")
 		if out, err := cmdRsync.CombinedOutput(); err != nil {
 			// Fallback to cp -rf if rsync is not installed
-			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
+			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", worldRoot+"/")
 			if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
 				// Pure Go fallback if neither rsync nor cp are available (e.g. on Windows)
 				excludes := []string{".git", ".carbon-panel_modpack_git", ".carbon-panel_modpack_staged", ".carbon-panel_snapshots"}
-				if goErr := copyDirExcluding(srcDir, server.DataPath, excludes); goErr != nil {
+				if goErr := copyDirExcluding(srcDir, worldRoot, excludes); goErr != nil {
 					// If copying failed and we took a snapshot, rollback if enabled
 					if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
 						_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
@@ -1556,6 +1564,26 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	return "No updates found", nil
+}
+
+// serverWorldRoot is the controller-side directory for a server's files.
+// Local nodes keep DataPath. A remote node uses its shared-storage mount, and
+// a remote node with no reachable storage is refused.
+func (s *Scheduler) serverWorldRoot(ctx context.Context, server *storage.Server) (string, error) {
+	if server == nil || server.DataPath == "" {
+		return "", fmt.Errorf("server has no data directory")
+	}
+	if nodestorage.IsLegacyLocalNodeID(server.NodeID) {
+		return server.DataPath, nil
+	}
+	if s.store == nil {
+		return "", fmt.Errorf("store is required to resolve node storage")
+	}
+	node, err := s.store.GetNode(ctx, server.NodeID)
+	if err != nil {
+		return "", fmt.Errorf("resolve storage node %q: %w", server.NodeID, err)
+	}
+	return nodestorage.EnsureDataRoot(node.StorageInfo(), server.DataPath)
 }
 
 // isWithinMaintenanceWindow checks if the given time falls within a 30-minute window of the cron schedule
