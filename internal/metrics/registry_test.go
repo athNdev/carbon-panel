@@ -6,6 +6,7 @@
 package metrics
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -267,5 +268,100 @@ func TestStartStop_IdleCollector(t *testing.T) {
 
 	if n := len(c.GetAllMetrics()); n != 0 {
 		t.Errorf("idle collector recorded %d metric entries", n)
+	}
+}
+
+func newDiskStore(t *testing.T) *db.Store {
+	t.Helper()
+	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
+	store, err := db.NewSQLiteStore(&config.Config{
+		Database: config.DatabaseConfig{
+			Path:           fmt.Sprintf("file:%s?mode=memory&cache=shared", dbName),
+			AutoMigrate:    true,
+			MaxConnections: 5,
+		},
+	})
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if err := store.Migrate(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	return store
+}
+
+func TestCollectDiskUsageSkipsAnUnreachableRemoteWorld(t *testing.T) {
+	dir := t.TempDir()
+	lookalike := filepath.Join(dir, "lookalike")
+	if err := os.MkdirAll(lookalike, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lookalike, "level.dat"), bytes.Repeat([]byte("x"), 2048), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store := newDiskStore(t)
+	if err := store.DB().Create(&db.Node{
+		ID: "remote-disk", Name: "remote-disk", Host: "tcp://10.0.0.8:2376", Enabled: true,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DB().Create(&db.Server{
+		ID: "srv-remote", Name: "remote", NodeID: "remote-disk", DataPath: lookalike,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{}
+	cfg.Storage.DataDir = dir
+	c := NewCollectorWithPool(store, nil, nil, nil, cfg, nil, logger.New())
+	c.collectDiskUsage()
+	if got := c.GetMetrics("srv-remote"); got != nil {
+		t.Fatalf("recorded disk usage %d for an unreachable remote world", got.DiskUsage)
+	}
+}
+
+func TestCollectDiskUsageMeasuresTheSharedStorageMount(t *testing.T) {
+	dir := t.TempDir()
+	lookalike := filepath.Join(dir, "controller-copy")
+	if err := os.MkdirAll(lookalike, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lookalike, "level.dat"), bytes.Repeat([]byte("x"), 2048), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mount := filepath.Join(dir, "mount")
+	mappedWorld := filepath.Join(mount, "srv-data", "world")
+	if err := os.MkdirAll(mappedWorld, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(mappedWorld, "level.dat"), []byte("real"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store := newDiskStore(t)
+	if err := store.DB().Create(&db.Node{
+		ID: "remote-shared", Name: "remote-shared", Host: "tcp://10.0.0.9:2376", Enabled: true,
+		StorageRoot: "/node/storage", ControllerStorageRoot: mount,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DB().Create(&db.Server{
+		ID: "srv-shared", Name: "shared", NodeID: "remote-shared",
+		DataPath: filepath.Join(dir, "node-side", "srv-data"),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{}
+	cfg.Storage.DataDir = dir
+	c := NewCollectorWithPool(store, nil, nil, nil, cfg, nil, logger.New())
+	c.collectDiskUsage()
+	got := c.GetMetrics("srv-shared")
+	if got == nil {
+		t.Fatal("shared-storage world was not measured")
+	}
+	if got.DiskUsage >= 2048 {
+		t.Fatalf("DiskUsage = %d, measured the controller copy", got.DiskUsage)
+	}
+	if got.DiskUsage < 4 {
+		t.Fatalf("DiskUsage = %d, want the mapped world", got.DiskUsage)
 	}
 }

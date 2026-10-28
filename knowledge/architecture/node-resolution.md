@@ -9,6 +9,8 @@ code_refs:
   - internal/module
   - internal/snapshot
   - internal/docker/freezer.go
+  - internal/metrics
+  - internal/nodestorage
 sources:
   - title: Fail-closed node resolution change
     resource: https://github.com/athNdev/carbon-panel/pull/225
@@ -33,6 +35,8 @@ wrong host. That is a data-safety bug, not a degraded mode.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
 - Remote file, Minecraft and backup archive paths still read the controller
   filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- Disk usage measures the node's mapped world root. A remote node without
+  reachable storage is left unmeasured.
 
 # How to check
 
