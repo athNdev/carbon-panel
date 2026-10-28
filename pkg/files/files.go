@@ -14,6 +14,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -685,6 +686,45 @@ func WithinReal(root, target string) bool {
 	}
 
 	return Within(realRoot, current)
+}
+
+// ErrEmptyRoot, ErrAbsolutePath, and ErrPathEscapes are returned by ResolveInRoot.
+var (
+	ErrEmptyRoot    = errors.New("files: empty root")
+	ErrAbsolutePath = errors.New("files: absolute path")
+	ErrPathEscapes  = errors.New("files: path escapes root")
+)
+
+// ResolveInRoot cleans rel against root and returns the absolute path.
+// Callers use this instead of a string prefix. An empty rel names the root.
+// An absolute rel is rejected. The path is returned only when WithinReal
+// accepts it, so a symlink that leaves root is an error.
+func ResolveInRoot(root, rel string) (string, error) {
+	if strings.TrimSpace(root) == "" {
+		return "", ErrEmptyRoot
+	}
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	if rel == "" || rel == "." {
+		if !WithinReal(rootAbs, rootAbs) {
+			return "", ErrPathEscapes
+		}
+		return rootAbs, nil
+	}
+	if filepath.IsAbs(rel) {
+		return "", ErrAbsolutePath
+	}
+	cleaned := filepath.Clean(rel)
+	if cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
+		return "", ErrPathEscapes
+	}
+	target := filepath.Join(rootAbs, cleaned)
+	if !WithinReal(rootAbs, target) {
+		return "", ErrPathEscapes
+	}
+	return target, nil
 }
 
 // SHA256File calculates and returns the hex-encoded SHA256 hash of a file on disk.

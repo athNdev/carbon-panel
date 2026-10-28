@@ -10,6 +10,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -289,5 +290,77 @@ func TestExtractArchiveRejectsSymlinkEntries(t *testing.T) {
 			t.Fatalf("symlink entry was materialised as a link to %s", body)
 		}
 		t.Fatalf("symlink entry was written as a file (mode %v)", info.Mode())
+	}
+}
+
+func TestResolveInRoot(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "srv")
+	sibling := filepath.Join(base, "srv-evil")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(sibling, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sibling, "x"), []byte("no"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	inside := filepath.Join(root, "regular.txt")
+	if err := os.WriteFile(inside, []byte("yes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := ResolveInRoot(root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != rootAbs {
+		t.Fatalf("empty rel = %s, want %s", got, rootAbs)
+	}
+	got, err = ResolveInRoot(root, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != rootAbs {
+		t.Fatalf("dot rel = %s, want %s", got, rootAbs)
+	}
+
+	got, err = ResolveInRoot(root, "regular.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != inside && got != filepath.Join(rootAbs, "regular.txt") {
+		t.Fatalf("file = %s", got)
+	}
+
+	if _, err := ResolveInRoot("", "regular.txt"); !errors.Is(err, ErrEmptyRoot) {
+		t.Fatalf("empty root: %v", err)
+	}
+	if _, err := ResolveInRoot(root, filepath.Join(sibling, "x")); !errors.Is(err, ErrAbsolutePath) {
+		t.Fatalf("absolute rel: %v", err)
+	}
+	if _, err := ResolveInRoot(root, filepath.Join("..", "srv-evil", "x")); !errors.Is(err, ErrPathEscapes) {
+		t.Fatalf("sibling prefix: %v", err)
+	}
+
+	link := filepath.Join(root, "link_out")
+	if err := os.Symlink(filepath.Join(sibling, "x"), link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolveInRoot(root, "link_out"); !errors.Is(err, ErrPathEscapes) {
+		t.Fatalf("symlink escape: %v", err)
+	}
+
+	linkIn := filepath.Join(root, "link_in")
+	if err := os.Symlink(inside, linkIn); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolveInRoot(root, "link_in"); err != nil {
+		t.Fatalf("inside symlink: %v", err)
 	}
 }
