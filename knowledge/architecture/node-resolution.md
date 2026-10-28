@@ -45,9 +45,10 @@ wrong host. That is a data-safety bug, not a degraded mode.
 - Mod installation and packwiz bake write the mods folder on that mapped
   root. A remote node with no reachable storage is refused, and a controller
   copy is not treated as the installed set.
-- Scheduled modpack sync still copies into the stored data path. Snapshot
-  create and restore still archive that stored path. Deleting a server still
-  removes that stored path.
+- Snapshot create and restore archive that mapped root. A remote node with
+  no reachable storage is refused before a controller copy is archived.
+- Scheduled modpack sync still copies into the stored data path. Deleting a
+  server still removes that stored path.
 
 # How to check
 

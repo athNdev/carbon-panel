@@ -61,8 +61,12 @@ func TestSnapshot_Rollback_UnresolvableRemoteNodeMakesNoDockerCalls(t *testing.T
 	engine := NewEngineWithPool(store, localClient, pool, nil, logger.New(), Config{
 		MaxSnapshots: 5,
 	})
+	// The fixture archive is this local directory. Rollback is what must refuse
+	// the missing remote node before it touches Docker or the files.
+	server.NodeID = ""
 	snap, err := engine.CreatePreUpdateSnapshot(ctx, server, "baseline")
 	require.NoError(t, err)
+	server.NodeID = "missing-remote-node"
 
 	// Simulate the modification a rollback would overwrite, and a running
 	// container that the rollback would have to stop.

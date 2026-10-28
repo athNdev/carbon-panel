@@ -28,10 +28,10 @@ cannot be resolved, and a module records the server's node ID.
 
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
-- Scheduled modpack sync still copies into the stored data path. Snapshot
-  create and restore still archive that stored path. Deleting a server still
-  removes that stored path. Creating a server, mod installation, packwiz
-  bake, and scheduled backup archives use the node's mapped storage root.
+- Scheduled modpack sync still copies into the stored data path. Deleting a
+  server still removes that stored path. Creating a server, mod installation,
+  packwiz bake, snapshot create/restore, and scheduled backup archives use
+  the node's mapped storage root.
 
 # Detection
 
