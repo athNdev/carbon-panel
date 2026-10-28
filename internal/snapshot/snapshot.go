@@ -251,7 +251,7 @@ func (e *Engine) Rollback(ctx context.Context, server *storage.Server, snapshotI
 	// lock keeps this rollback from interleaving with other lifecycle
 	// writers of the same world, and startup recovery observes interrupted
 	// rollbacks instead of letting a retry guess.
-	return operation.RunJournaled(ctx, e.store, e.log, server, "snapshot-rollback", func() error {
+	return operation.RunJournaled(ctx, e.store, e.log, server, "snapshot-rollback", "", func() error {
 		// Lifecycle concurrency guard (prevent racing with user/reconciler operations)
 		transition, err := docker.TryBeginServerTransition(server.ID)
 		if err != nil {

@@ -31,6 +31,10 @@ A backup, snapshot, restore or retention change is being made.
 Remote file, Minecraft and backup archive paths still read the controller
 filesystem; only restore refuses. This is tracked as the remote archive path gap.
 
+Panel database snapshots and the offline restore command are specified in
+[ADR 0007](../../docs/adr/0007-panel-sqlite-snapshots.md) and
+`docs/runbook-panel-db-restore.md`.
+
 # Read next
 
 - [Data safety](../invariants/data-safety.md)

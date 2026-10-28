@@ -38,7 +38,7 @@ func TestRunJournaledMutationRecordsCompletion(t *testing.T) {
 	service, store := newOperationTestService(t)
 	server := &storage.Server{ID: "srv-1", NodeID: "node-1", ContainerID: "cont-1"}
 
-	if err := service.runJournaledMutation(context.Background(), server, "start", func() error {
+	if err := service.runJournaledMutation(context.Background(), server, "start", "", func() error {
 		return nil
 	}); err != nil {
 		t.Fatalf("runJournaledMutation: %v", err)
@@ -61,7 +61,7 @@ func TestRunJournaledMutationReleasesOnMutationError(t *testing.T) {
 	server := &storage.Server{ID: "srv-2", NodeID: "node-1", ContainerID: "cont-2"}
 	mutationErr := errors.New("docker refused the start")
 
-	err := service.runJournaledMutation(context.Background(), server, "start", func() error {
+	err := service.runJournaledMutation(context.Background(), server, "start", "", func() error {
 		return mutationErr
 	})
 	if !errors.Is(err, mutationErr) {
@@ -84,7 +84,7 @@ func TestRunJournaledMutationUsesDistinctKeysForRepeatedRuns(t *testing.T) {
 	server := &storage.Server{ID: "srv-3", NodeID: "node-1", ContainerID: "cont-3"}
 
 	for i := 0; i < 2; i++ {
-		if err := service.runJournaledMutation(context.Background(), server, "stop", func() error {
+		if err := service.runJournaledMutation(context.Background(), server, "stop", "", func() error {
 			return nil
 		}); err != nil {
 			t.Fatalf("run %d: %v", i, err)

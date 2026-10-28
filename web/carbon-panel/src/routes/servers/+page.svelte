@@ -12,6 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { resolve } from '$app/paths';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { beginLifecycleRequest } from '$lib/lifecycle-request';
 	import { formatRpcError } from '$lib/api/rpc-error';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -106,18 +107,28 @@ one at https://mozilla.org/MPL/2.0/.
 	) {
 		event?.stopPropagation();
 		loading = true;
+		const attempt = action === 'recreate' ? null : beginLifecycleRequest(server.id, action);
 		try {
 			switch (action) {
 				case 'start':
-					await rpcClient.server.startServer({ id: server.id });
+					await rpcClient.server.startServer({
+						id: server.id,
+						requestId: attempt?.requestId ?? ''
+					});
 					toast.success(`Starting ${server.name}...`);
 					break;
 				case 'stop':
-					await rpcClient.server.stopServer({ id: server.id });
+					await rpcClient.server.stopServer({
+						id: server.id,
+						requestId: attempt?.requestId ?? ''
+					});
 					toast.success(`Stopping ${server.name}...`);
 					break;
 				case 'restart':
-					await rpcClient.server.restartServer({ id: server.id });
+					await rpcClient.server.restartServer({
+						id: server.id,
+						requestId: attempt?.requestId ?? ''
+					});
 					toast.success(`Restarting ${server.name}...`);
 					break;
 				case 'recreate':
@@ -130,6 +141,7 @@ one at https://mozilla.org/MPL/2.0/.
 				`Failed to ${action} server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
 		} finally {
+			attempt?.finish();
 			loading = false;
 		}
 	}
@@ -144,8 +156,12 @@ one at https://mozilla.org/MPL/2.0/.
 		const server = pendingDelete;
 		if (!server) return;
 		loading = true;
+		const attempt = beginLifecycleRequest(server.id, 'delete');
 		try {
-			await rpcClient.server.deleteServer({ id: server.id });
+			await rpcClient.server.deleteServer({
+				id: server.id,
+				requestId: attempt.requestId
+			});
 			serversStore.removeServer(server.id);
 			toast.success(`Deleted ${server.name}`);
 		} catch (error) {
@@ -153,6 +169,7 @@ one at https://mozilla.org/MPL/2.0/.
 				`Failed to delete server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
 		} finally {
+			attempt.finish();
 			loading = false;
 			pendingDelete = null;
 		}

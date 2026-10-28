@@ -16,6 +16,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { Switch } from '$lib/components/ui/switch';
 	import { Separator } from '$lib/components/ui/separator';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { beginLifecycleRequest } from '$lib/lifecycle-request';
 	import { create } from '@bufbuild/protobuf';
 	import { toast } from 'svelte-sonner';
 	import { Loader2, Save, AlertCircle, Network, ArrowRightLeft } from '@lucide/svelte';
@@ -221,11 +222,13 @@ one at https://mozilla.org/MPL/2.0/.
 		migrationStep = isLive
 			? 'Flushing world chunks and migrating container...'
 			: 'Recreating container on target node...';
+		const attempt = beginLifecycleRequest(server.id, 'migrate');
 		try {
 			const req = create(MigrateServerRequestSchema, {
 				id: server.id,
 				targetNodeId: targetNodeId,
-				force: forceMigrate
+				force: forceMigrate,
+				requestId: attempt.requestId
 			});
 			const res = await rpcClient.server.migrateServer(req);
 			if (res.success) {
@@ -243,6 +246,7 @@ one at https://mozilla.org/MPL/2.0/.
 				`Migration failed: ${(err instanceof Error ? err.message : undefined) || 'Unknown error'}`
 			);
 		} finally {
+			attempt.finish();
 			migrating = false;
 			migrationStep = '';
 			pendingMigrate = null;

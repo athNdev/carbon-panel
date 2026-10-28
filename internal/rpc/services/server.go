@@ -37,6 +37,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
 	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/internal/scheduler"
@@ -1102,6 +1103,35 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	}
 	server.NodeID = nodeID
 
+	requestID := strings.TrimSpace(msg.GetRequestId())
+	if err := operation.ValidateRequestID(requestID); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	releaseClaim := false
+	if requestID != "" {
+		owner, claimed, claimErr := s.store.ClaimIdempotencyKey(ctx, requestID, server.ID, "create")
+		if claimErr != nil {
+			code := connect.CodeInternal
+			if errors.Is(claimErr, storage.ErrRequestIDTooLong) || errors.Is(claimErr, storage.ErrRequestIDReused) {
+				code = connect.CodeInvalidArgument
+			}
+			return nil, connect.NewError(code, claimErr)
+		}
+		if !claimed {
+			existing, getErr := s.store.GetServer(ctx, owner)
+			if getErr != nil {
+				return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("create request is already in progress"))
+			}
+			return connect.NewResponse(&v1.CreateServerResponse{Server: dbServerToProto(existing)}), nil
+		}
+		releaseClaim = true
+		defer func() {
+			if releaseClaim {
+				_ = s.store.ReleaseIdempotencyKey(context.WithoutCancel(ctx), requestID)
+			}
+		}()
+	}
+
 	backendReserved := false
 	if server.ProxyHostname != "" {
 		used := map[int]bool{}
@@ -1174,6 +1204,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create server"))
 	}
 	keepLease = true
+	releaseClaim = false
 	s.capacityMu.Unlock()
 
 	// Get the server config
@@ -1280,7 +1311,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			return
 		}
 		var containerID string
-		if err := s.runJournaledMutation(bgCtx, server, "create", func() error {
+		if err := s.runJournaledMutation(bgCtx, server, "create", requestID, func() error {
 			var createErr error
 			containerID, createErr = dockerCli.CreateContainer(bgCtx, server, serverConfig)
 			return createErr
@@ -1311,7 +1342,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 		// Start the container immediately if requested
 		if startImmediately {
-			if err := s.runJournaledMutation(bgCtx, server, "start", func() error {
+			if err := s.runJournaledMutation(bgCtx, server, "start", requestID, func() error {
 				return dockerCli.StartContainer(bgCtx, containerID)
 			}); err != nil {
 				s.log.Error("Failed to start container: %v", err)
@@ -1684,6 +1715,10 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 
 // DeleteServer deletes a server
 func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v1.DeleteServerRequest]) (*connect.Response[v1.DeleteServerResponse], error) {
+	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
+	if reqErr != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
+	}
 	transition, err := beginServerLifecycleTransition(req.Msg.Id)
 	if err != nil {
 		return nil, err
@@ -1722,7 +1757,7 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	// Stop and remove the server container before deleting its database row or
 	// data directory. A failed removal must not orphan a live container.
 	if server.ContainerID != "" {
-		if err := s.runJournaledMutation(ctx, server, "delete", func() error {
+		if err := s.runJournaledMutation(ctx, server, "delete", requestID, func() error {
 			if _, stopErr := dockerCli.StopContainer(ctx, server.ContainerID); stopErr != nil {
 				s.log.Warn("Failed to stop container %s during deletion; removal will still be attempted: %v", server.ContainerID, stopErr)
 			}
@@ -1766,6 +1801,10 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 // StartServer starts a server
 func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error) {
+	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
+	if reqErr != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
+	}
 	transition, err := beginServerLifecycleTransition(req.Msg.Id)
 	if err != nil {
 		return nil, err
@@ -1813,7 +1852,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	// replacement. For staged replacement, keep it frozen until config loading
 	// succeeds and RecreateContainer owns the stop/remove transition.
 	if server.Status == storage.StatusPaused && server.ContainerID != "" && !needsStagedRecreate {
-		if err := s.runJournaledMutation(ctx, server, "start_unpause", func() error {
+		if err := s.runJournaledMutation(ctx, server, "start_unpause", requestID, func() error {
 			return dockerCli.UnpauseContainer(ctx, server.ContainerID)
 		}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resume server: %w", err))
@@ -1928,7 +1967,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	if !stagedContainerStarted {
 
 		// Start container
-		if err := s.runJournaledMutation(ctx, server, "start", func() error {
+		if err := s.runJournaledMutation(ctx, server, "start", requestID, func() error {
 			return dockerCli.StartContainer(ctx, server.ContainerID)
 		}); err != nil {
 			s.log.Error("Failed to start container, attempting to recreate: %v", err)
@@ -2045,6 +2084,10 @@ func (s *ServerService) rollbackPausedResume(ctx context.Context, dockerCli *doc
 
 // StopServer stops a server
 func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error) {
+	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
+	if reqErr != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
+	}
 	transition, err := beginServerLifecycleTransition(req.Msg.Id)
 	if err != nil {
 		return nil, err
@@ -2111,7 +2154,7 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 		found   bool
 		stopErr error
 	)
-	stopErr = s.runJournaledMutation(ctx, server, "stop", func() error {
+	stopErr = s.runJournaledMutation(ctx, server, "stop", requestID, func() error {
 		var err error
 		found, err = dockerCli.StopContainerWithin(stopCtx, server.ContainerID, window)
 		return err
@@ -2151,6 +2194,10 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 
 // RestartServer restarts a server
 func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[v1.RestartServerRequest]) (*connect.Response[v1.RestartServerResponse], error) {
+	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
+	if reqErr != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
+	}
 	transition, err := beginServerLifecycleTransition(req.Msg.Id)
 	if err != nil {
 		return nil, err
@@ -2234,7 +2281,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("container recreated but its ID could not be saved: %w", err))
 		}
 		if !result.WasRunning {
-			if err := s.runJournaledMutation(ctx, server, "restart_start", func() error {
+			if err := s.runJournaledMutation(ctx, server, "restart_start", requestID, func() error {
 				return dockerCli.StartContainer(ctx, result.NewContainerID)
 			}); err != nil {
 				server.Status = storage.StatusError
@@ -2279,7 +2326,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		// Create container
 		s.prepareServerConfig(ctx, server, serverConfig)
 		var containerID string
-		if err := s.runJournaledMutation(ctx, server, "create", func() error {
+		if err := s.runJournaledMutation(ctx, server, "restart_create", requestID, func() error {
 			var createErr error
 			containerID, createErr = dockerCli.CreateContainer(ctx, server, serverConfig)
 			return createErr
@@ -2295,8 +2342,9 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
 		}
 
-		// Now start the container
-		if err := s.runJournaledMutation(ctx, server, "start", func() error {
+		// Now start the container. These kinds stay distinct from StartServer
+		// so a reused request id cannot replay a completed start as this restart.
+		if err := s.runJournaledMutation(ctx, server, "restart_start", requestID, func() error {
 			return dockerCli.StartContainer(ctx, server.ContainerID)
 		}); err != nil {
 			s.log.Error("Failed to start container: %v", err)
@@ -2340,7 +2388,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	}
 
 	// Restart container
-	if err := s.runJournaledMutation(ctx, server, "restart", func() error {
+	if err := s.runJournaledMutation(ctx, server, "restart", requestID, func() error {
 		return dockerCli.RestartContainer(ctx, server.ContainerID, 2*time.Second)
 	}); err != nil {
 		s.log.Warn("Failed to restart container directly (%v), attempting recreation", err)
@@ -2859,6 +2907,10 @@ func slugifyName(name string) string {
 
 // MigrateServer moves a server instance from its current node to a target node
 func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[v1.MigrateServerRequest]) (*connect.Response[v1.MigrateServerResponse], error) {
+	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
+	if reqErr != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
+	}
 	startTime := time.Now()
 	serverID := req.Msg.Id
 	targetNodeID := req.Msg.TargetNodeId
@@ -2950,7 +3002,7 @@ func (s *ServerService) MigrateServer(ctx context.Context, req *connect.Request[
 
 	oldContainerID := server.ContainerID
 	var migrateResp *v1.MigrateServerResponse
-	migrateErr := s.runJournaledMutation(ctx, server, "migrate", func() error {
+	migrateErr := s.runJournaledMutation(ctx, server, "migrate", requestID, func() error {
 		var mErr error
 		migrateResp, mErr = s.migrateServerNow(ctx, server, targetNode, sourceDockerCli, targetDockerCli, srcRoot, dstRoot, isRunning, oldContainerID, startTime)
 		return mErr

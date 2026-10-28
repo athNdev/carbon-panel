@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -62,6 +63,10 @@ func main() {
 		"Restore the panel database from a snapshot and exit; the panel must be stopped")
 	printRecoveryKey := flag.Bool("print-recovery-key", false,
 		"Print the recovery key to stderr on startup (off by default: the key bypasses authentication)")
+	operationsCommand := flag.String("operations", "",
+		"Maintenance command, then exit: list or resolve. resolve releases a lifecycle lock and does not change containers")
+	operationID := flag.String("operation-id", "", "Operation id for -operations resolve")
+	operationNote := flag.String("operation-note", "", "Note stored when -operations resolve releases a lock")
 	flag.Parse()
 
 	// Load configuration
@@ -99,8 +104,11 @@ func main() {
 
 	// Refuse to start with no authentication provider unless the operator
 	// explicitly opted in. Without this guard the panel would synthesise an
-	// admin identity for every caller (fail-open).
-	if !cfg.Auth.Local.Enabled && !cfg.Auth.OIDC.Enabled && !cfg.Auth.AllowNoAuth {
+	// admin identity for every caller (fail-open). Maintenance commands do
+	// not serve the API, so they may run against a database whose auth
+	// providers are unset.
+	maintenance := strings.TrimSpace(*operationsCommand) != ""
+	if !maintenance && !cfg.Auth.Local.Enabled && !cfg.Auth.OIDC.Enabled && !cfg.Auth.AllowNoAuth {
 		log.Fatal("No authentication provider is enabled (auth.local.enabled=false, auth.oidc.enabled=false). " +
 			"Enable local auth or OIDC, or set auth.allow_no_auth=true if this panel is intentionally unauthenticated.")
 	}
@@ -125,6 +133,18 @@ func main() {
 	defer store.Close()
 
 	ctx := context.Background()
+	if maintenance {
+		if err := runOperationsCommand(ctx, store, *operationsCommand, *operationID, *operationNote, os.Stdout); err != nil {
+			log.Fatal("%v", err)
+		}
+		return
+	}
+
+	if pruned, pruneErr := store.PruneServerOperations(ctx, time.Now().UTC().Add(-storage.ServerOperationRetention)); pruneErr != nil {
+		log.Error("Failed to prune terminal server operations: %v", pruneErr)
+	} else if pruned > 0 {
+		log.Info("Pruned %d terminal server operations older than 30 days", pruned)
+	}
 
 	// Load or create this controller installation's stable identity. It scopes
 	// container ownership: another panel sharing the same Docker daemon is
@@ -157,11 +177,20 @@ func main() {
 
 	// Resolve operations interrupted by a crash or restart before reconciliation:
 	// each one is observed against the daemon so an unknown Docker outcome is never
-	// treated as if the mutation never happened.
+	// treated as if the mutation never happened. Locks that cannot be observed yet
+	// are retried until the daemon answers; the operator can also release one
+	// with -operations resolve, which does not delete containers.
+	reviewCtx, stopReview := context.WithCancel(context.Background())
+	defer stopReview()
 	if summary, recErr := operation.RecoverInterrupted(ctx, store, operation.NewDockerObserver(dockerClient), log); recErr != nil {
 		log.Error("Failed to recover interrupted server operations: %v", recErr)
-	} else if summary.Scanned > 0 {
-		log.Warn("Interrupted server operations: %d scanned, %d recovered, %d require review", summary.Scanned, summary.Recovered, summary.NeedsReview)
+	} else {
+		if summary.Scanned > 0 {
+			log.Warn("Interrupted server operations: %d scanned, %d recovered, %d require review", summary.Scanned, summary.Recovered, summary.NeedsReview)
+		}
+		if len(summary.ReviewIDs) > 0 {
+			go operation.RetryReview(reviewCtx, store, operation.NewDockerObserver(dockerClient), log, summary.ReviewIDs, 15*time.Second)
+		}
 	}
 
 	// Ensure Docker network exists
@@ -467,6 +496,19 @@ func main() {
 			log.Error("Failed to start Docker events supervisor: %v", err)
 		}
 		reconcileEvents = eventSupervisor.Events()
+		go eventSupervisor.WatchMembership(reconcileCtx, 15*time.Second, func(ctx context.Context) ([]string, error) {
+			nodes, err := store.ListNodes(ctx)
+			if err != nil {
+				return nil, err
+			}
+			ids := make([]string, 0, len(nodes))
+			for _, n := range nodes {
+				if n != nil && n.Enabled {
+					ids = append(ids, n.ID)
+				}
+			}
+			return ids, nil
+		})
 	}
 
 	reconcilerEngine := reconciler.New(
@@ -515,6 +557,7 @@ func main() {
 	<-quit
 
 	log.Info("Shutting down server...")
+	stopReview()
 	close(stopSessionCleanup)
 
 	// Halt reconciliation before we start stopping containers, so the reconciler

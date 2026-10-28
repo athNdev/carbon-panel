@@ -7,6 +7,7 @@ package services
 
 import (
 	"context"
+	"strings"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/operation"
@@ -17,6 +18,13 @@ import (
 // operation.RunJournaled: the per-server active lock is the shared
 // coordinator that keeps concurrent lifecycle mutations of one world from
 // interleaving (OSS-229).
-func (s *ServerService) runJournaledMutation(ctx context.Context, server *storage.Server, kind string, mutate func() error) error {
-	return operation.RunJournaled(ctx, s.store, s.log, server, kind, mutate)
+func (s *ServerService) runJournaledMutation(ctx context.Context, server *storage.Server, kind, requestID string, mutate func() error) error {
+	return operation.RunJournaled(ctx, s.store, s.log, server, kind, requestID, mutate)
+}
+
+func lifecycleRequestID(raw string) (string, error) {
+	if err := operation.ValidateRequestID(raw); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(raw), nil
 }

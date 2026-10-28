@@ -141,6 +141,8 @@ message CreateServerRequest {
   string placement_strategy = 20;
   bool auto_hibernate = 21;
   bool auto_deep_sleep = 22;
+  // Idempotency key for this create. Repeating it returns the original server.
+  string request_id = 23;
 }
 
 // Created server instance
@@ -180,6 +182,8 @@ message UpdateServerResponse {
 // Server to delete
 message DeleteServerRequest {
   string id = 1;
+  // Idempotency key for this delete. Repeating it does not delete twice.
+  string request_id = 2;
 }
 
 // Empty deletion response
@@ -188,6 +192,8 @@ message DeleteServerResponse {}
 // Server to start
 message StartServerRequest {
   string id = 1;
+  // Idempotency key for this start. Repeating it does not start twice.
+  string request_id = 2;
 }
 
 // Start operation status
@@ -198,6 +204,8 @@ message StartServerResponse {
 // Server to stop
 message StopServerRequest {
   string id = 1;
+  // Idempotency key for this stop. Repeating it does not stop twice.
+  string request_id = 2;
 }
 
 // Stop operation status
@@ -208,6 +216,8 @@ message StopServerResponse {
 // Server to restart
 message RestartServerRequest {
   string id = 1;
+  // Idempotency key for this restart. Repeating it does not restart twice.
+  string request_id = 2;
 }
 
 // Restart operation status
@@ -254,6 +264,8 @@ message MigrateServerRequest {
   string id = 1;
   string target_node_id = 2;
   optional bool force = 3;
+  // Idempotency key for this migration. Repeating it does not move the world twice.
+  string request_id = 4;
 }
 
 // Migrate server response

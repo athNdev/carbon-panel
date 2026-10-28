@@ -391,7 +391,7 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	// The per-server operation lock serializes this restore against every
 	// other lifecycle mutation of the world (OSS-229/OSS-235).
 	var restoreResp *v1.RestoreBackupResponse
-	jerr := operation.RunJournaled(ctx, s.store, s.log, server, "restore", func() error {
+	jerr := operation.RunJournaled(ctx, s.store, s.log, server, "restore", "", func() error {
 		var rerr error
 		restoreResp, rerr = s.restoreBackupNow(ctx, server, rec, archivePath, worldDataPath, done)
 		return rerr

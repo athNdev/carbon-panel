@@ -49,6 +49,7 @@ func allModels() []any {
 		&StagedConfigChange{},
 		&BackendPortLease{},
 		&ServerOperation{},
+		&IdempotencyKey{},
 	}
 }
 

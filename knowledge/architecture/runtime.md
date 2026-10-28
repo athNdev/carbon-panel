@@ -11,6 +11,8 @@ code_refs:
   - internal/db
   - internal/docker
   - internal/scheduler
+  - internal/operation
+  - internal/reconciler
   - web/carbon-panel
 sources:
   - title: Design specification
@@ -22,7 +24,8 @@ sources:
 `cmd/carbon-panel/main.go` loads configuration, opens the SQLite database,
 registers the RPC services, starts the TCP proxy and starts the scheduler,
 reconciler and WebSocket hub. The console is a SvelteKit build embedded into the
-binary.
+binary. Interrupted server mutations are journaled and recovered on startup.
+The Docker event supervisor refreshes its node set while it runs.
 
 # Listeners
 

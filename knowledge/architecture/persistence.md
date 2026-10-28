@@ -9,7 +9,9 @@ code_refs:
   - internal/snapshot
   - internal/s3
 sources:
-  - title: SQLite durability ADR
+  - title: Panel SQLite snapshots
+    resource: ../../docs/adr/0007-panel-sqlite-snapshots.md
+  - title: Superseded SQLite durability ADR
     resource: ../../docs/adr/0003-sqlite-durability.md
 ---
 
@@ -17,7 +19,9 @@ sources:
 
 The controller uses SQLite through GORM. The database file is the controller's
 state; server worlds and backups live outside it and are persistent user data.
-Migrations are embedded and run at startup.
+Migrations are embedded and run at startup. The shipped durability mode is a
+daily `VACUUM INTO` snapshot with an integrity check and an explicit offline
+restore (ADR 0007). It is not continuous replication.
 
 Worlds, snapshots and remote archives are handled by `internal/snapshot` and
 `internal/s3`. The database holds metadata about them, never the world data

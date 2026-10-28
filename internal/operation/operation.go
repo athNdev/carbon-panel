@@ -42,6 +42,9 @@ type Summary struct {
 	Scanned     int
 	Recovered   int
 	NeedsReview int
+	// ReviewIDs are the active operations whose container state could not be
+	// established. A later pass may observe them once the daemon is reachable.
+	ReviewIDs []string
 }
 
 // RecoverInterrupted observes every operation that still owns a server lock and
@@ -59,6 +62,7 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 		observed, observeErr := observer.Observe(ctx, op.ServerID, op.ContainerID)
 		if observeErr != nil {
 			summary.NeedsReview++
+			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
 			log.Error("Interrupted %s operation %s for server %s requires manual recovery: cannot observe container: %v", op.Kind, op.ID, op.ServerID, observeErr)
 			continue
 		}
@@ -66,6 +70,7 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 		detail := describeObservation(observed)
 		if err := store.AdvanceServerOperation(ctx, op.ID, op.Phase, db.ServerOperationRecovered, detail); err != nil {
 			summary.NeedsReview++
+			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
 			log.Error("Interrupted %s operation %s for server %s requires manual recovery: %v", op.Kind, op.ID, op.ServerID, err)
 			continue
 		}

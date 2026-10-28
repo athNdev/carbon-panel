@@ -14,6 +14,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { beginLifecycleRequest } from '$lib/lifecycle-request';
 	import { toast } from 'svelte-sonner';
 	import DatapackSearch from '$lib/components/datapack-search.svelte';
 	import {
@@ -376,6 +377,7 @@ one at https://mozilla.org/MPL/2.0/.
 		}
 
 		loading = true;
+		const attempt = beginLifecycleRequest(formData.name.trim() || 'new-server', 'create');
 		try {
 			const selectedVersion = modpackVersions.find((v) => v.id === selectedVersionId);
 			const versionToSend =
@@ -391,7 +393,8 @@ one at https://mozilla.org/MPL/2.0/.
 				modpackVersionId: versionToSend || '',
 				port: useProxyMode ? 0 : formData.port,
 				proxyHostname: useProxyMode && proxyEnabled ? formData.proxyHostname : '',
-				proxyListenerId: useProxyMode && proxyEnabled ? formData.proxyListenerId : ''
+				proxyListenerId: useProxyMode && proxyEnabled ? formData.proxyListenerId : '',
+				requestId: attempt.requestId
 			};
 
 			const response = await rpcClient.server.createServer(createRequest);
@@ -422,6 +425,7 @@ one at https://mozilla.org/MPL/2.0/.
 				`Failed to create server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
 		} finally {
+			attempt.finish();
 			loading = false;
 		}
 	}

@@ -6,3 +6,4 @@
 
 - [Backup and restore](backup-restore.md) — Where backup storage, snapshots and restore are specified.
 - [Deep sleep and wake](deep-sleep.md) — Where the hibernation behavior is specified and which code path still needs a node resolver.
+- [Server lifecycle journal](lifecycle-journal.md) — Interrupted container mutations stay locked until the daemon is observed, and an operator can release that lock without deleting containers.
