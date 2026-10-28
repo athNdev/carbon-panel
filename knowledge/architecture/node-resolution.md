@@ -33,10 +33,12 @@ wrong host. That is a data-safety bug, not a degraded mode.
   server's node ID.
 - `internal/docker/freezer.go` still targets the local client unconditionally.
 - `internal/module/hooks.go:execInModule` still uses the manager's client.
-- Remote file, Minecraft and backup archive paths still read the controller
-  filesystem; only restore refuses. This is tracked as the remote archive path gap.
+- Minecraft and backup archive paths still read the controller filesystem.
+  This is tracked as the remote archive path gap.
 - Disk usage measures the node's mapped world root. A remote node without
   reachable storage is left unmeasured.
+- File read, update, delete, and rename resolve that mapped root before
+  checking the path. A controller copy of the data path is not consulted.
 
 # How to check
 
