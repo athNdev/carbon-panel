@@ -258,8 +258,8 @@ func TestScheduler_StartRecoversOrphanedExecutions(t *testing.T) {
 	if recovered.Status != storage.ExecutionStatusFailed {
 		t.Errorf("expected status %s, got %s", storage.ExecutionStatusFailed, recovered.Status)
 	}
-	if recovered.Error != "interrupted by panel restart" {
-		t.Errorf("expected error message 'interrupted by panel restart', got '%s'", recovered.Error)
+	if recovered.Error != "interrupted by panel restart; run the task again after the server is idle" {
+		t.Errorf("expected the restart reason to name the next action, got '%s'", recovered.Error)
 	}
 	if recovered.EndedAt == nil {
 		t.Errorf("expected EndedAt to be set")

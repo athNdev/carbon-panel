@@ -3,11 +3,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -136,4 +136,49 @@ func TestChainContinuesWhenAllowed(t *testing.T) {
 	if n := countExecutions(t, store, ctx, child.ID); n != 1 {
 		t.Fatalf("expected 1 child execution, got %d", n)
 	}
+}
+
+func TestChainRecordsTheStepItDidNotFinish(t *testing.T) {
+	s, store, ctx, server := setupChainTest(t)
+	if err := store.UpdateServerStatus(ctx, server.ID, storage.StatusRunning); err != nil {
+		t.Fatal(err)
+	}
+	parent := mkTask(server.ID, "parent", storage.TaskTypeCommand)
+	parent.RequireOnline = false
+	parent.ContinueOnFailure = true
+	if err := store.CreateScheduledTask(ctx, parent); err != nil {
+		t.Fatal(err)
+	}
+	first := mkTask(server.ID, "step-a", storage.TaskType("bogus"))
+	pid := parent.ID
+	first.ParentTaskID = &pid
+	first.RequireOnline = false
+	first.StepOrder = 0
+	second := mkTask(server.ID, "step-b", storage.TaskTypeCommand)
+	second.ParentTaskID = &pid
+	second.RequireOnline = false
+	second.StepOrder = 1
+	for _, child := range []*storage.ScheduledTask{first, second} {
+		if err := store.CreateScheduledTask(ctx, child); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	execution, err := s.executeTask(context.Background(), parent, "manual", 0, nil)
+	if err == nil {
+		t.Fatal("expected the parent command to fail")
+	}
+	if execution == nil || !strings.Contains(execution.Output, "chain stopped at step-a") || !strings.Contains(execution.Output, "remaining steps were not run") {
+		t.Fatalf("parent output = %q", executionOutput(execution))
+	}
+	if n := countExecutions(t, store, ctx, second.ID); n != 0 {
+		t.Fatalf("step-b executions = %d, want 0", n)
+	}
+}
+
+func executionOutput(execution *storage.TaskExecution) string {
+	if execution == nil {
+		return ""
+	}
+	return execution.Output
 }

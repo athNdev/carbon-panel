@@ -424,6 +424,23 @@ func (m *DeepSleepManager) SleepServer(ctx context.Context, serverID string) err
 	return nil
 }
 
+// refuseActiveOperation stops a wake or unfreeze when a journal row still owns
+// the world. Stores that do not record a journal, including test doubles, are
+// treated as unlocked.
+func refuseActiveOperation(ctx context.Context, store any, serverID string) error {
+	type operationGuard interface {
+		AssertNoServerOperation(ctx context.Context, serverID string) error
+	}
+	guard, ok := store.(operationGuard)
+	if !ok {
+		return nil
+	}
+	if err := guard.AssertNoServerOperation(ctx, serverID); err != nil {
+		return fmt.Errorf("operation owns server %s: %w", serverID, err)
+	}
+	return nil
+}
+
 // WakeServer boots a deeply asleep server. Concurrent callers wait for the
 // current lifecycle transition, then re-read state; a completed wake is
 // idempotent while an in-flight sleep is followed by a wake.
@@ -441,6 +458,9 @@ func (m *DeepSleepManager) WakeServer(ctx context.Context, serverID string) erro
 	srv, err := m.store.GetServer(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("server %s not found: %w", serverID, err)
+	}
+	if err := refuseActiveOperation(ctx, m.store, serverID); err != nil {
+		return err
 	}
 
 	if srv.Status == db.StatusRunning {

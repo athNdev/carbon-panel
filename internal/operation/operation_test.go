@@ -18,7 +18,9 @@ type fakeStore struct {
 	ops        []db.ServerOperation
 	listErr    error
 	advanceErr error
+	noteErr    error
 	advances   []struct{ id, from, to, detail string }
+	notes      []struct{ id, detail string }
 }
 
 func (f *fakeStore) ListActiveServerOperations(context.Context) ([]db.ServerOperation, error) {
@@ -28,6 +30,11 @@ func (f *fakeStore) ListActiveServerOperations(context.Context) ([]db.ServerOper
 func (f *fakeStore) AdvanceServerOperation(_ context.Context, id, from, to, detail string) error {
 	f.advances = append(f.advances, struct{ id, from, to, detail string }{id, from, to, detail})
 	return f.advanceErr
+}
+
+func (f *fakeStore) NoteActiveServerOperation(_ context.Context, id, detail string) error {
+	f.notes = append(f.notes, struct{ id, detail string }{id, detail})
+	return f.noteErr
 }
 
 type fakeObserver struct {
@@ -72,6 +79,140 @@ func TestRecoverInterruptedReleasesObservedOperations(t *testing.T) {
 	}
 	if want := "absent"; !contains(store.advances[1].detail, want) {
 		t.Errorf("absent detail %q does not mention %q", store.advances[1].detail, want)
+	}
+}
+
+func TestRecoverInterruptedBackupNamesTheNextAction(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-backup", ServerID: "srv-1", Kind: "backup", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-1": {Exists: true, Running: false},
+	}}
+
+	summary, err := RecoverInterrupted(context.Background(), store, observer, logger.New())
+	if err != nil {
+		t.Fatalf("RecoverInterrupted: %v", err)
+	}
+	if summary.Recovered != 1 || len(store.advances) != 1 {
+		t.Fatalf("summary = %+v, advances = %+v", summary, store.advances)
+	}
+	detail := store.advances[0].detail
+	if !contains(detail, "run the backup again") || !contains(detail, "container stopped") {
+		t.Fatalf("backup recovery detail = %q", detail)
+	}
+}
+
+type fakeSaver struct {
+	err error
+	ids []string
+}
+
+func (f *fakeSaver) ResumeWorldSaves(_ context.Context, serverID string) error {
+	f.ids = append(f.ids, serverID)
+	return f.err
+}
+
+func TestRecoverInterruptedBackupHoldsARunningServerUntilSaveOn(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-backup", ServerID: "srv-1", Kind: "backup", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-1": {Exists: true, Running: true},
+	}}
+
+	summary, err := RecoverInterrupted(context.Background(), store, observer, logger.New())
+	if err != nil {
+		t.Fatalf("RecoverInterrupted: %v", err)
+	}
+	if summary.Recovered != 0 || summary.NeedsReview != 1 || len(store.advances) != 0 {
+		t.Fatalf("summary = %+v, advances = %+v, want the running backup held", summary, store.advances)
+	}
+	if len(store.notes) != 1 || !contains(store.notes[0].detail, "save-on") {
+		t.Fatalf("note = %+v, want save-on named", store.notes)
+	}
+}
+
+func TestResumeInterruptedBackupEnablesSavesBeforeRelease(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-backup", ServerID: "srv-1", Kind: "backup", Phase: db.ServerOperationExecuting},
+		{ID: "op-delete", ServerID: "srv-delete", Kind: "delete", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-1":      {Exists: true, Running: true},
+		"srv-delete": {Exists: false},
+	}}
+	saver := &fakeSaver{}
+
+	summary, err := ResumeInterruptedBackups(context.Background(), store, observer, saver, logger.New())
+	if err != nil {
+		t.Fatalf("ResumeInterruptedBackups: %v", err)
+	}
+	if summary.Scanned != 1 || summary.Recovered != 1 || len(saver.ids) != 1 || saver.ids[0] != "srv-1" {
+		t.Fatalf("summary = %+v, saves = %v", summary, saver.ids)
+	}
+	if len(store.advances) != 1 || store.advances[0].id != "op-backup" || store.advances[0].to != db.ServerOperationRecovered {
+		t.Fatalf("advances = %+v, want only the backup released", store.advances)
+	}
+	if !contains(store.advances[0].detail, "run the backup again") {
+		t.Fatalf("detail = %q", store.advances[0].detail)
+	}
+}
+
+func TestResumeInterruptedBackupKeepsTheLockWhenSaveOnFails(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-backup", ServerID: "srv-1", Kind: "backup", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-1": {Exists: true, Running: true},
+	}}
+	saver := &fakeSaver{err: errors.New("rcon refused")}
+
+	summary, err := ResumeInterruptedBackups(context.Background(), store, observer, saver, logger.New())
+	if err != nil {
+		t.Fatalf("ResumeInterruptedBackups: %v", err)
+	}
+	if summary.Recovered != 0 || summary.NeedsReview != 1 || len(store.advances) != 0 {
+		t.Fatalf("summary = %+v, advances = %+v, want the lock kept", summary, store.advances)
+	}
+	if len(store.notes) != 1 || !contains(store.notes[0].detail, "save-on") {
+		t.Fatalf("note = %+v", store.notes)
+	}
+}
+
+func TestRecoverInterruptedDeleteAndMigrationNameTheNextAction(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-delete", ServerID: "srv-delete", Kind: "delete", Phase: db.ServerOperationExecuting},
+		{ID: "op-migrate", ServerID: "srv-migrate", Kind: "migrate", Phase: db.ServerOperationExecuting},
+		{ID: "op-restore", ServerID: "srv-restore", Kind: "restore", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-delete":  {Exists: false},
+		"srv-migrate": {Exists: true, Running: false},
+		"srv-restore": {Exists: true, Running: false},
+	}}
+
+	summary, err := RecoverInterrupted(context.Background(), store, observer, logger.New())
+	if err != nil {
+		t.Fatalf("RecoverInterrupted: %v", err)
+	}
+	if summary.Recovered != 0 || summary.NeedsReview != 3 || len(store.advances) != 0 {
+		t.Fatalf("summary = %+v, advances = %+v, want the world locks kept", summary, store.advances)
+	}
+	if len(summary.ReviewIDs) != 0 {
+		t.Fatalf("review ids = %v, want none; a later retry must not release these locks", summary.ReviewIDs)
+	}
+	if len(store.notes) != 3 {
+		t.Fatalf("notes = %+v, want one next action per held lock", store.notes)
+	}
+	if !contains(store.notes[0].detail, "confirm the container and the world") {
+		t.Fatalf("delete recovery detail = %q", store.notes[0].detail)
+	}
+	if !contains(store.notes[1].detail, "confirm which node holds the world") {
+		t.Fatalf("migration recovery detail = %q", store.notes[1].detail)
+	}
+	if !contains(store.notes[2].detail, "confirm the world before starting") {
+		t.Fatalf("restore recovery detail = %q", store.notes[2].detail)
 	}
 }
 

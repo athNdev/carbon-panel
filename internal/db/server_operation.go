@@ -23,6 +23,10 @@ const (
 // ServerOperationRetention is how long a finished lifecycle journal row is kept.
 const ServerOperationRetention = 30 * 24 * time.Hour
 
+// ErrActiveOperation is returned when a server already has an operation row
+// that still owns its lock. Callers must not mutate that world.
+var ErrActiveOperation = errors.New("server already has an active operation")
+
 // ServerOperation retains uncertain external effects across controller restarts.
 // ActiveServer is released only by an explicit successful finalization or recovery.
 type ServerOperation struct {
@@ -59,9 +63,30 @@ func (s *Store) BeginServerOperation(ctx context.Context, serverID, nodeID, cont
 			return err
 		}
 		op = ServerOperation{ID: uuid.NewString(), ServerID: serverID, NodeID: nodeID, ContainerID: containerID, RequestKey: key, Kind: kind, PayloadHash: digest, Phase: ServerOperationPrepared, ActiveServer: &serverID}
-		return tx.Create(&op).Error
+		if err := tx.Create(&op).Error; err != nil {
+			if strings.Contains(err.Error(), "active_server") {
+				return ErrActiveOperation
+			}
+			return err
+		}
+		return nil
 	})
 	return &op, reused, err
+}
+
+// NoteActiveServerOperation records the next action on a lock that must stay
+// held. It does not change the phase or release ActiveServer.
+func (s *Store) NoteActiveServerOperation(ctx context.Context, id, detail string) error {
+	r := s.db.WithContext(ctx).Model(&ServerOperation{}).
+		Where("id = ? AND active_server IS NOT NULL", id).
+		Updates(map[string]any{"last_error": detail, "updated_at": time.Now().UTC()})
+	if r.Error != nil {
+		return r.Error
+	}
+	if r.RowsAffected != 1 {
+		return fmt.Errorf("operation %s is no longer active", id)
+	}
+	return nil
 }
 
 func (s *Store) AdvanceServerOperation(ctx context.Context, id, from, to, detail string) error {

@@ -380,8 +380,9 @@ func TestServerService_MigrateServerConcurrentMutationRefused(t *testing.T) {
 		TargetNodeId: "node-2",
 		Force:        boolPtr(true),
 	}))
-	if err == nil {
-		t.Fatal("migration must refuse to interleave with another lifecycle mutation")
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeAborted {
+		t.Fatalf("MigrateServer error = %T %v, want CodeAborted", err, err)
 	}
 	updated, err := f.store.GetServer(ctx, "server-1")
 	if err != nil {

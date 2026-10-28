@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -156,5 +155,145 @@ func TestHandleServerEvent_DeduplicatesConcurrently(t *testing.T) {
 	}
 	if hasRunning {
 		t.Errorf("expected no execution to be dispatched for already running task")
+	}
+}
+
+func TestTryClaimTaskRefusesWhenTheRunningCheckFails(t *testing.T) {
+	s, store := newTriggerTestScheduler(t)
+	ctx := context.Background()
+
+	task := &storage.ScheduledTask{
+		ID:       "task-check-fail",
+		ServerID: "srv-1",
+		Name:     "t",
+		TaskType: storage.TaskTypeCommand,
+		Status:   storage.TaskStatusEnabled,
+		Schedule: storage.ScheduleTypeOnce,
+	}
+	if err := store.CreateScheduledTask(ctx, task); err != nil {
+		t.Fatalf("failed to insert task: %v", err)
+	}
+	sqlDB, err := store.DB().DB()
+	if err != nil {
+		t.Fatalf("sql db: %v", err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatalf("close db: %v", err)
+	}
+
+	if !s.IsTaskRunning(task.ID) {
+		t.Fatal("an unknown running check must be treated as running")
+	}
+	claimed, err := s.tryClaimTask(ctx, task.ID)
+	if err == nil || claimed {
+		t.Fatalf("claim = %v, %v; want an error and no claim", claimed, err)
+	}
+	s.runningTasksMu.Lock()
+	registered := s.runningTasks[task.ID]
+	s.runningTasksMu.Unlock()
+	if registered {
+		t.Fatal("a failed check registered the task as running")
+	}
+}
+
+type failCommandSender struct {
+	n int
+}
+
+func (f *failCommandSender) SendCommand(context.Context, string, string) (string, error) {
+	f.n++
+	return "", errors.New("rcon closed")
+}
+
+func TestCommandTaskDoesNotRepeatAFailedSend(t *testing.T) {
+	s, store := newTriggerTestScheduler(t)
+	ctx := context.Background()
+	sender := &failCommandSender{}
+	s.sender = sender
+
+	server := &storage.Server{
+		ID:          "srv-cmd",
+		Name:        "cmd",
+		Status:      storage.StatusRunning,
+		ContainerID: "container-1",
+	}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatalf("create server: %v", err)
+	}
+	task := &storage.ScheduledTask{
+		ID:         "task-cmd-once",
+		ServerID:   server.ID,
+		Name:       "say",
+		TaskType:   storage.TaskTypeCommand,
+		Status:     storage.TaskStatusEnabled,
+		Schedule:   storage.ScheduleTypeOnce,
+		Config:     `{"command":"say hi"}`,
+		RetryCount: 3,
+	}
+	if err := store.CreateScheduledTask(ctx, task); err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	execution, err := s.executeTask(ctx, task, "manual", v1.TriggeredEventType_TRIGGERED_EVENT_TYPE_UNSPECIFIED, nil)
+	if err == nil {
+		t.Fatal("expected the command send to fail")
+	}
+	if sender.n != 1 {
+		t.Fatalf("command sends = %d, want 1", sender.n)
+	}
+	if execution == nil || !strings.Contains(execution.Output, "command was not retried") {
+		t.Fatalf("output = %q", executionOutput(execution))
+	}
+}
+
+func TestDueCronRunsOnceWhenSeveralSlotsWereMissed(t *testing.T) {
+	s, store := newTriggerTestScheduler(t)
+	ctx := context.Background()
+
+	server := &storage.Server{ID: "srv-missed", Name: "missed", Status: storage.StatusStopped}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatalf("create server: %v", err)
+	}
+	overdue := time.Now().Add(-3 * time.Hour)
+	task := &storage.ScheduledTask{
+		ID:       "task-missed-cron",
+		ServerID: server.ID,
+		Name:     "nightly",
+		TaskType: storage.TaskTypeCommand,
+		Status:   storage.TaskStatusEnabled,
+		Schedule: storage.ScheduleTypeCron,
+		CronExpr: "0 0 * * *",
+		NextRun:  &overdue,
+	}
+	if err := store.CreateScheduledTask(ctx, task); err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	s.checkAndRunDueTasks()
+	s.wg.Wait()
+
+	updated, err := store.GetScheduledTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("reload task: %v", err)
+	}
+	if updated.NextRun == nil || !updated.NextRun.After(time.Now()) {
+		t.Fatalf("next run = %v, want a future slot", updated.NextRun)
+	}
+	executions, err := store.ListTaskExecutions(ctx, task.ID, 10)
+	if err != nil {
+		t.Fatalf("list executions: %v", err)
+	}
+	if len(executions) != 1 {
+		t.Fatalf("executions after the overdue tick = %d, want 1", len(executions))
+	}
+
+	s.checkAndRunDueTasks()
+	s.wg.Wait()
+	executions, err = store.ListTaskExecutions(ctx, task.ID, 10)
+	if err != nil {
+		t.Fatalf("list executions again: %v", err)
+	}
+	if len(executions) != 1 {
+		t.Fatalf("executions after the following tick = %d, want 1", len(executions))
 	}
 }

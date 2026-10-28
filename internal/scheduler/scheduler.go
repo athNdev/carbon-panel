@@ -188,7 +188,7 @@ func (s *Scheduler) Start() error {
 	// Recover orphaned executions left in running state by a prior abnormal process exit.
 	if s.store != nil {
 		ctx := context.Background()
-		if count, err := s.store.FailOrphanedTaskExecutions(ctx, "interrupted by panel restart"); err != nil {
+		if count, err := s.store.FailOrphanedTaskExecutions(ctx, "interrupted by panel restart; run the task again after the server is idle"); err != nil {
 			s.log.Error("Failed to recover orphaned task executions: %v", err)
 		} else if count > 0 {
 			s.log.Warn("Recovered %d orphaned task execution(s) from prior session", count)
@@ -341,7 +341,12 @@ func (s *Scheduler) checkAndRunDueTasks() {
 	}
 
 	for _, task := range tasks {
-		if !s.tryClaimTask(context.Background(), task.ID) {
+		claimed, err := s.tryClaimTask(context.Background(), task.ID)
+		if err != nil {
+			s.log.Error("Task %s: running check failed, leaving it due: %v", task.Name, err)
+			continue
+		}
+		if !claimed {
 			s.log.Debug("Task %s is already running, skipping duplicate dispatch", task.Name)
 			continue
 		}
@@ -361,22 +366,26 @@ func (s *Scheduler) checkAndRunDueTasks() {
 }
 
 // tryClaimTask attempts to atomically register taskID as running in memory and checks
-// the database for any active running executions (SCH-5). Returns true if successfully claimed.
-func (s *Scheduler) tryClaimTask(ctx context.Context, taskID string) bool {
+// the database for any active running executions (SCH-5). A database error refuses
+// the claim and leaves the task unregistered, so a scheduled run stays due.
+func (s *Scheduler) tryClaimTask(ctx context.Context, taskID string) (bool, error) {
 	s.runningTasksMu.Lock()
 	defer s.runningTasksMu.Unlock()
 
 	if s.runningTasks[taskID] {
-		return false
+		return false, nil
 	}
 	if s.store != nil {
 		hasRunning, err := s.store.HasRunningExecution(ctx, taskID)
-		if err == nil && hasRunning {
-			return false
+		if err != nil {
+			return false, err
+		}
+		if hasRunning {
+			return false, nil
 		}
 	}
 	s.runningTasks[taskID] = true
-	return true
+	return true, nil
 }
 
 // releaseTask unregisters taskID from in-memory running tasks.
@@ -394,7 +403,12 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 	}
 
 	// Conflicting execution guard (MINE-146, SCH-5): never run the same task twice.
-	if !s.tryClaimTask(ctx, taskID) {
+	// A failed running check is not proof that the task is idle.
+	claimed, err := s.tryClaimTask(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if !claimed {
 		return nil, ErrTaskAlreadyRunning
 	}
 	defer s.releaseTask(taskID)
@@ -416,7 +430,7 @@ func (s *Scheduler) IsTaskRunning(taskID string) bool {
 
 	if s.store != nil {
 		hasRunning, err := s.store.HasRunningExecution(context.Background(), taskID)
-		if err == nil && hasRunning {
+		if err != nil || hasRunning {
 			return true
 		}
 	}
@@ -431,7 +445,12 @@ func (s *Scheduler) HandleServerEvent(ctx context.Context, event events.Event) {
 		return
 	}
 	for _, task := range tasks {
-		if !s.tryClaimTask(ctx, task.ID) {
+		claimed, err := s.tryClaimTask(ctx, task.ID)
+		if err != nil {
+			s.log.Error("Event-triggered task %s: running check failed, not dispatching: %v", task.Name, err)
+			continue
+		}
+		if !claimed {
 			s.log.Debug("Event-triggered task %s is already running, skipping duplicate dispatch", task.Name)
 			continue
 		}
@@ -496,7 +515,8 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 		// Skipped steps still fan out to children (each child applies its
 		// own online gate), so chains degrade to per-step skip records.
 		if depth < maxChainDepth {
-			s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+			stopped, chainErr := s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+			s.recordChainStop(ctx, execution, stopped, chainErr)
 		}
 
 		// Update next run time if not already updated at dispatch
@@ -541,13 +561,19 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 
 	s.log.Info("Task %s: executing on server %s (trigger: %s)", task.Name, server.Name, trigger)
 
-	// Execute the task based on type, retrying on failure if configured
+	// Execute the task based on type, retrying on failure if configured.
+	// A console command is attempted once: a failed send may already have
+	// been delivered, and repeating it is not safe.
 	var output string
 	var execErr error
+	retries := task.RetryCount
+	if task.TaskType == storage.TaskTypeCommand {
+		retries = 0
+	}
 
 	for attempt := 0; ; attempt++ {
 		output, execErr = s.runTaskType(execCtx, server, task, eventType, eventData)
-		if execErr == nil || attempt >= task.RetryCount || execCtx.Err() != nil {
+		if execErr == nil || attempt >= retries || execCtx.Err() != nil {
 			break
 		}
 
@@ -565,6 +591,12 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 			break
 		}
 		execution.RetryNum = attempt + 1
+	}
+	if execErr != nil && task.TaskType == storage.TaskTypeCommand && task.RetryCount > 0 {
+		if output != "" {
+			output += "\n"
+		}
+		output += "command was not retried because it may already have been delivered"
 	}
 
 	// Update execution record
@@ -598,7 +630,8 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 	// Each child runs through the normal path, so RequireOnline and retries
 	// apply per step.
 	if depth < maxChainDepth && (execErr == nil || task.ContinueOnFailure) {
-		s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+		stopped, chainErr := s.runChildChain(ctx, task, trigger, eventType, eventData, depth)
+		s.recordChainStop(ctx, execution, stopped, chainErr)
 	}
 
 	// Update next run time if not already updated at dispatch
@@ -609,12 +642,14 @@ func (s *Scheduler) executeTaskAtDepth(ctx context.Context, task *storage.Schedu
 	return execution, execErr
 }
 
-// runChildChain executes a task's children sequentially.
-func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) {
+// runChildChain executes a task's children sequentially. The returned step is
+// the child where the chain stopped; later children were not started. A
+// non-nil error means the child list itself could not be read.
+func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.ScheduledTask, trigger string, eventType v1.TriggeredEventType, eventData map[string]any, depth int) (string, error) {
 	children, err := s.store.ListChildTasks(ctx, parent.ID)
 	if err != nil {
 		s.log.Error("Task %s: failed to list child tasks: %v", parent.Name, err)
-		return
+		return "", err
 	}
 	for _, child := range children {
 		if child.TimeOffsetSecs > 0 {
@@ -626,15 +661,33 @@ func (s *Scheduler) runChildChain(ctx context.Context, parent *storage.Scheduled
 			case <-ctx.Done():
 				timer.Stop()
 				s.log.Info("Task %s: chain cancelled while waiting before step %s", parent.Name, child.Name)
-				return
+				return child.Name, nil
 			case <-timer.C:
 			}
 		}
 		_, childErr := s.executeTaskAtDepth(ctx, child, trigger, eventType, eventData, depth+1)
 		if childErr != nil && !child.ContinueOnFailure {
 			s.log.Warn("Task %s: chain aborted at step %s: %v", parent.Name, child.Name, childErr)
-			return
+			return child.Name, nil
 		}
+	}
+	return "", nil
+}
+
+func (s *Scheduler) recordChainStop(ctx context.Context, execution *storage.TaskExecution, stopped string, chainErr error) {
+	if execution == nil || (chainErr == nil && stopped == "") {
+		return
+	}
+	note := "chain stopped because the next steps could not be listed"
+	if chainErr == nil {
+		note = fmt.Sprintf("chain stopped at %s; remaining steps were not run", stopped)
+	}
+	if execution.Output != "" {
+		execution.Output += "\n"
+	}
+	execution.Output += note
+	if err := s.store.UpdateTaskExecution(ctx, execution); err != nil {
+		s.log.Error("Task execution %s: failed to record chain stop: %v", execution.ID, err)
 	}
 }
 
@@ -758,12 +811,25 @@ func (s *Scheduler) executeCommandTask(ctx context.Context, server *storage.Serv
 	return output, err
 }
 
+func (s *Scheduler) refuseActiveOperation(ctx context.Context, serverID string) error {
+	if s.store == nil {
+		return nil
+	}
+	if err := s.store.AssertNoServerOperation(ctx, serverID); err != nil {
+		return fmt.Errorf("refused while another operation owns the server: %w", err)
+	}
+	return nil
+}
+
 func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
 	transition, err := docker.TryBeginServerTransition(server.ID)
 	if err != nil {
 		return "", err
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return "", err
+	}
 
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
@@ -818,6 +884,9 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 		return "", err
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return "", err
+	}
 
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
@@ -857,6 +926,9 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 		return err
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return err
+	}
 	if server.ContainerID == "" {
 		return fmt.Errorf("server has no container")
 	}
@@ -1137,6 +1209,14 @@ func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Se
 func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
+	}
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return "", fmt.Errorf("stop refused while another lifecycle operation owns the server: %w", err)
+	}
+	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return "", err
 	}
 
 	dockerCli, err := s.dockerForNode(server.NodeID)
@@ -1478,28 +1558,14 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 			return updateSummary, err
 		}
 
-		// Sync files into server.DataPath (excluding internal directories)
-		s.log.Info("ModpackTask %s: Syncing updated modpack files from %s to %s", task.Name, srcDir, server.DataPath)
-		cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
-			"--exclude=.git",
-			"--exclude=.carbon-panel_modpack_git",
-			"--exclude=.carbon-panel_modpack_staged",
-			"--exclude=.carbon-panel_snapshots",
-			srcDir+"/", server.DataPath+"/")
-		if out, err := cmdRsync.CombinedOutput(); err != nil {
-			// Fallback to cp -rf if rsync is not installed
-			cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
-			if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
-				// Pure Go fallback if neither rsync nor cp are available (e.g. on Windows)
-				excludes := []string{".git", ".carbon-panel_modpack_git", ".carbon-panel_modpack_staged", ".carbon-panel_snapshots"}
-				if goErr := copyDirExcluding(srcDir, server.DataPath, excludes); goErr != nil {
-					// If copying failed and we took a snapshot, rollback if enabled
-					if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
-						_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
-					}
-					return string(out) + "\n" + string(cpOut), fmt.Errorf("failed to copy modpack files: %w", goErr)
-				}
+		// Sync files into server.DataPath (excluding internal directories).
+		// The copy holds the lifecycle transition and releases it before a
+		// restart, which claims that transition itself.
+		if out, syncErr := s.syncModpackFiles(ctx, server, srcDir); syncErr != nil {
+			if cfg.AutoRollbackOnFailure && createdSnapshot != nil && s.snapshotEngine != nil {
+				_ = s.snapshotEngine.Rollback(ctx, server, createdSnapshot.ID)
 			}
+			return out, syncErr
 		}
 
 		// Check if maintenance window or immediate restart is triggered
@@ -1556,6 +1622,37 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	return "No updates found", nil
+}
+
+// syncModpackFiles copies a modpack tree into the server directory. It holds
+// the lifecycle transition for the copy and releases it before returning, so
+// a following restart can claim that transition itself.
+func (s *Scheduler) syncModpackFiles(ctx context.Context, server *storage.Server, srcDir string) (string, error) {
+	transition, err := docker.TryBeginServerTransition(server.ID)
+	if err != nil {
+		return "", fmt.Errorf("modpack sync refused while another lifecycle operation owns the server: %w", err)
+	}
+	defer transition.Release()
+
+	if s.log != nil {
+		s.log.Info("Syncing updated modpack files from %s to %s", srcDir, server.DataPath)
+	}
+	cmdRsync := exec.CommandContext(ctx, "rsync", "-avc",
+		"--exclude=.git",
+		"--exclude=.carbon-panel_modpack_git",
+		"--exclude=.carbon-panel_modpack_staged",
+		"--exclude=.carbon-panel_snapshots",
+		srcDir+"/", server.DataPath+"/")
+	if out, err := cmdRsync.CombinedOutput(); err != nil {
+		cmdCp := exec.CommandContext(ctx, "cp", "-rf", srcDir+"/.", server.DataPath+"/")
+		if cpOut, cpErr := cmdCp.CombinedOutput(); cpErr != nil {
+			excludes := []string{".git", ".carbon-panel_modpack_git", ".carbon-panel_modpack_staged", ".carbon-panel_snapshots"}
+			if goErr := copyDirExcluding(srcDir, server.DataPath, excludes); goErr != nil {
+				return string(out) + "\n" + string(cpOut), fmt.Errorf("failed to copy modpack files: %w", goErr)
+			}
+		}
+	}
+	return "", nil
 }
 
 // isWithinMaintenanceWindow checks if the given time falls within a 30-minute window of the cron schedule

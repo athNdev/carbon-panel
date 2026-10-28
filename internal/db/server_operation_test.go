@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -41,8 +42,8 @@ func TestServerOperationJournalLifecycle(t *testing.T) {
 	}
 
 	// One server can only have one active operation.
-	if _, _, err := store.BeginServerOperation(ctx, "srv-1", "node-1", "cont-1", "key-2", "stop", "digest-3"); err == nil {
-		t.Fatal("expected a second active operation for the same server to be rejected")
+	if _, _, err := store.BeginServerOperation(ctx, "srv-1", "node-1", "cont-1", "key-2", "stop", "digest-3"); !errors.Is(err, ErrActiveOperation) {
+		t.Fatalf("second active operation = %v, want ErrActiveOperation", err)
 	}
 
 	// The active operation blocks the server until it is finalized.
@@ -73,6 +74,31 @@ func TestServerOperationJournalLifecycle(t *testing.T) {
 	}
 	if len(active) != 0 {
 		t.Fatalf("active operations after completion = %+v, want none", active)
+	}
+}
+
+func TestNoteActiveServerOperationKeepsTheLock(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+
+	op, _, err := store.BeginServerOperation(ctx, "srv-note", "node-1", "", "key-1", "delete", "digest")
+	if err != nil {
+		t.Fatalf("BeginServerOperation: %v", err)
+	}
+	const detail = "delete was interrupted; confirm the container and the world before trying again."
+	if err := store.NoteActiveServerOperation(ctx, op.ID, detail); err != nil {
+		t.Fatalf("NoteActiveServerOperation: %v", err)
+	}
+	if err := store.AssertNoServerOperation(ctx, "srv-note"); err == nil {
+		t.Fatal("noting the next action released the lock")
+	}
+	got, err := store.GetServerOperation(ctx, op.ID)
+	if err != nil {
+		t.Fatalf("GetServerOperation: %v", err)
+	}
+	if got.Phase != ServerOperationPrepared || got.LastError != detail || got.ActiveServer == nil {
+		t.Fatalf("noted operation = %+v", got)
 	}
 }
 

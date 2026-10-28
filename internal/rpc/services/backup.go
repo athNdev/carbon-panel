@@ -398,6 +398,9 @@ func (s *BackupService) RestoreBackup(ctx context.Context, req *connect.Request[
 	})
 	if jerr != nil {
 		done("failed")
+		if errors.Is(jerr, storage.ErrActiveOperation) || errors.Is(jerr, operation.ErrInProgress) {
+			return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("restore refused while another operation owns the server: %w", jerr))
+		}
 		return nil, jerr
 	}
 	return connect.NewResponse(restoreResp), nil

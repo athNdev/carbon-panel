@@ -21,6 +21,7 @@ import (
 type Store interface {
 	ListActiveServerOperations(ctx context.Context) ([]db.ServerOperation, error)
 	AdvanceServerOperation(ctx context.Context, id, from, to, detail string) error
+	NoteActiveServerOperation(ctx context.Context, id, detail string) error
 }
 
 // Observed is the container state recovery sees for an interrupted operation.
@@ -62,12 +63,34 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 		observed, observeErr := observer.Observe(ctx, op.ServerID, op.ContainerID)
 		if observeErr != nil {
 			summary.NeedsReview++
+			if keepsWorldLock(op.Kind) || op.Kind == "backup" {
+				detail := nextAction(op.Kind) + " Container state could not be read."
+				if op.Kind == "backup" {
+					detail = nextAction("backup") + " Container state could not be read, so save-on was not sent."
+				}
+				noteHeldWorld(ctx, store, log, op, detail)
+				continue
+			}
 			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
 			log.Error("Interrupted %s operation %s for server %s requires manual recovery: cannot observe container: %v", op.Kind, op.ID, op.ServerID, observeErr)
 			continue
 		}
 
-		detail := describeObservation(observed)
+		detail := recoveryDetail(op.Kind, observed)
+		if op.Kind == "backup" && observed.Running {
+			// save-off is a live JVM command. Releasing this lock while the
+			// container is still running would leave saves off until something
+			// else sends save-on. ResumeInterruptedBackups does that once a
+			// command sender exists; until then the lock stays.
+			noteHeldWorld(ctx, store, log, op, nextAction("backup")+" World saves may still be off; save-on has not been sent.")
+			summary.NeedsReview++
+			continue
+		}
+		if keepsWorldLock(op.Kind) {
+			noteHeldWorld(ctx, store, log, op, detail)
+			summary.NeedsReview++
+			continue
+		}
 		if err := store.AdvanceServerOperation(ctx, op.ID, op.Phase, db.ServerOperationRecovered, detail); err != nil {
 			summary.NeedsReview++
 			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
@@ -80,6 +103,108 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 	}
 
 	return summary, nil
+}
+
+// SaveResumer turns world saves back on after an interrupted backup. save-off
+// does not survive a stopped JVM, so callers send it only while the container
+// is still running.
+type SaveResumer interface {
+	ResumeWorldSaves(ctx context.Context, serverID string) error
+}
+
+// ResumeInterruptedBackups sends save-on for an interrupted backup whose
+// container is still running, then releases that lock. A failed save-on leaves
+// the lock in place. A stopped container is released without a command,
+// because the next boot starts with saves enabled and this pass must not
+// start the server.
+func ResumeInterruptedBackups(ctx context.Context, store Store, observer Observer, saves SaveResumer, log *logger.Logger) (Summary, error) {
+	ops, err := store.ListActiveServerOperations(ctx)
+	if err != nil {
+		return Summary{}, fmt.Errorf("list interrupted server operations: %w", err)
+	}
+
+	summary := Summary{}
+	for _, op := range ops {
+		if op.Kind != "backup" {
+			continue
+		}
+		summary.Scanned++
+		observed, observeErr := observer.Observe(ctx, op.ServerID, op.ContainerID)
+		if observeErr != nil {
+			summary.NeedsReview++
+			noteHeldWorld(ctx, store, log, op, nextAction("backup")+" Container state could not be read, so save-on was not sent.")
+			continue
+		}
+		if observed.Running {
+			if saves == nil {
+				summary.NeedsReview++
+				noteHeldWorld(ctx, store, log, op, nextAction("backup")+" World saves may still be off; save-on has not been sent.")
+				continue
+			}
+			if saveErr := saves.ResumeWorldSaves(ctx, op.ServerID); saveErr != nil {
+				summary.NeedsReview++
+				noteHeldWorld(ctx, store, log, op, "world saves may still be off; run save-on or restart the server. "+saveErr.Error())
+				continue
+			}
+		}
+		detail := recoveryDetail(op.Kind, observed)
+		if err := store.AdvanceServerOperation(ctx, op.ID, op.Phase, db.ServerOperationRecovered, detail); err != nil {
+			summary.NeedsReview++
+			if log != nil {
+				log.Error("Interrupted backup %s for server %s requires manual recovery: %v", op.ID, op.ServerID, err)
+			}
+			continue
+		}
+		summary.Recovered++
+		if log != nil {
+			log.Warn("Recovered interrupted backup %s for server %s: %s", op.ID, op.ServerID, detail)
+		}
+	}
+	return summary, nil
+}
+
+// keepsWorldLock reports operations whose container state does not prove the
+// world is safe to start. Those locks stay until an operator resolves them.
+func keepsWorldLock(kind string) bool {
+	switch kind {
+	case "delete", "restore", "migrate":
+		return true
+	default:
+		return false
+	}
+}
+
+func noteHeldWorld(ctx context.Context, store Store, log *logger.Logger, op db.ServerOperation, detail string) {
+	if err := store.NoteActiveServerOperation(ctx, op.ID, detail); err != nil && log != nil {
+		log.Error("Interrupted %s operation %s for server %s stays locked, and the next action could not be recorded: %v", op.Kind, op.ID, op.ServerID, err)
+		return
+	}
+	if log != nil {
+		log.Warn("Interrupted %s operation %s for server %s stays locked until an operator resolves it: %s", op.Kind, op.ID, op.ServerID, detail)
+	}
+}
+
+func nextAction(kind string) string {
+	switch kind {
+	case "backup":
+		return "backup was interrupted before the archive was finalized; run the backup again."
+	case "restore":
+		return "restore was interrupted; confirm the world before starting the server."
+	case "delete":
+		return "delete was interrupted; confirm the container and the world before trying again."
+	case "migrate":
+		return "migration was interrupted; confirm which node holds the world before starting the server."
+	default:
+		return ""
+	}
+}
+
+func recoveryDetail(kind string, observed Observed) string {
+	state := describeObservation(observed)
+	if action := nextAction(kind); action != "" {
+		return action + " " + state
+	}
+	return state
 }
 
 func describeObservation(observed Observed) string {

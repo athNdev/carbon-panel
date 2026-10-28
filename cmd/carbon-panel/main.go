@@ -32,8 +32,19 @@ import (
 	"github.com/athNdev/carbon-panel/internal/reconciler"
 	"github.com/athNdev/carbon-panel/internal/rpc"
 	"github.com/athNdev/carbon-panel/internal/scheduler"
+	"github.com/athNdev/carbon-panel/internal/snapshot"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
+
+// commandSaver sends save-on through the panel command path. It does not
+// start a stopped server.
+type commandSaver struct {
+	sender snapshot.CommandSender
+}
+
+func (c commandSaver) ResumeWorldSaves(ctx context.Context, serverID string) error {
+	return snapshot.ResumeWorldSaves(ctx, c.sender, serverID)
+}
 
 // shouldAutoStartOnBoot reports whether a persisted server should be started
 // when the panel boots.
@@ -264,6 +275,16 @@ func main() {
 
 	// Initialize command sender
 	sender := command.NewSender(store, cfg, dockerClient, clientPool)
+
+	// A backup interrupted while its JVM is still running may have left saves
+	// off. Turn them back on before idle managers or boot can use that world,
+	// and keep the lock when the command fails. This does not start a stopped
+	// server.
+	if summary, recErr := operation.ResumeInterruptedBackups(ctx, store, operation.NewDockerObserver(dockerClient), commandSaver{sender}, log); recErr != nil {
+		log.Error("Failed to resume saves after an interrupted backup: %v", recErr)
+	} else if summary.Scanned > 0 {
+		log.Warn("Interrupted backups: %d scanned, %d recovered after save-on, %d still locked", summary.Scanned, summary.Recovered, summary.NeedsReview)
+	}
 
 	// Initialize the central event bus
 	eventBus := events.NewBus(log)

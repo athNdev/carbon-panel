@@ -1746,62 +1746,55 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Stop and remove module containers before deleting the server. A module
-	// cleanup or lookup failure must keep the parent row so the remaining
-	// resources stay addressable and deletion can be retried.
-	if s.moduleManager != nil {
-		modules, err := s.store.ListServerModules(ctx, server.ID)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list server modules before deletion: %w", err))
-		}
-		for _, mod := range modules {
-			if err := s.moduleManager.DeleteModule(ctx, mod.ID); err != nil {
-				s.log.Error("Failed to delete module %s: %v", mod.ID, err)
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete module %s: %w", mod.ID, err))
+	// One journal row covers modules, the container, the panel row, and the
+	// world. An active backup, restore, or migration lock refuses the delete
+	// before any of those are touched. A server with no container still takes
+	// the lock, so its world cannot be removed during that operation.
+	peerIP := req.Peer().Addr
+	if err := s.runJournaledMutation(ctx, server, "delete", requestID, func() error {
+		if s.moduleManager != nil {
+			modules, listErr := s.store.ListServerModules(ctx, server.ID)
+			if listErr != nil {
+				return fmt.Errorf("failed to list server modules before deletion: %w", listErr)
+			}
+			for _, mod := range modules {
+				if delErr := s.moduleManager.DeleteModule(ctx, mod.ID); delErr != nil {
+					s.log.Error("Failed to delete module %s: %v", mod.ID, delErr)
+					return fmt.Errorf("failed to delete module %s: %w", mod.ID, delErr)
+				}
 			}
 		}
-	}
-
-	// Stop and remove the server container before deleting its database row or
-	// data directory. A failed removal must not orphan a live container.
-	if server.ContainerID != "" {
-		if err := s.runJournaledMutation(ctx, server, "delete", requestID, func() error {
+		if server.ContainerID != "" {
 			if _, stopErr := dockerCli.StopContainer(ctx, server.ContainerID); stopErr != nil {
 				s.log.Warn("Failed to stop container %s during deletion; removal will still be attempted: %v", server.ContainerID, stopErr)
 			}
 			if rmErr := dockerCli.RemoveContainer(ctx, server.ContainerID); rmErr != nil && !errdefs.IsNotFound(rmErr) {
-				return rmErr
+				return fmt.Errorf("failed to remove server container %s: %w", server.ContainerID, rmErr)
 			}
-			return nil
-		}); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server container %s: %w", server.ContainerID, err))
 		}
-	}
-
-	// Remove proxy route or direct knock listener only after Docker resources are gone.
-	// If earlier cleanup failed, the live server remains reachable while the caller retries.
-	if s.proxy != nil {
-		if server.ProxyHostname != "" {
-			if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server proxy route: %w", err))
+		if s.proxy != nil {
+			if server.ProxyHostname != "" {
+				if routeErr := s.proxy.RemoveServerRoute(server.ID); routeErr != nil {
+					return fmt.Errorf("failed to remove server proxy route: %w", routeErr)
+				}
+			} else {
+				s.proxy.StopDirectKnock(server.ID)
 			}
-		} else {
-			s.proxy.StopDirectKnock(server.ID)
 		}
-	}
-
-	// Delete from database
-	if err := s.store.DeleteServer(ctx, req.Msg.Id); err != nil {
-		s.log.Error("Failed to delete server: %v", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete server"))
-	}
-
-	peerIP := req.Peer().Addr
-	s.auditServerLifecycle(ctx, peerIP, activity.EventServerDelete, server.ID)
-
-	// Delete data directory
-	if err := os.RemoveAll(server.DataPath); err != nil {
-		s.log.Error("Failed to delete server data: %v", err)
+		if delErr := s.store.DeleteServer(ctx, req.Msg.Id); delErr != nil {
+			s.log.Error("Failed to delete server: %v", delErr)
+			return fmt.Errorf("failed to delete server")
+		}
+		s.auditServerLifecycle(ctx, peerIP, activity.EventServerDelete, server.ID)
+		if rmErr := os.RemoveAll(server.DataPath); rmErr != nil {
+			s.log.Error("Failed to delete server data: %v", rmErr)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, storage.ErrActiveOperation) || errors.Is(err, operation.ErrInProgress) {
+			return nil, connect.NewError(connect.CodeAborted, fmt.Errorf("delete refused while another operation owns the server: %w", err))
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(&v1.DeleteServerResponse{}), nil
@@ -1827,6 +1820,9 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
+	}
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return nil, err
 	}
 
 	dockerCli, err := s.getDockerClientStrict(server.NodeID)
@@ -2126,6 +2122,9 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return nil, err
+	}
 
 	if server.ContainerID == "" {
 		// If there's no container, server is already stopped
@@ -2240,6 +2239,9 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
+	}
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return nil, err
 	}
 
 	dockerCli, err := s.getDockerClientStrict(server.NodeID)
@@ -2520,6 +2522,9 @@ func (s *ServerService) RecreateServer(ctx context.Context, req *connect.Request
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
+	}
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return nil, err
 	}
 
 	// Get server config for container creation

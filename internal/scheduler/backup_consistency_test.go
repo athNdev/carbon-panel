@@ -19,6 +19,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/backupcrypt"
 	appconfig "github.com/athNdev/carbon-panel/internal/config"
 	storage "github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
 
@@ -234,4 +235,30 @@ func TestPruneKeepsLastVerifiedCopy(t *testing.T) {
 	if _, err := s.store.GetBackupRecord(ctx, "b-good"); err != nil {
 		t.Fatalf("the last verified copy must survive retention: %v", err)
 	}
+}
+
+func TestBackupRefusesWhileRestoreOrWakeOwnsTheServer(t *testing.T) {
+	s, server, sender := consistencyFixture(t)
+	s.sender = sender
+
+	held, err := docker.TryBeginServerTransition(server.ID)
+	requireNoErr(t, err)
+
+	_, err = s.executeBackupTask(context.Background(), server, &storage.ScheduledTask{Name: "nightly"})
+	if !errors.Is(err, docker.ErrTransitionInFlight) {
+		t.Fatalf("backup error = %v, want the lifecycle transition", err)
+	}
+	if sender.sent("save-off") {
+		t.Fatal("backup paused saves while another operation owned the server")
+	}
+
+	held.Release()
+	out, err := s.executeBackupTask(context.Background(), server, &storage.ScheduledTask{Name: "nightly"})
+	requireNoErr(t, err)
+	if !strings.Contains(out, "consistency:") {
+		t.Fatalf("backup after the transition was released = %q", out)
+	}
+	next, err := docker.TryBeginServerTransition(server.ID)
+	requireNoErr(t, err)
+	next.Release()
 }
