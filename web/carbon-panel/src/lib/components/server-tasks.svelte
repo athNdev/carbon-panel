@@ -1389,9 +1389,9 @@ one at https://mozilla.org/MPL/2.0/.
 											<div class="space-y-1">
 												<span class="font-medium">Stage into the open batch</span>
 												<p class="text-sm text-muted-foreground">
-													The fetched pack joins the server's open update batch. The live pack
-													stays as it is, and this task does not restart the server. The batch
-													window applies the pack with any other staged changes.
+													The fetched pack joins the server's open update batch. The live pack stays
+													as it is, and this task does not restart the server. The batch window
+													applies the pack with any other staged changes.
 												</p>
 											</div>
 										</label>

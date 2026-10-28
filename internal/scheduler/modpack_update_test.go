@@ -165,14 +165,14 @@ func TestModpackUpdate_CloningStagingAndSync(t *testing.T) {
 
 func TestModpackUpdate_StageIntoBatchLeavesLiveTree(t *testing.T) {
 	remoteRepo := createGitRepo(t)
-	defer os.RemoveAll(remoteRepo)
+	t.Cleanup(func() { _ = os.RemoveAll(remoteRepo) })
 
 	serverDir, err := os.MkdirTemp("", "server-data-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(serverDir)
+	t.Cleanup(func() { _ = os.RemoveAll(serverDir) })
 
 	store := setupTestStore(t)
-	defer store.Close()
+	t.Cleanup(func() { _ = store.Close() })
 
 	ctx := context.Background()
 	server := &storage.Server{
@@ -217,7 +217,7 @@ func TestModpackUpdate_StageIntoBatchLeavesLiveTree(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(serverDir, "config", "modpack.json"))
 
 	staged := false
-	_ = filepath.Walk(filepath.Join(serverDir, ".carbon-panel", "staged"), func(path string, info os.FileInfo, walkErr error) error {
+	require.NoError(t, filepath.Walk(filepath.Join(serverDir, ".carbon-panel", "staged"), func(path string, info os.FileInfo, walkErr error) error {
 		if walkErr == nil && info != nil && info.Name() == "modpack.json" {
 			body, readErr := os.ReadFile(path)
 			require.NoError(t, readErr)
