@@ -30,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261028a" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261028d" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -831,6 +831,62 @@
           </svg>
         </div>
 
+        <!-- Stacked node board for phones, where the wide diagram cannot read -->
+        <div class="fleet-stack">
+          <div class="fs-node">
+            <div class="fs-top">
+              <span class="fs-name">home machine</span>
+              <span class="fs-val fs-val-hot">15.0 / 16 GB</span>
+            </div>
+            <div class="fs-meter"><i class="fs-fill hot" style="width: 94%"></i></div>
+            <ul class="fs-list">
+              <li class="fs-chip hot"><b>survival-01</b><span>6 GB · migrating</span></li>
+              <li class="fs-chip"><b>creative</b><span>4 GB · 6 players</span></li>
+              <li class="fs-chip"><b>modded-01</b><span>5 GB · 2 players</span></li>
+            </ul>
+            <div class="fs-foot">3 servers · 1 migrating</div>
+          </div>
+
+          <div class="fs-move"><span class="fs-move-label">survival-01 · live migration</span></div>
+
+          <div class="fs-node">
+            <div class="fs-top">
+              <span class="fs-name">homelab</span>
+              <span class="fs-val">8.2 / 32 GB</span>
+            </div>
+            <div class="fs-meter"><i class="fs-fill" style="width: 26%"></i></div>
+            <ul class="fs-list">
+              <li class="fs-chip rep"><b>survival-01</b><span>standby · synced</span></li>
+              <li class="fs-chip"><b>event-01</b><span>8 GB · 22 players</span></li>
+              <li class="fs-chip sleep"><b>archive</b><span>parked · 0 B</span></li>
+            </ul>
+            <div class="fs-foot">standby replica · ready</div>
+          </div>
+
+          <div class="fs-node">
+            <div class="fs-top">
+              <span class="fs-name">cloud vps</span>
+              <span class="fs-val">1.4 / 8 GB</span>
+            </div>
+            <div class="fs-meter"><i class="fs-fill" style="width: 18%"></i></div>
+            <ul class="fs-list">
+              <li class="fs-chip sleep"><b>lobby-01</b><span>asleep · 0 B</span></li>
+              <li class="fs-chip"><b>proxy</b><span>0.4 GB · ingress</span></li>
+              <li class="fs-chip sleep"><b>events-2</b><span>asleep · 0 B</span></li>
+            </ul>
+            <div class="fs-foot">2 asleep · wake on join</div>
+          </div>
+
+          <div class="fs-bar">
+            <div class="fs-top">
+              <span class="fs-name">offsite backups</span>
+              <span class="fs-val"><span class="fs-dot"></span> 4m ago</span>
+            </div>
+            <div class="fs-foot">S3 · MinIO · any compatible endpoint</div>
+            <div class="fs-foot">world snapshots · versioned · retention</div>
+          </div>
+        </div>
+
         <div class="fleet-cards">
           <div class="fleet-card reveal">
             <svg class="icon f-icon" aria-hidden="true"><use href="#i-route"/></svg>
@@ -1244,6 +1300,6 @@
     </div>
   </footer>
 
-  <script src="./assets/script.js?v=20261028a" defer></script>
+  <script src="./assets/script.js?v=20261028c" defer></script>
 </body>
 </html>
