@@ -20,6 +20,7 @@ sources:
 | [0003](../../docs/adr/0003-sqlite-durability.md) | Superseded. Original continuous-replication proposal | [Persistence](../architecture/persistence.md) |
 | [0006](../../docs/adr/0006-idle-modes-are-data.md) | Idle modes are data, not strategies | [Deep sleep](../operations/deep-sleep.md) |
 | [0007](../../docs/adr/0007-panel-sqlite-snapshots.md) | Daily SQLite snapshots and an explicit restore | [Persistence](../architecture/persistence.md) |
+| [0008](../../docs/adr/0008-carbon-panel-brand-identity.md) | Use the approved lower-cut block and technical-capitals wordmark | [Brand assets](../../assets/branding/README.md) |
 
 # Rule
 

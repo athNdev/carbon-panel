@@ -10,7 +10,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
+	import { base, resolve } from '$app/paths';
 	import { runningServers, activitySortedServers } from '$lib/stores/servers';
 	import { currentUser, canAccessSettings } from '$lib/stores/auth';
 	import { rpcClient, silentCallOptions } from '$lib/api/rpc-client';
@@ -208,6 +208,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				href={resolve('/')}
 				class="flex items-center gap-2 font-sans text-sm tracking-[0.16px] text-white transition-colors hover:text-accent-text"
 			>
+				<img src="{base}/brand-mark-light.svg" alt="" class="h-6 w-6" />
 				<span class="font-semibold tracking-wide">Carbon Panel</span>
 			</a>
 		</div>
