@@ -54,7 +54,7 @@ func (c *Client) CreateModuleContainer(ctx context.Context, module *models.Modul
 
 	// A local image skips the registry. A pull that does not leave the image
 	// on the daemon is a failure, including an error frame in an HTTP 200.
-	if err := c.ensureImage(ctx, imageName); err != nil {
+	if _, err := c.ensureImage(ctx, imageName); err != nil {
 		return "", fmt.Errorf("module image %s is not available: %w", imageName, err)
 	}
 

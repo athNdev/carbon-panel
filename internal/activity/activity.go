@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package activity
 
 import (
@@ -24,6 +23,7 @@ const (
 	EventServerRestart             = "server.restart"
 	EventServerCreate              = "server.create"
 	EventServerUpdate              = "server.update"
+	EventServerImage               = "server.image"
 	EventServerDelete              = "server.delete"
 	EventServerPrivilegedOverrides = "server.privileged_overrides"
 )

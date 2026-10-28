@@ -49,7 +49,10 @@ Other repositories are rejected. A tag stays a tag in the database so the
 image picker still matches it. An image that is already on the daemon is
 used without a registry check. Concurrent pulls of the same reference on
 one client share one request, and a pull is success only after the daemon
-reports that image present.
+reports that image present. The image ID of the container that last came
+up stays recorded when a later pull or recreate fails. A tag change is
+written to the activity log with that ID and whether the running
+container moved to the new image.
 
 # How to check
 

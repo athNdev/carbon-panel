@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	models "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/containerd/errdefs"
 )
 
@@ -24,10 +25,11 @@ type imagePulls struct {
 type imagePullCall struct {
 	done    chan struct{}
 	err     error
+	id      string
 	waiters int
 }
 
-func (p *imagePulls) do(ctx context.Context, image string, fn func() error) error {
+func (p *imagePulls) do(ctx context.Context, image string, fn func() (string, error)) (string, error) {
 	p.mu.Lock()
 	if p.inflight == nil {
 		p.inflight = map[string]*imagePullCall{}
@@ -37,9 +39,9 @@ func (p *imagePulls) do(ctx context.Context, image string, fn func() error) erro
 		p.mu.Unlock()
 		select {
 		case <-call.done:
-			return call.err
+			return call.id, call.err
 		case <-ctx.Done():
-			return ctx.Err()
+			return "", ctx.Err()
 		}
 	}
 	call := &imagePullCall{done: make(chan struct{})}
@@ -52,8 +54,8 @@ func (p *imagePulls) do(ctx context.Context, image string, fn func() error) erro
 		p.mu.Unlock()
 		close(call.done)
 	}()
-	call.err = fn()
-	return call.err
+	call.id, call.err = fn()
+	return call.id, call.err
 }
 
 func (p *imagePulls) waiterCount(image string) int {
@@ -67,54 +69,74 @@ func (p *imagePulls) waiterCount(image string) int {
 
 // ensureImage pulls imageName when the daemon does not already have it.
 // A local image skips the registry. Concurrent callers share one pull.
-// The pull is a failure when the daemon still does not report the image.
-func (c *Client) ensureImage(ctx context.Context, imageName string) error {
+// The returned ID is the daemon image identity. The pull is a failure when
+// the daemon still does not report that image.
+func (c *Client) ensureImage(ctx context.Context, imageName string) (string, error) {
 	imageName = strings.TrimSpace(imageName)
 	if imageName == "" || strings.ContainsAny(imageName, " \t\r\n") {
-		return fmt.Errorf("invalid image reference %q", imageName)
+		return "", fmt.Errorf("invalid image reference %q", imageName)
 	}
-	present, err := c.imagePresent(ctx, imageName)
+	id, present, err := c.imageIdentity(ctx, imageName)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if present {
 		if c.log != nil {
 			c.log.Debug("Image %s exists locally, skipping pull", imageName)
 		}
-		return nil
+		return id, nil
 	}
 	if c.log != nil {
 		c.log.Info("Image %s not present locally, pulling...", imageName)
 	}
-	return c.pulls.do(ctx, imageName, func() error {
-		present, err := c.imagePresent(ctx, imageName)
+	return c.pulls.do(ctx, imageName, func() (string, error) {
+		id, present, err := c.imageIdentity(ctx, imageName)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if present {
-			return nil
+			return id, nil
 		}
 		if err := c.pullImage(ctx, imageName); err != nil {
-			return err
+			return "", err
 		}
-		present, err = c.imagePresent(ctx, imageName)
+		id, present, err = c.imageIdentity(ctx, imageName)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if !present {
-			return fmt.Errorf("image %s is not present after pull", imageName)
+			return "", fmt.Errorf("image %s is not present after pull", imageName)
 		}
-		return nil
+		return id, nil
 	})
 }
 
-func (c *Client) imagePresent(ctx context.Context, imageName string) (bool, error) {
-	_, err := c.docker.ImageInspect(ctx, imageName)
+// ServerImageID is the daemon identity of the server's resolved image.
+func (c *Client) ServerImageID(ctx context.Context, server *models.Server) (string, error) {
+	imageName, err := serverImageName(server)
+	if err != nil {
+		return "", err
+	}
+	id, present, err := c.imageIdentity(ctx, imageName)
+	if err != nil {
+		return "", err
+	}
+	if !present {
+		return "", fmt.Errorf("image %s is not present", imageName)
+	}
+	return id, nil
+}
+
+func (c *Client) imageIdentity(ctx context.Context, imageName string) (string, bool, error) {
+	inspected, err := c.docker.ImageInspect(ctx, imageName)
 	if err == nil {
-		return true, nil
+		if inspected.ID == "" {
+			return "", false, fmt.Errorf("image %s has no identity", imageName)
+		}
+		return inspected.ID, true, nil
 	}
 	if errdefs.IsNotFound(err) {
-		return false, nil
+		return "", false, nil
 	}
-	return false, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
+	return "", false, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
 }

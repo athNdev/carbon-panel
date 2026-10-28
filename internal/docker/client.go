@@ -755,10 +755,10 @@ func serverImageName(server *models.Server) (string, error) {
 // skipped to avoid blocking / stalling during 'Creating' state on network
 // latency or Docker Hub rate limits. A pull is not success until the daemon
 // reports the image present.
-func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) error {
+func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) (string, error) {
 	imageName, err := serverImageName(server)
 	if err != nil {
-		return err
+		return "", err
 	}
 	return c.ensureImage(ctx, imageName)
 }
@@ -779,7 +779,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 	}
 
 	// Ensure image is available locally before creating container (MINE-125).
-	if err := c.ensureImage(ctx, imageName); err != nil {
+	if _, err = c.ensureImage(ctx, imageName); err != nil {
 		return "", err
 	}
 
@@ -1483,6 +1483,9 @@ type RecreateContainerResult struct {
 	// cutover, or after a partial create that could not be rolled back.
 	NewContainerID string
 	WasRunning     bool
+	// ImageID is the daemon identity of the image the replacement came up
+	// with. It is empty when the old container remains the one that runs.
+	ImageID string
 }
 
 // retainedContainerName is the side identity a replaced container keeps
@@ -1506,7 +1509,8 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	if err := validateServerPorts(server); err != nil {
 		return result, err
 	}
-	if err := c.ensureServerImage(ctx, server); err != nil {
+	imageID, err := c.ensureServerImage(ctx, server)
+	if err != nil {
 		return result, err
 	}
 
@@ -1607,6 +1611,7 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	}
 
 	result.NewContainerID = newContainerID
+	result.ImageID = imageID
 	return result, nil
 }
 

@@ -99,8 +99,12 @@ func TestEnsureImageSkipsPullWhenTheDaemonAlreadyHasIt(t *testing.T) {
 	c, cleanup := newImagePullTestClient(t, imageFixture(true, &pulls, nil))
 	t.Cleanup(cleanup)
 
-	if err := c.ensureImage(context.Background(), "example:latest"); err != nil {
+	id, err := c.ensureImage(context.Background(), "example:latest")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if id != "sha256:fixture" {
+		t.Fatalf("image id = %q, want sha256:fixture", id)
 	}
 	if pulls.Load() != 0 {
 		t.Fatalf("pulls = %d, want 0", pulls.Load())
@@ -112,7 +116,7 @@ func TestEnsureImageFailsWhenThePullDoesNotLeaveAnImage(t *testing.T) {
 	c, cleanup := newImagePullTestClient(t, imageFixture(false, &pulls, nil))
 	t.Cleanup(cleanup)
 
-	err := c.ensureImage(context.Background(), "example:latest")
+	_, err := c.ensureImage(context.Background(), "example:latest")
 	if err == nil || !strings.Contains(err.Error(), "not present after pull") {
 		t.Fatalf("ensureImage() error = %v, want image missing after pull", err)
 	}
@@ -134,7 +138,10 @@ func TestEnsureImageCoalescesConcurrentPulls(t *testing.T) {
 
 	const ref = "example:latest"
 	errCh := make(chan error, 2)
-	go func() { errCh <- c.ensureImage(context.Background(), ref) }()
+	go func() {
+		_, err := c.ensureImage(context.Background(), ref)
+		errCh <- err
+	}()
 	select {
 	case <-started:
 	case <-time.After(5 * time.Second):
@@ -142,7 +149,10 @@ func TestEnsureImageCoalescesConcurrentPulls(t *testing.T) {
 	case err := <-errCh:
 		t.Fatalf("first pull finished before the gate: %v", err)
 	}
-	go func() { errCh <- c.ensureImage(context.Background(), ref) }()
+	go func() {
+		_, err := c.ensureImage(context.Background(), ref)
+		errCh <- err
+	}()
 	deadline := time.Now().Add(5 * time.Second)
 	for c.pulls.waiterCount(ref) < 1 {
 		if time.Now().After(deadline) {
