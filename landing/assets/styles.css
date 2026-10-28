@@ -1358,9 +1358,8 @@ body > footer {
 .a-badge { fill: rgba(120, 169, 255, 0.15); stroke: var(--accent-text); stroke-width: 1; }
 .a-badge-t { font-family: var(--mono); font-size: 9px; font-weight: 500; fill: var(--accent-text); }
 
-/* Pinned + scrubbed presentation: JS only, motion OK, wide viewports.
-   Everything else degrades to the static layout above. */
-@media (prefers-reduced-motion: no-preference) and (min-width: 901px) {
+/* Pinned + scrubbed presentation. Reduced motion keeps the static layout above. */
+@media (prefers-reduced-motion: no-preference) {
   .js .arch-track {
     height: 320vh;
   }
@@ -1471,15 +1470,65 @@ body > footer {
 @media (max-width: 900px) {
   .arch-inner {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 28px;
   }
   .arch-visual {
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
+    overflow: hidden;
+    min-width: 0;
   }
   .arch-svg {
-    min-width: 540px;
+    min-width: 0;
+    width: 100%;
   }
+}
+
+/* Phone pin: the same scrub, with the diagram zoomed to the beat so it
+   stays inside the screen instead of panning sideways. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
+  .js .arch-track {
+    height: 280vh;
+  }
+  .js .arch-stage {
+    top: 0;
+    height: 100svh;
+    align-items: flex-start;
+    padding: calc(var(--nav-h) + 8px) 0 12px;
+    overflow: hidden;
+  }
+  .js .arch-inner {
+    gap: 16px;
+  }
+  .js .arch-copy h2 {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .js .arch-sub {
+    font-size: 15px;
+    line-height: 1.45;
+    margin-bottom: 12px;
+  }
+  .js .arch-beats {
+    height: 108px;
+    margin-bottom: 12px;
+  }
+  .js .arch-beat h3 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .js .arch-beat p {
+    font-size: 13.5px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .js .arch-svg {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 900px) and (max-height: 740px) {
+  .js .arch-sub { display: none; }
 }
 /* ============ ARCH-SECTION-END ============ */
 
@@ -2404,8 +2453,7 @@ table.compare .icon { width: 18px; height: 18px; }
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    margin-right: -32px;
-    padding-right: 32px;
+    max-width: 100%;
   }
   .fleet-svg { min-width: 880px; }
 }
