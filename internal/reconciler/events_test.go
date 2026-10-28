@@ -490,6 +490,166 @@ func TestWatchMembershipReplacesNodes(t *testing.T) {
 	t.Fatal("membership did not move from a to b")
 }
 
+func TestWatchGenerationsReplacesOnEndpointChange(t *testing.T) {
+	var lists atomic.Int32
+	var built atomic.Int32
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent, 4),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			built.Add(1)
+			return &scriptedWatcher{
+				out: make(chan ContainerEvent, 1),
+				ev:  ContainerEvent{NodeID: nodeID, Action: "start"},
+			}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	go sup.WatchGenerations(ctx, 15*time.Millisecond, func(context.Context) ([]WatchedNode, error) {
+		if lists.Add(1) == 1 {
+			return []WatchedNode{{ID: "node-a", Generation: 1}}, nil
+		}
+		return []WatchedNode{{ID: "node-a", Generation: 2}}, nil
+	})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if built.Load() >= 2 {
+			break
+		}
+		time.Sleep(15 * time.Millisecond)
+	}
+	if got := built.Load(); got != 2 {
+		t.Fatalf("watchers built = %d, want 2 after the generation change", got)
+	}
+	time.Sleep(40 * time.Millisecond)
+	if got := built.Load(); got != 2 {
+		t.Fatalf("watchers built after the new generation settled = %d, want 2", got)
+	}
+}
+
+func TestSyncGenerationsReplacesTheWatcher(t *testing.T) {
+	var calls atomic.Int32
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent, 4),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			calls.Add(1)
+			return &scriptedWatcher{
+				out: make(chan ContainerEvent, 1),
+				ev:  ContainerEvent{NodeID: nodeID, Action: "start"},
+			}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := sup.SyncGenerations([]WatchedNode{{ID: "node-a", Generation: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := sup.SyncGenerations([]WatchedNode{{ID: "node-a", Generation: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("factory calls after the same generation = %d, want 1", got)
+	}
+	if err := sup.SyncGenerations([]WatchedNode{{ID: "node-a", Generation: 2}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("factory calls after a new generation = %d, want 2", got)
+	}
+	sup.mu.Lock()
+	rw := sup.running["node-a"]
+	sup.mu.Unlock()
+	if rw == nil || rw.generation != 2 {
+		t.Fatalf("running generation = %+v, want 2", rw)
+	}
+}
+
+func TestUnresolvedNodeIsStaleAndDoesNotBlockAnotherNode(t *testing.T) {
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent, 4),
+		running: map[string]*supervisedNode{},
+		factory: func(nodeID string) (eventWatcher, error) {
+			if nodeID == "bad" {
+				return nil, errors.New("daemon unreachable")
+			}
+			return &scriptedWatcher{
+				out: make(chan ContainerEvent, 1),
+				ev:  ContainerEvent{NodeID: nodeID, Action: "start"},
+			}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := sup.SyncGenerations([]WatchedNode{{ID: "good", Generation: 1}, {ID: "bad", Generation: 1}}); err == nil {
+		t.Fatal("expected the unreachable node to be reported")
+	}
+	sup.mu.Lock()
+	_, goodRunning := sup.running["good"]
+	sup.mu.Unlock()
+	if !goodRunning {
+		t.Fatal("healthy node was not watched")
+	}
+	stale := sup.StaleNodes()
+	if len(stale) != 1 || stale[0] != "bad" {
+		t.Fatalf("stale = %v, want [bad]", stale)
+	}
+	if err := sup.SyncGenerations([]WatchedNode{{ID: "good", Generation: 1}}); err != nil {
+		t.Fatal(err)
+	}
+	if leftover := sup.StaleNodes(); len(leftover) != 0 {
+		t.Fatalf("stale after removal = %v", leftover)
+	}
+}
+
+func TestFullEventBufferDoesNotStallTheWatcher(t *testing.T) {
+	watcher := &blockingWatcher{out: make(chan ContainerEvent), sent: make(chan struct{})}
+	sup := &Supervisor{
+		merged:  make(chan ContainerEvent),
+		running: map[string]*supervisedNode{},
+		factory: func(string) (eventWatcher, error) { return watcher, nil },
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := sup.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := sup.Sync([]string{"node-a"}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-watcher.sent:
+	case <-time.After(time.Second):
+		t.Fatal("watcher stalled while the merged event buffer was full")
+	}
+}
+
+type blockingWatcher struct {
+	out  chan ContainerEvent
+	sent chan struct{}
+}
+
+func (w *blockingWatcher) Run(ctx context.Context) {
+	w.out <- ContainerEvent{Action: "start"}
+	w.out <- ContainerEvent{Action: "die"}
+	close(w.sent)
+	<-ctx.Done()
+	close(w.out)
+}
+
+func (w *blockingWatcher) Out() <-chan ContainerEvent { return w.out }
+
 func TestFiltersArgsCompiles(t *testing.T) {
 	args := make(client.Filters)
 	args.Add("type", "container")

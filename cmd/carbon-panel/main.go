@@ -503,18 +503,18 @@ func main() {
 			log.Error("Failed to start Docker events supervisor: %v", err)
 		}
 		reconcileEvents = eventSupervisor.Events()
-		go eventSupervisor.WatchMembership(reconcileCtx, 15*time.Second, func(ctx context.Context) ([]string, error) {
+		go eventSupervisor.WatchGenerations(reconcileCtx, 15*time.Second, func(ctx context.Context) ([]reconciler.WatchedNode, error) {
 			nodes, err := store.ListNodes(ctx)
 			if err != nil {
 				return nil, err
 			}
-			ids := make([]string, 0, len(nodes))
+			watched := make([]reconciler.WatchedNode, 0, len(nodes))
 			for _, n := range nodes {
 				if n != nil && n.Enabled {
-					ids = append(ids, n.ID)
+					watched = append(watched, reconciler.WatchedNode{ID: n.ID, Generation: n.EndpointGeneration})
 				}
 			}
-			return ids, nil
+			return watched, nil
 		})
 	}
 

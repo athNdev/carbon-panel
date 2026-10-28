@@ -17,6 +17,7 @@ package reconciler
 import (
 	"context"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -269,9 +270,18 @@ type eventWatcher interface {
 	Out() <-chan ContainerEvent
 }
 
+// WatchedNode is a node the supervisor should watch, with the endpoint
+// generation the client was resolved for. A later generation replaces the
+// watcher so it does not keep a client from the previous daemon endpoint.
+type WatchedNode struct {
+	ID         string
+	Generation int64
+}
+
 // supervisedNode is one node's watcher and the cancel that stops it.
 type supervisedNode struct {
-	cancel context.CancelFunc
+	cancel     context.CancelFunc
+	generation int64
 }
 
 // Supervisor manages one Watcher per node and fans their output into a
@@ -290,7 +300,13 @@ type Supervisor struct {
 	started     bool
 	parent      context.Context
 	running     map[string]*supervisedNode
-	wg          sync.WaitGroup
+	// initial is the endpoint generation captured when the supervisor is built
+	// from the node store. Start records those generations so the first
+	// refresh does not replace every watcher.
+	initial []WatchedNode
+	// stale is the last resolve error for a desired node that has no watcher.
+	stale map[string]string
+	wg    sync.WaitGroup
 }
 
 // NewSupervisor constructs a Supervisor for an explicit set of node IDs,
@@ -328,18 +344,22 @@ func NewSupervisorFromNodeStore(ctx context.Context, pool *docker.ClientPool, st
 	}
 
 	nodeIDs := make([]string, 0, len(nodes))
+	initial := make([]WatchedNode, 0, len(nodes))
 	for _, n := range nodes {
 		if n == nil || !n.Enabled {
 			continue
 		}
 		nodeIDs = append(nodeIDs, n.ID)
+		initial = append(initial, WatchedNode{ID: n.ID, Generation: n.EndpointGeneration})
 	}
 
 	resolve := func(nodeID string) (*docker.Client, error) {
 		return pool.GetClientStrict(nodeID)
 	}
 
-	return NewSupervisor(nodeIDs, resolve, log), nil
+	supervisor := NewSupervisor(nodeIDs, resolve, log)
+	supervisor.initial = initial
+	return supervisor, nil
 }
 
 // Events returns the merged, fanned-in channel of ContainerEvent values
@@ -371,10 +391,14 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		s.running = map[string]*supervisedNode{}
 	}
 	ids := append([]string(nil), s.nodeIDs...)
+	initial := append([]WatchedNode(nil), s.initial...)
 	s.mu.Unlock()
 
 	go s.closeWhenDone(ctx)
-	return s.apply(ids)
+	if len(initial) > 0 {
+		return s.apply(initial, true)
+	}
+	return s.apply(watchedFromIDs(ids), false)
 }
 
 // Sync sets the watched node set. Before Start it only records the set.
@@ -394,7 +418,66 @@ func (s *Supervisor) Sync(nodeIDs []string) error {
 		s.mu.Unlock()
 		return nil
 	}
-	return s.apply(nodeIDs)
+	return s.apply(watchedFromIDs(nodeIDs), false)
+}
+
+// SyncGenerations sets the watched set and replaces a running watcher when
+// its endpoint generation changed. A node that fails to resolve is recorded
+// as stale and does not stop the other nodes.
+func (s *Supervisor) SyncGenerations(nodes []WatchedNode) error {
+	s.reconcileMu.Lock()
+	defer s.reconcileMu.Unlock()
+
+	s.mu.Lock()
+	started := s.started
+	s.mu.Unlock()
+	if !started {
+		s.mu.Lock()
+		s.nodeIDs = idsFromWatched(uniqueWatched(nodes))
+		s.mu.Unlock()
+		return nil
+	}
+	return s.apply(nodes, true)
+}
+
+// StaleNodes returns the desired nodes whose Docker client could not be
+// resolved. A later successful resolve removes the node from this list.
+func (s *Supervisor) StaleNodes() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]string, 0, len(s.stale))
+	for id := range s.stale {
+		out = append(out, id)
+	}
+	return out
+}
+
+// WatchGenerations refreshes membership and endpoint generation until ctx is
+// cancelled. A failed listing keeps the previous watchers. A changed
+// generation replaces that node's watcher.
+func (s *Supervisor) WatchGenerations(ctx context.Context, every time.Duration, list func(context.Context) ([]WatchedNode, error)) {
+	if every <= 0 {
+		every = 15 * time.Second
+	}
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			nodes, err := list(ctx)
+			if err != nil {
+				if s.log != nil {
+					s.log.Warn("reconciler: node generation refresh failed: %v", err)
+				}
+				continue
+			}
+			if err := s.SyncGenerations(nodes); err != nil && s.log != nil {
+				s.log.Warn("reconciler: node generation update failed: %v", err)
+			}
+		}
+	}
 }
 
 // WatchMembership refreshes the watched set on every interval until ctx is
@@ -437,48 +520,64 @@ func (s *Supervisor) closeWhenDone(ctx context.Context) {
 	close(s.merged)
 }
 
-func (s *Supervisor) apply(nodeIDs []string) error {
+func (s *Supervisor) apply(nodes []WatchedNode, replaceOnGeneration bool) error {
 	if s.parent != nil && s.parent.Err() != nil {
 		return s.parent.Err()
 	}
-	ordered := uniqueIDs(nodeIDs)
-	desired := make(map[string]struct{}, len(ordered))
-	for _, id := range ordered {
-		desired[id] = struct{}{}
+	ordered := uniqueWatched(nodes)
+	desired := make(map[string]WatchedNode, len(ordered))
+	for _, node := range ordered {
+		desired[node.ID] = node
 	}
 
 	s.mu.Lock()
 	if s.running == nil {
 		s.running = map[string]*supervisedNode{}
 	}
-	for id, rw := range s.running {
+	if s.stale == nil {
+		s.stale = map[string]string{}
+	}
+	var missing []WatchedNode
+	for id := range s.stale {
 		if _, ok := desired[id]; !ok {
+			delete(s.stale, id)
+		}
+	}
+	for id, rw := range s.running {
+		want, ok := desired[id]
+		if !ok {
+			rw.cancel()
+			delete(s.running, id)
+			delete(s.stale, id)
+			continue
+		}
+		if replaceOnGeneration && rw.generation != want.Generation {
 			rw.cancel()
 			delete(s.running, id)
 		}
 	}
-	var missing []string
-	for _, id := range ordered {
-		if _, ok := s.running[id]; !ok {
-			missing = append(missing, id)
+	for _, node := range ordered {
+		if _, ok := s.running[node.ID]; !ok {
+			missing = append(missing, node)
 		}
 	}
 	factory := s.factory
-	s.nodeIDs = ordered
+	s.nodeIDs = idsFromWatched(ordered)
 	s.mu.Unlock()
 
 	var firstErr error
-	for _, id := range missing {
+	for _, node := range missing {
 		if s.parent != nil && s.parent.Err() != nil {
 			if firstErr == nil {
 				firstErr = s.parent.Err()
 			}
 			break
 		}
-		w, err := factory(id)
+		w, err := factory(node.ID)
 		if err != nil {
+			s.noteStale(node.ID, err)
 			if s.log != nil {
-				s.log.Error("reconciler: failed to resolve Docker client for node %q: %v", id, err)
+				s.log.Error("reconciler: failed to resolve Docker client for node %q: %v", node.ID, err)
 			}
 			if firstErr == nil {
 				firstErr = err
@@ -491,22 +590,36 @@ func (s *Supervisor) apply(nodeIDs []string) error {
 			}
 			break
 		}
-		s.startWatcher(id, w)
+		s.startWatcher(node, w)
 	}
 	return firstErr
 }
 
-func (s *Supervisor) startWatcher(id string, w eventWatcher) {
+func (s *Supervisor) noteStale(id string, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stale == nil {
+		s.stale = map[string]string{}
+	}
+	if err == nil {
+		delete(s.stale, id)
+		return
+	}
+	s.stale[id] = err.Error()
+}
+
+func (s *Supervisor) startWatcher(node WatchedNode, w eventWatcher) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.parent != nil && s.parent.Err() != nil {
 		return
 	}
-	if _, exists := s.running[id]; exists {
+	if _, exists := s.running[node.ID]; exists {
 		return
 	}
 	nodeCtx, cancel := context.WithCancel(s.parent)
-	s.running[id] = &supervisedNode{cancel: cancel}
+	s.running[node.ID] = &supervisedNode{cancel: cancel, generation: node.Generation}
+	delete(s.stale, node.ID)
 	s.wg.Add(2)
 	go func() {
 		defer s.wg.Done()
@@ -524,12 +637,50 @@ func (s *Supervisor) startWatcher(id string, w eventWatcher) {
 				case s.merged <- ev:
 				case <-nodeCtx.Done():
 					return
+				default:
+					// A full merged buffer must not stall this node's event
+					// stream. The periodic sweep remains the status source.
 				}
 			case <-nodeCtx.Done():
 				return
 			}
 		}
 	}()
+}
+
+func watchedFromIDs(ids []string) []WatchedNode {
+	out := make([]WatchedNode, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, WatchedNode{ID: id})
+	}
+	return out
+}
+
+func idsFromWatched(nodes []WatchedNode) []string {
+	out := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		out = append(out, node.ID)
+	}
+	return out
+}
+
+func uniqueWatched(nodes []WatchedNode) []WatchedNode {
+	index := make(map[string]int, len(nodes))
+	out := make([]WatchedNode, 0, len(nodes))
+	for _, node := range nodes {
+		id := strings.TrimSpace(node.ID)
+		if id == "" {
+			continue
+		}
+		node.ID = id
+		if at, ok := index[id]; ok {
+			out[at] = node
+			continue
+		}
+		index[id] = len(out)
+		out = append(out, node)
+	}
+	return out
 }
 
 func uniqueIDs(ids []string) []string {
