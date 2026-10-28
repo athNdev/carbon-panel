@@ -833,6 +833,7 @@ func (x *StagedUpdateItem) GetSummary() string {
 	return ""
 }
 
+// Request for the server's open update batch.
 type GetUpdateBatchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -877,13 +878,15 @@ func (x *GetUpdateBatchRequest) GetServerId() string {
 	return ""
 }
 
+// The open batch, its window, and the items waiting in it.
 type GetUpdateBatchResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Open          bool                   `protobuf:"varint,1,opt,name=open,proto3" json:"open,omitempty"`
-	Window        ConfigApplyWindow      `protobuf:"varint,2,opt,name=window,proto3,enum=carbonpanel.v1.ConfigApplyWindow" json:"window,omitempty"`
-	ApplyAtUnix   int64                  `protobuf:"varint,3,opt,name=apply_at_unix,json=applyAtUnix,proto3" json:"apply_at_unix,omitempty"`
-	IdleMinutes   int32                  `protobuf:"varint,4,opt,name=idle_minutes,json=idleMinutes,proto3" json:"idle_minutes,omitempty"`
-	Items         []*StagedUpdateItem    `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Open   bool                   `protobuf:"varint,1,opt,name=open,proto3" json:"open,omitempty"`
+	Window ConfigApplyWindow      `protobuf:"varint,2,opt,name=window,proto3,enum=carbonpanel.v1.ConfigApplyWindow" json:"window,omitempty"`
+	// UTC unix seconds. Zero when the window is not a timestamp.
+	ApplyAtUnix   int64               `protobuf:"varint,3,opt,name=apply_at_unix,json=applyAtUnix,proto3" json:"apply_at_unix,omitempty"`
+	IdleMinutes   int32               `protobuf:"varint,4,opt,name=idle_minutes,json=idleMinutes,proto3" json:"idle_minutes,omitempty"`
+	Items         []*StagedUpdateItem `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -953,6 +956,7 @@ func (x *GetUpdateBatchResponse) GetItems() []*StagedUpdateItem {
 	return nil
 }
 
+// Drop one staged item, or the whole batch when item_id is empty.
 type DiscardUpdateBatchRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	ServerId string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -1006,6 +1010,7 @@ func (x *DiscardUpdateBatchRequest) GetItemId() string {
 	return ""
 }
 
+// Empty after the item or batch is discarded.
 type DiscardUpdateBatchResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
