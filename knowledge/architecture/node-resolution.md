@@ -37,6 +37,10 @@ wrong host. That is a data-safety bug, not a degraded mode.
   UDP publish does not occupy the same number on TCP, and a TCP publish does
   not occupy it on UDP. The controller socket table is consulted only for the
   local node, and only for the protocol being reserved.
+- A durable port lease is unique per node, port, and protocol. Additional
+  binds are claimed before the server row is kept, and a failed create drops
+  those claims. Moving a server moves its leases onto the target node, and
+  leaves them on the source when the target already holds that bind.
 
 # How to check
 

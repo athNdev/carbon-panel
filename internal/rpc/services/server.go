@@ -164,6 +164,17 @@ func (s *ServerService) checkNodeHostPortProtocol(ctx context.Context, nodeID st
 	return nil
 }
 
+func hostPorts(ports []*v1.AdditionalPort) []storage.HostPort {
+	out := make([]storage.HostPort, 0, len(ports))
+	for _, port := range ports {
+		if port == nil {
+			continue
+		}
+		out = append(out, storage.HostPort{Port: int(port.HostPort), Protocol: port.Protocol})
+	}
+	return out
+}
+
 func (s *ServerService) checkAdditionalHostPorts(ctx context.Context, nodeID string, ports []*v1.AdditionalPort) error {
 	for _, extra := range ports {
 		protocol := extra.GetProtocol()
@@ -1177,7 +1188,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}()
 	}
 
-	backendReserved := false
+	portsReserved := false
 	if server.ProxyHostname != "" {
 		used := map[int]bool{}
 		dockerCli, err := s.getDockerClientStrict(server.NodeID)
@@ -1197,11 +1208,11 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no free backend port on node: %w", err))
 		}
 		server.Port = gamePort
-		backendReserved = true
+		portsReserved = true
 	}
 	keepLease := false
 	defer func() {
-		if backendReserved && !keepLease {
+		if portsReserved && !keepLease {
 			_ = s.store.ReleaseBackendPorts(context.WithoutCancel(ctx), server.ID)
 		}
 	}()
@@ -1216,6 +1227,15 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 	}
 	if err := s.checkAdditionalHostPorts(ctx, server.NodeID, server.AdditionalPorts); err != nil {
 		return nil, err
+	}
+	if len(server.AdditionalPorts) > 0 {
+		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(server.AdditionalPorts)); err != nil {
+			if errors.Is(err, storage.ErrPortLeaseHeld) {
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to reserve additional ports: %w", err))
+		}
+		portsReserved = true
 	}
 
 	// The creation task continues after this RPC returns. Claim the same
@@ -1576,6 +1596,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		server.DeepSleepTimeoutMinutes = int(*msg.DeepSleepTimeoutMinutes)
 	}
 
+	var rollbackAdditional bool
 	// Handle additional ports update
 	if len(msg.AdditionalPorts) > 0 {
 		// Validate additional ports
@@ -1626,6 +1647,19 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		if err := s.checkAdditionalHostPorts(ctx, server.NodeID, additionalPorts); err != nil {
 			return nil, err
 		}
+		previousPorts := hostPorts(server.AdditionalPorts)
+		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(additionalPorts)); err != nil {
+			if errors.Is(err, storage.ErrPortLeaseHeld) {
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to reserve additional ports: %w", err))
+		}
+		rollbackAdditional = true
+		defer func() {
+			if rollbackAdditional {
+				_ = s.store.ReplaceAdditionalPortLeases(context.WithoutCancel(ctx), server.NodeID, server.ID, previousPorts)
+			}
+		}()
 		server.AdditionalPorts = additionalPorts
 		needsRecreation = true
 	}
@@ -1692,6 +1726,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		s.log.Error("Failed to update server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
 	}
+	rollbackAdditional = false
 	if capacityLockHeld {
 		s.capacityMu.Unlock()
 		capacityLockHeld = false

@@ -205,6 +205,52 @@ func TestCheckNodeHostPortTreatsTCPAndUDPAsDifferentBinds(t *testing.T) {
 	}
 }
 
+func TestCreateServerLeasesUDPWithoutTakingTheTCPPort(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostPortBoundUDP = func(int) bool { return false }
+	ctx := ctxWithRole("operator")
+
+	first, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name: "voice-a", NodeId: "test-node", McVersion: "1.20.1", DockerImage: "java21",
+		Port: 25590,
+		AdditionalPorts: []*v1.AdditionalPort{{
+			ContainerPort: 19132, HostPort: 25590, Protocol: "udp",
+		}},
+	}))
+	if err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+	var leased []db.BackendPortLease
+	if err := svc.store.DB().Where("server_id = ? AND protocol = ?", first.Msg.Server.Id, "udp").Find(&leased).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(leased) != 1 || leased[0].Port != 25590 {
+		t.Fatalf("udp leases = %+v, want 25590", leased)
+	}
+
+	_, err = svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name: "voice-b", NodeId: "test-node", McVersion: "1.20.1", DockerImage: "java21",
+		Port: 25591,
+		AdditionalPorts: []*v1.AdditionalPort{{
+			ContainerPort: 19132, HostPort: 25590, Protocol: "udp",
+		}},
+	}))
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "already leased") {
+		t.Fatalf("second UDP create error = %v, want the lease to refuse it", err)
+	}
+
+	if _, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name: "tcp-same-number", NodeId: "test-node", McVersion: "1.20.1", DockerImage: "java21",
+		Port: 25592,
+		AdditionalPorts: []*v1.AdditionalPort{{
+			ContainerPort: 25592, HostPort: 25591, Protocol: "tcp",
+		}},
+	})); err != nil {
+		t.Fatalf("TCP additional port on a free number: %v", err)
+	}
+}
+
 func TestLocalTCPBindDoesNotOccupyUDP(t *testing.T) {
 	svc, _ := newDockerPrivilegeTestService(t)
 	svc.hostPortBound = func(int) bool { return true }
