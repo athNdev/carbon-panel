@@ -192,15 +192,15 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 		}
 	}
 
-	// Read lock check
-	p.mu.RLock()
-	cli, exists := p.clients[nodeID]
-	allowFallback := p.allowFallback
-	p.mu.RUnlock()
-	if exists && cli != nil {
-		atomic.AddUint64(&p.stats.cacheHits, 1)
-		return cli, nil
+	cached, fresh, err := p.lookupCachedClient(nodeID)
+	if err != nil {
+		return nil, err
 	}
+	if fresh {
+		atomic.AddUint64(&p.stats.cacheHits, 1)
+		return cached, nil
+	}
+	allowFallback := p.IsFallbackEnabled()
 
 	atomic.AddUint64(&p.stats.cacheMisses, 1)
 
@@ -226,6 +226,7 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	if node.IsLocal && p.defaultClient != nil {
 		p.mu.Lock()
 		p.clients[nodeID] = p.defaultClient
+		p.nodeConfigs[nodeID] = cloneNode(node)
 		p.mu.Unlock()
 		atomic.AddUint64(&p.stats.cacheHits, 1)
 		return p.defaultClient, nil
@@ -255,7 +256,7 @@ func (p *ClientPool) GetClient(nodeID string) (*Client, error) {
 	}
 
 	p.clients[nodeID] = newCli
-	p.nodeConfigs[nodeID] = node
+	p.nodeConfigs[nodeID] = cloneNode(node)
 	return newCli, nil
 }
 
@@ -275,12 +276,13 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 		}
 	}
 
-	p.mu.RLock()
-	cli, exists := p.clients[nodeID]
-	p.mu.RUnlock()
-	if exists && cli != nil {
+	cached, fresh, err := p.lookupCachedClient(nodeID)
+	if err != nil {
+		return nil, err
+	}
+	if fresh {
 		atomic.AddUint64(&p.stats.cacheHits, 1)
-		return cli, nil
+		return cached, nil
 	}
 
 	atomic.AddUint64(&p.stats.cacheMisses, 1)
@@ -297,6 +299,7 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 	if node.IsLocal && p.defaultClient != nil {
 		p.mu.Lock()
 		p.clients[nodeID] = p.defaultClient
+		p.nodeConfigs[nodeID] = cloneNode(node)
 		p.mu.Unlock()
 		atomic.AddUint64(&p.stats.cacheHits, 1)
 		return p.defaultClient, nil
@@ -319,8 +322,77 @@ func (p *ClientPool) GetClientStrict(nodeID string) (*Client, error) {
 	}
 
 	p.clients[nodeID] = newCli
-	p.nodeConfigs[nodeID] = node
+	p.nodeConfigs[nodeID] = cloneNode(node)
 	return newCli, nil
+}
+
+// lookupCachedClient returns a cached client only when its recorded endpoint
+// still matches the node row. A changed host or TLS material drops that
+// client so the caller builds one for the current daemon. A client registered
+// without an endpoint, such as a test double, is returned as-is.
+func (p *ClientPool) lookupCachedClient(nodeID string) (*Client, bool, error) {
+	p.mu.RLock()
+	cli := p.clients[nodeID]
+	var cached *models.Node
+	if cfg := p.nodeConfigs[nodeID]; cfg != nil {
+		cp := *cfg
+		cached = &cp
+	}
+	store := p.store
+	p.mu.RUnlock()
+
+	if cli == nil {
+		return nil, false, nil
+	}
+	if cached == nil || store == nil {
+		return cli, true, nil
+	}
+	node, err := store.GetNode(context.Background(), nodeID)
+	if err != nil {
+		return nil, false, fmt.Errorf("node %s endpoint could not be confirmed: %w", nodeID, err)
+	}
+	if !endpointChanged(cached, node) {
+		return cli, true, nil
+	}
+	p.dropCachedClient(nodeID)
+	return nil, false, nil
+}
+
+// dropCachedClient forgets a node client after its endpoint changes. The
+// shared default client is left open because other node ids still use it.
+func (p *ClientPool) dropCachedClient(nodeID string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	cli := p.clients[nodeID]
+	delete(p.clients, nodeID)
+	delete(p.nodeConfigs, nodeID)
+	delete(p.hostMemories, nodeID)
+	if cli == nil || cli == p.defaultClient {
+		return
+	}
+	if err := cli.Close(); err != nil && p.log != nil {
+		p.log.Warn("Error closing stale client for node %s: %v", nodeID, err)
+	}
+}
+
+func endpointChanged(cached, current *models.Node) bool {
+	if cached == nil || current == nil {
+		return false
+	}
+	return cached.Host != current.Host ||
+		cached.TLSEnabled != current.TLSEnabled ||
+		cached.TLSSkipVerify != current.TLSSkipVerify ||
+		cached.TLSCACert != current.TLSCACert ||
+		cached.TLSCert != current.TLSCert ||
+		cached.TLSKey != current.TLSKey
+}
+
+func cloneNode(node *models.Node) *models.Node {
+	if node == nil {
+		return nil
+	}
+	cp := *node
+	return &cp
 }
 
 // RemoveNode closes and unregisters a node client from the pool.

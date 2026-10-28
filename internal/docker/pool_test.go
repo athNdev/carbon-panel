@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
@@ -170,6 +169,39 @@ func TestClientPool_RegisterAndRemoveNode(t *testing.T) {
 	afterRemove, err := pool.GetClient("custom-node")
 	if err != nil || afterRemove != defaultCli {
 		t.Fatalf("expected fallback to default after removal when enabled, got %v (err: %v)", afterRemove, err)
+	}
+}
+
+func TestGetClientStrictDropsAClientWhenTheEndpointChanges(t *testing.T) {
+	log := logger.New()
+	stale := &Client{log: log, host: "tcp://10.0.0.2:2375"}
+	store := newMockNodeStore(&models.Node{
+		ID: "remote-b", Name: "B", Host: "tcp://10.0.0.2:2375", Enabled: true,
+	})
+	pool := NewClientPool(store, &Client{log: log}, log)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	pool.mu.Lock()
+	pool.clients["remote-b"] = stale
+	recorded := *store.nodes["remote-b"]
+	pool.nodeConfigs["remote-b"] = &recorded
+	pool.mu.Unlock()
+
+	got, err := pool.GetClientStrict("remote-b")
+	if err != nil || got != stale {
+		t.Fatalf("unchanged endpoint = %v %v, want the cached client", got, err)
+	}
+
+	store.mu.Lock()
+	store.nodes["remote-b"].Host = "tcp://10.0.0.3:2375"
+	store.mu.Unlock()
+
+	got, err = pool.GetClientStrict("remote-b")
+	if err != nil {
+		t.Fatalf("rebuild after endpoint change: %v", err)
+	}
+	if got == stale || got.host != "tcp://10.0.0.3:2375" {
+		t.Fatalf("client after endpoint change = host %q, want the new endpoint", got.host)
 	}
 }
 

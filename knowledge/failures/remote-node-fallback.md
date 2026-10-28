@@ -22,7 +22,8 @@ silently operates on the controller's local Docker socket.
 # What was fixed
 
 Module, snapshot and deep-sleep helpers now return an error when the target node
-cannot be resolved, and a module records the server's node ID.
+cannot be resolved, and a module records the server's node ID. A cached client
+is not reused after that node's host or TLS material changes.
 
 # Remaining exposure
 
