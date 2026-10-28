@@ -95,6 +95,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let step = $state<'select' | 'configure'>('select');
 	let selectedTemplate = $state<ModuleTemplate | null>(null);
 	let submitting = $state(false);
+	let stageIntoBatch = $state(false);
 	let activeSection = $state<ConfigSection>('general');
 
 	// Form state
@@ -556,7 +557,7 @@ one at https://mozilla.org/MPL/2.0/.
 				});
 				toast.success(`Module "${name}" created`);
 			} else if (module) {
-				await rpcClient.module.updateModule({
+				const stagedScalars = {
 					id: module.id,
 					name,
 					envOverrides: envVarsToJson(),
@@ -566,20 +567,33 @@ one at https://mozilla.org/MPL/2.0/.
 					autoStart,
 					followServerLifecycle,
 					detached,
-					ports: portsPayload,
-					dependencies: depsPayload,
-					healthCheckInterval,
-					healthCheckTimeout,
-					healthCheckRetries,
-					eventHooks: hooksPayload,
-					metadata: metadataToMap(),
 					uid,
 					gid,
 					initCommand,
 					initCommandDelay,
-					restartAfterInit
-				});
-				toast.success(`Module "${name}" updated`);
+					restartAfterInit,
+					stage: true
+				};
+				await rpcClient.module.updateModule(
+					stageIntoBatch
+						? stagedScalars
+						: {
+								...stagedScalars,
+								stage: false,
+								ports: portsPayload,
+								dependencies: depsPayload,
+								healthCheckInterval,
+								healthCheckTimeout,
+								healthCheckRetries,
+								eventHooks: hooksPayload,
+								metadata: metadataToMap()
+							}
+				);
+				toast.success(
+					stageIntoBatch
+						? `Module "${name}" staged. Ports and hooks stay as they are until a save.`
+						: `Module "${name}" updated`
+				);
 			}
 			open = false;
 			onSuccess();
@@ -1515,6 +1529,12 @@ one at https://mozilla.org/MPL/2.0/.
 
 					<!-- Footer -->
 					<div class="flex items-center justify-end gap-3 border-t bg-muted/30 px-8 py-5">
+						{#if mode !== 'create'}
+							<label class="mr-auto flex cursor-pointer items-center gap-3 text-sm">
+								<Switch bind:checked={stageIntoBatch} />
+								<span>Stage into the open batch</span>
+							</label>
+						{/if}
 						{#if mode === 'create'}
 							<Button
 								variant="outline"

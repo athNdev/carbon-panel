@@ -348,6 +348,47 @@ func (s *Store) DiscardStagedConfigChange(ctx context.Context, id string) error 
 	return s.db.WithContext(ctx).Save(staged).Error
 }
 
+// StagedConfigConflict reports whether a live field moved after a staged row
+// in the batch was recorded. It does not write the live config.
+func (s *Store) StagedConfigConflict(ctx context.Context, serverID, batchID string) error {
+	var rows []StagedConfigChange
+	if err := s.db.WithContext(ctx).
+		Where("server_id = ? AND batch_id = ? AND status = ?", serverID, batchID, StagedStatusStaged).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	live := &ServerConfig{}
+	err := s.db.WithContext(ctx).Where("server_id = ?", serverID).First(live).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		live = s.CreateDefaultServerConfig(serverID)
+	} else if err != nil {
+		return err
+	}
+	base, err := ServerConfigToMap(live)
+	if err != nil {
+		return err
+	}
+	for i := range rows {
+		if err := stagedConfigStillMatches(base, rows[i].BasePayload); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ListBatchConfig returns staged config rows still waiting in one batch, oldest first.
+func (s *Store) ListBatchConfig(ctx context.Context, batchID string) ([]*StagedConfigChange, error) {
+	var rows []*StagedConfigChange
+	err := s.db.WithContext(ctx).
+		Where("batch_id = ? AND status = ?", batchID, StagedStatusStaged).
+		Order("created_at asc").
+		Find(&rows).Error
+	return rows, err
+}
+
 // ApplyStagedConfigChange merges a staged diff into the live ServerConfig and
 // flips the record to applied. Callers decide when to invoke it (restart hook
 // or cron tick); container recreation stays the caller's responsibility.

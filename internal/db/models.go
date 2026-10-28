@@ -565,6 +565,7 @@ type ServerUpdateBatch struct {
 	Window      string     `json:"window" gorm:"not null"`
 	ApplyAt     *time.Time `json:"apply_at,omitempty" gorm:"column:apply_at"`
 	IdleMinutes int        `json:"idle_minutes,omitempty" gorm:"column:idle_minutes"`
+	IdleSince   *time.Time `json:"idle_since,omitempty" gorm:"column:idle_since"`
 	Status      string     `json:"status" gorm:"not null;index"`
 	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
@@ -577,6 +578,8 @@ const (
 	StagedKindMod      = "mod"
 	StagedKindDatapack = "datapack"
 	StagedKindFile     = "file"
+	StagedKindModpack  = "modpack"
+	StagedKindModule   = "module"
 
 	StagedActionInstall = "install"
 	StagedActionReplace = "replace"
@@ -596,6 +599,7 @@ type StagedContentChange struct {
 	FileName   string       `json:"file_name" gorm:"column:file_name"`
 	Status     StagedStatus `json:"status" gorm:"not null;index"`
 	CreatedAt  time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	AppliedAt  *time.Time   `json:"applied_at,omitempty" gorm:"column:applied_at"`
 	Server     *Server      `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
 }
 

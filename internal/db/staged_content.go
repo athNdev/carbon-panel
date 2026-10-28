@@ -7,9 +7,12 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // AddStagedContent joins the server's one open batch and records a content
@@ -24,7 +27,7 @@ func (s *Store) AddStagedContent(ctx context.Context, row *StagedContentChange) 
 		return nil, fmt.Errorf("staged content file is required")
 	}
 	switch row.Kind {
-	case StagedKindMod, StagedKindDatapack, StagedKindFile:
+	case StagedKindMod, StagedKindDatapack, StagedKindFile, StagedKindModpack, StagedKindModule:
 	default:
 		return nil, fmt.Errorf("unknown staged content kind %q", row.Kind)
 	}
@@ -83,4 +86,77 @@ func (s *Store) DiscardStagedContent(ctx context.Context, id string) (*StagedCon
 		return nil, err
 	}
 	return &row, nil
+}
+
+// ListOpenUpdateBatches returns every batch that can still receive or apply updates.
+func (s *Store) ListOpenUpdateBatches(ctx context.Context) ([]ServerUpdateBatch, error) {
+	var rows []ServerUpdateBatch
+	err := s.db.WithContext(ctx).Where("status = ?", UpdateBatchOpen).Order("created_at asc").Find(&rows).Error
+	return rows, err
+}
+
+// OpenUpdateBatch returns the server's open batch, or nil when there is none.
+func (s *Store) OpenUpdateBatch(ctx context.Context, serverID string) (*ServerUpdateBatch, error) {
+	var batch ServerUpdateBatch
+	err := s.db.WithContext(ctx).Where("open_key = ?", serverID).First(&batch).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &batch, nil
+}
+
+// SetBatchIdleSince records when the current idle stretch started.
+// A nil value clears it, which is what a player joining does.
+func (s *Store) SetBatchIdleSince(ctx context.Context, id string, since *time.Time) error {
+	return s.db.WithContext(ctx).Model(&ServerUpdateBatch{}).Where("id = ?", id).Update("idle_since", since).Error
+}
+
+// CloseUpdateBatch finishes the open batch so another one can be recorded.
+func (s *Store) CloseUpdateBatch(ctx context.Context, id, status string) error {
+	return s.db.WithContext(ctx).Model(&ServerUpdateBatch{}).Where("id = ? AND status = ?", id, UpdateBatchOpen).Updates(map[string]any{
+		"status":   status,
+		"open_key": nil,
+	}).Error
+}
+
+// ListBatchContent returns staged content still waiting in one batch.
+func (s *Store) ListBatchContent(ctx context.Context, batchID string) ([]StagedContentChange, error) {
+	var rows []StagedContentChange
+	err := s.db.WithContext(ctx).
+		Where("batch_id = ? AND status = ?", batchID, StagedStatusStaged).
+		Order("created_at asc").
+		Find(&rows).Error
+	return rows, err
+}
+
+// MarkStagedContentApplied records that a content row was committed to the live tree.
+func (s *Store) MarkStagedContentApplied(ctx context.Context, id string) error {
+	now := time.Now()
+	res := s.db.WithContext(ctx).Model(&StagedContentChange{}).
+		Where("id = ? AND status = ?", id, StagedStatusStaged).
+		Updates(map[string]any{"status": StagedStatusApplied, "applied_at": now})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected != 1 {
+		return fmt.Errorf("staged content %s is not waiting to be applied", id)
+	}
+	return nil
+}
+
+// MarkStagedContentStaged returns an applied content row to staged after a failed publish.
+func (s *Store) MarkStagedContentStaged(ctx context.Context, id string) error {
+	res := s.db.WithContext(ctx).Model(&StagedContentChange{}).
+		Where("id = ? AND status = ?", id, StagedStatusApplied).
+		Updates(map[string]any{"status": StagedStatusStaged, "applied_at": nil})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected != 1 {
+		return fmt.Errorf("staged content %s is not applied", id)
+	}
+	return nil
 }
