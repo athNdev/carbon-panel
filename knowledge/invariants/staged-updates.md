@@ -8,6 +8,7 @@ code_refs:
   - internal/db/staged_config.go
   - internal/db/staged_content.go
   - internal/rpc/services/stage_content.go
+  - internal/staging
 sources:
   - title: Staged update research
     resource: ../../docs/research/staged-update-application.md
@@ -28,5 +29,14 @@ node whose storage is unreachable refuses the stage and gets no
 controller-local copy.
 
 Client-only mod jars and archives that are not datapacks are rejected before
-any staged byte is kept. Applying the batch on a clock time or after idle time
-is a separate step from recording it.
+any staged byte is kept.
+
+Publishing a due batch is journaled. A future timestamp or an unfinished idle
+stretch stays staged across an incidental restart. Idle does not fire unless
+the same player-count provider used by freeze and deep sleep is installed, and
+the time that stretch started is stored on the batch. A player joining clears
+it. Deep sleep commits the batch onto the stopped server and does not start
+the JVM. A running server is saved and restarted once. A frozen server gets a
+real stop and start and is left running. If that publish fails, the previous
+files and config are restored and the batch stays open. A live config field
+that moved after it was staged stops the publish before anything is written.

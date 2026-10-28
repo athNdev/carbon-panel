@@ -33,6 +33,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/snapshot"
+	"github.com/athNdev/carbon-panel/internal/staging"
 	"github.com/athNdev/carbon-panel/internal/webhook"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -81,6 +82,10 @@ type Scheduler struct {
 
 	// Multi-node Docker client pool (optional; falls back to s.docker)
 	clientPool *docker.ClientPool
+
+	// playerCount is the same online-player source freeze and deep sleep use.
+	// Nil means the provider is not installed, so an idle window does not fire.
+	playerCount func(serverID string) int
 }
 
 // Config holds scheduler configuration
@@ -140,6 +145,14 @@ func (s *Scheduler) SetClientPool(pool *docker.ClientPool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.clientPool = pool
+}
+
+// SetPlayerCountProvider installs the online-player source used for idle
+// apply windows. It is the same function freeze and deep sleep use.
+func (s *Scheduler) SetPlayerCountProvider(provider func(serverID string) int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.playerCount = provider
 }
 
 func (s *Scheduler) dockerForNode(nodeID string) (*docker.Client, error) {
@@ -937,15 +950,29 @@ type stagedLifecycleDocker interface {
 // change. A replacement ID is persisted even when Docker reports a partial
 // recreate failure, allowing the next attempt to recover from the right object.
 func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server, startReplacement, markStarted bool) (bool, error) {
+	undoFiles := func() {}
+	contentReady := false
+	if concrete, ok := store.(*storage.Store); ok {
+		undo, fileErr := staging.CommitNextRestartFiles(ctx, concrete, server)
+		if fileErr != nil {
+			return true, fmt.Errorf("failed to apply staged content: %w", fileErr)
+		}
+		if undo != nil {
+			undoFiles = undo
+			contentReady = true
+		}
+	}
 	appliedRecords, err := ApplyOnRestartStagedConfigRecords(ctx, store, server.ID)
 	if err != nil {
+		undoFiles()
 		return true, fmt.Errorf("failed to apply staged server configuration: %w", err)
 	}
 	pending, err := HasPendingRestartStagedConfigRecreate(ctx, store, server.ID, server.LastStarted)
 	if err != nil {
+		undoFiles()
 		return true, fmt.Errorf("failed to check staged configuration recovery: %w", err)
 	}
-	if len(appliedRecords) == 0 && !pending {
+	if len(appliedRecords) == 0 && !pending && !contentReady {
 		return false, nil
 	}
 
@@ -985,6 +1012,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		if persistErr := store.UpdateServer(ctx, server); persistErr != nil && log != nil {
 			log.Error("Failed to persist server state after scheduled staged recreation error for server %s: %v", server.ID, persistErr)
 		}
+		undoFiles()
 		// Rollback newly applied staged configs on container recreate failure (SCH-1)
 		for _, rec := range appliedRecords {
 			if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
@@ -999,6 +1027,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		server.ContainerID = ""
 		server.Status = storage.StatusError
 		_ = store.UpdateServer(ctx, server)
+		undoFiles()
 		for _, rec := range appliedRecords {
 			if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
 				log.Error("Failed to auto-rollback staged config %s after scheduled recreate missing container ID: %v", rec.ID, rbErr)
@@ -1014,6 +1043,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		if err := dockerClient.StartContainer(ctx, result.NewContainerID); err != nil {
 			server.Status = storage.StatusError
 			_ = store.UpdateServer(ctx, server)
+			undoFiles()
 			for _, rec := range appliedRecords {
 				if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
 					log.Error("Failed to auto-rollback staged config %s after scheduled start failure: %v", rec.ID, rbErr)
@@ -1023,6 +1053,9 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 			}
 			return true, fmt.Errorf("failed to start recreated server: %w", err)
 		}
+	}
+	if concrete, ok := store.(*storage.Store); ok {
+		_ = staging.FinishNextRestartBatch(ctx, concrete, server.ID)
 	}
 	if err := store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 		return true, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err)

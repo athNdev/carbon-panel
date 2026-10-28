@@ -309,6 +309,12 @@ func main() {
 		CheckInterval: time.Duration(cfg.Docker.SyncInterval) * time.Second, // Use same interval as container status monitor
 	})
 	taskScheduler.SetClientPool(clientPool)
+	taskScheduler.SetPlayerCountProvider(func(serverID string) int {
+		if m := metricsCollector.GetMetrics(serverID); m != nil {
+			return m.PlayersOnline
+		}
+		return 0
+	})
 
 	// MINE-121: deep sleep — full container stop on idle (zero RAM/CPU),
 	// boot on login intent via the proxy. Only acts on servers with
