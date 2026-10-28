@@ -405,6 +405,8 @@ export const StagedUpdateItemSchema: GenMessage<StagedUpdateItem> =
 	messageDesc(file_carbonpanel_v1_config, 12);
 
 /**
+ * Request for the server's open update batch.
+ *
  * @generated from message carbonpanel.v1.GetUpdateBatchRequest
  */
 export type GetUpdateBatchRequest = Message<'carbonpanel.v1.GetUpdateBatchRequest'> & {
@@ -423,6 +425,8 @@ export const GetUpdateBatchRequestSchema: GenMessage<GetUpdateBatchRequest> =
 	messageDesc(file_carbonpanel_v1_config, 13);
 
 /**
+ * The open batch, its window, and the items waiting in it.
+ *
  * @generated from message carbonpanel.v1.GetUpdateBatchResponse
  */
 export type GetUpdateBatchResponse = Message<'carbonpanel.v1.GetUpdateBatchResponse'> & {
@@ -437,6 +441,8 @@ export type GetUpdateBatchResponse = Message<'carbonpanel.v1.GetUpdateBatchRespo
 	window: ConfigApplyWindow;
 
 	/**
+	 * UTC unix seconds. Zero when the window is not a timestamp.
+	 *
 	 * @generated from field: int64 apply_at_unix = 3;
 	 */
 	applyAtUnix: bigint;
@@ -461,6 +467,8 @@ export const GetUpdateBatchResponseSchema: GenMessage<GetUpdateBatchResponse> =
 	messageDesc(file_carbonpanel_v1_config, 14);
 
 /**
+ * Drop one staged item, or the whole batch when item_id is empty.
+ *
  * @generated from message carbonpanel.v1.DiscardUpdateBatchRequest
  */
 export type DiscardUpdateBatchRequest = Message<'carbonpanel.v1.DiscardUpdateBatchRequest'> & {
@@ -486,6 +494,8 @@ export const DiscardUpdateBatchRequestSchema: GenMessage<DiscardUpdateBatchReque
 	messageDesc(file_carbonpanel_v1_config, 15);
 
 /**
+ * Empty after the item or batch is discarded.
+ *
  * @generated from message carbonpanel.v1.DiscardUpdateBatchResponse
  */
 export type DiscardUpdateBatchResponse = Message<'carbonpanel.v1.DiscardUpdateBatchResponse'> & {};

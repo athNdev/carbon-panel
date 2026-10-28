@@ -182,6 +182,7 @@ message ModpackUpdateTaskConfig {
   string target_subfolder = 3;            // Optional subdirectory inside the git repo to sync
   bool restart_immediately = 4;           // If true, restart immediately when updates found; otherwise rely on scheduled maintenance
   string auth_token = 5;                  // Optional GitHub token or personal access token for private repositories
+  bool stage_into_batch = 6;              // Copy the pack into the open update batch and leave the live tree and container alone
 }
 
 // List tasks request

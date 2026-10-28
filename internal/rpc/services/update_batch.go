@@ -86,11 +86,15 @@ func (s *ConfigService) batchItems(ctx context.Context, batchID string) ([]*v1.S
 		})
 	}
 	for _, row := range content {
+		summary := row.Action + " " + row.FileName
+		if row.Kind == storage.StagedKindModpack || row.Kind == storage.StagedKindModule {
+			summary = row.FileName
+		}
 		items = append(items, &v1.StagedUpdateItem{
 			Id:      row.ID,
 			Kind:    row.Kind,
 			Action:  row.Action,
-			Summary: row.Action + " " + row.FileName,
+			Summary: summary,
 		})
 	}
 	return items, nil

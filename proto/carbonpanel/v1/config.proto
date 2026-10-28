@@ -129,22 +129,27 @@ message StagedUpdateItem {
   string summary = 4;
 }
 
+// Request for the server's open update batch.
 message GetUpdateBatchRequest {
   string server_id = 1;
 }
 
+// The open batch, its window, and the items waiting in it.
 message GetUpdateBatchResponse {
   bool open = 1;
   ConfigApplyWindow window = 2;
+  // UTC unix seconds. Zero when the window is not a timestamp.
   int64 apply_at_unix = 3;
   int32 idle_minutes = 4;
   repeated StagedUpdateItem items = 5;
 }
 
+// Drop one staged item, or the whole batch when item_id is empty.
 message DiscardUpdateBatchRequest {
   string server_id = 1;
   // Empty discards the whole open batch.
   string item_id = 2;
 }
 
+// Empty after the item or batch is discarded.
 message DiscardUpdateBatchResponse {}

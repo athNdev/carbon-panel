@@ -27,7 +27,7 @@ func (s *Store) AddStagedContent(ctx context.Context, row *StagedContentChange) 
 		return nil, fmt.Errorf("staged content file is required")
 	}
 	switch row.Kind {
-	case StagedKindMod, StagedKindDatapack, StagedKindFile:
+	case StagedKindMod, StagedKindDatapack, StagedKindFile, StagedKindModpack, StagedKindModule:
 	default:
 		return nil, fmt.Errorf("unknown staged content kind %q", row.Kind)
 	}

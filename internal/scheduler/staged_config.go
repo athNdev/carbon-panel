@@ -35,7 +35,18 @@ func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
 }
 
 func (s *Scheduler) publishStagedBatch(ctx context.Context, server *storage.Server, plan staging.Plan) error {
-	if server == nil || server.ContainerID == "" || !plan.TouchesContainer() {
+	if server == nil {
+		return errors.New("server is required")
+	}
+	for _, id := range plan.ModuleIDs {
+		if s.recreateModule == nil {
+			return errors.New("module recreate is not configured")
+		}
+		if err := s.recreateModule(ctx, id); err != nil {
+			return err
+		}
+	}
+	if server.ContainerID == "" || !plan.TouchesContainer() {
 		return nil
 	}
 	if plan.SaveAll && s.sender != nil {
