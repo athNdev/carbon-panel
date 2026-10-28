@@ -67,7 +67,7 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 			continue
 		}
 
-		detail := describeObservation(observed)
+		detail := recoveryDetail(op.Kind, observed)
 		if err := store.AdvanceServerOperation(ctx, op.ID, op.Phase, db.ServerOperationRecovered, detail); err != nil {
 			summary.NeedsReview++
 			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
@@ -80,6 +80,22 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 	}
 
 	return summary, nil
+}
+
+func recoveryDetail(kind string, observed Observed) string {
+	state := describeObservation(observed)
+	switch kind {
+	case "backup":
+		return "backup was interrupted before the archive was finalized; run the backup again. " + state
+	case "restore":
+		return "restore was interrupted; confirm the world before starting the server. " + state
+	case "delete":
+		return "delete was interrupted; confirm the container and the world before trying again. " + state
+	case "migrate":
+		return "migration was interrupted; confirm which node holds the world before starting the server. " + state
+	default:
+		return state
+	}
 }
 
 func describeObservation(observed Observed) string {

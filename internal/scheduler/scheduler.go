@@ -188,7 +188,7 @@ func (s *Scheduler) Start() error {
 	// Recover orphaned executions left in running state by a prior abnormal process exit.
 	if s.store != nil {
 		ctx := context.Background()
-		if count, err := s.store.FailOrphanedTaskExecutions(ctx, "interrupted by panel restart"); err != nil {
+		if count, err := s.store.FailOrphanedTaskExecutions(ctx, "interrupted by panel restart; run the task again after the server is idle"); err != nil {
 			s.log.Error("Failed to recover orphaned task executions: %v", err)
 		} else if count > 0 {
 			s.log.Warn("Recovered %d orphaned task execution(s) from prior session", count)

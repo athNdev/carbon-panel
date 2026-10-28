@@ -213,8 +213,9 @@ func TestRestoreBackupRefusedWhileOperationOwnsWorld(t *testing.T) {
 	}
 
 	_, err = svc.RestoreBackup(ctx, connect.NewRequest(&v1.RestoreBackupRequest{Id: "b-journaled"}))
-	if err == nil {
-		t.Fatal("restore must refuse to interleave with another lifecycle mutation")
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeAborted {
+		t.Fatalf("RestoreBackup error = %T %v, want CodeAborted", err, err)
 	}
 	if !strings.Contains(err.Error(), "restore") {
 		t.Fatalf("refusal must name the operation, got %v", err)

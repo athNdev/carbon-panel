@@ -24,6 +24,7 @@ import (
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/nodestorage"
+	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/internal/worldstore"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
@@ -188,6 +189,9 @@ func (s *ServerService) migrateServerNow(ctx context.Context, server *storage.Se
 func migrationResponseError(err error) error {
 	if nodestorage.IsUnavailable(err) {
 		return connect.NewError(connect.CodeUnavailable, err)
+	}
+	if errors.Is(err, storage.ErrActiveOperation) || errors.Is(err, operation.ErrInProgress) {
+		return connect.NewError(connect.CodeAborted, fmt.Errorf("migration refused while another operation owns the server: %w", err))
 	}
 	return connect.NewError(connect.CodeInternal, err)
 }

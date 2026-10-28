@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -41,8 +42,8 @@ func TestServerOperationJournalLifecycle(t *testing.T) {
 	}
 
 	// One server can only have one active operation.
-	if _, _, err := store.BeginServerOperation(ctx, "srv-1", "node-1", "cont-1", "key-2", "stop", "digest-3"); err == nil {
-		t.Fatal("expected a second active operation for the same server to be rejected")
+	if _, _, err := store.BeginServerOperation(ctx, "srv-1", "node-1", "cont-1", "key-2", "stop", "digest-3"); !errors.Is(err, ErrActiveOperation) {
+		t.Fatalf("second active operation = %v, want ErrActiveOperation", err)
 	}
 
 	// The active operation blocks the server until it is finalized.

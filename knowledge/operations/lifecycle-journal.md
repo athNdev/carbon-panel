@@ -25,6 +25,15 @@ behind an operation lock.
 - A scheduled backup persists that same intent before it pauses world saves
   or writes an archive. An empty request id makes each run its own row. A
   crash leaves the row active until startup recovery observes the server.
+  Recovery of that backup says the archive was not finalized and that the
+  backup can be run again. Recovery of a restore says to confirm the world
+  before starting the server. Recovery of a migration says to confirm which
+  node holds the world before starting the server.
+- Deleting a server persists a delete intent before modules, the container,
+  the panel row, or the world are removed. A server with no container still
+  takes that lock. An active backup, restore, or migration row refuses the
+  delete and leaves the world in place. Recovery of an interrupted delete
+  says to confirm the container and the world before trying again.
 - A client `request_id` plus the action kind is idempotent for one server.
   Completing a key does not run the mutation again. A failure needs a new key.
 - Do not release a lock when the container state cannot be read. Retry the

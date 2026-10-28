@@ -75,6 +75,52 @@ func TestRecoverInterruptedReleasesObservedOperations(t *testing.T) {
 	}
 }
 
+func TestRecoverInterruptedBackupNamesTheNextAction(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-backup", ServerID: "srv-1", Kind: "backup", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-1": {Exists: true, Running: true},
+	}}
+
+	summary, err := RecoverInterrupted(context.Background(), store, observer, logger.New())
+	if err != nil {
+		t.Fatalf("RecoverInterrupted: %v", err)
+	}
+	if summary.Recovered != 1 || len(store.advances) != 1 {
+		t.Fatalf("summary = %+v, advances = %+v", summary, store.advances)
+	}
+	detail := store.advances[0].detail
+	if !contains(detail, "run the backup again") || !contains(detail, "container running") {
+		t.Fatalf("backup recovery detail = %q", detail)
+	}
+}
+
+func TestRecoverInterruptedDeleteAndMigrationNameTheNextAction(t *testing.T) {
+	store := &fakeStore{ops: []db.ServerOperation{
+		{ID: "op-delete", ServerID: "srv-delete", Kind: "delete", Phase: db.ServerOperationExecuting},
+		{ID: "op-migrate", ServerID: "srv-migrate", Kind: "migrate", Phase: db.ServerOperationExecuting},
+	}}
+	observer := &fakeObserver{observed: map[string]Observed{
+		"srv-delete":  {Exists: false},
+		"srv-migrate": {Exists: true, Running: false},
+	}}
+
+	summary, err := RecoverInterrupted(context.Background(), store, observer, logger.New())
+	if err != nil {
+		t.Fatalf("RecoverInterrupted: %v", err)
+	}
+	if summary.Recovered != 2 || len(store.advances) != 2 {
+		t.Fatalf("summary = %+v, advances = %+v", summary, store.advances)
+	}
+	if !contains(store.advances[0].detail, "confirm the container and the world") {
+		t.Fatalf("delete recovery detail = %q", store.advances[0].detail)
+	}
+	if !contains(store.advances[1].detail, "confirm which node holds the world") {
+		t.Fatalf("migration recovery detail = %q", store.advances[1].detail)
+	}
+}
+
 func TestRecoverInterruptedKeepsLockWhenObservationFails(t *testing.T) {
 	store := &fakeStore{ops: []db.ServerOperation{
 		{ID: "op-1", ServerID: "srv-1", Kind: "start", Phase: db.ServerOperationExecuting},
