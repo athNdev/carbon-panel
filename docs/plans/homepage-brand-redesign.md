@@ -75,8 +75,9 @@ describe the state before those changes.
 2. Start from the current Carbon neutral surfaces: `#161616` page background,
    `#262626` raised surfaces, `#393939` borders, and `#f4f4f4` primary
    text. Use the committed light mark on dark surfaces and dark mark on light
-   surfaces. Keep `#0f62fe` / `#78a9ff` as functional accents for actions,
-   links and focus, rather than making blue part of the fixed logo.
+   surfaces. The homepage uses a black, white and grey palette with restrained
+   metallic highlights. A product illustration may retain the application's
+   actual interface and status colors.
 3. Keep IBM Plex Sans for body and UI text and IBM Plex Mono for code and
    operational data. Use the approved outlined wordmark for the logo itself,
    not Bahnschrift as a new site-wide font. Verify rights before distributing
@@ -103,7 +104,7 @@ describe the state before those changes.
   Candidate headline for design exploration: “Your Minecraft servers. Your
   infrastructure.” Final wording remains subject to review.
 - Reduce decorative noise around the hero; use the dark neutral grid, restrained
-  blue interaction accents and a single credible product visual. Keep the
+  silver interaction accents and a single credible product visual. Keep the
   lower-cut opening visually readable and do not use the mark as a generic
   feature icon.
 - Replace or update the current illustrative dashboard with an accurate
