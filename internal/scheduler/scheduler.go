@@ -305,7 +305,7 @@ func (s *Scheduler) checkAndRunDueTasks() {
 		}
 	}
 
-	// Apply staged config rollouts whose cron schedule has fired (MINE staged rollout MVP).
+	// Staged config waits for its apply window. This tick must not merge it.
 	s.applyDueStagedConfigs(ctx)
 
 	// Get all due tasks

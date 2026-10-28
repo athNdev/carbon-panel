@@ -106,6 +106,8 @@ func TestApplyOnRestartStagedConfigs_OnlyOnRestart(t *testing.T) {
 	store := &fakeStagedStore{changes: []*storage.StagedConfigChange{
 		{ID: "a", ServerID: "srv-1", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusStaged},
 		{ID: "b", ServerID: "srv-1", ApplyMode: storage.StagedApplyScheduled, Status: storage.StagedStatusStaged},
+		{ID: "e", ServerID: "srv-1", ApplyMode: storage.StagedApplyAtTime, Status: storage.StagedStatusStaged},
+		{ID: "f", ServerID: "srv-1", ApplyMode: storage.StagedApplyIdle, Status: storage.StagedStatusStaged},
 		{ID: "c", ServerID: "srv-1", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusApplied},
 		{ID: "d", ServerID: "srv-2", ApplyMode: storage.StagedApplyOnRestart, Status: storage.StagedStatusStaged},
 	}}
@@ -114,6 +116,10 @@ func TestApplyOnRestartStagedConfigs_OnlyOnRestart(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, n)
 	assert.Equal(t, []string{"a"}, store.applied)
+}
+
+func TestApplyDueStagedConfigsDoesNotMerge(t *testing.T) {
+	(&Scheduler{}).applyDueStagedConfigs(context.Background())
 }
 
 func TestApplyOnRestartStagedConfigs_StopsOnError(t *testing.T) {

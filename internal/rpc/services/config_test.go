@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package services
 
 import (
@@ -11,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
@@ -110,6 +110,53 @@ func TestConfigRecreateRetainsOriginalContainerIDWhenStopFails(t *testing.T) {
 	require.NoError(t, getErr)
 	assert.Equal(t, "old-container", updated.ContainerID)
 	assert.Equal(t, storage.StatusError, updated.Status)
+}
+
+func TestUpdateServerConfigStageDoesNotRecreate(t *testing.T) {
+	ctx := context.Background()
+	svc, store := setupConfigTestService(t)
+	statuses := []storage.ServerStatus{storage.StatusRunning, storage.StatusDeepSleep, storage.StatusPaused}
+	for i, status := range statuses {
+		id := "stage-" + string(status)
+		require.NoError(t, store.CreateServer(ctx, &storage.Server{
+			ID: id, Name: id, NodeID: "node-1", Port: 26000 + i, Memory: 1024,
+			ContainerID: "container-" + string(status), Status: status,
+		}))
+		cfg := store.CreateDefaultServerConfig(id)
+		motd := "live"
+		cfg.MOTD = &motd
+		require.NoError(t, store.SaveServerConfig(ctx, cfg))
+
+		res, err := svc.UpdateServerConfig(ctx, connect.NewRequest(&v1.UpdateServerConfigRequest{
+			ServerId:    id,
+			Updates:     map[string]string{"motd": "staged-" + string(status)},
+			Stage:       true,
+			Window:      v1.ConfigApplyWindow_CONFIG_APPLY_WINDOW_AT_TIME,
+			ApplyAtUnix: time.Now().UTC().Add(time.Hour).Unix(),
+		}))
+		require.NoError(t, err)
+		assert.True(t, res.Msg.GetStaged())
+
+		got, err := store.GetServer(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, status, got.Status)
+		assert.Equal(t, "container-"+string(status), got.ContainerID)
+		live, err := store.GetServerConfig(ctx, id)
+		require.NoError(t, err)
+		require.NotNil(t, live.MOTD)
+		assert.Equal(t, "live", *live.MOTD)
+	}
+
+	_, err := svc.UpdateServerConfig(ctx, connect.NewRequest(&v1.UpdateServerConfigRequest{
+		ServerId: "stage-" + string(storage.StatusRunning),
+		Updates:  map[string]string{"motd": "applied-now"},
+	}))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "docker client pool not configured")
+	live, err := store.GetServerConfig(ctx, "stage-"+string(storage.StatusRunning))
+	require.NoError(t, err)
+	require.NotNil(t, live.MOTD)
+	assert.Equal(t, "applied-now", *live.MOTD)
 }
 
 func TestConfigService_GetGlobalSettings(t *testing.T) {

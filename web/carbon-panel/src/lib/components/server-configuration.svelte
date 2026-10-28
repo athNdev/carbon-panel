@@ -33,8 +33,11 @@ one at https://mozilla.org/MPL/2.0/.
 	import { copyToClipboard } from '$lib/utils/clipboard';
 	import { CarbonInlineLoading } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
-	import { ServerStatus } from '$lib/proto/carbonpanel/v1/common_pb';
-	import type { ConfigCategory, ConfigProperty } from '$lib/proto/carbonpanel/v1/config_pb';
+	import {
+		ConfigApplyWindow,
+		type ConfigCategory,
+		type ConfigProperty
+	} from '$lib/proto/carbonpanel/v1/config_pb';
 	import ScrollToTop from './scroll-to-top.svelte';
 
 	interface Props {
@@ -62,7 +65,6 @@ one at https://mozilla.org/MPL/2.0/.
 
 	// Derived state
 	let isSaving = $derived(externalSaving || saving);
-	let isServerRunning = $derived(!!server && server.status === ServerStatus.RUNNING);
 
 	// Get filtered categories (hide empty ones and filter system fields for global)
 	let filteredCategories = $derived.by(() => {
@@ -309,12 +311,13 @@ one at https://mozilla.org/MPL/2.0/.
 		currentEnabled = newCurrentEnabled;
 	}
 
-	async function handleSave() {
+	async function handleSave(stage = true) {
 		if (!hasChanges) {
 			toast.info('No changes to save');
 			return;
 		}
 
+		const stageUpdate = !!server && stage;
 		saving = true;
 		try {
 			const updates: Record<string, string> = {};
@@ -333,18 +336,19 @@ one at https://mozilla.org/MPL/2.0/.
 			} else if (server) {
 				const response = await rpcClient.config.updateServerConfig({
 					serverId: server.id,
-					updates
+					updates,
+					stage: stageUpdate,
+					window: stageUpdate ? ConfigApplyWindow.NEXT_RESTART : ConfigApplyWindow.UNSPECIFIED
 				});
 				processConfig(response.categories);
 			}
 
-			toast.success('Configuration saved');
-
-			if (server && isServerRunning) {
-				toast.info('Restart the server for changes to take effect');
+			toast.success(stageUpdate ? 'Configuration staged' : 'Configuration saved');
+			if (stageUpdate) {
+				toast.info('The server was not restarted. These changes apply on the next restart.');
 			}
 		} catch (error) {
-			toast.error('Failed to save configuration');
+			toast.error(stageUpdate ? 'Failed to stage configuration' : 'Failed to save configuration');
 			console.error(error);
 		} finally {
 			saving = false;
@@ -500,7 +504,6 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	function canToggleField(prop: ConfigProperty): boolean {
-		if (isServerRunning) return false;
 		if (prop.required) return false;
 		if (prop.system) return false;
 		return true;
@@ -547,16 +550,27 @@ one at https://mozilla.org/MPL/2.0/.
 				<button
 					type="button"
 					onclick={handleReset}
-					disabled={loading || isServerRunning || !hasChanges}
+					disabled={loading || !hasChanges}
 					class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none border border-[#393939] bg-[#353535] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#393939] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<RefreshCw class="mr-2 h-3.5 w-3.5" />
 					<span>Reset</span>
 				</button>
+				{#if server}
+					<button
+						type="button"
+						onclick={() => handleSave(false)}
+						disabled={loading || isSaving || !hasChanges}
+						title="Save these values and restart the container"
+						class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none border border-[#393939] bg-[#353535] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#393939] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						<span>Apply now</span>
+					</button>
+				{/if}
 				<button
 					type="button"
-					onclick={handleSave}
-					disabled={loading || isSaving || isServerRunning || !hasChanges}
+					onclick={() => handleSave(true)}
+					disabled={loading || isSaving || !hasChanges}
 					class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-4 font-sans text-xs font-medium text-white transition-colors hover:bg-[#0353e9] disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{#if isSaving}
@@ -564,7 +578,7 @@ one at https://mozilla.org/MPL/2.0/.
 					{:else}
 						<Save class="mr-2 h-3.5 w-3.5" />
 					{/if}
-					<span>Save</span>
+					<span>{server ? 'Stage' : 'Save'}</span>
 				</button>
 			</div>
 		</div>
@@ -747,7 +761,7 @@ one at https://mozilla.org/MPL/2.0/.
 										id={prop.key}
 										checked={getBooleanValue(prop)}
 										onCheckedChange={(checked) => updateValue(prop.key, checked)}
-										disabled={prop.system || !isEnabled || isServerRunning}
+										disabled={prop.system || !isEnabled}
 									/>
 									<span class="text-xs text-[#c6c6c6] {!isEnabled ? 'text-[#8d8d8d]' : ''}">
 										{getBooleanValue(prop) ? 'Enabled' : 'Disabled'}
@@ -758,7 +772,7 @@ one at https://mozilla.org/MPL/2.0/.
 									type="single"
 									value={getDisplayValue(prop)}
 									onValueChange={(value) => updateValue(prop.key, value ?? '')}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 								>
 									<SelectTrigger
 										class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {!isEnabled
@@ -784,7 +798,7 @@ one at https://mozilla.org/MPL/2.0/.
 									value={getDisplayValue(prop)}
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
 										? 'opacity-60'
 										: ''}"
@@ -796,7 +810,7 @@ one at https://mozilla.org/MPL/2.0/.
 									value={getDisplayValue(prop)}
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
 										? 'opacity-60'
 										: ''}"
@@ -808,7 +822,7 @@ one at https://mozilla.org/MPL/2.0/.
 									value={getDisplayValue(prop)}
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
 										? 'opacity-60'
 										: ''}"
@@ -880,10 +894,11 @@ one at https://mozilla.org/MPL/2.0/.
 				</div>
 			</div>
 
-			{#if server && isServerRunning}
-				<div class="rounded-none border-t border-[#f1c21b]/30 bg-[#f1c21b]/10 p-4">
-					<p class="font-mono text-xs text-[#f1c21b]">
-						Server must be stopped to modify configuration. Changes will take effect after restart.
+			{#if server}
+				<div class="rounded-none border-t border-[#393939] bg-[#262626] p-4">
+					<p class="font-mono text-xs text-[#c6c6c6]">
+						Stage keeps the server as it is, including while it is frozen or in deep sleep. The
+						diff applies on the next restart. Apply now restarts the container.
 					</p>
 				</div>
 			{/if}

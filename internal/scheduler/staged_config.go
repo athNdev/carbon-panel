@@ -10,36 +10,13 @@ import (
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/athNdev/carbon-panel/internal/docker"
 )
 
-// applyDueStagedConfigs applies staged config changes whose cron schedule has
-// fired (one-shot semantics: each record applies once, then flips to
-// "applied"). It runs on every scheduler tick before task dispatch so
-// scheduled rollouts land without operator intervention. Failures are logged
-// per record and never abort the tick.
-//
-// Wiring: called from checkAndRunDueTasks.
-func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
-	due, err := s.store.ListDueScheduledStagedChanges(ctx, time.Now())
-	if err != nil {
-		s.log.Error("Failed to list due staged config changes: %v", err)
-		return
-	}
-	for _, staged := range due {
-		transition, err := docker.TryBeginServerTransition(staged.ServerID)
-		if err != nil {
-			continue
-		}
-		applied, err := s.store.ApplyStagedConfigChange(ctx, staged.ID)
-		transition.Release()
-		if err != nil {
-			s.log.Error("Failed to apply staged config change %s for server %s: %v", staged.ID, staged.ServerID, err)
-			continue
-		}
-		s.log.Info("Applied scheduled staged config change %s to server %s", applied.ID, applied.ServerID)
-	}
-}
+// applyDueStagedConfigs used to merge a due cron diff into the live
+// ServerConfig without restarting the container. That applied the database
+// row while a running, frozen, or deep-sleeping process kept the old env.
+// Rows now wait for an explicit apply window (OSS-283 / OSS-285).
+func (s *Scheduler) applyDueStagedConfigs(context.Context) {}
 
 // stagedConfigStore is the subset of storage.Store used for staged rollouts,
 // kept as an interface so the restart hook is unit-testable without a DB.
