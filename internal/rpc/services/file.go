@@ -12,6 +12,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/auth"
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
@@ -1170,6 +1172,132 @@ func (s *FileService) DownloadArchive(ctx context.Context, req *connect.Request[
 		Filename:  filename,
 		TotalSize: info.Size(),
 	}), nil
+}
+
+// ExportWorld zips the server's data directory into a download session.
+// The container, the world directory, and the panel row stay in place.
+func (s *FileService) ExportWorld(ctx context.Context, req *connect.Request[v1.ExportWorldRequest]) (*connect.Response[v1.ExportWorldResponse], error) {
+	if s.downloadManager == nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("download manager is not configured"))
+	}
+	server, err := s.store.GetServer(ctx, req.Msg.GetServerId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("server not found"))
+	}
+	if strings.TrimSpace(server.DataPath) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server data path is empty"))
+	}
+	info, err := storageNodeInfo(ctx, s.store, server.NodeID)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	root, err := nodestorage.MapDataPath(info, server.DataPath)
+	if err != nil {
+		return nil, storageError(err)
+	}
+	if unsafeWorldExport(root) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("refusing to export unsafe server data path %q", root))
+	}
+	if !info.IsLocal {
+		shared := info.ControllerStorageRoot
+		if shared == "" {
+			shared = info.StorageRoot
+		}
+		if shared != "" && filepath.Clean(root) == filepath.Clean(shared) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("refusing to export storage root %q", root))
+		}
+	}
+	if _, err := os.Stat(root); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("world directory is not available: %w", err))
+	}
+
+	filename := worldExportFilename(server)
+	tempPath := filepath.Join(s.downloadManager.TempDir(), fmt.Sprintf("world-%s.zip", time.Now().Format("20060102-150405.000")))
+	if files.WithinReal(root, tempPath) {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("refusing to write the world export inside the world directory"))
+	}
+	if _, err := files.CreateZipArchive([]string{"."}, root, tempPath, true); err != nil {
+		s.log.Error("Failed to export world: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to export world"))
+	}
+	zipInfo, err := os.Stat(tempPath)
+	if err != nil {
+		_ = os.Remove(tempPath)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to stat world export"))
+	}
+	user := auth.GetUserFromContext(ctx)
+	creatorID := ""
+	if user != nil {
+		creatorID = user.ID
+	}
+	session := s.downloadManager.InitSessionFor(tempPath, filename, zipInfo.Size(), true, server.ID, creatorID)
+	s.auditWorldExport(ctx, req.Peer().Addr, server, filename)
+
+	return connect.NewResponse(&v1.ExportWorldResponse{
+		SessionId: session.ID,
+		Filename:  filename,
+		TotalSize: zipInfo.Size(),
+		DataPath:  server.DataPath,
+	}), nil
+}
+
+func worldExportFilename(server *storage.Server) string {
+	name := strings.TrimSpace(server.Name)
+	if name == "" {
+		name = server.ID
+	}
+	name = strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\', ':', '*', '?', '"', '<', '>', '|':
+			return '-'
+		default:
+			return r
+		}
+	}, name)
+	name = strings.Trim(name, ". ")
+	if name == "" {
+		name = "server"
+	}
+	return name + "-world.zip"
+}
+
+func unsafeWorldExport(path string) bool {
+	cleaned := filepath.Clean(strings.TrimSpace(path))
+	if cleaned == "" || cleaned == "." || cleaned == string(filepath.Separator) {
+		return true
+	}
+	rest := strings.TrimPrefix(cleaned, filepath.VolumeName(cleaned))
+	rest = strings.Trim(rest, string(filepath.Separator))
+	return rest == ""
+}
+
+func (s *FileService) auditWorldExport(ctx context.Context, ip string, server *storage.Server, filename string) {
+	if server == nil {
+		return
+	}
+	actorID, actorName := "", ""
+	if u := auth.GetUserFromContext(ctx); u != nil {
+		actorID, actorName = u.ID, u.Username
+	}
+	props, err := json.Marshal(map[string]any{
+		"data_path": server.DataPath,
+		"filename":  filename,
+	})
+	if err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerExport, err)
+		return
+	}
+	if err := activity.Log(s.store.DB(), activity.Entry{
+		ActorID:    actorID,
+		ActorName:  actorName,
+		IP:         ip,
+		Event:      activity.EventServerExport,
+		SubjectTyp: "server",
+		SubjectID:  server.ID,
+		Properties: string(props),
+	}); err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerExport, err)
+	}
 }
 
 // Creates a download session for file

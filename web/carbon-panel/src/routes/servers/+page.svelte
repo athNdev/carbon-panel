@@ -12,6 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
 	import { resolve } from '$app/paths';
 	import { serversStore, sortServersByActivity } from '$lib/stores/servers';
 	import { rpcClient } from '$lib/api/rpc-client';
+	import { triggerStreamDownload } from '$lib/api/stream-download';
 	import { beginLifecycleRequest } from '$lib/lifecycle-request';
 	import { formatRpcError } from '$lib/api/rpc-error';
 	import { toast } from 'svelte-sonner';
@@ -45,7 +46,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let loadError = $state<string | null>(null);
 	let pendingDelete = $state<Server | null>(null);
 	let confirmOpen = $state(false);
-	let deleteDisposition = $state<'delete' | 'keep' | 'detach'>('delete');
+	let deleteDisposition = $state<'delete' | 'keep' | 'detach' | 'export'>('delete');
 	// Cold direct loads render before the layout's fetch lands; hold the
 	// empty state until the first fetch settles so "no servers" never
 	// flashes for fleets that simply haven't loaded yet.
@@ -158,12 +159,18 @@ one at https://mozilla.org/MPL/2.0/.
 		const server = pendingDelete;
 		if (!server) return;
 		loading = true;
-		const attempt = beginLifecycleRequest(server.id, 'delete');
 		const disposition = deleteDisposition;
+		const attempt = disposition === 'export' ? null : beginLifecycleRequest(server.id, 'delete');
 		try {
+			if (disposition === 'export') {
+				const response = await rpcClient.file.exportWorld({ serverId: server.id });
+				triggerStreamDownload(response.sessionId, response.filename);
+				toast.success(`Exported ${server.name}. The server was left in place.`);
+				return;
+			}
 			await rpcClient.server.deleteServer({
 				id: server.id,
-				requestId: attempt.requestId,
+				requestId: attempt?.requestId ?? '',
 				keepData: disposition === 'keep',
 				detach: disposition === 'detach'
 			});
@@ -177,10 +184,10 @@ one at https://mozilla.org/MPL/2.0/.
 			);
 		} catch (error) {
 			toast.error(
-				`Failed to delete server: ${error instanceof Error ? error.message : 'Unknown error'}`
+				`Failed to ${disposition === 'export' ? 'export' : 'delete'} server: ${error instanceof Error ? error.message : 'Unknown error'}`
 			);
 		} finally {
-			attempt.finish();
+			attempt?.finish();
 			loading = false;
 			pendingDelete = null;
 		}
@@ -837,22 +844,28 @@ one at https://mozilla.org/MPL/2.0/.
 
 	<CarbonConfirm
 		bind:open={confirmOpen}
-		title={deleteDisposition === 'detach'
-			? 'Detach server?'
-			: deleteDisposition === 'keep'
-				? 'Remove server from the panel?'
-				: 'Delete server?'}
-		message={deleteDisposition === 'detach'
-			? 'The container keeps running and the world stays on disk. The panel forgets this server. Its host port stays reserved. A proxy name is dropped the next time the panel starts.'
-			: deleteDisposition === 'keep'
-				? 'The container is removed and the server leaves the panel. The world directory stays on disk.'
-				: 'This action cannot be undone. The container and the server files are removed.'}
-		confirmLabel={deleteDisposition === 'detach'
-			? 'Detach server'
-			: deleteDisposition === 'keep'
-				? 'Remove from panel'
-				: 'Delete Server'}
-		danger
+		title={deleteDisposition === 'export'
+			? 'Export world?'
+			: deleteDisposition === 'detach'
+				? 'Detach server?'
+				: deleteDisposition === 'keep'
+					? 'Remove server from the panel?'
+					: 'Delete server?'}
+		message={deleteDisposition === 'export'
+			? 'A zip of the world downloads now. The container, the world, and the server stay in the panel.'
+			: deleteDisposition === 'detach'
+				? 'The container keeps running and the world stays on disk. The panel forgets this server. Its host port stays reserved. A proxy name is dropped the next time the panel starts.'
+				: deleteDisposition === 'keep'
+					? 'The container is removed and the server leaves the panel. The world directory stays on disk.'
+					: 'This action cannot be undone. The container and the server files are removed.'}
+		confirmLabel={deleteDisposition === 'export'
+			? 'Export world'
+			: deleteDisposition === 'detach'
+				? 'Detach server'
+				: deleteDisposition === 'keep'
+					? 'Remove from panel'
+					: 'Delete Server'}
+		danger={deleteDisposition !== 'export'}
 		confirming={loading}
 		onconfirm={confirmDeleteServer}
 		onclose={() => (pendingDelete = null)}
@@ -892,6 +905,16 @@ one at https://mozilla.org/MPL/2.0/.
 						disabled={loading}
 					/>
 					<span>Leave the container and the world files</span>
+				</label>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-delete-disposition"
+						value="export"
+						bind:group={deleteDisposition}
+						disabled={loading}
+					/>
+					<span>Export the world and leave the server</span>
 				</label>
 			</fieldset>
 		{/snippet}

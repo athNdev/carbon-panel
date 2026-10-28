@@ -46,6 +46,9 @@ losing a world is not recoverable by rebuilding the controller.
   container id and the path. `-operations release-port` frees that lease
   only after the panel row is gone, and it does not stop the container or
   delete the world.
+- `ExportWorld` zips the server directory on the owning node's storage into
+  a download and leaves the container, the world, and the panel row in
+  place. A remote node without shared storage is refused.
 
 # Review
 
