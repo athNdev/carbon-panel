@@ -578,6 +578,8 @@ const (
 	StagedKindMod      = "mod"
 	StagedKindDatapack = "datapack"
 	StagedKindFile     = "file"
+	StagedKindModpack  = "modpack"
+	StagedKindModule   = "module"
 
 	StagedActionInstall = "install"
 	StagedActionReplace = "replace"

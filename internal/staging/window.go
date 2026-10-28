@@ -66,6 +66,7 @@ type Plan struct {
 	Restart    bool
 	Recreate   bool
 	StartAfter bool
+	ModuleIDs  []string
 }
 
 // PlanFor chooses the container action for a server status. configChanged
@@ -87,7 +88,12 @@ func PlanFor(status storage.ServerStatus, configChanged bool) Plan {
 }
 
 // TouchesContainer reports whether publishing the plan stops, starts, or
-// replaces a container.
+// replaces the server container.
 func (p Plan) TouchesContainer() bool {
 	return p.Restart || p.Recreate || p.StartAfter
+}
+
+// NeedsPublish reports whether the window has server or module container work.
+func (p Plan) NeedsPublish() bool {
+	return p.TouchesContainer() || len(p.ModuleIDs) > 0
 }

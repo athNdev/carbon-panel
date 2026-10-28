@@ -395,6 +395,7 @@ func main() {
 		log.Error("Failed to start module manager: %v", err)
 	}
 	defer moduleManager.Stop()
+	taskScheduler.SetModuleRecreator(moduleManager.RecreateModule)
 
 	// Register event consumers on the event bus - EVENT CONSUMERS REGISTER HERE...
 	eventBus.Subscribe(moduleManager.HandleServerEvent)

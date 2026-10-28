@@ -94,6 +94,9 @@ func ApplyBatch(ctx context.Context, store *storage.Store, log *logger.Logger, s
 		if err != nil {
 			return err
 		}
+		if err := stagedModuleConflict(ctx, store, server, content); err != nil {
+			return err
+		}
 		var restore func() error
 		if len(content) > 0 {
 			acc, accErr := openAccessor(ctx, store, server)
@@ -126,14 +129,20 @@ func ApplyBatch(ctx context.Context, store *storage.Store, log *logger.Logger, s
 			}
 			applied = append(applied, rec)
 		}
+		moduleIDs, undoModules, modErr := applyStagedModules(ctx, store, server, content)
+		if modErr != nil {
+			_ = undoApply(ctx, store, restore, applied, nil)
+			return modErr
+		}
 		plan := PlanFor(server.Status, len(applied) > 0)
-		if plan.TouchesContainer() {
+		plan.ModuleIDs = moduleIDs
+		if plan.NeedsPublish() {
 			if publish == nil {
-				_ = undoApply(ctx, store, restore, applied, nil)
+				_ = undoApply(ctx, store, moduleRestore(undoModules, restore), applied, nil)
 				return errors.New("staged batch needs a container publish")
 			}
 			if pubErr := publish(ctx, server, plan); pubErr != nil {
-				_ = undoApply(ctx, store, restore, applied, nil)
+				_ = undoApply(ctx, store, moduleRestore(undoModules, restore), applied, nil)
 				return pubErr
 			}
 		}
@@ -148,9 +157,10 @@ func ApplyBatch(ctx context.Context, store *storage.Store, log *logger.Logger, s
 
 // CommitNextRestartFiles copies content for a next-restart batch onto the live
 // tree. A batch waiting for a time or an idle window is left untouched, so an
-// incidental restart does not publish it. The returned function puts the files
-// back and returns the rows to staged.
-func CommitNextRestartFiles(ctx context.Context, store *storage.Store, server *storage.Server) (func(), error) {
+// incidental restart does not publish it. recreateModule runs for a staged
+// module whose container spec changed. The returned function puts the files
+// and module fields back and returns the rows to staged.
+func CommitNextRestartFiles(ctx context.Context, store *storage.Store, server *storage.Server, recreateModule func(context.Context, string) error) (func(), error) {
 	batch, err := store.OpenUpdateBatch(ctx, server.ID)
 	if err != nil || batch == nil || batch.Window != string(storage.UpdateWindowNextRestart) {
 		return nil, err
@@ -159,44 +169,52 @@ func CommitNextRestartFiles(ctx context.Context, store *storage.Store, server *s
 	if err != nil || len(content) == 0 {
 		return nil, err
 	}
+	if err := stagedModuleConflict(ctx, store, server, content); err != nil {
+		return nil, err
+	}
 	acc, err := openAccessor(ctx, store, server)
 	if err != nil {
 		return nil, err
 	}
 	snaps, err := commitFiles(acc, content)
 	_ = acc.Close()
-	if err != nil {
+	restoreFilesNow := func() error {
 		again, openErr := openAccessor(ctx, store, server)
-		if openErr == nil {
-			_ = restoreFiles(again, snaps)
-			_ = again.Close()
+		if openErr != nil {
+			return openErr
 		}
+		defer func() { _ = again.Close() }()
+		return restoreFiles(again, snaps)
+	}
+	if err != nil {
+		_ = restoreFilesNow()
 		return nil, err
+	}
+	moduleIDs, undoModules, err := applyStagedModules(ctx, store, server, content)
+	if err != nil {
+		_ = restoreFilesNow()
+		return nil, err
+	}
+	for _, id := range moduleIDs {
+		if recreateModule == nil {
+			_ = moduleRestore(undoModules, restoreFilesNow)()
+			return nil, errors.New("staged module needs a container recreate")
+		}
+		if err := recreateModule(ctx, id); err != nil {
+			_ = moduleRestore(undoModules, restoreFilesNow)()
+			return nil, err
+		}
 	}
 	applied := make([]string, 0, len(content))
 	for i := range content {
 		if markErr := store.MarkStagedContentApplied(ctx, content[i].ID); markErr != nil {
-			_ = undoApply(ctx, store, func() error {
-				again, openErr := openAccessor(ctx, store, server)
-				if openErr != nil {
-					return openErr
-				}
-				defer func() { _ = again.Close() }()
-				return restoreFiles(again, snaps)
-			}, nil, applied)
+			_ = undoApply(ctx, store, moduleRestore(undoModules, restoreFilesNow), nil, applied)
 			return nil, markErr
 		}
 		applied = append(applied, content[i].ID)
 	}
 	return func() {
-		_ = undoApply(ctx, store, func() error {
-			again, openErr := openAccessor(ctx, store, server)
-			if openErr != nil {
-				return openErr
-			}
-			defer func() { _ = again.Close() }()
-			return restoreFiles(again, snaps)
-		}, nil, applied)
+		_ = undoApply(ctx, store, moduleRestore(undoModules, restoreFilesNow), nil, applied)
 	}, nil
 }
 
@@ -221,6 +239,53 @@ func FinishNextRestartBatch(ctx context.Context, store *storage.Store, serverID 
 	return store.CloseUpdateBatch(ctx, batch.ID, storage.UpdateBatchApplied)
 }
 
+func moduleRestore(undoModules func() error, restore func() error) func() error {
+	return func() error {
+		var failed error
+		if undoModules != nil {
+			failed = undoModules()
+		}
+		if restore != nil {
+			failed = errors.Join(failed, restore())
+		}
+		return failed
+	}
+}
+
+func stagedModuleConflict(ctx context.Context, store *storage.Store, server *storage.Server, rows []storage.StagedContentChange) error {
+	var moduleRows []storage.StagedContentChange
+	for _, row := range rows {
+		if row.Kind == storage.StagedKindModule {
+			moduleRows = append(moduleRows, row)
+		}
+	}
+	if len(moduleRows) == 0 {
+		return nil
+	}
+	acc, err := openAccessor(ctx, store, server)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = acc.Close() }()
+	for _, row := range moduleRows {
+		payload, err := readModulePayload(acc, row.StagePath)
+		if err != nil {
+			return err
+		}
+		module, err := store.GetModule(ctx, payload.ModuleID)
+		if err != nil {
+			return err
+		}
+		if module.ServerID != server.ID {
+			return fmt.Errorf("staged module %s is not on this server", payload.ModuleID)
+		}
+		if err := checkModuleBase(module, payload.Fields); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func undoApply(ctx context.Context, store *storage.Store, restore func() error, configs []*storage.StagedConfigChange, contentIDs []string) error {
 	var failed error
 	if restore != nil {
@@ -242,6 +307,17 @@ func undoApply(ctx context.Context, store *storage.Store, restore func() error, 
 func commitFiles(acc nodestorage.Accessor, rows []storage.StagedContentChange) ([]fileSnap, error) {
 	snaps := make([]fileSnap, 0, len(rows))
 	for _, row := range rows {
+		if row.Kind == storage.StagedKindModpack {
+			more, err := snapshotModpack(acc, row)
+			snaps = append(snaps, more...)
+			if err != nil {
+				return snaps, err
+			}
+			continue
+		}
+		if row.Kind == storage.StagedKindModule {
+			continue
+		}
 		info, err := acc.Stat(row.TargetPath)
 		if err != nil && !os.IsNotExist(err) {
 			return snaps, err
@@ -260,6 +336,16 @@ func commitFiles(acc nodestorage.Accessor, rows []storage.StagedContentChange) (
 		snaps = append(snaps, item)
 	}
 	for _, row := range rows {
+		if row.Kind == storage.StagedKindModpack {
+			if err := writeModpack(acc, row); err != nil {
+				_ = restoreFiles(acc, snaps)
+				return snaps, err
+			}
+			continue
+		}
+		if row.Kind == storage.StagedKindModule {
+			continue
+		}
 		switch row.Action {
 		case storage.StagedActionDelete:
 			if err := acc.Remove(row.TargetPath); err != nil && !os.IsNotExist(err) {

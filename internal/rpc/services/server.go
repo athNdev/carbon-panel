@@ -106,6 +106,13 @@ func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
 	return cli
 }
 
+func (s *ServerService) recreateStagedModule(ctx context.Context, moduleID string) error {
+	if s.moduleManager == nil {
+		return errors.New("module recreate is not configured")
+	}
+	return s.moduleManager.RecreateModule(ctx, moduleID)
+}
+
 func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, error) {
 	return docker.NewLocator(s.pool, s.docker, s.store).For(context.Background(), nodeID)
 }
@@ -1834,7 +1841,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 
 	// Apply staged configs on restart/start (STAGED-CONFIG). Content waiting
 	// for a clock time or an idle window stays staged.
-	undoFiles, fileErr := staging.CommitNextRestartFiles(ctx, s.store, server)
+	undoFiles, fileErr := staging.CommitNextRestartFiles(ctx, s.store, server, s.recreateStagedModule)
 	if fileErr != nil {
 		s.log.Error("Failed to apply staged content on start for server %s: %v", server.ID, fileErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged content: %w", fileErr))
@@ -2245,7 +2252,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 	// Apply any staged config changes marked for restart. A future time or idle
 	// window is not published by this restart.
-	undoFiles, fileErr := staging.CommitNextRestartFiles(ctx, s.store, server)
+	undoFiles, fileErr := staging.CommitNextRestartFiles(ctx, s.store, server, s.recreateStagedModule)
 	if fileErr != nil {
 		s.log.Error("Failed to apply staged content on restart for server %s: %v", server.ID, fileErr)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged content: %w", fileErr))
