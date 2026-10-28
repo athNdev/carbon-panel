@@ -224,7 +224,7 @@ func TestNextRestartContentIsNotAppliedByTheSweep(t *testing.T) {
 	}))
 	require.NoFileExists(t, filepath.Join(data, "mod.jar"))
 
-	undo, err := CommitNextRestartFiles(ctx, store, server)
+	undo, err := CommitNextRestartFiles(ctx, store, server, nil)
 	require.NoError(t, err)
 	require.NotNil(t, undo)
 	body, err := os.ReadFile(filepath.Join(data, "mod.jar"))

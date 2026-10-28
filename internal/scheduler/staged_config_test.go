@@ -172,7 +172,7 @@ func TestRecreateForPendingStagedConfigPersistsPartialContainerID(t *testing.T) 
 	}
 	server := &storage.Server{ID: "srv-1", ContainerID: "old-id", Status: storage.StatusRunning}
 
-	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server, true, true)
+	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server, true, true, nil)
 	require.True(t, handled)
 	require.Error(t, err)
 	require.NotNil(t, store.server)
@@ -194,7 +194,7 @@ func TestPrepareDeepSleepWakeRecreatesWithoutStartingOrAdvancingLastStarted(t *t
 	client := &fakeLifecycleDocker{result: &docker.RecreateContainerResult{NewContainerID: "replacement-id"}}
 	server := &storage.Server{ID: "srv-1", ContainerID: "old-id", Status: storage.StatusDeepSleep}
 
-	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server, false, false)
+	handled, err := recreateForPendingStagedConfig(ctx, store, client, nil, server, false, false, nil)
 	require.NoError(t, err)
 	require.True(t, handled)
 	assert.Equal(t, "replacement-id", server.ContainerID)
@@ -265,7 +265,7 @@ func TestRecreateForPendingStagedConfigRollbackOnStartFailure(t *testing.T) {
 	failClient := &failingStartDocker{fakeLifecycleDocker: client, failOn: "replacement-id-2"}
 	server := &storage.Server{ID: "srv-1", ContainerID: "old-id", Status: storage.StatusStopped}
 
-	handled, err := recreateForPendingStagedConfig(ctx, store, failClient, nil, server, true, true)
+	handled, err := recreateForPendingStagedConfig(ctx, store, failClient, nil, server, true, true, nil)
 	require.True(t, handled)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to start recreated server")
