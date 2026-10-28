@@ -467,6 +467,25 @@ func (c *Client) GetDockerClient() *client.Client {
 	return c.docker
 }
 
+// DaemonID is the Docker daemon id reported by Info. An empty id is an error
+// so a caller cannot accept an unnamed daemon.
+func (c *Client) DaemonID(ctx context.Context) (string, error) {
+	if c == nil || c.docker == nil {
+		return "", fmt.Errorf("docker client is nil")
+	}
+	ctx, cancel := boundedCall(ctx)
+	defer cancel()
+	result, err := c.docker.Info(ctx, client.InfoOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to read Docker daemon id: %w", err)
+	}
+	id := strings.TrimSpace(result.Info.ID)
+	if id == "" {
+		return "", fmt.Errorf("docker daemon reported an empty id")
+	}
+	return id, nil
+}
+
 // Ping checks connectivity to the Docker daemon
 func (c *Client) Ping(ctx context.Context) (client.PingResult, error) {
 	if c == nil || c.docker == nil {
@@ -1845,6 +1864,9 @@ func getDockerImage(loader models.ModLoader, mcVersion string) string {
 
 // Creates the Docker network if it doesn't exist - attaches itself to that network when applicable
 func (c *Client) EnsureNetwork() error {
+	if c == nil || c.docker == nil {
+		return fmt.Errorf("docker client is nil")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultAPITimeout)
 	defer cancel()
 

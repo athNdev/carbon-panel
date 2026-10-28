@@ -3,11 +3,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -112,18 +112,15 @@ func TestClientPool_Fallback(t *testing.T) {
 		t.Fatalf("expected error requesting unknown node with fallback disabled, got nil")
 	}
 
-	// Enabling fallback allows GetClient to gracefully fall back to default
+	// A named node still fails when the historical fallback flag is set.
 	pool.SetFallbackEnabled(true)
 	if !pool.IsFallbackEnabled() {
-		t.Fatalf("expected fallback to be enabled after SetFallbackEnabled(true)")
+		t.Fatalf("expected fallback flag to be stored after SetFallbackEnabled(true)")
 	}
 
 	fallbackCli, err := pool.GetClient("nonexistent-node-123")
-	if err != nil {
-		t.Fatalf("expected graceful fallback when enabled, got error: %v", err)
-	}
-	if fallbackCli != mockClient {
-		t.Fatalf("expected default client on fallback, got %v", fallbackCli)
+	if err == nil || fallbackCli == mockClient {
+		t.Fatalf("named node returned the local client with fallback enabled: %v %v", fallbackCli, err)
 	}
 
 	// Strict get should ALWAYS fail and NOT fall back, regardless of allowFallback setting
@@ -165,11 +162,118 @@ func TestClientPool_RegisterAndRemoveNode(t *testing.T) {
 		t.Fatalf("expected error requesting removed node with fallback disabled, got nil")
 	}
 
-	// With fallback enabled, it falls back to default
+	// A removed named node is not served by the local client.
 	pool.SetFallbackEnabled(true)
 	afterRemove, err := pool.GetClient("custom-node")
-	if err != nil || afterRemove != defaultCli {
-		t.Fatalf("expected fallback to default after removal when enabled, got %v (err: %v)", afterRemove, err)
+	if err == nil || afterRemove == defaultCli {
+		t.Fatalf("removed node returned the local client: %v %v", afterRemove, err)
+	}
+}
+
+func TestGetClientStrictDropsAClientWhenTheEndpointChanges(t *testing.T) {
+	log := logger.New()
+	stale := &Client{log: log, host: "tcp://10.0.0.2:2375"}
+	store := newMockNodeStore(&models.Node{
+		ID: "remote-b", Name: "B", Host: "tcp://10.0.0.2:2375", Enabled: true,
+	})
+	pool := NewClientPool(store, &Client{log: log}, log)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	pool.mu.Lock()
+	pool.clients["remote-b"] = stale
+	recorded := *store.nodes["remote-b"]
+	pool.nodeConfigs["remote-b"] = &recorded
+	pool.mu.Unlock()
+
+	got, err := pool.GetClientStrict("remote-b")
+	if err != nil || got != stale {
+		t.Fatalf("unchanged endpoint = %v %v, want the cached client", got, err)
+	}
+
+	store.mu.Lock()
+	store.nodes["remote-b"].Host = "tcp://10.0.0.3:2375"
+	store.mu.Unlock()
+
+	got, err = pool.GetClientStrict("remote-b")
+	if err != nil {
+		t.Fatalf("rebuild after endpoint change: %v", err)
+	}
+	if got == stale || got.host != "tcp://10.0.0.3:2375" {
+		t.Fatalf("client after endpoint change = host %q, want the new endpoint", got.host)
+	}
+}
+
+func TestGetClientStrictDropsAClientWhenTheGenerationChanges(t *testing.T) {
+	log := logger.New()
+	stale := &Client{log: log, host: "tcp://10.0.0.2:2375"}
+	store := newMockNodeStore(&models.Node{
+		ID: "remote-b", Name: "B", Host: "tcp://10.0.0.2:2375", Enabled: true, EndpointGeneration: 1,
+	})
+	pool := NewClientPool(store, &Client{log: log}, log)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	pool.mu.Lock()
+	pool.clients["remote-b"] = stale
+	recorded := *store.nodes["remote-b"]
+	pool.nodeConfigs["remote-b"] = &recorded
+	pool.mu.Unlock()
+
+	store.mu.Lock()
+	store.nodes["remote-b"].EndpointGeneration = 2
+	store.mu.Unlock()
+
+	got, err := pool.GetClientStrict("remote-b")
+	if err != nil {
+		t.Fatalf("rebuild after generation change: %v", err)
+	}
+	if got == stale {
+		t.Fatal("generation change reused the cached client")
+	}
+}
+
+func TestPingNodeAcceptsTheFirstDaemonAndRefusesAReplacement(t *testing.T) {
+	log := logger.New()
+	remote := &Client{log: log}
+	store := newMockNodeStore(&models.Node{
+		ID: "remote-b", Name: "B", Host: "tcp://10.0.0.2:2375", Enabled: true,
+		Status: models.NodeStatusOffline, EndpointGeneration: 1,
+	})
+	pool := NewClientPool(store, &Client{log: log}, log)
+	t.Cleanup(func() { _ = pool.Close() })
+	pool.RegisterClient("remote-b", remote)
+
+	origPing := pingDocker
+	origID := readDaemonIdentity
+	t.Cleanup(func() {
+		pingDocker = origPing
+		readDaemonIdentity = origID
+	})
+	pingDocker = func(context.Context, *Client) error { return nil }
+	readDaemonIdentity = func(context.Context, *Client) (string, error) { return "daemon-a", nil }
+
+	ok, err := pool.PingNode(context.Background(), "remote-b")
+	if err != nil || !ok {
+		t.Fatalf("first ping = %v %v", ok, err)
+	}
+	got, err := store.GetNode(context.Background(), "remote-b")
+	if err != nil || got.DaemonID != "daemon-a" || got.Status != models.NodeStatusOnline || got.EndpointGeneration != 1 {
+		t.Fatalf("node after accept = %+v %v", got, err)
+	}
+
+	readDaemonIdentity = func(context.Context, *Client) (string, error) { return "daemon-b", nil }
+	ok, err = pool.PingNode(context.Background(), "remote-b")
+	if ok || !errors.Is(err, ErrDaemonIdentity) {
+		t.Fatalf("replacement ping = %v %v, want ErrDaemonIdentity", ok, err)
+	}
+	got, err = store.GetNode(context.Background(), "remote-b")
+	if err != nil || got.DaemonID != "daemon-a" || got.Status != models.NodeStatusOffline {
+		t.Fatalf("node after mismatch = %+v %v", got, err)
+	}
+	pool.mu.RLock()
+	_, stillCached := pool.clients["remote-b"]
+	pool.mu.RUnlock()
+	if stillCached {
+		t.Fatal("mismatched daemon kept the cached client")
 	}
 }
 
@@ -322,12 +426,12 @@ func TestClientPool_Stats(t *testing.T) {
 		t.Fatalf("expected 2 requests, 2 hits, got %+v", stats)
 	}
 
-	// Request nonexistent (fallback)
+	// A missing named node is a miss, not a fallback to the local daemon.
 	pool.SetFallbackEnabled(true)
 	_, _ = pool.GetClient("nonexistent")
 	stats = pool.Stats()
-	if stats.TotalRequests != 3 || stats.CacheMisses != 1 || stats.Fallbacks != 1 {
-		t.Fatalf("expected 3 requests, 1 miss, 1 fallback, got %+v", stats)
+	if stats.TotalRequests != 3 || stats.CacheMisses != 1 || stats.Fallbacks != 0 {
+		t.Fatalf("expected 3 requests, 1 miss, 0 fallbacks, got %+v", stats)
 	}
 }
 

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -93,5 +94,71 @@ func TestAdvanceServerOperationRejectsStalePhase(t *testing.T) {
 	}
 	if err := store.AdvanceServerOperation(ctx, op.ID, ServerOperationPrepared, ServerOperationExecuting, ""); err != nil {
 		t.Fatalf("advance from the current phase: %v", err)
+	}
+}
+
+func TestOperationRecordsTheEndpointGeneration(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+
+	node := &Node{ID: "node-gen", Name: "Gen", Host: "tcp://10.0.0.2:2375", Enabled: true, Status: NodeStatusOnline, DaemonID: "daemon-a"}
+	if err := store.CreateNode(ctx, node); err != nil {
+		t.Fatalf("CreateNode: %v", err)
+	}
+	if node.EndpointGeneration != 1 {
+		t.Fatalf("create generation = %d, want 1", node.EndpointGeneration)
+	}
+
+	op, _, err := store.BeginServerOperation(ctx, "srv-gen", node.ID, "c1", "key-1", "start", "digest")
+	if err != nil {
+		t.Fatalf("BeginServerOperation: %v", err)
+	}
+	if op.EndpointGeneration != 1 || op.DaemonID != "daemon-a" {
+		t.Fatalf("operation identity = generation %d daemon %q, want 1 and daemon-a", op.EndpointGeneration, op.DaemonID)
+	}
+
+	node.Status = NodeStatusOffline
+	if err := store.UpdateNode(ctx, node); err != nil {
+		t.Fatalf("status update: %v", err)
+	}
+	if node.EndpointGeneration != 1 {
+		t.Fatalf("status update generation = %d, want 1", node.EndpointGeneration)
+	}
+
+	node.Host = "tcp://10.0.0.3:2375"
+	if err := store.UpdateNode(ctx, node); err != nil {
+		t.Fatalf("host update: %v", err)
+	}
+	if node.EndpointGeneration != 2 {
+		t.Fatalf("host update generation = %d, want 2", node.EndpointGeneration)
+	}
+	if _, _, err := store.BeginServerOperation(ctx, "srv-gen", node.ID, "c1", "key-1", "start", "digest"); err == nil {
+		t.Fatal("same request key must conflict after the endpoint generation changes")
+	}
+
+	if err := store.AdvanceServerOperation(ctx, op.ID, ServerOperationPrepared, ServerOperationExecuting, ""); err != nil {
+		t.Fatalf("advance to executing: %v", err)
+	}
+	if err := store.AdvanceServerOperation(ctx, op.ID, ServerOperationExecuting, ServerOperationComplete, ""); err != nil {
+		t.Fatalf("advance to complete: %v", err)
+	}
+	next, _, err := store.BeginServerOperation(ctx, "srv-gen", node.ID, "c1", "key-2", "start", "digest-2")
+	if err != nil {
+		t.Fatalf("BeginServerOperation after generation bump: %v", err)
+	}
+	if next.EndpointGeneration != 2 || next.DaemonID != "daemon-a" {
+		t.Fatalf("new operation identity = generation %d daemon %q, want 2 and daemon-a", next.EndpointGeneration, next.DaemonID)
+	}
+
+	node.DaemonID = "daemon-b"
+	if err := store.UpdateNode(ctx, node); err != nil {
+		t.Fatalf("daemon id update: %v", err)
+	}
+	if node.EndpointGeneration != 2 {
+		t.Fatalf("daemon id update generation = %d, want 2", node.EndpointGeneration)
+	}
+	if _, _, err := store.BeginServerOperation(ctx, "srv-gen", node.ID, "c1", "key-2", "start", "digest-2"); err == nil || !strings.Contains(err.Error(), "conflicts") {
+		t.Fatalf("repeat after daemon change = %v, want an identity conflict", err)
 	}
 }

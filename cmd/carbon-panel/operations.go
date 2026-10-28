@@ -52,18 +52,22 @@ func writeOperationList(ctx context.Context, store *storage.Store, out io.Writer
 		return err
 	}
 	if len(ops) == 0 {
-		fmt.Fprintln(out, "no server operations")
-		return nil
+		_, err := fmt.Fprintln(out, "no server operations")
+		return err
 	}
-	fmt.Fprintln(out, "ID\tSERVER\tKIND\tPHASE\tACTIVE\tUPDATED\tDETAIL")
+	if _, err := fmt.Fprintln(out, "ID\tSERVER\tKIND\tPHASE\tACTIVE\tNODE\tGENERATION\tDAEMON\tUPDATED\tDETAIL"); err != nil {
+		return err
+	}
 	for _, op := range ops {
 		active := "no"
 		if op.ActiveServer != nil {
 			active = "yes"
 		}
 		detail := strings.ReplaceAll(op.LastError, "\n", " ")
-		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			op.ID, op.ServerID, op.Kind, op.Phase, active, op.UpdatedAt.UTC().Format(time.RFC3339), detail)
+		if _, err := fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\n",
+			op.ID, op.ServerID, op.Kind, op.Phase, active, op.NodeID, op.EndpointGeneration, op.DaemonID, op.UpdatedAt.UTC().Format(time.RFC3339), detail); err != nil {
+			return err
+		}
 	}
 	return nil
 }
