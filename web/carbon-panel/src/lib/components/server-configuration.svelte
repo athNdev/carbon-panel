@@ -1002,7 +1002,9 @@ one at https://mozilla.org/MPL/2.0/.
 					{#if batchOpen}
 						<ul class="space-y-1">
 							{#each batchItems as item (item.id)}
-								<li class="flex items-center justify-between gap-3 font-mono text-xs text-[#f4f4f4]">
+								<li
+									class="flex items-center justify-between gap-3 font-mono text-xs text-[#f4f4f4]"
+								>
 									<span>{item.summary}</span>
 									<button
 										type="button"
@@ -1025,10 +1027,12 @@ one at https://mozilla.org/MPL/2.0/.
 					<p class="font-mono text-xs text-[#c6c6c6]">
 						Stage keeps the server as it is, including while it is frozen or in deep sleep.
 						{#if applyWindow === 'time'}
-							The batch applies at the chosen time, even if that time passed while the panel was down.
+							The batch applies at the chosen time, even if that time passed while the panel was
+							down.
 						{:else if applyWindow === 'idle'}
-							The batch applies after the server has had nobody online for the chosen minutes. A player
-							joining starts that wait over. Deep sleep stays stopped. A frozen server restarts once.
+							The batch applies after the server has had nobody online for the chosen minutes. A
+							player joining starts that wait over. Deep sleep stays stopped. A frozen server
+							restarts once.
 						{:else}
 							The batch applies on the next restart.
 						{/if}
