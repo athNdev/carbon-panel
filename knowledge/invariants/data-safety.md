@@ -43,6 +43,9 @@ losing a world is not recoverable by rebuilding the controller.
   row is gone. The row records delete, keep_data, or detach, and it stays
   unsettled until that choice is recorded. A retry of a delete whose row is
   already gone only settles that record. It does not delete files again.
+- Panel startup resumes an unsettled disposition. A pending delete continues
+  the original choice. A disposition that already recorded the world outcome
+  only removes the remaining panel row.
 - `DeleteServer` with `keep_data` drops the panel record and container and
   leaves the world directory where it is. The audit row records that path.
 - `DeleteServer` with `detach` leaves the container and the world directory

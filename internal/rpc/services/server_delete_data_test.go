@@ -236,6 +236,80 @@ func TestDeleteServerKeepsTheRowWhenDataRemovalFails(t *testing.T) {
 	requireDisposition(t, svc, server.ID, db.DispositionDelete, db.DispositionSettled, dataPath)
 }
 
+func TestStartupResumesAPendingDeletion(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := context.Background()
+	dataPath := filepath.Join(t.TempDir(), "world")
+	marker := writeServerMarker(t, dataPath)
+	server := &db.Server{
+		ID: "resume-pending", Name: "Resume Pending", NodeID: "test-node",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25596, Memory: 2048, Status: db.StatusStopped, DataPath: dataPath,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.store.BeginServerDisposition(ctx, &db.ServerDisposition{
+		ServerID: server.ID, Name: server.Name, NodeID: server.NodeID,
+		DataPath: dataPath, Port: server.Port, Mode: db.DispositionDelete,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	finished, err := svc.ResumeUnsettledDispositions(ctx)
+	if err != nil || finished != 1 {
+		t.Fatalf("resume = %d %v, want 1", finished, err)
+	}
+	if _, err := os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatalf("resumed delete left the world: %v", err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err == nil {
+		t.Fatal("server row still exists")
+	}
+	requireDisposition(t, svc, server.ID, db.DispositionDelete, db.DispositionSettled, dataPath)
+}
+
+func TestStartupFinishesARecordedDispositionWithoutDeletingTheWorldAgain(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := context.Background()
+	dataPath := filepath.Join(t.TempDir(), "world")
+	marker := writeServerMarker(t, dataPath)
+	svc.removeData = func(string) error {
+		t.Fatal("startup deleted a world whose disposition was already recorded")
+		return nil
+	}
+	server := &db.Server{
+		ID: "resume-settled-data", Name: "Resume Settled Data", NodeID: "test-node",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25597, Memory: 2048, Status: db.StatusStopped, DataPath: dataPath,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	disp, err := svc.store.BeginServerDisposition(ctx, &db.ServerDisposition{
+		ServerID: server.ID, Name: server.Name, NodeID: server.NodeID,
+		DataPath: dataPath, Port: server.Port, Mode: db.DispositionDelete,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.store.SetServerDispositionPhase(ctx, disp.ID, db.DispositionDataSettled); err != nil {
+		t.Fatal(err)
+	}
+
+	finished, err := svc.ResumeUnsettledDispositions(ctx)
+	if err != nil || finished != 1 {
+		t.Fatalf("resume = %d %v, want 1", finished, err)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("recorded world was removed: %v", err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err == nil {
+		t.Fatal("server row still exists")
+	}
+	requireDisposition(t, svc, server.ID, db.DispositionDelete, db.DispositionSettled, dataPath)
+}
+
 func requireDisposition(t *testing.T, svc *ServerService, serverID, mode, phase, dataPath string) {
 	t.Helper()
 	disp, err := svc.store.LatestServerDisposition(context.Background(), serverID)

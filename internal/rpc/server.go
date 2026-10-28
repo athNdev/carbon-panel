@@ -299,6 +299,11 @@ func (s *Server) registerServices(mux *http.ServeMux, opts []connect.HandlerOpti
 	nodeService := services.NewNodeService(s.store, s.clientPool, s.log)
 	proxyService := services.NewProxyService(s.store, s.docker, s.clientPool, s.proxyManager, s.config, s.logStreamer, s.log)
 	serverService := services.NewServerService(s.store, s.docker, s.sender, s.config, s.proxyManager, s.logStreamer, s.metricsCollector, s.moduleManager, s.bus, s.log, s.clientPool, s.placementEngine, s.enforcer)
+	if finished, err := serverService.ResumeUnsettledDispositions(context.Background()); err != nil {
+		s.log.Error("Failed to list unfinished deletions: %v", err)
+	} else if finished > 0 {
+		s.log.Warn("Resumed %d unfinished deletion(s)", finished)
+	}
 	supportService := services.NewSupportService(s.store, s.docker, s.config, s.log)
 	taskService := services.NewTaskService(s.store, s.scheduler, s.log)
 	activityService := services.NewActivityService(s.store, s.log)

@@ -93,6 +93,12 @@ func (s *Store) SetServerDispositionPhase(ctx context.Context, id, phase string)
 	return nil
 }
 
+func (s *Store) ListUnsettledDispositions(ctx context.Context) ([]ServerDisposition, error) {
+	var rows []ServerDisposition
+	err := s.db.WithContext(ctx).Where("phase <> ?", DispositionSettled).Order("created_at asc").Find(&rows).Error
+	return rows, err
+}
+
 func (s *Store) LatestServerDisposition(ctx context.Context, serverID string) (*ServerDisposition, error) {
 	var row ServerDisposition
 	err := s.db.WithContext(ctx).Where("server_id = ?", serverID).Order("created_at desc").First(&row).Error
