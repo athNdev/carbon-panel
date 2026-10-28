@@ -1337,6 +1337,7 @@ body > footer {
   width: 100%;
   height: auto;
   display: block;
+  overflow: visible;
   text-rendering: geometricPrecision;
 }
 .a-chip { fill: var(--term-bg); stroke: var(--border-strong); stroke-width: 1; }
@@ -1473,8 +1474,8 @@ body > footer {
     gap: 28px;
   }
   .arch-visual {
-    overflow: hidden;
     min-width: 0;
+    overflow: visible;
   }
   .arch-svg {
     min-width: 0;
