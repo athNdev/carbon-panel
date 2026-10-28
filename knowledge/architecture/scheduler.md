@@ -33,6 +33,8 @@ streamed through the WebSocket hub.
 - A task is not claimed when the running-execution check fails. The due run
   stays due, and a manual trigger returns that error. An unknown check is
   treated as running.
+- Cron runs in the controller's local time. A missed slot is not replayed:
+  one due check runs the task once and stores the next future time.
 - Validate cron expressions before persisting them.
 
 # How to check

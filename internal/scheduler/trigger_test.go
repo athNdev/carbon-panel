@@ -195,3 +195,55 @@ func TestTryClaimTaskRefusesWhenTheRunningCheckFails(t *testing.T) {
 		t.Fatal("a failed check registered the task as running")
 	}
 }
+
+func TestDueCronRunsOnceWhenSeveralSlotsWereMissed(t *testing.T) {
+	s, store := newTriggerTestScheduler(t)
+	ctx := context.Background()
+
+	server := &storage.Server{ID: "srv-missed", Name: "missed", Status: storage.StatusStopped}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatalf("create server: %v", err)
+	}
+	overdue := time.Now().Add(-3 * time.Hour)
+	task := &storage.ScheduledTask{
+		ID:       "task-missed-cron",
+		ServerID: server.ID,
+		Name:     "nightly",
+		TaskType: storage.TaskTypeCommand,
+		Status:   storage.TaskStatusEnabled,
+		Schedule: storage.ScheduleTypeCron,
+		CronExpr: "0 0 * * *",
+		NextRun:  &overdue,
+	}
+	if err := store.CreateScheduledTask(ctx, task); err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	s.checkAndRunDueTasks()
+	s.wg.Wait()
+
+	updated, err := store.GetScheduledTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("reload task: %v", err)
+	}
+	if updated.NextRun == nil || !updated.NextRun.After(time.Now()) {
+		t.Fatalf("next run = %v, want a future slot", updated.NextRun)
+	}
+	executions, err := store.ListTaskExecutions(ctx, task.ID, 10)
+	if err != nil {
+		t.Fatalf("list executions: %v", err)
+	}
+	if len(executions) != 1 {
+		t.Fatalf("executions after the overdue tick = %d, want 1", len(executions))
+	}
+
+	s.checkAndRunDueTasks()
+	s.wg.Wait()
+	executions, err = store.ListTaskExecutions(ctx, task.ID, 10)
+	if err != nil {
+		t.Fatalf("list executions again: %v", err)
+	}
+	if len(executions) != 1 {
+		t.Fatalf("executions after the following tick = %d, want 1", len(executions))
+	}
+}
