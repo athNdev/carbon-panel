@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+"""Regression checks for the standalone landing page."""
+
+from html.parser import HTMLParser
+from pathlib import Path
+import unittest
+
+
+class InstallCommandParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.copy_targets = []
+        self.command_parts = []
+        self.command_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "button" and attrs.get("aria-label") == "Copy install command":
+            self.copy_targets.append(attrs.get("data-copy"))
+        if self.command_depth:
+            self.command_depth += 1
+        elif attrs.get("id") == "install-cmd":
+            self.command_depth = 1
+
+    def handle_endtag(self, tag):
+        if self.command_depth:
+            self.command_depth -= 1
+
+    def handle_data(self, data):
+        if self.command_depth:
+            self.command_parts.append(data)
+
+
+class LandingPageTests(unittest.TestCase):
+    def test_copy_target_contains_a_runnable_command_without_the_prompt(self):
+        page = Path(__file__).resolve().parent.parent / "landing" / "index.html"
+        parser = InstallCommandParser()
+        parser.feed(page.read_text(encoding="utf-8"))
+        self.assertEqual(parser.copy_targets, ["install-cmd"])
+        self.assertEqual(
+            "".join(parser.command_parts).strip(),
+            "git clone https://github.com/athNdev/carbonpanel && cd carbonpanel",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

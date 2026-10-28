@@ -94,7 +94,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261029d" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261029e" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -260,10 +260,8 @@
           <h1>Your Minecraft servers.<br /><span class="grad">Your infrastructure.</span></h1>
 
           <p class="hero-sub">
-            Carbon Panel is the open-source, Docker-native control plane for Minecraft
-            servers. Every server in its own container — on your home machine or in the
-            cloud — players routed by hostname, and modpacks shipped straight from
-            CurseForge and Modrinth.
+            Run your Minecraft servers in isolated containers, on your own hardware
+            or in the cloud. One self-hosted panel for your worlds, players and modpacks.
           </p>
 
           <div class="hero-cta">
@@ -278,7 +276,7 @@
           </div>
 
           <div class="install">
-            <code id="install-cmd"><span class="prompt">$</span> git clone https://github.com/athNdev/carbonpanel && cd carbonpanel</code>
+            <code><span class="prompt" aria-hidden="true">$</span> <span id="install-cmd">git clone https://github.com/athNdev/carbonpanel &amp;&amp; cd carbonpanel</span></code>
             <button class="copy-btn" data-copy="install-cmd" aria-label="Copy install command">
               <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span>
             </button>
