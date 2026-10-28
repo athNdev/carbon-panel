@@ -35,8 +35,12 @@ func ExtractTarGz(r io.Reader, dest string) error {
 		if err != nil {
 			return err
 		}
-		switch hdr.Typeflag {
-		case tar.TypeDir, tar.TypeReg, tar.TypeRegA:
+		kind := hdr.Typeflag
+		if kind == 0 {
+			kind = tar.TypeReg
+		}
+		switch kind {
+		case tar.TypeDir, tar.TypeReg:
 		default:
 			return fmt.Errorf("files: rejected tar entry %q", hdr.Name)
 		}
@@ -44,7 +48,7 @@ func ExtractTarGz(r io.Reader, dest string) error {
 		if err != nil {
 			return fmt.Errorf("files: %s: %w", hdr.Name, err)
 		}
-		if hdr.Typeflag == tar.TypeDir {
+		if kind == tar.TypeDir {
 			if err := os.MkdirAll(target, 0o755); err != nil {
 				return err
 			}

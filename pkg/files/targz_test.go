@@ -75,6 +75,17 @@ func TestExtractTarGz(t *testing.T) {
 		t.Fatal("absolute path was extracted")
 	}
 
+	legacy := tarGz(t,
+		[]tar.Header{{Name: "legacy.txt", Mode: 0o644, Typeflag: 0}},
+		[]string{"old"},
+	)
+	if err := ExtractTarGz(legacy, dest); err != nil {
+		t.Fatal(err)
+	}
+	if body, err := os.ReadFile(filepath.Join(dest, "legacy.txt")); err != nil || string(body) != "old" {
+		t.Fatalf("legacy typeflag: %v %q", err, body)
+	}
+
 	link := tarGz(t,
 		[]tar.Header{{Name: "escape", Typeflag: tar.TypeSymlink, Linkname: "/etc/passwd", Mode: 0o777}},
 		[]string{""},
