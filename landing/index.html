@@ -94,7 +94,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261029b" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261029c" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -136,6 +136,12 @@
       </symbol>
       <symbol id="i-menu" viewBox="0 0 24 24">
         <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
       </symbol>
       <symbol id="i-box" viewBox="0 0 24 24">
         <path d="M21 8v8l-9 5-9-5V8l9-5 9 5zM3 8l9 5 9-5M12 13v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
@@ -281,73 +287,56 @@
 
         <!-- Hero product mockup -->
         <div class="hero-visual reveal">
-          <div class="mock" role="img" aria-label="Illustration of a Carbon Panel dashboard with example server and node status">
-            <div class="mock-bar">
-              <div class="dots"><i></i><i></i><i></i></div>
-              <div class="url">carbon-panel · example interface</div>
+          <div class="mock" role="img" aria-label="Illustration of the Carbon Panel Cluster Overview, showing example server statistics, server status and recent activity">
+            <div class="mock-header">
+              <span class="mock-menu">☰</span>
+              <img src="./assets/brand-mark-light.svg" alt="" />
+              <strong>Carbon Panel</strong>
+              <span class="mock-running">RUNNING: <b>2 / 3</b></span>
+              <span class="mock-avatar">AD</span>
             </div>
             <div class="mock-body">
               <div class="mock-rail">
-                <div class="r-icon active"><svg class="icon"><use href="#i-layout"/></svg></div>
-                <div class="r-icon"><svg class="icon"><use href="#i-server"/></svg></div>
-                <div class="r-icon"><svg class="icon"><use href="#i-route"/></svg></div>
-                <div class="r-icon"><svg class="icon"><use href="#i-puzzle"/></svg></div>
-                <div class="r-icon"><svg class="icon"><use href="#i-database"/></svg></div>
-                <div class="r-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
+                <div class="mock-nav-item active"><svg class="icon"><use href="#i-layout"/></svg><span>Overview</span></div>
+                <div class="mock-nav-item"><svg class="icon"><use href="#i-server"/></svg><span>Servers</span></div>
+                <div class="mock-nav-item"><svg class="icon"><use href="#i-plus"/></svg><span>Create Server</span></div>
+                <div class="mock-nav-item"><svg class="icon"><use href="#i-puzzle"/></svg><span>Modpack Studio</span></div>
+                <div class="mock-nav-item"><svg class="icon"><use href="#i-box"/></svg><span>Modpacks &amp; Manifests</span></div>
+                <div class="mock-nav-item"><svg class="icon"><use href="#i-route"/></svg><span>Modules &amp; Sidecars</span></div>
+                <div class="mock-nav-item"><svg class="icon"><use href="#i-settings"/></svg><span>Settings</span></div>
+                <div class="mock-node"><span>HOME NODE</span><b>ONLINE</b><small>PORT 8080 · CARBON V11</small></div>
               </div>
               <div class="mock-main">
+                <div class="mock-title">
+                  <div><div class="mock-heading">Cluster Overview <span>Carbon Panel</span></div><p>Hardware utilization, game servers status, and network routing topology</p></div>
+                  <div class="mock-actions"><span>Refresh</span><b>＋ Create Server</b></div>
+                </div>
                 <div class="mock-stats">
-                  <div class="mock-stat">
-                    <div class="k">Players</div>
-                    <div class="v">42<small> / 120</small></div>
-                  </div>
-                  <div class="mock-stat">
-                    <div class="k">TPS</div>
-                    <div class="v">19.9</div>
-                  </div>
-                  <div class="mock-stat">
-                    <div class="k">Nodes</div>
-                    <div class="v">3<small> online</small></div>
-                  </div>
+                  <div class="mock-stat"><div class="k">Total Servers</div><div class="v">3</div><div class="mock-stat-footer"><span>▪ 2 ACTIVE</span><span>0 STOPPED</span></div></div>
+                  <div class="mock-stat"><div class="k">Active Players</div><div class="v">8</div><div class="mock-stat-footer"><span>▪ 8 ONLINE</span><span>MAX: 60</span></div></div>
+                  <div class="mock-stat"><div class="k">Memory Allocation</div><div class="v">4.8<small> / 12.0 GB</small></div><div class="mock-progress"><i></i></div><div class="mock-stat-footer"><span>▪ 40% UTILIZED</span></div></div>
+                  <div class="mock-stat"><div class="k">Cluster Performance</div><div class="v mock-good">19.9<small> AVG TPS</small></div><div class="mock-stat-footer"><span>▪ HEALTHY</span><span>18% CPU</span></div></div>
                 </div>
-
-                <div class="mock-servers">
-                  <div class="mock-server">
-                    <span class="s-dot on"></span>
-                    <span class="s-name">survival-01</span>
-                    <span class="s-badge">Paper 1.21</span>
-                    <span class="s-meta">24 players · 6 GB</span>
+                <div class="mock-panels">
+                  <div class="mock-panel mock-server-panel">
+                    <div class="mock-panel-title"><div><strong>Server Overview</strong><small>Instance telemetry &amp; state across cluster</small></div><span>VIEW ALL (3) ›</span></div>
+                    <div class="mock-table-head"><span>SERVER</span><span>STATUS</span><span>VERSION</span><span>METRICS</span></div>
+                    <div class="mock-table-row"><span><b>survival</b><small>7a92c813</small></span><span><i class="mock-tag running">RUNNING</i></span><span>1.21.1</span><span>6/40 <em>19.9</em></span></div>
+                    <div class="mock-table-row"><span><b>creative</b><small>c4e12a90</small></span><span><i class="mock-tag running">RUNNING</i></span><span>1.21.1</span><span>2/20 <em>20.0</em></span></div>
+                    <div class="mock-table-row"><span><b>modded</b><small>f3b24c17</small></span><span><i class="mock-tag sleeping">DEEPSLEEP</i></span><span>1.20.1</span><span class="mock-sleep">DEEP SLEEP</span></div>
                   </div>
-                  <div class="mock-server">
-                    <span class="s-dot idle"></span>
-                    <span class="s-name">creative</span>
-                    <span class="s-badge">Fabric</span>
-                    <span class="s-meta">starting… · 4 GB</span>
+                  <div class="mock-panel mock-activity">
+                    <div class="mock-panel-title"><div><strong>Recent Activity</strong><small>Latest lifecycle and cluster events</small></div><span>◷</span></div>
+                    <div class="mock-activity-head"><span>EVENT / INSTANCE</span><span>TIMESTAMP</span></div>
+                    <div class="mock-activity-row"><span class="mock-pip"></span><span><b>survival</b><small>Started</small></span><time>2h ago</time></div>
+                    <div class="mock-activity-row"><span class="mock-pip"></span><span><b>creative</b><small>Started</small></span><time>4h ago</time></div>
+                    <div class="mock-activity-row"><span class="mock-pip sleeping"></span><span><b>modded</b><small>Activity</small></span><time>1d ago</time></div>
                   </div>
-                  <div class="mock-server">
-                    <span class="s-dot sleep"></span>
-                    <span class="s-name">modded-forge</span>
-                    <span class="s-badge">NeoForge</span>
-                    <span class="s-meta">deep-sleep · 0 B</span>
-                  </div>
-                </div>
-
-                <div class="mock-console">
-                  <div><span class="c-ts">12:04:18</span> <span class="c-ok">✔</span> proxy: routed <span class="c-info">survival.mc.example.com</span> → survival-01</div>
-                  <div><span class="c-ts">12:04:19</span> <span class="c-info">➜</span> rcon: whitelisted player <span class="c-ok">alex</span></div>
-                  <div><span class="c-ts">12:04:21</span> <span class="c-warn">◇</span> backup: world snapshot queued (s3://offsite)<span class="caret"></span></div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="mock-chip chip-a">
-            <svg class="icon"><use href="#i-box"/></svg>
-            isolated containers
-          </div>
-          <div class="mock-chip chip-b">
-            <svg class="icon"><use href="#i-zap"/></svg>
-            wake-on-connect
-          </div>
+          <p class="mock-caption">Carbon Panel overview · example data</p>
         </div>
       </div>
     </section>
