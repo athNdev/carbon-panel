@@ -53,6 +53,10 @@ func TestDeleteServerRemovesLocalDataBeforeTheRow(t *testing.T) {
 	if len(leases) != 0 {
 		t.Fatalf("port leases still held: %+v", leases)
 	}
+	requireDisposition(t, svc, server.ID, db.DispositionDelete, db.DispositionSettled, dataPath)
+	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{Id: server.ID})); err != nil {
+		t.Fatalf("settled delete retry: %v", err)
+	}
 }
 
 func TestDeleteServerKeepDataLeavesTheWorldAndDropsTheRow(t *testing.T) {
@@ -81,6 +85,7 @@ func TestDeleteServerKeepDataLeavesTheWorldAndDropsTheRow(t *testing.T) {
 	if _, err := os.Stat(marker); err != nil {
 		t.Fatalf("kept world stat = %v", err)
 	}
+	requireDisposition(t, svc, server.ID, db.DispositionKeepData, db.DispositionSettled, dataPath)
 
 	var logs []db.ActivityLog
 	if err := svc.store.DB().Where("subject_id = ? AND event = ?", server.ID, activity.EventServerDelete).Find(&logs).Error; err != nil {
@@ -134,6 +139,7 @@ func TestDeleteServerDetachLeavesTheContainerWorldAndPort(t *testing.T) {
 	if _, err := os.Stat(marker); err != nil {
 		t.Fatalf("detached world stat = %v", err)
 	}
+	requireDisposition(t, svc, server.ID, db.DispositionDetach, db.DispositionSettled, dataPath)
 	var leases []db.BackendPortLease
 	if err := svc.store.DB().Where("server_id = ?", server.ID).Find(&leases).Error; err != nil {
 		t.Fatal(err)
@@ -217,6 +223,27 @@ func TestDeleteServerKeepsTheRowWhenDataRemovalFails(t *testing.T) {
 	}
 	if _, err := os.Stat(marker); err != nil {
 		t.Fatalf("server data stat = %v", err)
+	}
+	requireDisposition(t, svc, server.ID, db.DispositionDelete, db.DispositionPending, dataPath)
+
+	svc.removeData = nil
+	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{Id: server.ID})); err != nil {
+		t.Fatalf("retry after a failed data delete: %v", err)
+	}
+	if _, err := os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatalf("retried delete left the world: %v", err)
+	}
+	requireDisposition(t, svc, server.ID, db.DispositionDelete, db.DispositionSettled, dataPath)
+}
+
+func requireDisposition(t *testing.T, svc *ServerService, serverID, mode, phase, dataPath string) {
+	t.Helper()
+	disp, err := svc.store.LatestServerDisposition(context.Background(), serverID)
+	if err != nil || disp == nil {
+		t.Fatalf("disposition = %v %v", disp, err)
+	}
+	if disp.Mode != mode || disp.Phase != phase || disp.DataPath != dataPath {
+		t.Fatalf("disposition = mode %s phase %s path %s, want %s %s %s", disp.Mode, disp.Phase, disp.DataPath, mode, phase, dataPath)
 	}
 }
 

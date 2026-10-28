@@ -1769,11 +1769,30 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
 	if err != nil {
+		if settled, serr := s.settleFinishedDisposition(ctx, req.Msg.Id); serr != nil {
+			return nil, connect.NewError(connect.CodeInternal, serr)
+		} else if settled {
+			return connect.NewResponse(&v1.DeleteServerResponse{}), nil
+		}
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
 	detach := req.Msg.GetDetach()
 	keepData := detach || req.Msg.GetKeepData()
+	mode := storage.DispositionDelete
+	if detach {
+		mode = storage.DispositionDetach
+	} else if keepData {
+		mode = storage.DispositionKeepData
+	}
+	disposition, err := s.store.BeginServerDisposition(ctx, &storage.ServerDisposition{
+		ServerID: server.ID, Name: server.Name, NodeID: server.NodeID,
+		ContainerID: server.ContainerID, DataPath: server.DataPath, Port: server.Port,
+		Mode: mode,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to record deletion disposition: %w", err))
+	}
 
 	var dockerCli *docker.Client
 	if server.ContainerID != "" && !detach {
@@ -1844,6 +1863,9 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 			return nil, connect.NewError(code, fmt.Errorf("failed to delete server data: %w", err))
 		}
 	}
+	if err := s.store.SetServerDispositionPhase(ctx, disposition.ID, storage.DispositionDataSettled); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to record data disposition: %w", err))
+	}
 
 	// Delete from database. Detach keeps the port lease so a new server cannot
 	// publish the port the left-behind container still binds.
@@ -1855,11 +1877,33 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		s.log.Error("Failed to delete server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete server"))
 	}
+	if err := s.store.SetServerDispositionPhase(ctx, disposition.ID, storage.DispositionSettled); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to settle deletion disposition: %w", err))
+	}
 
 	peerIP := req.Peer().Addr
 	s.auditServerDelete(ctx, peerIP, server, keepData, detach)
 
 	return connect.NewResponse(&v1.DeleteServerResponse{}), nil
+}
+
+// settleFinishedDisposition completes a delete whose panel row is already
+// gone and whose world disposition was recorded. It does not delete files.
+func (s *ServerService) settleFinishedDisposition(ctx context.Context, serverID string) (bool, error) {
+	disp, err := s.store.LatestServerDisposition(ctx, serverID)
+	if err != nil || disp == nil {
+		return false, err
+	}
+	if disp.Phase == storage.DispositionSettled {
+		return true, nil
+	}
+	if disp.Phase != storage.DispositionDataSettled {
+		return false, nil
+	}
+	if err := s.store.SetServerDispositionPhase(ctx, disp.ID, storage.DispositionSettled); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // removeServerData deletes the server directory on the owning node's storage.

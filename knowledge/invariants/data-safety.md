@@ -39,6 +39,10 @@ losing a world is not recoverable by rebuilding the controller.
   before the database row. A failed removal keeps the row so the delete
   can be retried. A remote node without shared storage does not have a
   controller-local directory removed in its place.
+- Every delete writes a disposition row first and keeps it after the panel
+  row is gone. The row records delete, keep_data, or detach, and it stays
+  unsettled until that choice is recorded. A retry of a delete whose row is
+  already gone only settles that record. It does not delete files again.
 - `DeleteServer` with `keep_data` drops the panel record and container and
   leaves the world directory where it is. The audit row records that path.
 - `DeleteServer` with `detach` leaves the container and the world directory
