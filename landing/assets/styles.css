@@ -2137,12 +2137,12 @@ table.compare .icon { width: 18px; height: 18px; }
   background: radial-gradient(ellipse 45% 35% at 85% 15%, rgba(120, 169, 255, 0.08) 0%, transparent 72%);
 }
 
+.tile:hover::before {
+  opacity: 0;
+}
 .tile:hover {
-  border-color: rgba(120, 169, 255, 0.38);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 22px 50px -28px rgba(15, 98, 254, 0.7),
-    0 0 42px -18px rgba(120, 169, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* ============================================================
@@ -2663,11 +2663,9 @@ table.compare .icon { width: 18px; height: 18px; }
   -webkit-backdrop-filter: blur(14px) saturate(145%);
   backdrop-filter: blur(14px) saturate(145%);
 }
-.section:has(.final-cta),
 .section:has(.oss) {
   isolation: isolate;
 }
-.section:has(.final-cta)::before,
 .section:has(.oss)::before {
   content: "";
   position: absolute;
@@ -2711,28 +2709,11 @@ table.compare thead th.hl {
 }
 
 .final-cta {
-  background: linear-gradient(155deg, rgba(15, 98, 254, 0.32) 0%, rgba(38, 38, 38, 0.42) 48%, rgba(22, 22, 22, 0.38) 100%);
-  border-color: rgba(120, 169, 255, 0.28);
-  box-shadow:
-    var(--glass-sheen),
-    0 0 80px -24px rgba(15, 98, 254, 0.5);
+  background: linear-gradient(140deg, rgba(15, 98, 254, 0.18) 0%, rgba(38, 38, 38, 0.55) 42%, rgba(22, 22, 22, 0.5) 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: var(--glass-sheen);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
-}
-.final-cta::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: 50%;
-  top: -36%;
-  width: 78%;
-  height: 78%;
-  transform: translateX(-50%);
-  pointer-events: none;
-  background: radial-gradient(ellipse, rgba(120, 169, 255, 0.38) 0%, rgba(15, 98, 254, 0.12) 42%, transparent 70%);
-}
-.final-cta h2 {
-  text-shadow: 0 0 36px rgba(120, 169, 255, 0.22);
 }
 
 .faq-item[open] summary {
