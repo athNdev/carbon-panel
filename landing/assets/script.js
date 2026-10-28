@@ -116,7 +116,7 @@
   // --- Live GitHub star count (graceful fallback: hidden if unavailable) ---
   const starEl = document.querySelector("[data-star-count]");
   if (starEl && window.fetch) {
-    fetch("https://api.github.com/repos/athNdev/carbon-panel")
+    fetch("https://api.github.com/repos/athNdev/carbonpanel")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data && typeof data.stargazers_count === "number" && data.stargazers_count > 0) {
