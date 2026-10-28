@@ -37,6 +37,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
 	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/rbac"
@@ -68,6 +69,7 @@ type ServerService struct {
 	docker           *docker.Client
 	hostMemoryMB     func(context.Context, string) (int64, error)
 	hostPortBound    func(int) bool
+	removeData       func(string) error
 	capacityMu       sync.Mutex
 	pool             *docker.ClientPool
 	placementEngine  *docker.PlacementEngine
@@ -1790,6 +1792,18 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
+	// Remove the data directory before the row. A failure leaves the server
+	// addressable so the same delete can be retried. The path is the node's
+	// mapped storage, never an unrelated controller directory.
+	if err := s.removeServerData(ctx, server); err != nil {
+		s.log.Error("Failed to delete server data: %v", err)
+		code := connect.CodeInternal
+		if nodestorage.IsUnavailable(err) {
+			code = connect.CodeUnavailable
+		}
+		return nil, connect.NewError(code, fmt.Errorf("failed to delete server data: %w", err))
+	}
+
 	// Delete from database
 	if err := s.store.DeleteServer(ctx, req.Msg.Id); err != nil {
 		s.log.Error("Failed to delete server: %v", err)
@@ -1799,12 +1813,50 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	peerIP := req.Peer().Addr
 	s.auditServerLifecycle(ctx, peerIP, activity.EventServerDelete, server.ID)
 
-	// Delete data directory
-	if err := os.RemoveAll(server.DataPath); err != nil {
-		s.log.Error("Failed to delete server data: %v", err)
-	}
-
 	return connect.NewResponse(&v1.DeleteServerResponse{}), nil
+}
+
+// removeServerData deletes the server directory on the owning node's storage.
+// A remote node without shared storage is refused so a controller-local path
+// is not removed in its place.
+func (s *ServerService) removeServerData(ctx context.Context, server *storage.Server) error {
+	if server == nil || strings.TrimSpace(server.DataPath) == "" {
+		return errors.New("server data path is empty")
+	}
+	info, err := storageNodeInfo(ctx, s.store, server.NodeID)
+	if err != nil {
+		return err
+	}
+	mapped, err := nodestorage.MapDataPath(info, server.DataPath)
+	if err != nil {
+		return err
+	}
+	if unsafeDataRemoval(mapped) {
+		return fmt.Errorf("refusing to delete unsafe server data path %q", mapped)
+	}
+	if !info.IsLocal {
+		root := info.ControllerStorageRoot
+		if root == "" {
+			root = info.StorageRoot
+		}
+		if root != "" && filepath.Clean(mapped) == filepath.Clean(root) {
+			return fmt.Errorf("refusing to delete storage root %q", mapped)
+		}
+	}
+	if s.removeData != nil {
+		return s.removeData(mapped)
+	}
+	return os.RemoveAll(mapped)
+}
+
+func unsafeDataRemoval(path string) bool {
+	cleaned := filepath.Clean(strings.TrimSpace(path))
+	if cleaned == "" || cleaned == "." || cleaned == string(filepath.Separator) {
+		return true
+	}
+	rest := strings.TrimPrefix(cleaned, filepath.VolumeName(cleaned))
+	rest = strings.Trim(rest, string(filepath.Separator))
+	return rest == ""
 }
 
 // StartServer starts a server

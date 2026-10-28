@@ -35,6 +35,10 @@ losing a world is not recoverable by rebuilding the controller.
 - Backup and restore must be tested; a backup that cannot be restored is not a
   backup.
 - Remote archive paths must not silently read the controller filesystem.
+- Deleting a server removes its directory on the owning node's storage
+  before the database row. A failed removal keeps the row so the delete
+  can be retried. A remote node without shared storage does not have a
+  controller-local directory removed in its place.
 
 # Review
 
