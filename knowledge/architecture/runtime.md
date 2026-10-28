@@ -25,7 +25,10 @@ sources:
 registers the RPC services, starts the TCP proxy and starts the scheduler,
 reconciler and WebSocket hub. The console is a SvelteKit build embedded into the
 binary. Interrupted server mutations are journaled and recovered on startup.
-The Docker event supervisor refreshes its node set while it runs.
+The Docker event supervisor refreshes its node set while it runs. A changed
+endpoint generation replaces that node's watcher. A node whose client cannot
+be resolved is stale and does not stop the others. A full event buffer drops
+the event instead of stalling that node's stream.
 
 # Listeners
 
