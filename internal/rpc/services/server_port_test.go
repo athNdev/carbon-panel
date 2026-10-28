@@ -284,9 +284,12 @@ func TestCreateServer_AutoPlacementSkipsNodeWithoutPhysicalMemoryCapacity(t *tes
 	if err := svc.store.UpdateNode(context.Background(), testNode); err != nil {
 		t.Fatalf("failed to cap helper node: %v", err)
 	}
+	// These nodes are remote daemons. Server creation writes the world on the
+	// node's shared-storage mount, so the fixture has to provide one.
+	mount := t.TempDir()
 	for _, node := range []*db.Node{
-		{ID: "a-small-node", Name: "Small Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline},
-		{ID: "z-large-node", Name: "Large Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline},
+		{ID: "a-small-node", Name: "Small Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline, StorageRoot: mount},
+		{ID: "z-large-node", Name: "Large Node", Host: "tcp://127.0.0.1:2375", Enabled: true, Status: db.NodeStatusOnline, StorageRoot: mount},
 	} {
 		if err := svc.store.CreateNode(context.Background(), node); err != nil {
 			t.Fatalf("failed to seed node %s: %v", node.ID, err)
