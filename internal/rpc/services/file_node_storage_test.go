@@ -13,6 +13,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/athNdev/carbon-panel/internal/db"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
@@ -185,5 +186,56 @@ func TestGetFileRefusesAnUnreachableRemoteBeforeTheControllerCopy(t *testing.T) 
 	_, err := svc.GetFile(ctx, connect.NewRequest(&v1.GetFileRequest{ServerId: server.ID, Path: "server.properties"}))
 	if connect.CodeOf(err) != connect.CodeUnavailable {
 		t.Fatalf("GetFile error = %v, want unavailable", err)
+	}
+}
+
+func TestServerLatestLogReadsTheMappedRoot(t *testing.T) {
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	mount := filepath.Join(dir, "mount", "srv-data", "logs")
+	if err := os.MkdirAll(mount, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(mount, "latest.log"), []byte("from-mount"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	controller := filepath.Join(dir, "controller", "srv-data", "logs")
+	if err := os.MkdirAll(controller, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(controller, "latest.log"), []byte("from-controller"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateNode(ctx, &db.Node{
+		ID: "remote-log", Name: "remote-log", Host: "tcp://10.0.0.10:2375", Enabled: true,
+		StorageRoot: filepath.Join(dir, "mount"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	server := &db.Server{
+		ID: "srv-log", Name: "srv-log", NodeID: "remote-log",
+		DataPath: filepath.Join(dir, "controller", "srv-data"),
+	}
+	if err := store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+
+	body, err := serverLatestLog(ctx, store, server)
+	if err != nil || string(body) != "from-mount" {
+		t.Fatalf("log = %q, %v", body, err)
+	}
+
+	bare := &db.Server{ID: "srv-log-bare", Name: "bare", NodeID: "remote-bare-log", DataPath: server.DataPath}
+	if err := store.CreateNode(ctx, &db.Node{ID: "remote-bare-log", Name: "remote-bare-log", Host: "tcp://10.0.0.11:2375", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateServer(ctx, bare); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := serverLatestLog(ctx, store, bare); !nodestorage.IsUnavailable(err) {
+		t.Fatalf("unreachable log error = %v, want unavailable", err)
 	}
 }

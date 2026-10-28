@@ -37,6 +37,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/minecraft"
 	"github.com/athNdev/carbon-panel/internal/module"
+	"github.com/athNdev/carbon-panel/internal/nodestorage"
 	"github.com/athNdev/carbon-panel/internal/operation"
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/rbac"
@@ -2675,6 +2676,17 @@ func (s *ServerService) ListServerPlayers(ctx context.Context, req *connect.Requ
 	}), nil
 }
 
+// serverLatestLog reads logs/latest.log from the owning node's mapped root.
+// A remote node without reachable storage is refused, so a controller-local
+// copy is not uploaded in its place.
+func serverLatestLog(ctx context.Context, store *storage.Store, server *storage.Server) ([]byte, error) {
+	root, err := dataRootFor(ctx, store, server, false)
+	if err != nil {
+		return nil, err
+	}
+	return os.ReadFile(filepath.Join(root, "logs", "latest.log"))
+}
+
 // Reads the server's latest.log and uploads it to mclo.gs
 func (s *ServerService) UploadToMCLogs(ctx context.Context, req *connect.Request[v1.UploadToMCLogsRequest]) (*connect.Response[v1.UploadToMCLogsResponse], error) {
 	server, err := s.store.GetServer(ctx, req.Msg.Id)
@@ -2682,11 +2694,16 @@ func (s *ServerService) UploadToMCLogs(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
-	logPath := filepath.Join(server.DataPath, "logs", "latest.log")
-	content, err := os.ReadFile(logPath)
+	content, err := serverLatestLog(ctx, s.store, server)
+	if nodestorage.IsUnavailable(err) {
+		return nil, connect.NewError(connect.CodeUnavailable, err)
+	}
 	if err != nil {
 		s.log.Error("Failed to read server log file: %v", err)
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("log file not found"))
+		if os.IsNotExist(err) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("log file not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read server log"))
 	}
 
 	if len(content) == 0 {

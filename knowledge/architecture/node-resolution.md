@@ -39,6 +39,7 @@ wrong host. That is a data-safety bug, not a degraded mode.
   reachable storage is left unmeasured.
 - File read, update, delete, and rename resolve that mapped root before
   checking the path. A controller copy of the data path is not consulted.
+  The latest-log upload uses that same root.
 
 # How to check
 
