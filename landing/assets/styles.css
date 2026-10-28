@@ -816,7 +816,7 @@ body > footer {
    ============================================================ */
 .stats {
   border-top: 1px solid var(--grid-line);
-  background: rgba(38, 38, 38, 0.25);
+  background: var(--bg);
 }
 .stats-grid {
   display: grid;
@@ -1708,6 +1708,7 @@ body > footer {
 .compare-wrap {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  background: var(--bg);
   overflow: hidden;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -1909,7 +1910,9 @@ table.compare .icon { width: 18px; height: 18px; }
   overflow: hidden;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-strong);
-  background: linear-gradient(140deg, rgba(15, 98, 254, 0.22) 0%, var(--layer-01) 46%, var(--layer-01) 100%);
+  background:
+    linear-gradient(140deg, rgba(15, 98, 254, 0.22) 0%, transparent 46%),
+    var(--layer-01);
   padding: 72px 56px;
   text-align: center;
 }
@@ -2192,7 +2195,6 @@ table.compare .icon { width: 18px; height: 18px; }
 }
 .tile:hover {
   border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* ============================================================
@@ -2470,19 +2472,9 @@ table.compare .icon { width: 18px; height: 18px; }
 }
 
 /* ============================================================
-   GLOW + GLASS
-   Light stays soft. Frosted surfaces are the chrome — nav,
-   badges, the product frame, and the closing bands — so the
-   lattice still reads through them. Cards stay translucent
-   without a second blur, which keeps a long page cheap to paint.
+   GLOW
+   Soft light behind the page. Surfaces stay solid.
    ============================================================ */
-
-:root {
-  --glass: rgba(38, 38, 38, 0.5);
-  --glass-line: rgba(255, 255, 255, 0.1);
-  --glass-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --glass-blur: blur(22px) saturate(165%);
-}
 
 /* Two slow pools behind the lattice. They stay put while the page scrolls. */
 .page-grid::before,
@@ -2513,45 +2505,12 @@ table.compare .icon { width: 18px; height: 18px; }
   to { transform: translate3d(6vw, 4vh, 0); }
 }
 
-.nav {
-  background: rgba(22, 22, 22, 0.58);
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-}
-.nav.scrolled {
-  background: rgba(22, 22, 22, 0.74);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 16px 40px -28px rgba(0, 0, 0, 0.85);
-}
-
 .brand .mark {
   filter: drop-shadow(0 0 10px rgba(15, 98, 254, 0.45));
 }
 
 .hero h1 .grad {
   filter: drop-shadow(0 0 22px rgba(120, 169, 255, 0.32));
-}
-
-.hero-badge,
-.gh-star,
-.btn-ghost {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: var(--glass-line);
-  box-shadow: var(--glass-sheen);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
-}
-.btn-ghost:hover,
-.gh-star:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-.nav-links a:hover {
-  background: rgba(255, 255, 255, 0.06);
 }
 
 .hero-visual {
@@ -2571,52 +2530,6 @@ table.compare .icon { width: 18px; height: 18px; }
     radial-gradient(ellipse 36% 28% at 78% 18%, rgba(120, 169, 255, 0.24) 0%, transparent 72%);
 }
 
-.mock {
-  background: linear-gradient(180deg, rgba(48, 48, 48, 0.62) 0%, rgba(22, 22, 22, 0.46) 100%);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    var(--glass-sheen),
-    0 40px 80px -32px rgba(0, 0, 0, 0.8),
-    0 0 72px -24px rgba(15, 98, 254, 0.45);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-}
-.mock-bar {
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-}
-.mock-chip {
-  background: rgba(38, 38, 38, 0.55);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 16px 36px -16px rgba(0, 0, 0, 0.75),
-    0 0 28px -10px rgba(15, 98, 254, 0.4);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-}
-
-.install {
-  background: rgba(13, 13, 13, 0.72);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 0 36px -16px rgba(15, 98, 254, 0.45);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
-}
-.install:hover {
-  border-color: rgba(120, 169, 255, 0.4);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 42px -12px rgba(15, 98, 254, 0.55);
-}
-
-.stats {
-  background: rgba(22, 22, 22, 0.28);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter: blur(14px) saturate(140%);
-}
 .stat .num {
   text-shadow: 0 0 28px rgba(120, 169, 255, 0.16);
 }
@@ -2640,43 +2553,12 @@ table.compare .icon { width: 18px; height: 18px; }
   background: radial-gradient(ellipse, rgba(15, 98, 254, 0.16) 0%, transparent 70%);
 }
 
-.tile,
-.problem-card,
-.step,
-.oss-point,
-.fs-node {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.015) 32%, transparent 52%),
-    var(--glass);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: var(--glass-sheen);
-  -webkit-backdrop-filter: blur(14px) saturate(145%);
-  backdrop-filter: blur(14px) saturate(145%);
-}
-/* The accent rule sits inside the radius; overflow stays visible so the hover bloom is not clipped. */
-.tile {
-  overflow: visible;
-}
-.tile::before {
-  left: 16px;
-  right: 16px;
-}
-.problem-card.pain {
-  background:
-    linear-gradient(180deg, rgba(250, 77, 86, 0.08) 0%, transparent 46%),
-    rgba(22, 22, 22, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
 .problem-card.model {
-  box-shadow:
-    var(--glass-sheen),
-    0 0 48px -28px rgba(15, 98, 254, 0.55);
+  box-shadow: 0 0 48px -28px rgba(15, 98, 254, 0.55);
 }
 .tile .t-icon,
 .step .step-num {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 0 18px -4px rgba(15, 98, 254, 0.75);
+  box-shadow: 0 0 18px -4px rgba(15, 98, 254, 0.75);
 }
 .fleet-card .f-icon,
 .oss-point .icon {
@@ -2700,18 +2582,6 @@ table.compare .icon { width: 18px; height: 18px; }
   filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 16px rgba(15, 98, 254, 0.22));
 }
 
-.deepdive,
-.compare-wrap,
-.oss,
-.final-cta {
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: var(--glass-sheen);
-}
-.deepdive,
-.compare-wrap {
-  -webkit-backdrop-filter: blur(14px) saturate(145%);
-  backdrop-filter: blur(14px) saturate(145%);
-}
 .section:has(.oss) {
   isolation: isolate;
 }
@@ -2727,24 +2597,11 @@ table.compare .icon { width: 18px; height: 18px; }
   pointer-events: none;
   background: radial-gradient(ellipse, rgba(15, 98, 254, 0.26) 0%, rgba(15, 98, 254, 0.08) 42%, transparent 70%);
 }
-.deepdive {
-  background: linear-gradient(180deg, rgba(48, 48, 48, 0.55) 0%, rgba(22, 22, 22, 0.4) 100%);
-}
-.compare-wrap {
-  background: rgba(22, 22, 22, 0.35);
-}
 table.compare thead th.hl {
   background: rgba(15, 98, 254, 0.28);
   box-shadow: inset 0 -1px 0 rgba(120, 169, 255, 0.35);
 }
 
-.oss {
-  background:
-    linear-gradient(120deg, rgba(15, 98, 254, 0.12) 0%, rgba(38, 38, 38, 0.42) 46%),
-    var(--glass);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  backdrop-filter: blur(18px) saturate(150%);
-}
 .oss::after {
   content: "";
   position: absolute;
@@ -2757,97 +2614,14 @@ table.compare thead th.hl {
   background: radial-gradient(ellipse, rgba(15, 98, 254, 0.28) 0%, transparent 68%);
 }
 
-.final-cta {
-  background: linear-gradient(140deg, rgba(15, 98, 254, 0.18) 0%, rgba(38, 38, 38, 0.55) 42%, rgba(22, 22, 22, 0.5) 100%);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: var(--glass-sheen);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-}
-
 .faq-item[open] summary {
   text-shadow: 0 0 18px rgba(120, 169, 255, 0.28);
-}
-
-.footer-social a {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: var(--glass-sheen);
-}
-.footer-social a:hover {
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow:
-    var(--glass-sheen),
-    0 0 18px -6px rgba(15, 98, 254, 0.55);
-}
-.footer-bottom .lic .badge {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: var(--glass-sheen);
-}
-
-@media (max-width: 900px) {
-  .nav-links {
-    background: rgba(22, 22, 22, 0.8);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-  }
-  .tile,
-  .problem-card,
-  .step,
-  .oss-point,
-  .fs-node,
-  .deepdive,
-  .compare-wrap {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-  .tile,
-  .step,
-  .oss-point,
-  .fs-node,
-  .problem-card.model {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 46%),
-      rgba(38, 38, 38, 0.94);
-  }
-  .problem-card.pain { background: rgba(22, 22, 22, 0.96); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .page-grid::before,
   .page-grid::after { animation: none; }
   .btn-primary:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 24px -10px rgba(15, 98, 254, 0.9); }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .nav,
-  .nav.scrolled,
-  .hero-badge,
-  .gh-star,
-  .btn-ghost,
-  .mock,
-  .mock-chip,
-  .install,
-  .stats,
-  .oss,
-  .final-cta,
-  .nav-links {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-  .nav,
-  .nav.scrolled { background: var(--bg); }
-  .tile,
-  .problem-card.model,
-  .step,
-  .oss-point,
-  .fs-node,
-  .oss { background: var(--layer-01); }
-  .problem-card.pain { background: var(--bg); }
-  .mock { background: linear-gradient(180deg, var(--layer-01) 0%, var(--bg) 100%); }
-  .stats { background: rgba(38, 38, 38, 0.25); }
-  .final-cta { background: linear-gradient(140deg, rgba(15, 98, 254, 0.22) 0%, var(--layer-01) 46%, var(--layer-01) 100%); }
 }
 
 @media (forced-colors: active) {
@@ -2857,9 +2631,4 @@ table.compare thead th.hl {
   .section-head.center::before,
   .oss::after,
   .final-cta::after { display: none; }
-  .nav,
-  .mock,
-  .tile,
-  .final-cta,
-  .oss { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
