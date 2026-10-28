@@ -344,6 +344,9 @@ func TestRecreateContainerSuccessRemovesRetainedOldAfterStart(t *testing.T) {
 	if result.ImageID != "sha256:fixture" {
 		t.Fatalf("RecreateContainer() ImageID = %q, want the daemon image identity", result.ImageID)
 	}
+	if result.RepoDigest != "" {
+		t.Fatalf("RecreateContainer() RepoDigest = %q, want empty when the daemon has no repo digest", result.RepoDigest)
+	}
 
 	f.mu.Lock()
 	defer f.mu.Unlock()

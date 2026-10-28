@@ -104,7 +104,11 @@ type Server struct {
 	DockerImage     string       `json:"docker_image" gorm:"column:docker_image"`
 	// AppliedImageID is the daemon image ID of the container that last came
 	// up. A failed pull or recreate leaves the previous value in place.
-	AppliedImageID     string `json:"applied_image_id" gorm:"column:applied_image_id"`
+	AppliedImageID string `json:"applied_image_id" gorm:"column:applied_image_id"`
+	// AppliedRepoDigest is the registry digest of that image for the
+	// requested repository. It is empty when the daemon has no repo digest,
+	// and it is not the image config ID in AppliedImageID.
+	AppliedRepoDigest  string `json:"applied_repo_digest" gorm:"column:applied_repo_digest"`
 	DataPath           string `json:"data_path" gorm:"not null;column:data_path"`
 	Detached           bool   `json:"detached" gorm:"default:false;column:detached"`                      // Detach server container from Carbon Panel lifecycle (default: false)
 	AutoStart          bool   `json:"auto_start" gorm:"default:false;column:auto_start"`                  // Start server when Carbon Panel starts (default: false)

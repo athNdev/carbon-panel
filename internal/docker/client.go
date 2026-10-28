@@ -755,12 +755,12 @@ func serverImageName(server *models.Server) (string, error) {
 // skipped to avoid blocking / stalling during 'Creating' state on network
 // latency or Docker Hub rate limits. A pull is not success until the daemon
 // reports the image present.
-func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) (string, error) {
+func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) (string, string, error) {
 	imageName, err := serverImageName(server)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return c.ensureImage(ctx, imageName)
+	return c.ensureImageWithDigest(ctx, imageName)
 }
 
 func (c *Client) CreateContainer(ctx context.Context, server *models.Server, serverConfig *models.ServerConfig) (string, error) {
@@ -1486,6 +1486,9 @@ type RecreateContainerResult struct {
 	// ImageID is the daemon identity of the image the replacement came up
 	// with. It is empty when the old container remains the one that runs.
 	ImageID string
+	// RepoDigest is the registry digest of that same image, when the daemon
+	// has one for the requested repository. It is not ImageID.
+	RepoDigest string
 }
 
 // retainedContainerName is the side identity a replaced container keeps
@@ -1509,7 +1512,7 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	if err := validateServerPorts(server); err != nil {
 		return result, err
 	}
-	imageID, err := c.ensureServerImage(ctx, server)
+	imageID, repoDigest, err := c.ensureServerImage(ctx, server)
 	if err != nil {
 		return result, err
 	}
@@ -1612,6 +1615,7 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 
 	result.NewContainerID = newContainerID
 	result.ImageID = imageID
+	result.RepoDigest = repoDigest
 	return result, nil
 }
 

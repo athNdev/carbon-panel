@@ -24,7 +24,8 @@ func TestUpdateServerImageFailureKeepsTheAppliedImage(t *testing.T) {
 		ID: "image-hold", Name: "Image Hold", NodeID: "test-node",
 		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
 		DockerImage: "java21", AppliedImageID: "sha256:known",
-		ContainerID: "running-container", Status: db.StatusRunning,
+		AppliedRepoDigest: "itzg/minecraft-server@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		ContainerID:       "running-container", Status: db.StatusRunning,
 		Port: 25583, Memory: 2048, MaxPlayers: 20, DataPath: t.TempDir(),
 	}
 	if err := svc.store.CreateServer(ctx, server); err != nil {
@@ -52,6 +53,9 @@ func TestUpdateServerImageFailureKeepsTheAppliedImage(t *testing.T) {
 	if updated.AppliedImageID != "sha256:known" {
 		t.Fatalf("applied image = %q, want the previous identity", updated.AppliedImageID)
 	}
+	if updated.AppliedRepoDigest != server.AppliedRepoDigest {
+		t.Fatalf("applied repo digest = %q, want the previous digest", updated.AppliedRepoDigest)
+	}
 	if updated.ContainerID != "running-container" {
 		t.Fatalf("container ID = %q, want the running container", updated.ContainerID)
 	}
@@ -66,7 +70,7 @@ func TestUpdateServerImageFailureKeepsTheAppliedImage(t *testing.T) {
 			continue
 		}
 		found = true
-		for _, want := range []string{`"previous":"java21"`, `"requested":"java25"`, `"applied_image_id":"sha256:known"`, `"applied":false`} {
+		for _, want := range []string{`"previous":"java21"`, `"requested":"java25"`, `"applied_image_id":"sha256:known"`, `"applied_repo_digest":"` + server.AppliedRepoDigest + `"`, `"applied":false`} {
 			if !strings.Contains(entry.Properties, want) {
 				t.Fatalf("audit properties = %s, want %s", entry.Properties, want)
 			}

@@ -367,16 +367,17 @@ func (s *ServerService) auditPrivilegedOverrides(ctx context.Context, ip, server
 
 // auditServerImage records a requested image change and whether the daemon
 // identity of the running container moved with it.
-func (s *ServerService) auditServerImage(ctx context.Context, ip, serverID, previous, requested, appliedID string, applied bool) {
+func (s *ServerService) auditServerImage(ctx context.Context, ip, serverID, previous, requested, appliedID, repoDigest string, applied bool) {
 	actorID, actorName := "", ""
 	if u := auth.GetUserFromContext(ctx); u != nil {
 		actorID, actorName = u.ID, u.Username
 	}
 	propsJSON, err := json.Marshal(map[string]any{
-		"previous":         previous,
-		"requested":        requested,
-		"applied_image_id": appliedID,
-		"applied":          applied,
+		"previous":            previous,
+		"requested":           requested,
+		"applied_image_id":    appliedID,
+		"applied_repo_digest": repoDigest,
+		"applied":             applied,
 	})
 	if err != nil {
 		s.log.Error("Audit log failed for %s: %v", activity.EventServerImage, err)
@@ -401,13 +402,17 @@ func (s *ServerService) recordAppliedImageID(ctx context.Context, dockerCli *doc
 	if dockerCli == nil || server == nil || s.store == nil {
 		return
 	}
-	imageID, err := dockerCli.ServerImageID(ctx, server)
+	imageID, repoDigest, err := dockerCli.ServerImageIdentity(ctx, server)
 	if err != nil {
 		s.log.Error("Failed to read applied image for server %s: %v", server.ID, err)
 		return
 	}
 	server.AppliedImageID = imageID
-	if err := s.store.UpdateServerFields(ctx, server.ID, map[string]any{"applied_image_id": imageID}); err != nil {
+	server.AppliedRepoDigest = repoDigest
+	if err := s.store.UpdateServerFields(ctx, server.ID, map[string]any{
+		"applied_image_id":    imageID,
+		"applied_repo_digest": repoDigest,
+	}); err != nil {
 		s.log.Error("Failed to store applied image for server %s: %v", server.ID, err)
 	}
 }
@@ -1718,7 +1723,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	var imageApplied bool
 	if server.DockerImage != originalDockerImage {
 		defer func() {
-			s.auditServerImage(ctx, peerIP, server.ID, originalDockerImage, server.DockerImage, server.AppliedImageID, imageApplied)
+			s.auditServerImage(ctx, peerIP, server.ID, originalDockerImage, server.DockerImage, server.AppliedImageID, server.AppliedRepoDigest, imageApplied)
 		}()
 	}
 	s.auditServerLifecycle(ctx, peerIP, activity.EventServerUpdate, server.ID)
@@ -1778,6 +1783,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			server.Status = statusAfterContainerRecreation(server.Status, result.WasRunning)
 			if result.ImageID != "" {
 				server.AppliedImageID = result.ImageID
+				server.AppliedRepoDigest = result.RepoDigest
 				imageApplied = true
 			}
 		}
@@ -2057,10 +2063,11 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		}
 
 		server.ContainerID = containerID
-		if imageID, idErr := dockerCli.ServerImageID(ctx, server); idErr != nil {
+		if imageID, repoDigest, idErr := dockerCli.ServerImageIdentity(ctx, server); idErr != nil {
 			s.log.Error("Failed to read applied image for server %s: %v", server.ID, idErr)
 		} else {
 			server.AppliedImageID = imageID
+			server.AppliedRepoDigest = repoDigest
 		}
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
@@ -2460,10 +2467,11 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		}
 
 		server.ContainerID = containerID
-		if imageID, idErr := dockerCli.ServerImageID(ctx, server); idErr != nil {
+		if imageID, repoDigest, idErr := dockerCli.ServerImageIdentity(ctx, server); idErr != nil {
 			s.log.Error("Failed to read applied image for server %s: %v", server.ID, idErr)
 		} else {
 			server.AppliedImageID = imageID
+			server.AppliedRepoDigest = repoDigest
 		}
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
