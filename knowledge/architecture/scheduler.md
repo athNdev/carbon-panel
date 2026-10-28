@@ -46,8 +46,10 @@ streamed through the WebSocket hub.
   creates the archive. Each run uses an empty request id, so the row belongs
   to that run. A crash leaves the row active until startup recovery observes
   the server. Recovery says the archive was not finalized and that the backup
-  can be run again. The backup does not start when that server already has an
-  active journal row.
+  can be run again. When that container is still running, save-on is sent
+  before the lock is released, and a failed save-on keeps the lock. A stopped
+  container is not started. The backup does not start when that server already
+  has an active journal row.
 - A task execution left in the running state across a panel restart is marked
   failed. The recorded reason says to run the task again after the server is
   idle.

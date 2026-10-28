@@ -61,7 +61,7 @@ func retryOnce(ctx context.Context, store ReviewStore, observer Observer, log *l
 		if op.ActiveServer == nil {
 			continue
 		}
-		if keepsWorldLock(op.Kind) {
+		if keepsWorldLock(op.Kind) || op.Kind == "backup" {
 			if log != nil {
 				log.Warn("Interrupted %s operation %s for server %s stays locked until an operator resolves it", op.Kind, op.ID, op.ServerID)
 			}

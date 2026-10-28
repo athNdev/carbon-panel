@@ -54,6 +54,29 @@ func (f *flakyObserver) Observe(context.Context, string, string) (Observed, erro
 	return f.observed, nil
 }
 
+func TestRetryReviewLeavesABackupLockHeld(t *testing.T) {
+	serverID := "srv"
+	store := &reviewFake{op: &db.ServerOperation{
+		ID: "op-backup", ServerID: serverID, Kind: "backup", Phase: db.ServerOperationExecuting, ActiveServer: &serverID,
+	}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		RetryReview(ctx, store, &flakyObserver{observed: Observed{Exists: true, Running: true}}, logger.New(), []string{"op-backup"}, 10*time.Millisecond)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("retry did not finish")
+	}
+	if len(store.advances) != 0 || store.op.ActiveServer == nil {
+		t.Fatalf("backup lock was released: advances=%+v active=%v", store.advances, store.op.ActiveServer)
+	}
+}
+
 func TestRetryReviewLeavesADeleteLockHeld(t *testing.T) {
 	serverID := "srv"
 	store := &reviewFake{op: &db.ServerOperation{

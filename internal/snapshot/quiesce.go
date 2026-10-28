@@ -8,6 +8,7 @@ package snapshot
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
@@ -66,15 +67,22 @@ func QuiesceWorld(ctx context.Context, sender CommandSender, log *logger.Logger,
 	}
 
 	resume = func() error {
-		// Bounded independent context: saves are re-enabled even when the
-		// task was cancelled or timed out, and failure is reported loudly
-		// because a world left in save-off stops persisting progress.
-		resumeCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if _, err := sender.SendCommand(resumeCtx, server.ID, "save-on"); err != nil {
-			return fmt.Errorf("world saves are still OFF for server %s; run save-on or restart the server: %w", server.Name, err)
-		}
-		return nil
+		return ResumeWorldSaves(context.Background(), sender, server.ID)
 	}
 	return resume, level
+}
+
+// ResumeWorldSaves re-enables world saves. A failure means the world may still
+// be in save-off. The command is not sent to a stopped server; callers decide
+// that from the container state.
+func ResumeWorldSaves(ctx context.Context, sender CommandSender, serverID string) error {
+	if sender == nil || strings.TrimSpace(serverID) == "" {
+		return fmt.Errorf("world saves are still OFF; run save-on or restart the server")
+	}
+	resumeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+	defer cancel()
+	if _, err := sender.SendCommand(resumeCtx, serverID, "save-on"); err != nil {
+		return fmt.Errorf("world saves are still OFF; run save-on or restart the server: %w", err)
+	}
+	return nil
 }

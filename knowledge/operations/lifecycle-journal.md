@@ -26,7 +26,10 @@ behind an operation lock.
   or writes an archive. An empty request id makes each run its own row. A
   crash leaves the row active until startup recovery observes the server.
   Recovery of that backup says the archive was not finalized and that the
-  backup can be run again, then releases the lock. Recovery of a restore, a
+  backup can be run again. A stopped container is released without a command,
+  and the server is not started. A container that is still running stays
+  locked until save-on succeeds; a failed save-on keeps the lock and says to
+  run save-on or restart the server. Recovery of a restore, a
   delete, or a migration records the next action and keeps the lock: confirm
   the world, confirm the container and the world, or confirm which node holds
   the world. Container state does not release those three locks. An operator
