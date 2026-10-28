@@ -341,7 +341,12 @@ func (s *Scheduler) checkAndRunDueTasks() {
 	}
 
 	for _, task := range tasks {
-		if !s.tryClaimTask(context.Background(), task.ID) {
+		claimed, err := s.tryClaimTask(context.Background(), task.ID)
+		if err != nil {
+			s.log.Error("Task %s: running check failed, leaving it due: %v", task.Name, err)
+			continue
+		}
+		if !claimed {
 			s.log.Debug("Task %s is already running, skipping duplicate dispatch", task.Name)
 			continue
 		}
@@ -361,22 +366,26 @@ func (s *Scheduler) checkAndRunDueTasks() {
 }
 
 // tryClaimTask attempts to atomically register taskID as running in memory and checks
-// the database for any active running executions (SCH-5). Returns true if successfully claimed.
-func (s *Scheduler) tryClaimTask(ctx context.Context, taskID string) bool {
+// the database for any active running executions (SCH-5). A database error refuses
+// the claim and leaves the task unregistered, so a scheduled run stays due.
+func (s *Scheduler) tryClaimTask(ctx context.Context, taskID string) (bool, error) {
 	s.runningTasksMu.Lock()
 	defer s.runningTasksMu.Unlock()
 
 	if s.runningTasks[taskID] {
-		return false
+		return false, nil
 	}
 	if s.store != nil {
 		hasRunning, err := s.store.HasRunningExecution(ctx, taskID)
-		if err == nil && hasRunning {
-			return false
+		if err != nil {
+			return false, err
+		}
+		if hasRunning {
+			return false, nil
 		}
 	}
 	s.runningTasks[taskID] = true
-	return true
+	return true, nil
 }
 
 // releaseTask unregisters taskID from in-memory running tasks.
@@ -394,7 +403,12 @@ func (s *Scheduler) TriggerTask(ctx context.Context, taskID string) (*storage.Ta
 	}
 
 	// Conflicting execution guard (MINE-146, SCH-5): never run the same task twice.
-	if !s.tryClaimTask(ctx, taskID) {
+	// A failed running check is not proof that the task is idle.
+	claimed, err := s.tryClaimTask(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if !claimed {
 		return nil, ErrTaskAlreadyRunning
 	}
 	defer s.releaseTask(taskID)
@@ -416,7 +430,7 @@ func (s *Scheduler) IsTaskRunning(taskID string) bool {
 
 	if s.store != nil {
 		hasRunning, err := s.store.HasRunningExecution(context.Background(), taskID)
-		if err == nil && hasRunning {
+		if err != nil || hasRunning {
 			return true
 		}
 	}
@@ -431,7 +445,12 @@ func (s *Scheduler) HandleServerEvent(ctx context.Context, event events.Event) {
 		return
 	}
 	for _, task := range tasks {
-		if !s.tryClaimTask(ctx, task.ID) {
+		claimed, err := s.tryClaimTask(ctx, task.ID)
+		if err != nil {
+			s.log.Error("Event-triggered task %s: running check failed, not dispatching: %v", task.Name, err)
+			continue
+		}
+		if !claimed {
 			s.log.Debug("Event-triggered task %s is already running, skipping duplicate dispatch", task.Name)
 			continue
 		}

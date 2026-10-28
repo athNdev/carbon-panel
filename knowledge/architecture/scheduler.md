@@ -30,6 +30,9 @@ streamed through the WebSocket hub.
   success state.
 - On startup, recover or fail tasks that were interrupted by a restart. Do not
   leave them "running" forever.
+- A task is not claimed when the running-execution check fails. The due run
+  stays due, and a manual trigger returns that error. An unknown check is
+  treated as running.
 - Validate cron expressions before persisting them.
 
 # How to check

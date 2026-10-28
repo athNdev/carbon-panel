@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -156,5 +155,43 @@ func TestHandleServerEvent_DeduplicatesConcurrently(t *testing.T) {
 	}
 	if hasRunning {
 		t.Errorf("expected no execution to be dispatched for already running task")
+	}
+}
+
+func TestTryClaimTaskRefusesWhenTheRunningCheckFails(t *testing.T) {
+	s, store := newTriggerTestScheduler(t)
+	ctx := context.Background()
+
+	task := &storage.ScheduledTask{
+		ID:       "task-check-fail",
+		ServerID: "srv-1",
+		Name:     "t",
+		TaskType: storage.TaskTypeCommand,
+		Status:   storage.TaskStatusEnabled,
+		Schedule: storage.ScheduleTypeOnce,
+	}
+	if err := store.CreateScheduledTask(ctx, task); err != nil {
+		t.Fatalf("failed to insert task: %v", err)
+	}
+	sqlDB, err := store.DB().DB()
+	if err != nil {
+		t.Fatalf("sql db: %v", err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatalf("close db: %v", err)
+	}
+
+	if !s.IsTaskRunning(task.ID) {
+		t.Fatal("an unknown running check must be treated as running")
+	}
+	claimed, err := s.tryClaimTask(ctx, task.ID)
+	if err == nil || claimed {
+		t.Fatalf("claim = %v, %v; want an error and no claim", claimed, err)
+	}
+	s.runningTasksMu.Lock()
+	registered := s.runningTasks[task.ID]
+	s.runningTasksMu.Unlock()
+	if registered {
+		t.Fatal("a failed check registered the task as running")
 	}
 }
