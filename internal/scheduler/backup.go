@@ -23,6 +23,7 @@ import (
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/docker"
 	"github.com/athNdev/carbon-panel/internal/nodestorage"
+	"github.com/athNdev/carbon-panel/internal/operation"
 	s3uploader "github.com/athNdev/carbon-panel/internal/s3"
 	"github.com/athNdev/carbon-panel/internal/snapshot"
 	"github.com/athNdev/carbon-panel/internal/worldstore"
@@ -59,6 +60,12 @@ var defaultBackupExcludes = []string{
 	"dynmap/web/tiles",
 	"spark/tmp",
 }
+
+// beforeBackupArchive, when set, runs after the backup journal row is
+// executing and before world saves are paused or the archive is written.
+// Tests use it to observe that a crash at that point would leave the row
+// active.
+var beforeBackupArchive func() error
 
 // Archives server data into the configured backup directory.
 // The archive holds the server's lifecycle transition for its whole window,
@@ -130,178 +137,192 @@ func (s *Scheduler) executeBackupTask(ctx context.Context, server *storage.Serve
 	}
 	defer transition.Release()
 
-	restart := false
-	resumeSaves, consistency := s.pauseWorldSaves(ctx, server)
-	defer func() {
-		if restart {
-			// The server was stopped for the archive; save state resets on
-			// its next boot and save-on would target a stopped server.
-			return
+	// The journal row is the crash record. It is written before saves are
+	// paused or the archive is created, and an empty request id keeps this
+	// run distinct from the previous backup. A failure to store the intent
+	// returns before either of those mutations.
+	err = operation.RunJournaled(ctx, s.store, s.log, server, "backup", "", func() (runErr error) {
+		if beforeBackupArchive != nil {
+			if hookErr := beforeBackupArchive(); hookErr != nil {
+				return hookErr
+			}
 		}
-		if rerr := resumeSaves(); rerr != nil {
-			s.log.Error("%v", rerr)
-			output += "; WARNING: " + rerr.Error()
-		}
-	}()
 
-	if config.StopForBackup {
-		restart, err = s.stopServerForBackup(ctx, server)
-		if err != nil {
-			return "", err
-		}
-		// Stopped for the archive: a stopped server is the strongest
-		// consistency claim an archive can make.
-		consistency = snapshot.ConsistencyVerifiedStopped
-	}
-	if restart {
+		restart := false
+		resumeSaves, consistency := s.pauseWorldSaves(ctx, server)
 		defer func() {
-			if startErr := s.startServerAfterBackup(ctx, server); startErr != nil {
-				if err != nil {
-					err = fmt.Errorf("%w; restart after backup failed: %v", err, startErr)
-					return
-				}
-				err = fmt.Errorf("backup written but restart failed: %w", startErr)
+			if restart {
+				// The server was stopped for the archive; save state resets on
+				// its next boot and save-on would target a stopped server.
+				return
+			}
+			if rerr := resumeSaves(); rerr != nil {
+				s.log.Error("%v", rerr)
+				output += "; WARNING: " + rerr.Error()
 			}
 		}()
-	}
 
-	start := time.Now()
-	excludes := append(append([]string{}, defaultBackupExcludes...), config.Exclude...)
-	var count int
-	if len(config.Paths) == 0 {
-		// Default backups run through the world-data seam (worldstore): a
-		// deterministic manifest archive covering the full server state tree
-		// minus excludes, streamed to disk. See ADR 0004.
-		owner, oerr := docker.LoadOrCreateInstallationID(s.appConfig.Storage.DataDir)
-		if oerr != nil {
-			return "", fmt.Errorf("installation identity: %w", oerr)
-		}
-		ws, werr := worldstore.OpenServerWorlds(owner, server.ID, server.NodeID,
-			filepath.Join(s.appConfig.Storage.DataDir, "worldstore-journal"), worldDataPath)
-		if werr != nil {
-			return "", fmt.Errorf("open world store: %w", werr)
-		}
-		defer func() { _ = ws.Close() }()
-		if rerr := ws.Recover(); rerr != nil {
-			return "", fmt.Errorf("world store recovery: %w", rerr)
-		}
-		if _, cerr := ws.BackupTo(ws.Identity(), destPath, func(rel string) bool {
-			return files.PathExcluded(rel, excludes)
-		}); cerr != nil {
-			return "", fmt.Errorf("failed to create backup archive: %w", cerr)
-		}
-		if zr, zerr := zip.OpenReader(destPath); zerr == nil {
-			for _, f := range zr.File {
-				if strings.TrimSuffix(f.Name, "/") != ".worldstore-manifest.json" {
-					count++
-				}
+		if config.StopForBackup {
+			var stopErr error
+			restart, stopErr = s.stopServerForBackup(ctx, server)
+			if stopErr != nil {
+				return stopErr
 			}
-			_ = zr.Close()
+			// Stopped for the archive: a stopped server is the strongest
+			// consistency claim an archive can make.
+			consistency = snapshot.ConsistencyVerifiedStopped
 		}
-	} else {
-		// Explicit path requests keep the legacy zip pipeline so existing
-		// custom-path tasks behave exactly as before (ADR 0004).
-		var cerr error
-		count, cerr = files.CreateZipArchive(paths, worldDataPath, destPath, config.Compress, func(rel string) bool {
-			return files.PathExcluded(rel, excludes)
-		})
-		if cerr != nil {
-			return "", fmt.Errorf("failed to create backup archive: %w", cerr)
+		if restart {
+			defer func() {
+				if startErr := s.startServerAfterBackup(ctx, server); startErr != nil {
+					if runErr != nil {
+						runErr = fmt.Errorf("%w; restart after backup failed: %v", runErr, startErr)
+						return
+					}
+					runErr = fmt.Errorf("backup written but restart failed: %w", startErr)
+				}
+			}()
 		}
-	}
-	if err := secureBackupArtifact(destPath); err != nil {
-		return "", fmt.Errorf("failed to secure backup archive: %w", err)
-	}
 
-	// Verify the plaintext archive before any encryption wrapper so a corrupt
-	// archive fails as itself (OSS-236).
-	if err := verifyZipArchive(destPath); err != nil {
-		return "", fmt.Errorf("backup archive failed verification: %w", err)
-	}
-
-	// Authenticated encryption at rest and offsite (OSS-236). The stored
-	// artifact is the ciphertext and its checksum covers the ciphertext.
-	key, kerr := s.backupKey()
-	if kerr != nil {
-		return "", kerr
-	}
-	encrypted := false
-	keyID := ""
-	if key != nil {
-		tmp := destPath + ".enc-tmp"
-		if err := backupcrypt.EncryptFile(destPath, tmp, key); err != nil {
-			_ = os.Remove(tmp)
-			return "", fmt.Errorf("failed to encrypt backup archive: %w", err)
-		}
-		if err := os.Rename(tmp, destPath); err != nil {
-			_ = os.Remove(tmp)
-			return "", fmt.Errorf("failed to finalize encrypted backup archive: %w", err)
+		start := time.Now()
+		excludes := append(append([]string{}, defaultBackupExcludes...), config.Exclude...)
+		var count int
+		if len(config.Paths) == 0 {
+			// Default backups run through the world-data seam (worldstore): a
+			// deterministic manifest archive covering the full server state tree
+			// minus excludes, streamed to disk. See ADR 0004.
+			owner, oerr := docker.LoadOrCreateInstallationID(s.appConfig.Storage.DataDir)
+			if oerr != nil {
+				return fmt.Errorf("installation identity: %w", oerr)
+			}
+			ws, werr := worldstore.OpenServerWorlds(owner, server.ID, server.NodeID,
+				filepath.Join(s.appConfig.Storage.DataDir, "worldstore-journal"), worldDataPath)
+			if werr != nil {
+				return fmt.Errorf("open world store: %w", werr)
+			}
+			defer func() { _ = ws.Close() }()
+			if rerr := ws.Recover(); rerr != nil {
+				return fmt.Errorf("world store recovery: %w", rerr)
+			}
+			if _, cerr := ws.BackupTo(ws.Identity(), destPath, func(rel string) bool {
+				return files.PathExcluded(rel, excludes)
+			}); cerr != nil {
+				return fmt.Errorf("failed to create backup archive: %w", cerr)
+			}
+			if zr, zerr := zip.OpenReader(destPath); zerr == nil {
+				for _, f := range zr.File {
+					if strings.TrimSuffix(f.Name, "/") != ".worldstore-manifest.json" {
+						count++
+					}
+				}
+				_ = zr.Close()
+			}
+		} else {
+			// Explicit path requests keep the legacy zip pipeline so existing
+			// custom-path tasks behave exactly as before (ADR 0004).
+			var cerr error
+			count, cerr = files.CreateZipArchive(paths, worldDataPath, destPath, config.Compress, func(rel string) bool {
+				return files.PathExcluded(rel, excludes)
+			})
+			if cerr != nil {
+				return fmt.Errorf("failed to create backup archive: %w", cerr)
+			}
 		}
 		if err := secureBackupArtifact(destPath); err != nil {
-			return "", fmt.Errorf("failed to secure encrypted backup archive: %w", err)
+			return fmt.Errorf("failed to secure backup archive: %w", err)
 		}
-		encrypted = true
-		keyID = key.ID
-	}
 
-	var size int64
-	if info, err := os.Stat(destPath); err == nil {
-		size = info.Size()
-	}
+		// Verify the plaintext archive before any encryption wrapper so a corrupt
+		// archive fails as itself (OSS-236).
+		if err := verifyZipArchive(destPath); err != nil {
+			return fmt.Errorf("backup archive failed verification: %w", err)
+		}
 
-	// Integrity proof (MINE-146): checksum sidecar + CRC verification.
-	sum, sumErr := sha256File(destPath)
-	if sumErr != nil {
-		return "", fmt.Errorf("failed to checksum backup archive: %w", sumErr)
-	}
-	sidecarPath := destPath + ".sha256"
-	if err := os.WriteFile(sidecarPath, []byte(sum+"  "+filepath.Base(destPath)+"\n"), 0600); err != nil {
-		return "", fmt.Errorf("failed to write backup checksum: %w", err)
-	}
+		// Authenticated encryption at rest and offsite (OSS-236). The stored
+		// artifact is the ciphertext and its checksum covers the ciphertext.
+		key, kerr := s.backupKey()
+		if kerr != nil {
+			return kerr
+		}
+		encrypted := false
+		keyID := ""
+		if key != nil {
+			tmp := destPath + ".enc-tmp"
+			if err := backupcrypt.EncryptFile(destPath, tmp, key); err != nil {
+				_ = os.Remove(tmp)
+				return fmt.Errorf("failed to encrypt backup archive: %w", err)
+			}
+			if err := os.Rename(tmp, destPath); err != nil {
+				_ = os.Remove(tmp)
+				return fmt.Errorf("failed to finalize encrypted backup archive: %w", err)
+			}
+			if err := secureBackupArtifact(destPath); err != nil {
+				return fmt.Errorf("failed to secure encrypted backup archive: %w", err)
+			}
+			encrypted = true
+			keyID = key.ID
+		}
 
-	// Track the archive in the database (MINE-138). A missing record must
-	// never fail the backup itself.
-	rec := &storage.BackupRecord{
-		ID: uuid.New().String(), ServerID: server.ID,
-		Name: filepath.Base(destPath), Path: destPath,
-		SizeBytes: size, SHA256: sum, Status: "complete",
-		Encrypted: encrypted, EncryptionKeyID: keyID,
-	}
-	if recErr := s.store.CreateBackupRecord(ctx, rec); recErr != nil {
-		s.log.Error("Backup: failed to record backup %s: %v", destPath, recErr)
-	}
+		var size int64
+		if info, err := os.Stat(destPath); err == nil {
+			size = info.Size()
+		}
 
-	// Offsite upload (MINE-138 slice 2). Upload failures are reported in
-	// the output but never fail the local backup.
-	remoteNote := ""
-	if s3uploader.Enabled(s.appConfig.Storage.S3) {
-		if key, uerr := s.uploadBackupToS3(ctx, server, rec, destPath); uerr != nil {
-			remoteNote = fmt.Sprintf("; offsite: FAILED (S3 upload: %v) — backup is local-only", uerr)
-			s.log.Error("Backup %s: %v", destPath, uerr)
+		// Integrity proof (MINE-146): checksum sidecar + CRC verification.
+		sum, sumErr := sha256File(destPath)
+		if sumErr != nil {
+			return fmt.Errorf("failed to checksum backup archive: %w", sumErr)
+		}
+		sidecarPath := destPath + ".sha256"
+		if err := os.WriteFile(sidecarPath, []byte(sum+"  "+filepath.Base(destPath)+"\n"), 0600); err != nil {
+			return fmt.Errorf("failed to write backup checksum: %w", err)
+		}
+
+		// Track the archive in the database (MINE-138). A missing record must
+		// never fail the backup itself.
+		rec := &storage.BackupRecord{
+			ID: uuid.New().String(), ServerID: server.ID,
+			Name: filepath.Base(destPath), Path: destPath,
+			SizeBytes: size, SHA256: sum, Status: "complete",
+			Encrypted: encrypted, EncryptionKeyID: keyID,
+		}
+		if recErr := s.store.CreateBackupRecord(ctx, rec); recErr != nil {
+			s.log.Error("Backup: failed to record backup %s: %v", destPath, recErr)
+		}
+
+		// Offsite upload (MINE-138 slice 2). Upload failures are reported in
+		// the output but never fail the local backup.
+		remoteNote := ""
+		if s3uploader.Enabled(s.appConfig.Storage.S3) {
+			if key, uerr := s.uploadBackupToS3(ctx, server, rec, destPath); uerr != nil {
+				remoteNote = fmt.Sprintf("; offsite: FAILED (S3 upload: %v) — backup is local-only", uerr)
+				s.log.Error("Backup %s: %v", destPath, uerr)
+			} else {
+				remoteNote = fmt.Sprintf("; offsite: S3 (%s)", key)
+			}
 		} else {
-			remoteNote = fmt.Sprintf("; offsite: S3 (%s)", key)
+			remoteNote = "; offsite: disabled (backup is local-only)"
 		}
-	} else {
-		remoteNote = "; offsite: disabled (backup is local-only)"
-	}
-	if encrypted {
-		remoteNote += fmt.Sprintf("; encrypted (key %s)", keyID)
-	}
+		if encrypted {
+			remoteNote += fmt.Sprintf("; encrypted (key %s)", keyID)
+		}
 
-	pruned, pruneErr := s.pruneServerBackups(ctx, server, destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
+		pruned, pruneErr := s.pruneServerBackups(ctx, server, destDir, prefix+"_", config.RetentionDays, config.MinBackups, config.MaxBackups)
 
-	output = fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s, consistency: %s)%s",
-		filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), consistency, remoteNote)
-	if len(missing) > 0 {
-		output += fmt.Sprintf("; skipped missing paths: %s", strings.Join(missing, ", "))
-	}
-	if pruned > 0 {
-		output += fmt.Sprintf("; pruned %d old backup(s)", pruned)
-	}
-	if pruneErr != nil {
-		output += fmt.Sprintf("; prune warning: %v", pruneErr)
-	}
-	return output, nil
+		output = fmt.Sprintf("backup created: %s (%d files, %s, sha256:%s, took %s, consistency: %s)%s",
+			filepath.Base(destPath), count, formatBytes(size), sum[:12], time.Since(start).Round(time.Millisecond), consistency, remoteNote)
+		if len(missing) > 0 {
+			output += fmt.Sprintf("; skipped missing paths: %s", strings.Join(missing, ", "))
+		}
+		if pruned > 0 {
+			output += fmt.Sprintf("; pruned %d old backup(s)", pruned)
+		}
+		if pruneErr != nil {
+			output += fmt.Sprintf("; prune warning: %v", pruneErr)
+		}
+		return nil
+	})
+	return output, err
 }
 
 // Validates the requested paths against the server data

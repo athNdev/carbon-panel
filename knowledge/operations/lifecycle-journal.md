@@ -22,6 +22,9 @@ behind an operation lock.
 
 - Persist the intent before calling Docker. If the intent cannot be stored,
   do not perform the mutation.
+- A scheduled backup persists that same intent before it pauses world saves
+  or writes an archive. An empty request id makes each run its own row. A
+  crash leaves the row active until startup recovery observes the server.
 - A client `request_id` plus the action kind is idempotent for one server.
   Completing a key does not run the mutation again. A failure needs a new key.
 - Do not release a lock when the container state cannot be read. Retry the

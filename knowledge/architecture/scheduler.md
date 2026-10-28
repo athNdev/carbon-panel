@@ -42,6 +42,11 @@ streamed through the WebSocket hub.
 - A scheduled backup holds the server lifecycle transition until the archive
   finishes. Restore and wake wait, and a backup refuses to start while that
   transition is already held.
+- A scheduled backup writes a journal row before it pauses world saves or
+  creates the archive. Each run uses an empty request id, so the row belongs
+  to that run. A crash leaves the row active until startup recovery observes
+  the server. The backup does not start when that server already has an
+  active journal row.
 - A scheduled stop and a live modpack file sync take that same transition.
   The sync releases it before a restart claims it again.
 - Validate cron expressions before persisting them.
