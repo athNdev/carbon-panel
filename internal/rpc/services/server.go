@@ -365,6 +365,58 @@ func (s *ServerService) auditPrivilegedOverrides(ctx context.Context, ip, server
 	}
 }
 
+// auditServerImage records a requested image change and whether the daemon
+// identity of the running container moved with it.
+func (s *ServerService) auditServerImage(ctx context.Context, ip, serverID, previous, requested, appliedID, repoDigest string, applied bool) {
+	actorID, actorName := "", ""
+	if u := auth.GetUserFromContext(ctx); u != nil {
+		actorID, actorName = u.ID, u.Username
+	}
+	propsJSON, err := json.Marshal(map[string]any{
+		"previous":            previous,
+		"requested":           requested,
+		"applied_image_id":    appliedID,
+		"applied_repo_digest": repoDigest,
+		"applied":             applied,
+	})
+	if err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerImage, err)
+		return
+	}
+	if err := activity.Log(s.store.DB(), activity.Entry{
+		ActorID:    actorID,
+		ActorName:  actorName,
+		IP:         ip,
+		Event:      activity.EventServerImage,
+		SubjectTyp: "server",
+		SubjectID:  serverID,
+		Properties: string(propsJSON),
+	}); err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerImage, err)
+	}
+}
+
+// recordAppliedImageID stores the daemon image identity after a container
+// exists. A miss is logged and does not undo the container.
+func (s *ServerService) recordAppliedImageID(ctx context.Context, dockerCli *docker.Client, server *storage.Server) {
+	if dockerCli == nil || server == nil || s.store == nil {
+		return
+	}
+	imageID, repoDigest, err := dockerCli.ServerImageIdentity(ctx, server)
+	if err != nil {
+		s.log.Error("Failed to read applied image for server %s: %v", server.ID, err)
+		return
+	}
+	server.AppliedImageID = imageID
+	server.AppliedRepoDigest = repoDigest
+	if err := s.store.UpdateServerFields(ctx, server.ID, map[string]any{
+		"applied_image_id":    imageID,
+		"applied_repo_digest": repoDigest,
+	}); err != nil {
+		s.log.Error("Failed to store applied image for server %s: %v", server.ID, err)
+	}
+}
+
 // NewServerService creates a new server service
 func NewServerService(
 	store *storage.Store,
@@ -974,10 +1026,17 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Determine Docker image if not specified
+	// Determine Docker image if not specified. A provided reference is
+	// normalized here so a full itzg name is not prefixed again later.
 	dockerImage := msg.DockerImage
 	if dockerImage == "" {
 		dockerImage = docker.GetOptimalDockerTag(msg.McVersion, modLoader, false)
+	} else {
+		canonical, err := docker.CanonicalServerImage(dockerImage)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		dockerImage = canonical
 	}
 
 	// Validate additional ports
@@ -1333,6 +1392,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 
 		server.ContainerID = containerID
 		s.log.Info("Container created successfully for server %s: %s", server.ID, containerID)
+		s.recordAppliedImageID(bgCtx, dockerCli, server)
 
 		// Update server with container ID
 		if err := s.store.UpdateServerContainerID(bgCtx, server.ID, containerID); err != nil {
@@ -1427,6 +1487,13 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	originalModLoader := server.ModLoader
 	originalMCVersion := server.MCVersion
 	originalDockerImage := server.DockerImage
+	if msg.DockerImage != "" && msg.DockerImage != originalDockerImage {
+		canonical, imageErr := docker.CanonicalServerImage(msg.DockerImage)
+		if imageErr != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, imageErr)
+		}
+		msg.DockerImage = canonical
+	}
 	capacityLockHeld := false
 	defer func() {
 		if capacityLockHeld {
@@ -1653,6 +1720,12 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 	}
 
 	peerIP := req.Peer().Addr
+	var imageApplied bool
+	if server.DockerImage != originalDockerImage {
+		defer func() {
+			s.auditServerImage(ctx, peerIP, server.ID, originalDockerImage, server.DockerImage, server.AppliedImageID, server.AppliedRepoDigest, imageApplied)
+		}()
+	}
 	s.auditServerLifecycle(ctx, peerIP, activity.EventServerUpdate, server.ID)
 	if docker.IsPrivilegedDockerOverride(msg.DockerOverrides) {
 		s.auditPrivilegedOverrides(ctx, peerIP, server.ID, msg.DockerOverrides)
@@ -1708,6 +1781,11 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			}
 			server.ContainerID = result.NewContainerID
 			server.Status = statusAfterContainerRecreation(server.Status, result.WasRunning)
+			if result.ImageID != "" {
+				server.AppliedImageID = result.ImageID
+				server.AppliedRepoDigest = result.RepoDigest
+				imageApplied = true
+			}
 		}
 
 		if err := s.store.UpdateServer(ctx, server); err != nil {
@@ -1985,6 +2063,12 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		}
 
 		server.ContainerID = containerID
+		if imageID, repoDigest, idErr := dockerCli.ServerImageIdentity(ctx, server); idErr != nil {
+			s.log.Error("Failed to read applied image for server %s: %v", server.ID, idErr)
+		} else {
+			server.AppliedImageID = imageID
+			server.AppliedRepoDigest = repoDigest
+		}
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
 			_ = dockerCli.RemoveContainer(ctx, containerID)
@@ -2383,6 +2467,12 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		}
 
 		server.ContainerID = containerID
+		if imageID, repoDigest, idErr := dockerCli.ServerImageIdentity(ctx, server); idErr != nil {
+			s.log.Error("Failed to read applied image for server %s: %v", server.ID, idErr)
+		} else {
+			server.AppliedImageID = imageID
+			server.AppliedRepoDigest = repoDigest
+		}
 		if err := s.store.UpdateServer(ctx, server); err != nil {
 			s.log.Error("Failed to update server with container ID: %v", err)
 			_ = dockerCli.RemoveContainer(ctx, containerID)

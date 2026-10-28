@@ -240,6 +240,9 @@ func TestRecreateContainerPullFailureLeavesOldContainerRunning(t *testing.T) {
 	if result == nil || result.NewContainerID != "original" {
 		t.Fatalf("RecreateContainer() result = %+v, want original ID retained", result)
 	}
+	if result.ImageID != "" {
+		t.Fatalf("RecreateContainer() ImageID = %q, want the previous image kept", result.ImageID)
+	}
 	for _, call := range f.snapshot() {
 		if strings.HasPrefix(call, "DELETE ") || strings.Contains(call, "/rename") || strings.Contains(call, "/stop") || strings.Contains(call, "/start") {
 			t.Fatalf("old container was mutated despite failed preflight: %q", call)
@@ -337,6 +340,12 @@ func TestRecreateContainerSuccessRemovesRetainedOldAfterStart(t *testing.T) {
 	}
 	if !result.WasRunning {
 		t.Fatal("RecreateContainer() WasRunning = false, want true")
+	}
+	if result.ImageID != "sha256:fixture" {
+		t.Fatalf("RecreateContainer() ImageID = %q, want the daemon image identity", result.ImageID)
+	}
+	if result.RepoDigest != "" {
+		t.Fatalf("RecreateContainer() RepoDigest = %q, want empty when the daemon has no repo digest", result.RepoDigest)
 	}
 
 	f.mu.Lock()

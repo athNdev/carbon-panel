@@ -333,6 +333,8 @@ type Client struct {
 	logStreamer ContainerLogStreamer
 	log         *logger.Logger
 	firewall    *FirewallManager
+	// pulls coalesces concurrent pulls of one reference on this client.
+	pulls imagePulls
 	// gameStop overrides the rcon-cli stop used before Docker's timeout.
 	// Production leaves it nil.
 	gameStop func(ctx context.Context, containerID string) error
@@ -738,28 +740,27 @@ func additionalPortBindings(ports []*v1.AdditionalPort, useProxy bool) network.P
 
 // serverImageName resolves the Docker image for a server: an explicit tag
 // when configured, otherwise the loader/version-derived itzg image.
-func serverImageName(server *models.Server) string {
-	if server.DockerImage != "" {
-		return "itzg/minecraft-server:" + server.DockerImage
+func serverImageName(server *models.Server) (string, error) {
+	if server == nil {
+		return "", errors.New("server is required")
 	}
-	return getDockerImage(server.ModLoader, server.MCVersion)
+	if strings.TrimSpace(server.DockerImage) == "" {
+		return getDockerImage(server.ModLoader, server.MCVersion), nil
+	}
+	return ResolveServerImage(server.DockerImage)
 }
 
 // ensureServerImage makes the server's image available on the daemon (MINE-125).
 // If the image is already present locally, the remote registry check is
 // skipped to avoid blocking / stalling during 'Creating' state on network
-// latency or Docker Hub rate limits.
-func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) error {
-	imageName := serverImageName(server)
-	if _, err := c.docker.ImageInspect(ctx, imageName); err != nil {
-		c.log.Info("Image %s not present locally, pulling...", imageName)
-		if pullErr := c.pullImage(ctx, imageName); pullErr != nil {
-			return fmt.Errorf("failed to pull image %s: %w", imageName, pullErr)
-		}
-		return nil
+// latency or Docker Hub rate limits. A pull is not success until the daemon
+// reports the image present.
+func (c *Client) ensureServerImage(ctx context.Context, server *models.Server) (string, string, error) {
+	imageName, err := serverImageName(server)
+	if err != nil {
+		return "", "", err
 	}
-	c.log.Debug("Image %s exists locally, skipping pull", imageName)
-	return nil
+	return c.ensureImageWithDigest(ctx, imageName)
 }
 
 func (c *Client) CreateContainer(ctx context.Context, server *models.Server, serverConfig *models.ServerConfig) (string, error) {
@@ -772,10 +773,13 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		return "", err
 	}
 
-	imageName := serverImageName(server)
+	imageName, err := serverImageName(server)
+	if err != nil {
+		return "", err
+	}
 
 	// Ensure image is available locally before creating container (MINE-125).
-	if err := c.ensureServerImage(ctx, server); err != nil {
+	if _, err = c.ensureImage(ctx, imageName); err != nil {
 		return "", err
 	}
 
@@ -1479,6 +1483,12 @@ type RecreateContainerResult struct {
 	// cutover, or after a partial create that could not be rolled back.
 	NewContainerID string
 	WasRunning     bool
+	// ImageID is the daemon identity of the image the replacement came up
+	// with. It is empty when the old container remains the one that runs.
+	ImageID string
+	// RepoDigest is the registry digest of that same image, when the daemon
+	// has one for the requested repository. It is not ImageID.
+	RepoDigest string
 }
 
 // retainedContainerName is the side identity a replaced container keeps
@@ -1502,7 +1512,8 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	if err := validateServerPorts(server); err != nil {
 		return result, err
 	}
-	if err := c.ensureServerImage(ctx, server); err != nil {
+	imageID, repoDigest, err := c.ensureServerImage(ctx, server)
+	if err != nil {
 		return result, err
 	}
 
@@ -1603,6 +1614,8 @@ func (c *Client) RecreateContainer(ctx context.Context, oldContainerID string, s
 	}
 
 	result.NewContainerID = newContainerID
+	result.ImageID = imageID
+	result.RepoDigest = repoDigest
 	return result, nil
 }
 
@@ -1804,17 +1817,34 @@ func (c *Client) ExecCommand(ctx context.Context, containerID string, command st
 func (c *Client) pullImage(ctx context.Context, imageName string) error {
 	reader, err := c.docker.ImagePull(ctx, imageName, client.ImagePullOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
+		return explainPullError(imageName, err)
 	}
 	// Docker reports some pull failures as JSON messages in an otherwise
 	// successful HTTP response. The SDK's Wait consumes and decodes those
 	// messages, returning embedded daemon errors, transport errors, and
 	// context cancellation while still draining successful progress streams.
 	if err = reader.Wait(ctx); err != nil {
-		return fmt.Errorf("failed to complete image pull for %s: %w", imageName, err)
+		return explainPullError(imageName, err)
 	}
 
 	return nil
+}
+
+// explainPullError names a registry rate limit or an access denial and keeps
+// the daemon's own message. Other failures stay a plain pull error.
+func explainPullError(imageName string, err error) error {
+	if err == nil {
+		return nil
+	}
+	text := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(text, "toomanyrequests") || strings.Contains(text, "rate limit"):
+		return fmt.Errorf("image %s was not pulled because the registry rate limit was reached: %w", imageName, err)
+	case strings.Contains(text, "unauthorized") || strings.Contains(text, "authentication required") || strings.Contains(text, "pull access denied") || strings.Contains(text, "insufficient_scope"):
+		return fmt.Errorf("image %s was not pulled because the registry denied access: %w", imageName, err)
+	default:
+		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
+	}
 }
 
 func (c *Client) GetDockerImages() []DockerImageTag {
