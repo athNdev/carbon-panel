@@ -65,6 +65,9 @@ func (s *Store) Migrate() error {
 	if err := ensurePortLeaseProtocolKey(s.db); err != nil {
 		return fmt.Errorf("port lease migration failed: %w", err)
 	}
+	if err := ensurePortLeaseAddressKey(s.db); err != nil {
+		return fmt.Errorf("port lease address migration failed: %w", err)
+	}
 
 	// Create all tables/columns
 	if err := s.db.AutoMigrate(allModels()...); err != nil {
@@ -168,7 +171,10 @@ func migrations() []*gormigrate.Migration {
 		{
 			ID: "20261028_001_port_lease_protocol",
 			Migrate: func(tx *gorm.DB) error {
-				return ensurePortLeaseProtocolKey(tx)
+				if err := ensurePortLeaseProtocolKey(tx); err != nil {
+					return err
+				}
+				return ensurePortLeaseAddressKey(tx)
 			},
 			Rollback: func(tx *gorm.DB) error {
 				return nil

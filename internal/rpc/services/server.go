@@ -164,13 +164,17 @@ func (s *ServerService) checkNodeHostPortProtocol(ctx context.Context, nodeID st
 	return nil
 }
 
-func hostPorts(ports []*v1.AdditionalPort) []storage.HostPort {
+func hostPorts(ports []*v1.AdditionalPort, proxied bool) []storage.HostPort {
 	out := make([]storage.HostPort, 0, len(ports))
 	for _, port := range ports {
 		if port == nil {
 			continue
 		}
-		out = append(out, storage.HostPort{Port: int(port.HostPort), Protocol: port.Protocol})
+		out = append(out, storage.HostPort{
+			Port:     int(port.HostPort),
+			Protocol: port.Protocol,
+			Address:  docker.AdditionalPortHostIP(proxied, port.GetExposePublic()),
+		})
 	}
 	return out
 }
@@ -1229,7 +1233,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		return nil, err
 	}
 	if len(server.AdditionalPorts) > 0 {
-		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(server.AdditionalPorts)); err != nil {
+		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(server.AdditionalPorts, server.ProxyHostname != "")); err != nil {
 			if errors.Is(err, storage.ErrPortLeaseHeld) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, err)
 			}
@@ -1647,8 +1651,9 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		if err := s.checkAdditionalHostPorts(ctx, server.NodeID, additionalPorts); err != nil {
 			return nil, err
 		}
-		previousPorts := hostPorts(server.AdditionalPorts)
-		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(additionalPorts)); err != nil {
+		proxied := server.ProxyHostname != ""
+		previousPorts := hostPorts(server.AdditionalPorts, proxied)
+		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(additionalPorts, proxied)); err != nil {
 			if errors.Is(err, storage.ErrPortLeaseHeld) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, err)
 			}

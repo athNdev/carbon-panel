@@ -169,6 +169,71 @@ func TestMovePortLeasesStopsWhenTheTargetHoldsTheBind(t *testing.T) {
 	}
 }
 
+func TestLoopbackLeaseDoesNotOccupyIPv6(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+
+	if err := store.ReplaceAdditionalPortLeases(ctx, "node-a", "server-v4", []HostPort{{
+		Port: 25570, Protocol: "tcp", Address: "127.0.0.1",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	err := store.ReplaceAdditionalPortLeases(ctx, "node-a", "server-wild", []HostPort{{
+		Port: 25570, Protocol: "tcp", Address: "0.0.0.0",
+	}})
+	if !errors.Is(err, ErrPortLeaseHeld) {
+		t.Fatalf("wildcard error = %v, want ErrPortLeaseHeld", err)
+	}
+	if err := store.ReplaceAdditionalPortLeases(ctx, "node-a", "server-v6", []HostPort{{
+		Port: 25570, Protocol: "tcp", Address: "::",
+	}}); err != nil {
+		t.Fatalf("IPv6 wildcard should not overlap an IPv4 loopback lease: %v", err)
+	}
+}
+
+func TestPortLeaseAddressMigrationKeepsWildcardOverlap(t *testing.T) {
+	ctx := context.Background()
+	cfg := &config.Config{
+		Database: config.DatabaseConfig{
+			Path:        filepath.Join(t.TempDir(), "addr.db"),
+			AutoMigrate: false,
+		},
+	}
+	store, err := NewSQLiteStore(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if err := store.DB().Exec(`CREATE TABLE backend_port_leases (
+		node_id text NOT NULL,
+		port integer NOT NULL,
+		protocol text NOT NULL DEFAULT 'tcp',
+		server_id text,
+		purpose text NOT NULL DEFAULT '',
+		PRIMARY KEY (node_id, port, protocol)
+	)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DB().Exec(`INSERT INTO backend_port_leases (node_id, port, protocol, server_id, purpose) VALUES ('node-a', 25566, 'tcp', 'server-old', '')`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Migrate(); err != nil {
+		t.Fatal(err)
+	}
+	err = store.ReplaceAdditionalPortLeases(ctx, "node-a", "server-loop", []HostPort{{
+		Port: 25566, Protocol: "tcp", Address: "127.0.0.1",
+	}})
+	if !errors.Is(err, ErrPortLeaseHeld) {
+		t.Fatalf("loopback beside a migrated wildcard = %v, want ErrPortLeaseHeld", err)
+	}
+	if err := store.ReplaceAdditionalPortLeases(ctx, "node-a", "server-v6", []HostPort{{
+		Port: 25566, Protocol: "tcp", Address: "::",
+	}}); err != nil {
+		t.Fatalf("IPv6 beside a migrated IPv4 wildcard: %v", err)
+	}
+}
+
 func TestPortLeaseProtocolMigrationKeepsExistingTCPLease(t *testing.T) {
 	ctx := context.Background()
 	cfg := &config.Config{
