@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package scheduler
 
 import (
@@ -162,6 +161,82 @@ func TestModpackUpdate_CloningStagingAndSync(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(manifestBytes), "config/modpack.json")
 	assert.Contains(t, string(manifestBytes), `"status": "staged"`)
+}
+
+func TestModpackUpdate_StageIntoBatchLeavesLiveTree(t *testing.T) {
+	remoteRepo := createGitRepo(t)
+	t.Cleanup(func() { _ = os.RemoveAll(remoteRepo) })
+
+	serverDir, err := os.MkdirTemp("", "server-data-*")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(serverDir) })
+
+	store := setupTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+
+	ctx := context.Background()
+	server := &storage.Server{
+		ID:       uuid.New().String(),
+		Name:     "modpack-stage",
+		DataPath: serverDir,
+		Status:   storage.StatusRunning,
+	}
+	require.NoError(t, store.CreateServer(ctx, server))
+	s := NewScheduler(store, nil, nil, nil, nil, logger.New())
+
+	origClone, origFetch := cloneFn, fetchFn
+	t.Cleanup(func() { cloneFn, fetchFn = origClone, origFetch })
+	cloneFn = func(ctx context.Context, _ string, _ string, dir string) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, "git", "clone", "-b", "main", "--", remoteRepo, dir)
+		return cmd.CombinedOutput()
+	}
+	fetchFn = func(ctx context.Context, dir, branch string) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, "git", "-C", dir, "fetch", "origin", "--", branch)
+		return cmd.CombinedOutput()
+	}
+
+	cfg := ModpackUpdateTaskConfig{
+		GitURL:             "https://example.invalid/modpack.git",
+		Branch:             "main",
+		RestartImmediately: true,
+		StageIntoBatch:     true,
+	}
+	cfgJSON, err := json.Marshal(cfg)
+	require.NoError(t, err)
+	task := &storage.ScheduledTask{
+		ID:       uuid.New().String(),
+		ServerID: server.ID,
+		Name:     "git-modpack-stage",
+		TaskType: storage.TaskTypeModpackUpdate,
+		Config:   string(cfgJSON),
+	}
+
+	out, err := s.executeModpackUpdateTask(ctx, server, task)
+	require.NoError(t, err)
+	assert.Contains(t, out, "staged into the open batch")
+	assert.NoFileExists(t, filepath.Join(serverDir, "config", "modpack.json"))
+
+	staged := false
+	require.NoError(t, filepath.Walk(filepath.Join(serverDir, ".carbon-panel", "staged"), func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr == nil && info != nil && info.Name() == "modpack.json" {
+			body, readErr := os.ReadFile(path)
+			require.NoError(t, readErr)
+			assert.Equal(t, `{"version": "1.0.0"}`, string(body))
+			staged = true
+		}
+		return nil
+	}))
+	assert.True(t, staged)
+	stored, err := store.GetServer(ctx, server.ID)
+	require.NoError(t, err)
+	assert.Equal(t, storage.StatusRunning, stored.Status)
+	batch, err := store.OpenUpdateBatch(ctx, server.ID)
+	require.NoError(t, err)
+	require.NotNil(t, batch)
+	rows, err := store.ListBatchContent(ctx, batch.ID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, storage.StagedKindModpack, rows[0].Kind)
 }
 
 func TestModpackUpdate_MaintenanceWindow(t *testing.T) {

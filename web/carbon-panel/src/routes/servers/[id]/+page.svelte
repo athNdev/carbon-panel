@@ -195,8 +195,7 @@ one at https://mozilla.org/MPL/2.0/.
 		if (!server) return;
 
 		actionLoading = true;
-		const attempt =
-			action === 'recreate' ? null : beginLifecycleRequest(server.id, action);
+		const attempt = action === 'recreate' ? null : beginLifecycleRequest(server.id, action);
 		try {
 			switch (action) {
 				case 'start': {

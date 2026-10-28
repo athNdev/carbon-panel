@@ -386,6 +386,17 @@ func (s *FileService) UpdateFile(ctx context.Context, req *connect.Request[v1.Up
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid path"))
 	}
 
+	if msg.GetStage() {
+		if _, err := stageContentBytes(ctx, s.store, server, storage.StagedKindFile, storage.StagedActionReplace, msg.Path, msg.Path, msg.Content); err != nil {
+			return nil, stageContentError(err)
+		}
+		return connect.NewResponse(&v1.UpdateFileResponse{
+			Message: "File staged. The live file was not changed.",
+			Path:    msg.Path,
+			Staged:  true,
+		}), nil
+	}
+
 	// Write through the node-aware accessor: confined to the data root and
 	// refusing symlink writes.
 	acc, err := s.storageFor(ctx, server)
@@ -436,6 +447,15 @@ func (s *FileService) DeleteFile(ctx context.Context, req *connect.Request[v1.De
 		if fullPath == server.DataPath {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot delete server root directory"))
 		}
+	}
+
+	if msg.GetStage() {
+		for _, p := range paths {
+			if _, err := stageContentBytes(ctx, s.store, server, storage.StagedKindFile, storage.StagedActionDelete, p, p, nil); err != nil {
+				return nil, stageContentError(err)
+			}
+		}
+		return connect.NewResponse(&v1.DeleteFileResponse{}), nil
 	}
 
 	acc, err := s.storageFor(ctx, server)

@@ -41,6 +41,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/proxy"
 	"github.com/athNdev/carbon-panel/internal/rbac"
 	"github.com/athNdev/carbon-panel/internal/scheduler"
+	"github.com/athNdev/carbon-panel/internal/staging"
 	"github.com/athNdev/carbon-panel/pkg/files"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -103,6 +104,13 @@ func (s *ServerService) getDockerClient(nodeID string) *docker.Client {
 		return nil
 	}
 	return cli
+}
+
+func (s *ServerService) recreateStagedModule(ctx context.Context, moduleID string) error {
+	if s.moduleManager == nil {
+		return errors.New("module recreate is not configured")
+	}
+	return s.moduleManager.RecreateModule(ctx, moduleID)
 }
 
 func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, error) {
@@ -1800,7 +1808,12 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 }
 
 // StartServer starts a server
-func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error) {
+func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1.StartServerRequest]) (out *connect.Response[v1.StartServerResponse], retErr error) {
+	defer func() {
+		if retErr == nil && out != nil {
+			_ = staging.FinishNextRestartBatch(ctx, s.store, req.Msg.GetId())
+		}
+	}()
 	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
 	if reqErr != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
@@ -1826,9 +1839,20 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 
-	// Apply staged configs on restart/start (STAGED-CONFIG)
+	// Apply staged configs on restart/start (STAGED-CONFIG). Content waiting
+	// for a clock time or an idle window stays staged.
+	undoFiles, fileErr := staging.CommitNextRestartFiles(ctx, s.store, server, s.recreateStagedModule)
+	if fileErr != nil {
+		s.log.Error("Failed to apply staged content on start for server %s: %v", server.ID, fileErr)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged content: %w", fileErr))
+	}
+	contentReady := undoFiles != nil
+	if undoFiles == nil {
+		undoFiles = func() {}
+	}
 	appliedStaged, err := scheduler.ApplyOnRestartStagedConfigRecords(ctx, s.store, server.ID)
 	if err != nil {
+		undoFiles()
 		s.log.Error("Failed to apply staged config changes on start for server %s: %v", server.ID, err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged config changes: %w", err))
 	}
@@ -1838,9 +1862,10 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 	}
 	pendingRecreate, err := scheduler.HasPendingRestartStagedConfigRecreate(ctx, s.store, server.ID, server.LastStarted)
 	if err != nil {
+		undoFiles()
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check staged config recovery: %w", err))
 	}
-	needsStagedRecreate := n > 0 || pendingRecreate
+	needsStagedRecreate := n > 0 || pendingRecreate || contentReady
 	stagedContainerStarted := false
 
 	// If server was in deep sleep, release direct knock listener before starting
@@ -1892,6 +1917,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			}
 			server.Status = storage.StatusError
 			_ = s.store.UpdateServer(ctx, server)
+			undoFiles()
 			for _, rec := range appliedStaged {
 				if _, rbErr := s.store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil {
 					s.log.Error("Failed to auto-rollback staged config %s after start recreate error: %v", rec.ID, rbErr)
@@ -1902,6 +1928,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server with staged configuration: %w", recreateErr))
 		}
 		if result == nil || result.NewContainerID == "" {
+			undoFiles()
 			for _, rec := range appliedStaged {
 				_, _ = s.store.RollbackStagedConfigChange(ctx, rec.ID)
 			}
@@ -1915,6 +1942,7 @@ func (s *ServerService) StartServer(ctx context.Context, req *connect.Request[v1
 			if err := dockerCli.StartContainer(ctx, result.NewContainerID); err != nil {
 				server.Status = storage.StatusError
 				_ = s.store.UpdateServer(ctx, server)
+				undoFiles()
 				for _, rec := range appliedStaged {
 					if _, rbErr := s.store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil {
 						s.log.Error("Failed to auto-rollback staged config %s after start error: %v", rec.ID, rbErr)
@@ -2193,7 +2221,12 @@ func (s *ServerService) StopServer(ctx context.Context, req *connect.Request[v1.
 }
 
 // RestartServer restarts a server
-func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[v1.RestartServerRequest]) (*connect.Response[v1.RestartServerResponse], error) {
+func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[v1.RestartServerRequest]) (out *connect.Response[v1.RestartServerResponse], retErr error) {
+	defer func() {
+		if retErr == nil && out != nil {
+			_ = staging.FinishNextRestartBatch(ctx, s.store, req.Msg.GetId())
+		}
+	}()
 	requestID, reqErr := lifecycleRequestID(req.Msg.GetRequestId())
 	if reqErr != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, reqErr)
@@ -2217,9 +2250,19 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 
-	// Apply any staged config changes marked for restart
+	// Apply any staged config changes marked for restart. A future time or idle
+	// window is not published by this restart.
+	undoFiles, fileErr := staging.CommitNextRestartFiles(ctx, s.store, server, s.recreateStagedModule)
+	if fileErr != nil {
+		s.log.Error("Failed to apply staged content on restart for server %s: %v", server.ID, fileErr)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged content: %w", fileErr))
+	}
+	if undoFiles == nil {
+		undoFiles = func() {}
+	}
 	appliedStaged, err := scheduler.ApplyOnRestartStagedConfigRecords(ctx, s.store, server.ID)
 	if err != nil {
+		undoFiles()
 		s.log.Error("Failed to apply staged config changes on restart for server %s: %v", server.ID, err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to apply staged config changes: %w", err))
 	}
@@ -2237,6 +2280,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 
 	pendingRecreate, err := scheduler.HasPendingRestartStagedConfigRecreate(ctx, s.store, server.ID, server.LastStarted)
 	if err != nil {
+		undoFiles()
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check staged config recovery: %w", err))
 	}
 
@@ -2261,6 +2305,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			if persistErr := s.store.UpdateServer(ctx, server); persistErr != nil {
 				s.log.Error("Failed to persist server state after staged recreation error for server %s: %v", server.ID, persistErr)
 			}
+			undoFiles()
 			for _, rec := range appliedStaged {
 				if _, rbErr := s.store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil {
 					s.log.Error("Failed to auto-rollback staged config %s after restart recreate error: %v", rec.ID, rbErr)
@@ -2271,6 +2316,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to recreate server with staged configuration: %w", err))
 		}
 		if result == nil || result.NewContainerID == "" {
+			undoFiles()
 			for _, rec := range appliedStaged {
 				_, _ = s.store.RollbackStagedConfigChange(ctx, rec.ID)
 			}
@@ -2286,6 +2332,7 @@ func (s *ServerService) RestartServer(ctx context.Context, req *connect.Request[
 			}); err != nil {
 				server.Status = storage.StatusError
 				_ = s.store.UpdateServer(ctx, server)
+				undoFiles()
 				for _, rec := range appliedStaged {
 					if _, rbErr := s.store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil {
 						s.log.Error("Failed to auto-rollback staged config %s after restart start error: %v", rec.ID, rbErr)

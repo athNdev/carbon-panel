@@ -33,6 +33,7 @@ import (
 	"github.com/athNdev/carbon-panel/internal/events"
 	"github.com/athNdev/carbon-panel/internal/metrics"
 	"github.com/athNdev/carbon-panel/internal/snapshot"
+	"github.com/athNdev/carbon-panel/internal/staging"
 	"github.com/athNdev/carbon-panel/internal/webhook"
 	"github.com/athNdev/carbon-panel/pkg/logger"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
@@ -81,6 +82,14 @@ type Scheduler struct {
 
 	// Multi-node Docker client pool (optional; falls back to s.docker)
 	clientPool *docker.ClientPool
+
+	// playerCount is the same online-player source freeze and deep sleep use.
+	// Nil means the provider is not installed, so an idle window does not fire.
+	playerCount func(serverID string) int
+
+	// recreateModule replaces a module container after a staged spec change.
+	// Nil means that part of a batch cannot be published.
+	recreateModule func(ctx context.Context, moduleID string) error
 }
 
 // Config holds scheduler configuration
@@ -140,6 +149,22 @@ func (s *Scheduler) SetClientPool(pool *docker.ClientPool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.clientPool = pool
+}
+
+// SetPlayerCountProvider installs the online-player source used for idle
+// apply windows. It is the same function freeze and deep sleep use.
+func (s *Scheduler) SetPlayerCountProvider(provider func(serverID string) int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.playerCount = provider
+}
+
+// SetModuleRecreator installs the module container replace used when a staged
+// batch includes a module spec change.
+func (s *Scheduler) SetModuleRecreator(recreate func(ctx context.Context, moduleID string) error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.recreateModule = recreate
 }
 
 func (s *Scheduler) dockerForNode(nodeID string) (*docker.Client, error) {
@@ -747,7 +772,7 @@ func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Serv
 	if err != nil {
 		return "", err
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true, s.recreateModule); handled {
 		if err != nil {
 			return "", err
 		}
@@ -801,7 +826,7 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 	if err != nil {
 		return "", err
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true, s.recreateModule); handled {
 		if err != nil {
 			return "", err
 		}
@@ -842,7 +867,7 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 	if err != nil {
 		return err
 	}
-	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true); handled {
+	if handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, true, true, s.recreateModule); handled {
 		return err
 	}
 
@@ -936,16 +961,30 @@ type stagedLifecycleDocker interface {
 // start an old container and advance LastStarted past an applied on-restart
 // change. A replacement ID is persisted even when Docker reports a partial
 // recreate failure, allowing the next attempt to recover from the right object.
-func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server, startReplacement, markStarted bool) (bool, error) {
+func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleStore, dockerClient stagedLifecycleDocker, log *logger.Logger, server *storage.Server, startReplacement, markStarted bool, recreateModule func(context.Context, string) error) (bool, error) {
+	undoFiles := func() {}
+	contentReady := false
+	if concrete, ok := store.(*storage.Store); ok {
+		undo, fileErr := staging.CommitNextRestartFiles(ctx, concrete, server, recreateModule)
+		if fileErr != nil {
+			return true, fmt.Errorf("failed to apply staged content: %w", fileErr)
+		}
+		if undo != nil {
+			undoFiles = undo
+			contentReady = true
+		}
+	}
 	appliedRecords, err := ApplyOnRestartStagedConfigRecords(ctx, store, server.ID)
 	if err != nil {
+		undoFiles()
 		return true, fmt.Errorf("failed to apply staged server configuration: %w", err)
 	}
 	pending, err := HasPendingRestartStagedConfigRecreate(ctx, store, server.ID, server.LastStarted)
 	if err != nil {
+		undoFiles()
 		return true, fmt.Errorf("failed to check staged configuration recovery: %w", err)
 	}
-	if len(appliedRecords) == 0 && !pending {
+	if len(appliedRecords) == 0 && !pending && !contentReady {
 		return false, nil
 	}
 
@@ -985,6 +1024,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		if persistErr := store.UpdateServer(ctx, server); persistErr != nil && log != nil {
 			log.Error("Failed to persist server state after scheduled staged recreation error for server %s: %v", server.ID, persistErr)
 		}
+		undoFiles()
 		// Rollback newly applied staged configs on container recreate failure (SCH-1)
 		for _, rec := range appliedRecords {
 			if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
@@ -999,6 +1039,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		server.ContainerID = ""
 		server.Status = storage.StatusError
 		_ = store.UpdateServer(ctx, server)
+		undoFiles()
 		for _, rec := range appliedRecords {
 			if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
 				log.Error("Failed to auto-rollback staged config %s after scheduled recreate missing container ID: %v", rec.ID, rbErr)
@@ -1014,6 +1055,7 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 		if err := dockerClient.StartContainer(ctx, result.NewContainerID); err != nil {
 			server.Status = storage.StatusError
 			_ = store.UpdateServer(ctx, server)
+			undoFiles()
 			for _, rec := range appliedRecords {
 				if _, rbErr := store.RollbackStagedConfigChange(ctx, rec.ID); rbErr != nil && log != nil {
 					log.Error("Failed to auto-rollback staged config %s after scheduled start failure: %v", rec.ID, rbErr)
@@ -1023,6 +1065,9 @@ func recreateForPendingStagedConfig(ctx context.Context, store stagedLifecycleSt
 			}
 			return true, fmt.Errorf("failed to start recreated server: %w", err)
 		}
+	}
+	if concrete, ok := store.(*storage.Store); ok {
+		_ = staging.FinishNextRestartBatch(ctx, concrete, server.ID)
 	}
 	if err := store.ClearEphemeralConfigFields(ctx, server.ID); err != nil {
 		return true, fmt.Errorf("server restarted but temporary config could not be cleared: %w", err)
@@ -1053,7 +1098,7 @@ func (s *Scheduler) PrepareDeepSleepWake(ctx context.Context, server *storage.Se
 	if err != nil {
 		return err
 	}
-	handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, false, false)
+	handled, err := recreateForPendingStagedConfig(ctx, s.store, dockerCli, s.log, server, false, false, s.recreateModule)
 	if err != nil {
 		return err
 	}
@@ -1274,6 +1319,7 @@ type ModpackUpdateTaskConfig struct {
 	GracefulCountdownSeconds int    `json:"graceful_countdown_seconds"`
 	MaintenanceWindowCron    string `json:"maintenance_window_cron"`
 	StageConfigUpdates       bool   `json:"stage_config_updates"`
+	StageIntoBatch           bool   `json:"stage_into_batch"`
 	PreUpdateSnapshot        bool   `json:"pre_update_snapshot"`      // Create volume snapshot before applying updates (MINE-23)
 	AutoRollbackOnFailure    bool   `json:"auto_rollback_on_failure"` // Automatically rollback snapshot if restart/update fails
 	BootGateTimeoutSecs      int    `json:"boot_gate_timeout_secs"`   // SLP boot verification after restart; 0 disables (MINE-145)
@@ -1379,6 +1425,21 @@ func (s *Scheduler) executeModpackUpdateTask(ctx context.Context, server *storag
 	}
 
 	if hasUpdates {
+		if cfg.StageIntoBatch {
+			srcDir, err := resolveModpackSourceDir(cacheDir, cfg.TargetSubfolder)
+			if err != nil {
+				return updateSummary, err
+			}
+			label := "modpack"
+			if remoteHash != "" {
+				label = "modpack " + remoteHash[:min(8, len(remoteHash))]
+			}
+			if _, err := staging.StageModpackTree(ctx, s.store, server, srcDir, label); err != nil {
+				return updateSummary, fmt.Errorf("stage modpack into batch: %w", err)
+			}
+			return updateSummary + "; staged into the open batch", nil
+		}
+
 		var createdSnapshot *storage.ServerSnapshot
 
 		// One-click pre-update volume snapshotting (MINE-23)
