@@ -929,6 +929,14 @@ body > footer {
   grid-template-columns: repeat(6, 1fr);
   grid-auto-rows: minmax(178px, auto);
 }
+/* Children stay in the bento grid. On small screens the groups become catalogs. */
+.tile-stack,
+.tile-group {
+  display: contents;
+}
+.tile-kicker {
+  display: none;
+}
 .tile {
   position: relative;
   overflow: hidden;
@@ -2214,6 +2222,168 @@ table.compare .icon { width: 16px; height: 16px; flex: none; }
   .footer-brand { grid-column: span 1; }
 }
 
+/* Small screens: repeated cards become one catalog or a timeline.
+   Diagram tiles stay cards. Homogenous items stay visible, without a box each. */
+@media (max-width: 900px) {
+  .bento {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .tile-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: none;
+    background: transparent;
+    overflow: visible;
+  }
+  .tile-group {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--layer-01);
+    overflow: hidden;
+  }
+  .tile-kicker {
+    display: block;
+    margin: 0;
+    padding: 14px 16px 2px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .tile-stack .tile {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    align-items: start;
+    grid-column: auto;
+    padding: 16px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+  .tile-stack .tile:last-child { border-bottom: none; }
+  .tile-stack .tile:hover {
+    transform: none;
+    background: transparent;
+    border-bottom-color: var(--border);
+  }
+  .tile-stack .tile::before { display: none; }
+  .tile-stack .t-icon {
+    grid-row: 1 / span 3;
+    width: 36px;
+    height: 36px;
+    margin: 1px 0 0;
+  }
+  .tile-stack .t-icon .icon {
+    width: 18px;
+    height: 18px;
+  }
+  .tile-stack h3 {
+    font-size: 16px;
+    line-height: 1.3;
+    margin: 0;
+  }
+  .tile-stack p {
+    font-size: 14px;
+    line-height: 1.45;
+    margin: 0;
+    max-width: 62ch;
+  }
+  .tile-stack .t-tags { display: none; }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--layer-01);
+    overflow: hidden;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 6px;
+    align-items: start;
+    position: relative;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 18px 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+  .step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 31px;
+    top: 52px;
+    bottom: 0;
+    width: 1px;
+    background: var(--border-strong);
+  }
+  .step .step-num {
+    grid-row: 1 / span 3;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
+  }
+  .step h3 { font-size: 16px; margin: 0; }
+  .step p { font-size: 14px; margin: 0; }
+  .step code {
+    grid-column: 2;
+    margin: 2px 0 0;
+    min-width: 0;
+  }
+
+  .oss-points {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
+  }
+  .oss-point {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: start;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .oss-point:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .oss-point .icon {
+    grid-row: 1 / span 2;
+    width: 20px;
+    height: 20px;
+    margin: 1px 0 0;
+  }
+  .oss-point h4 { margin: 0; }
+  .oss-point p { margin: 0; }
+}
+
 /* ============================================================
    LIGHT — ambient glow behind the lattice
    ============================================================ */
@@ -2496,13 +2666,26 @@ table.compare .icon { width: 16px; height: 16px; flex: none; }
   }
 }
 @media (max-width: 860px) {
-  .fleet-cards { grid-template-columns: 1fr; margin-top: 24px; }
+  .fleet-cards { grid-template-columns: 1fr; margin-top: 8px; }
   .fleet-card {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    align-items: start;
     border-left: none;
     border-top: 1px solid var(--grid-line);
-    padding: 22px 0 0;
+    padding: 16px 0 0;
   }
-  .fleet-card:first-child { border-top: none; }
+  .fleet-card:first-child { border-top: none; padding-top: 0; }
+  .fleet-card .f-icon {
+    grid-row: 1 / span 2;
+    width: 20px;
+    height: 20px;
+    margin: 2px 0 0;
+  }
+  .fleet-card h3,
+  .fleet-card p { margin: 0; }
 }
 
 

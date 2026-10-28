@@ -94,7 +94,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261028i" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261028j" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -525,6 +525,9 @@
             </div>
           </div>
 
+          <div class="tile-stack">
+          <div class="tile-group" role="group" aria-labelledby="tg-server">
+          <p class="tile-kicker" id="tg-server">On a server</p>
           <!-- Modpack studio -->
           <div class="tile span-3 reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-puzzle"/></svg></div>
@@ -551,7 +554,10 @@
             <p>Browse, edit, zip and bulk-download files with resumable uploads and SHA-256 verified remote pulls.</p>
             <div class="t-tags"><span>resumable</span><span>zip/unzip</span></div>
           </div>
+          </div>
 
+          <div class="tile-group" role="group" aria-labelledby="tg-ops">
+          <p class="tile-kicker" id="tg-ops">Operations</p>
           <!-- Backups -->
           <div class="tile reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-database"/></svg></div>
@@ -575,7 +581,10 @@
             <p>Cron, interval and event-driven task chains — commands, backups, webhooks, even Chunky pre-generation and Git modpack updates.</p>
             <div class="t-tags"><span>cron</span><span>chains</span><span>webhooks</span></div>
           </div>
+          </div>
 
+          <div class="tile-group" role="group" aria-labelledby="tg-platform">
+          <p class="tile-kicker" id="tg-platform">Platform</p>
           <!-- Security -->
           <div class="tile reveal">
             <div class="t-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
@@ -590,6 +599,8 @@
             <h3>Typed, observable API</h3>
             <p>Protocol Buffers over Connect RPC &amp; gRPC, with a live OpenAPI viewer, reflection, and Prometheus metrics endpoints.</p>
             <div class="t-tags"><span>Connect RPC</span><span>OpenAPI</span><span>Prometheus</span></div>
+          </div>
+          </div>
           </div>
 
           <!-- Deep sleep -->
