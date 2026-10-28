@@ -79,8 +79,8 @@ func writePortLeases(ctx context.Context, store *storage.Store, out io.Writer) e
 		return err
 	}
 	if len(leases) == 0 {
-		fmt.Fprintln(out, "no port leases")
-		return nil
+		_, err := fmt.Fprintln(out, "no port leases")
+		return err
 	}
 	rows, err := store.ListServers(ctx)
 	if err != nil {
@@ -92,13 +92,17 @@ func writePortLeases(ctx context.Context, store *storage.Store, out io.Writer) e
 			present[server.ID] = true
 		}
 	}
-	fmt.Fprintln(out, "NODE\tPORT\tSERVER\tPANEL_ROW")
+	if _, err := fmt.Fprintln(out, "NODE\tPORT\tSERVER\tPANEL_ROW"); err != nil {
+		return err
+	}
 	for _, lease := range leases {
 		panelRow := "no"
 		if present[lease.ServerID] {
 			panelRow = "yes"
 		}
-		fmt.Fprintf(out, "%s\t%d\t%s\t%s\n", lease.NodeID, lease.Port, lease.ServerID, panelRow)
+		if _, err := fmt.Fprintf(out, "%s\t%d\t%s\t%s\n", lease.NodeID, lease.Port, lease.ServerID, panelRow); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -113,13 +117,13 @@ func releaseDetachedPorts(ctx context.Context, store *storage.Store, serverID st
 		return err
 	}
 	if len(released) == 0 {
-		fmt.Fprintf(out, "no port leases for %s\n", serverID)
-		return nil
+		_, err := fmt.Fprintf(out, "no port leases for %s\n", serverID)
+		return err
 	}
 	ports := make([]string, 0, len(released))
 	for _, lease := range released {
 		ports = append(ports, fmt.Sprintf("%s:%d", lease.NodeID, lease.Port))
 	}
-	fmt.Fprintf(out, "released %s for %s without stopping a container or deleting files\n", strings.Join(ports, ", "), serverID)
-	return nil
+	_, err = fmt.Fprintf(out, "released %s for %s without stopping a container or deleting files\n", strings.Join(ports, ", "), serverID)
+	return err
 }
