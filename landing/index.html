@@ -11,10 +11,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Carbon Panel — Open-source Minecraft server management</title>
   <meta name="description" content="Carbon Panel is the open-source, Docker-native control panel for Minecraft servers. Deploy every server in its own container, route players by hostname, and ship modpacks — all from one self-hosted panel." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#161616" />
 
   <link rel="canonical" href="https://athn.dev/carbonpanel/" />
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="https://athn.dev/carbonpanel/sitemap.xml" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Carbon Panel" />
   <meta property="og:locale" content="en_US" />
@@ -31,6 +33,59 @@
   <meta name="twitter:description" content="The open-source, Docker-native control panel for Minecraft servers. Deploy, orchestrate, and scale every server from one panel." />
   <meta name="twitter:image" content="https://athn.dev/carbonpanel/assets/og.png" />
   <meta name="twitter:image:alt" content="Carbon Panel: Minecraft servers, run like production." />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://athn.dev/carbonpanel/#website",
+        "url": "https://athn.dev/carbonpanel/",
+        "name": "Carbon Panel",
+        "description": "The open-source, Docker-native control plane for Minecraft servers.",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://athn.dev/carbonpanel/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://athn.dev/carbonpanel/#organization",
+        "name": "Carbon Panel",
+        "url": "https://athn.dev/carbonpanel/",
+        "sameAs": ["https://github.com/athNdev/carbonpanel"]
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://athn.dev/carbonpanel/#webpage",
+        "url": "https://athn.dev/carbonpanel/",
+        "name": "Carbon Panel — Open-source Minecraft server management",
+        "description": "Carbon Panel is the open-source, Docker-native control panel for Minecraft servers. Deploy every server in its own container, route players by hostname, and ship modpacks — all from one self-hosted panel.",
+        "isPartOf": { "@id": "https://athn.dev/carbonpanel/#website" },
+        "about": { "@id": "https://athn.dev/carbonpanel/#software" },
+        "inLanguage": "en",
+        "primaryImageOfPage": {
+          "@type": "ImageObject",
+          "url": "https://athn.dev/carbonpanel/assets/og.png",
+          "width": 1200,
+          "height": 630
+        }
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://athn.dev/carbonpanel/#software",
+        "name": "Carbon Panel",
+        "description": "Carbon Panel is the open-source, Docker-native control plane for Minecraft servers. Every server in its own container — on your home machine or in the cloud — players routed by hostname, and modpacks shipped straight from CurseForge and Modrinth.",
+        "url": "https://athn.dev/carbonpanel/",
+        "codeRepository": "https://github.com/athNdev/carbonpanel",
+        "programmingLanguage": "Go",
+        "runtimePlatform": "Docker",
+        "license": "https://www.mozilla.org/MPL/2.0/",
+        "isAccessibleForFree": true,
+        "image": "https://athn.dev/carbonpanel/assets/og.png"
+      }
+    ]
+  }
+  </script>
 
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f62fe'/%3E%3Cpath d='M16 6l8 4.5v9L16 24l-8-4.5v-9L16 6z' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M8 10.5l8 4.5 8-4.5M16 15v9' fill='none' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E" />
 
