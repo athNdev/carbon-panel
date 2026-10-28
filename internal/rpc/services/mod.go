@@ -291,6 +291,10 @@ func (s *ModService) ImportUploadedMod(ctx context.Context, req *connect.Request
 		)
 	}
 
+	if msg.GetStage() {
+		return s.stageUploadedMod(ctx, msg, server, tempPath, originalFilename)
+	}
+
 	root, err := dataRootFor(ctx, s.store, server, true)
 	if err != nil {
 		return nil, storageError(err)
@@ -352,6 +356,53 @@ func (s *ModService) ImportUploadedMod(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&v1.ImportUploadedModResponse{
 		Mod:     mod,
 		Message: "Mod uploaded successfully",
+	}), nil
+}
+
+// stageUploadedMod keeps a validated jar out of the live mods directory.
+func (s *ModService) stageUploadedMod(ctx context.Context, msg *v1.ImportUploadedModRequest, server *storage.Server, tempPath, originalFilename string) (*connect.Response[v1.ImportUploadedModResponse], error) {
+	info := minecraft.GetModLoaderInfo(server.ModLoader)
+	if info.ModsDirectory == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("this server type does not support mods"))
+	}
+	if _, err := modInstallPath(info.ModsDirectory, originalFilename); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	data, err := os.ReadFile(tempPath)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to read uploaded mod"))
+	}
+	fileInfo, err := os.Stat(tempPath)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to get mod info"))
+	}
+	target := info.ModsDirectory + "/" + filepath.Base(originalFilename)
+	if _, err := stageContentBytes(ctx, s.store, server, storage.StagedKindMod, storage.StagedActionInstall, target, originalFilename, data); err != nil {
+		return nil, stageContentError(err)
+	}
+	_ = os.Remove(tempPath)
+	_ = s.uploadManager.CleanupSession(msg.UploadSessionId)
+
+	displayName := msg.DisplayName
+	if displayName == "" {
+		displayName = originalFilename
+		if ext := filepath.Ext(displayName); ext != "" {
+			displayName = displayName[:len(displayName)-len(ext)]
+		}
+	}
+	return connect.NewResponse(&v1.ImportUploadedModResponse{
+		Mod: &v1.Mod{
+			Id:          uuid.NewSHA1(uuid.NameSpaceURL, []byte(msg.ServerId+originalFilename)).String(),
+			ServerId:    msg.ServerId,
+			FileName:    originalFilename,
+			DisplayName: displayName,
+			Description: msg.Description,
+			Enabled:     true,
+			FileSize:    fileInfo.Size(),
+			UploadedAt:  timestamppb.New(fileInfo.ModTime()),
+		},
+		Message: "Mod staged. The server was not changed.",
+		Staged:  true,
 	}), nil
 }
 

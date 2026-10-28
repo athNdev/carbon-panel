@@ -379,12 +379,14 @@ func (x *SearchDatapacksResponse) GetOffset() int32 {
 
 // InstallDatapackRequest installs a datapack from an index into the world.
 type InstallDatapackRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	DatapackId    string                 `protobuf:"bytes,2,opt,name=datapack_id,json=datapackId,proto3" json:"datapack_id,omitempty"`
-	GameVersion   string                 `protobuf:"bytes,3,opt,name=game_version,json=gameVersion,proto3" json:"game_version,omitempty"`
-	FileName      string                 `protobuf:"bytes,4,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"` // optional override for the stored filename
-	Indexer       string                 `protobuf:"bytes,5,opt,name=indexer,proto3" json:"indexer,omitempty"`                   // provider that resolved datapack_id (empty: try all)
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ServerId    string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	DatapackId  string                 `protobuf:"bytes,2,opt,name=datapack_id,json=datapackId,proto3" json:"datapack_id,omitempty"`
+	GameVersion string                 `protobuf:"bytes,3,opt,name=game_version,json=gameVersion,proto3" json:"game_version,omitempty"`
+	FileName    string                 `protobuf:"bytes,4,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"` // optional override for the stored filename
+	Indexer     string                 `protobuf:"bytes,5,opt,name=indexer,proto3" json:"indexer,omitempty"`                   // provider that resolved datapack_id (empty: try all)
+	// stage keeps the archive out of the world until the batch applies.
+	Stage         bool `protobuf:"varint,6,opt,name=stage,proto3" json:"stage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -454,10 +456,18 @@ func (x *InstallDatapackRequest) GetIndexer() string {
 	return ""
 }
 
+func (x *InstallDatapackRequest) GetStage() bool {
+	if x != nil {
+		return x.Stage
+	}
+	return false
+}
+
 // InstallDatapackResponse reports the installed datapack.
 type InstallDatapackResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datapack      *InstalledDatapack     `protobuf:"bytes,1,opt,name=datapack,proto3" json:"datapack,omitempty"`
+	Staged        bool                   `protobuf:"varint,2,opt,name=staged,proto3" json:"staged,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -499,14 +509,23 @@ func (x *InstallDatapackResponse) GetDatapack() *InstalledDatapack {
 	return nil
 }
 
+func (x *InstallDatapackResponse) GetStaged() bool {
+	if x != nil {
+		return x.Staged
+	}
+	return false
+}
+
 // UploadDatapackRequest imports a previously uploaded datapack archive.
 type UploadDatapackRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ServerId        string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
 	UploadSessionId string                 `protobuf:"bytes,2,opt,name=upload_session_id,json=uploadSessionId,proto3" json:"upload_session_id,omitempty"`
 	FileName        string                 `protobuf:"bytes,3,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"` // optional override for the stored filename
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// stage keeps the archive out of the world until the batch applies.
+	Stage         bool `protobuf:"varint,4,opt,name=stage,proto3" json:"stage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UploadDatapackRequest) Reset() {
@@ -560,11 +579,19 @@ func (x *UploadDatapackRequest) GetFileName() string {
 	return ""
 }
 
+func (x *UploadDatapackRequest) GetStage() bool {
+	if x != nil {
+		return x.Stage
+	}
+	return false
+}
+
 // UploadDatapackResponse reports the imported datapack.
 type UploadDatapackResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datapack      *InstalledDatapack     `protobuf:"bytes,1,opt,name=datapack,proto3" json:"datapack,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Staged        bool                   `protobuf:"varint,3,opt,name=staged,proto3" json:"staged,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -611,6 +638,13 @@ func (x *UploadDatapackResponse) GetMessage() string {
 		return x.Message
 	}
 	return ""
+}
+
+func (x *UploadDatapackResponse) GetStaged() bool {
+	if x != nil {
+		return x.Staged
+	}
+	return false
 }
 
 // ListDatapacksRequest lists the datapacks installed in the world.
@@ -830,23 +864,27 @@ const file_carbonpanel_v1_datapack_proto_rawDesc = "" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x12\x1b\n" +
 	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x16\n" +
-	"\x06offset\x18\x04 \x01(\x05R\x06offset\"\xb0\x01\n" +
+	"\x06offset\x18\x04 \x01(\x05R\x06offset\"\xc6\x01\n" +
 	"\x16InstallDatapackRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x1f\n" +
 	"\vdatapack_id\x18\x02 \x01(\tR\n" +
 	"datapackId\x12!\n" +
 	"\fgame_version\x18\x03 \x01(\tR\vgameVersion\x12\x1b\n" +
 	"\tfile_name\x18\x04 \x01(\tR\bfileName\x12\x18\n" +
-	"\aindexer\x18\x05 \x01(\tR\aindexer\"X\n" +
+	"\aindexer\x18\x05 \x01(\tR\aindexer\x12\x14\n" +
+	"\x05stage\x18\x06 \x01(\bR\x05stage\"p\n" +
 	"\x17InstallDatapackResponse\x12=\n" +
-	"\bdatapack\x18\x01 \x01(\v2!.carbonpanel.v1.InstalledDatapackR\bdatapack\"}\n" +
+	"\bdatapack\x18\x01 \x01(\v2!.carbonpanel.v1.InstalledDatapackR\bdatapack\x12\x16\n" +
+	"\x06staged\x18\x02 \x01(\bR\x06staged\"\x93\x01\n" +
 	"\x15UploadDatapackRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12*\n" +
 	"\x11upload_session_id\x18\x02 \x01(\tR\x0fuploadSessionId\x12\x1b\n" +
-	"\tfile_name\x18\x03 \x01(\tR\bfileName\"q\n" +
+	"\tfile_name\x18\x03 \x01(\tR\bfileName\x12\x14\n" +
+	"\x05stage\x18\x04 \x01(\bR\x05stage\"\x89\x01\n" +
 	"\x16UploadDatapackResponse\x12=\n" +
 	"\bdatapack\x18\x01 \x01(\v2!.carbonpanel.v1.InstalledDatapackR\bdatapack\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"3\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x16\n" +
+	"\x06staged\x18\x03 \x01(\bR\x06staged\"3\n" +
 	"\x14ListDatapacksRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\"X\n" +
 	"\x15ListDatapacksResponse\x12?\n" +

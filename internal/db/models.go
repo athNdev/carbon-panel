@@ -570,6 +570,35 @@ type ServerUpdateBatch struct {
 	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
+// Staged content kinds and actions. Bytes for install and replace live under
+// the server data root at .carbon-panel/staged, never in mods, datapacks, or
+// the world, until a later apply window copies them.
+const (
+	StagedKindMod      = "mod"
+	StagedKindDatapack = "datapack"
+	StagedKindFile     = "file"
+
+	StagedActionInstall = "install"
+	StagedActionReplace = "replace"
+	StagedActionDelete  = "delete"
+)
+
+// StagedContentChange is one mod, datapack, or file edit waiting in a batch.
+// StagePath is empty for a delete, which records the live path to remove later.
+type StagedContentChange struct {
+	ID         string       `json:"id" gorm:"primaryKey"`
+	ServerID   string       `json:"server_id" gorm:"not null;index;column:server_id"`
+	BatchID    string       `json:"batch_id" gorm:"not null;index;column:batch_id"`
+	Kind       string       `json:"kind" gorm:"not null"`
+	Action     string       `json:"action" gorm:"not null"`
+	TargetPath string       `json:"target_path" gorm:"not null;column:target_path"`
+	StagePath  string       `json:"stage_path,omitempty" gorm:"column:stage_path"`
+	FileName   string       `json:"file_name" gorm:"column:file_name"`
+	Status     StagedStatus `json:"status" gorm:"not null;index"`
+	CreatedAt  time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	Server     *Server      `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
+}
+
 // TaskType defines the type of scheduled task
 type TaskType string
 
