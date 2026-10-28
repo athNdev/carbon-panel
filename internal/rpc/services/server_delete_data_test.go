@@ -7,12 +7,14 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/athNdev/carbon-panel/internal/activity"
 	"github.com/athNdev/carbon-panel/internal/db"
 	v1 "github.com/athNdev/carbon-panel/pkg/proto/carbonpanel/v1"
 )
@@ -40,6 +42,83 @@ func TestDeleteServerRemovesLocalDataBeforeTheRow(t *testing.T) {
 	}
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatalf("local data stat = %v, want removed", err)
+	}
+}
+
+func TestDeleteServerKeepDataLeavesTheWorldAndDropsTheRow(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := context.Background()
+	dataPath := filepath.Join(t.TempDir(), "world")
+	marker := writeServerMarker(t, dataPath)
+
+	server := &db.Server{
+		ID: "keep-local", Name: "Keep Local", NodeID: "test-node",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25593, Memory: 2048, Status: db.StatusStopped, DataPath: dataPath,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{
+		Id: server.ID, KeepData: true,
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err == nil {
+		t.Fatal("server row still exists")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("kept world stat = %v", err)
+	}
+
+	var logs []db.ActivityLog
+	if err := svc.store.DB().Where("subject_id = ? AND event = ?", server.ID, activity.EventServerDelete).Find(&logs).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("delete audit count = %d", len(logs))
+	}
+	var props map[string]any
+	if err := json.Unmarshal([]byte(logs[0].Properties), &props); err != nil {
+		t.Fatal(err)
+	}
+	if props["keep_data"] != true || props["data_path"] != dataPath {
+		t.Fatalf("delete audit properties = %s", logs[0].Properties)
+	}
+}
+
+func TestDeleteServerKeepDataOnRemoteNodeLeavesControllerFiles(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	ctx := context.Background()
+	lookalike := filepath.Join(t.TempDir(), "world")
+	marker := writeServerMarker(t, lookalike)
+	if err := svc.store.CreateNode(ctx, &db.Node{
+		ID: "remote-keep", Name: "Remote Keep", Host: "tcp://10.0.0.10:2375",
+		Enabled: true, Status: db.NodeStatusOnline,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	server := &db.Server{
+		ID: "keep-remote", Name: "Keep Remote", NodeID: "remote-keep",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25594, Memory: 2048, Status: db.StatusStopped, DataPath: lookalike,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{
+		Id: server.ID, KeepData: true,
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err == nil {
+		t.Fatal("server row still exists")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("controller path stat = %v", err)
 	}
 }
 

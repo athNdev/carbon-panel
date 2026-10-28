@@ -45,6 +45,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let loadError = $state<string | null>(null);
 	let pendingDelete = $state<Server | null>(null);
 	let confirmOpen = $state(false);
+	let keepServerData = $state(false);
 	// Cold direct loads render before the layout's fetch lands; hold the
 	// empty state until the first fetch settles so "no servers" never
 	// flashes for fleets that simply haven't loaded yet.
@@ -148,6 +149,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function deleteServer(server: Server, event?: MouseEvent) {
 		event?.stopPropagation();
+		keepServerData = false;
 		pendingDelete = server;
 		confirmOpen = true;
 	}
@@ -157,13 +159,17 @@ one at https://mozilla.org/MPL/2.0/.
 		if (!server) return;
 		loading = true;
 		const attempt = beginLifecycleRequest(server.id, 'delete');
+		const retainingData = keepServerData;
 		try {
 			await rpcClient.server.deleteServer({
 				id: server.id,
-				requestId: attempt.requestId
+				requestId: attempt.requestId,
+				keepData: retainingData
 			});
 			serversStore.removeServer(server.id);
-			toast.success(`Deleted ${server.name}`);
+			toast.success(
+				retainingData ? `Removed ${server.name}. World files were kept.` : `Deleted ${server.name}`
+			);
 		} catch (error) {
 			toast.error(
 				`Failed to delete server: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -826,9 +832,11 @@ one at https://mozilla.org/MPL/2.0/.
 
 	<CarbonConfirm
 		bind:open={confirmOpen}
-		title="Delete server?"
-		message="This action cannot be undone. Containers, volumes, and configuration are removed."
-		confirmLabel="Delete Server"
+		title={keepServerData ? 'Remove server from the panel?' : 'Delete server?'}
+		message={keepServerData
+			? 'The container is removed and the server leaves the panel. The world directory stays on disk.'
+			: 'This action cannot be undone. The container and the server files are removed.'}
+		confirmLabel={keepServerData ? 'Remove from panel' : 'Delete Server'}
 		danger
 		confirming={loading}
 		onconfirm={confirmDeleteServer}
@@ -838,6 +846,10 @@ one at https://mozilla.org/MPL/2.0/.
 			{#if pendingDelete}
 				{pendingDelete.name} · {pendingDelete.mcVersion || 'Latest'}
 			{/if}
+			<label class="mt-3 flex items-start gap-2 font-sans text-xs text-[#f4f4f4]">
+				<input type="checkbox" bind:checked={keepServerData} disabled={loading} />
+				<span>Keep the world files</span>
+			</label>
 		{/snippet}
 	</CarbonConfirm>
 </div>

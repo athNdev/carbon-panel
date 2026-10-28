@@ -322,6 +322,35 @@ func (s *ServerService) auditPower(ctx context.Context, ip, event, serverID stri
 
 // auditServerLifecycle records a server lifecycle event in the audit trail (MINE-141, SEC-3).
 // Audit failures are logged, never returned.
+func (s *ServerService) auditServerDelete(ctx context.Context, ip string, server *storage.Server, keepData bool) {
+	if server == nil {
+		return
+	}
+	actorID, actorName := "", ""
+	if u := auth.GetUserFromContext(ctx); u != nil {
+		actorID, actorName = u.ID, u.Username
+	}
+	props, err := json.Marshal(map[string]any{
+		"keep_data": keepData,
+		"data_path": server.DataPath,
+	})
+	if err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerDelete, err)
+		return
+	}
+	if err := activity.Log(s.store.DB(), activity.Entry{
+		ActorID:    actorID,
+		ActorName:  actorName,
+		IP:         ip,
+		Event:      activity.EventServerDelete,
+		SubjectTyp: "server",
+		SubjectID:  server.ID,
+		Properties: string(props),
+	}); err != nil {
+		s.log.Error("Audit log failed for %s: %v", activity.EventServerDelete, err)
+	}
+}
+
 func (s *ServerService) auditServerLifecycle(ctx context.Context, ip, event, serverID string) {
 	actorID, actorName := "", ""
 	if u := auth.GetUserFromContext(ctx); u != nil {
@@ -1793,15 +1822,17 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	}
 
 	// Remove the data directory before the row. A failure leaves the server
-	// addressable so the same delete can be retried. The path is the node's
-	// mapped storage, never an unrelated controller directory.
-	if err := s.removeServerData(ctx, server); err != nil {
-		s.log.Error("Failed to delete server data: %v", err)
-		code := connect.CodeInternal
-		if nodestorage.IsUnavailable(err) {
-			code = connect.CodeUnavailable
+	// addressable so the same delete can be retried. keep_data leaves the
+	// world directory in place and still removes the panel record.
+	if !req.Msg.GetKeepData() {
+		if err := s.removeServerData(ctx, server); err != nil {
+			s.log.Error("Failed to delete server data: %v", err)
+			code := connect.CodeInternal
+			if nodestorage.IsUnavailable(err) {
+				code = connect.CodeUnavailable
+			}
+			return nil, connect.NewError(code, fmt.Errorf("failed to delete server data: %w", err))
 		}
-		return nil, connect.NewError(code, fmt.Errorf("failed to delete server data: %w", err))
 	}
 
 	// Delete from database
@@ -1811,7 +1842,7 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	}
 
 	peerIP := req.Peer().Addr
-	s.auditServerLifecycle(ctx, peerIP, activity.EventServerDelete, server.ID)
+	s.auditServerDelete(ctx, peerIP, server, req.Msg.GetKeepData())
 
 	return connect.NewResponse(&v1.DeleteServerResponse{}), nil
 }

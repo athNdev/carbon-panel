@@ -1140,7 +1140,9 @@ type DeleteServerRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Idempotency key for this delete. Repeating it does not delete twice.
-	RequestId     string `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	RequestId string `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// keep_data removes the panel record and container but leaves the world directory in place.
+	KeepData      bool `protobuf:"varint,3,opt,name=keep_data,json=keepData,proto3" json:"keep_data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1187,6 +1189,13 @@ func (x *DeleteServerRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *DeleteServerRequest) GetKeepData() bool {
+	if x != nil {
+		return x.KeepData
+	}
+	return false
 }
 
 // Empty deletion response
@@ -2188,11 +2197,12 @@ const file_carbonpanel_v1_server_proto_rawDesc = "" +
 	"\x10_auto_deep_sleepB\x1d\n" +
 	"\x1b_deep_sleep_timeout_minutes\"F\n" +
 	"\x14UpdateServerResponse\x12.\n" +
-	"\x06server\x18\x01 \x01(\v2\x16.carbonpanel.v1.ServerR\x06server\"D\n" +
+	"\x06server\x18\x01 \x01(\v2\x16.carbonpanel.v1.ServerR\x06server\"a\n" +
 	"\x13DeleteServerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tR\trequestId\"\x16\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12\x1b\n" +
+	"\tkeep_data\x18\x03 \x01(\bR\bkeepData\"\x16\n" +
 	"\x14DeleteServerResponse\"C\n" +
 	"\x12StartServerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +

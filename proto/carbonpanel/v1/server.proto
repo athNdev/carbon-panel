@@ -184,6 +184,8 @@ message DeleteServerRequest {
   string id = 1;
   // Idempotency key for this delete. Repeating it does not delete twice.
   string request_id = 2;
+  // keep_data removes the panel record and container but leaves the world directory in place.
+  bool keep_data = 3;
 }
 
 // Empty deletion response

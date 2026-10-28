@@ -245,9 +245,11 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	let confirmDeleteOpen = $state(false);
+	let keepServerData = $state(false);
 
 	async function handleDeleteServer() {
 		if (!server) return;
+		keepServerData = false;
 		confirmDeleteOpen = true;
 	}
 
@@ -255,14 +257,18 @@ one at https://mozilla.org/MPL/2.0/.
 		if (!server) return;
 		actionLoading = true;
 		const attempt = beginLifecycleRequest(server.id, 'delete');
+		const retainingData = keepServerData;
 		try {
 			const deleteRequest = create(DeleteServerRequestSchema, {
 				id: server.id,
-				requestId: attempt.requestId
+				requestId: attempt.requestId,
+				keepData: retainingData
 			});
 			await rpcClient.server.deleteServer(deleteRequest);
 			serversStore.removeServer(server.id);
-			toast.success('Server deleted successfully');
+			toast.success(
+				retainingData ? 'Server removed. World files were kept.' : 'Server deleted successfully'
+			);
 			goto(resolve('/servers'));
 		} catch (error) {
 			toast.error(
@@ -921,15 +927,21 @@ one at https://mozilla.org/MPL/2.0/.
 {#if server}
 	<CarbonConfirm
 		bind:open={confirmDeleteOpen}
-		title="Delete server?"
-		message="This will stop and remove the container, delete all files and data, and remove mods and configurations. This action cannot be undone."
-		confirmLabel="Delete Server"
+		title={keepServerData ? 'Remove server from the panel?' : 'Delete server?'}
+		message={keepServerData
+			? 'This stops and removes the container and drops the server from the panel. The world directory stays on disk.'
+			: 'This will stop and remove the container, delete all files and data, and remove mods and configurations. This action cannot be undone.'}
+		confirmLabel={keepServerData ? 'Remove from panel' : 'Delete Server'}
 		danger
 		confirming={actionLoading}
 		onconfirm={confirmDeleteServer}
 	>
 		{#snippet details()}
 			{#if server}{server.name}{/if}
+			<label class="mt-3 flex items-start gap-2 font-sans text-xs text-[#f4f4f4]">
+				<input type="checkbox" bind:checked={keepServerData} disabled={actionLoading} />
+				<span>Keep the world files</span>
+			</label>
 		{/snippet}
 	</CarbonConfirm>
 {/if}
