@@ -42,8 +42,12 @@ wrong host. That is a data-safety bug, not a degraded mode.
   a manual modpack archive there. A remote node with no reachable storage is
   refused, so no controller-local world directory is created.
 - Scheduled backup archives resolve the mapped root before reading the world.
-- Mod installation and packwiz still address the stored data path on the
-  controller. Deleting a server still removes that stored path.
+- Mod installation and packwiz bake write the mods folder on that mapped
+  root. A remote node with no reachable storage is refused, and a controller
+  copy is not treated as the installed set.
+- Scheduled modpack sync still copies into the stored data path. Snapshot
+  create and restore still archive that stored path. Deleting a server still
+  removes that stored path.
 
 # How to check
 
