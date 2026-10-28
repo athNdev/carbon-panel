@@ -322,7 +322,7 @@ func (s *ServerService) auditPower(ctx context.Context, ip, event, serverID stri
 
 // auditServerLifecycle records a server lifecycle event in the audit trail (MINE-141, SEC-3).
 // Audit failures are logged, never returned.
-func (s *ServerService) auditServerDelete(ctx context.Context, ip string, server *storage.Server, keepData bool) {
+func (s *ServerService) auditServerDelete(ctx context.Context, ip string, server *storage.Server, keepData, detach bool) {
 	if server == nil {
 		return
 	}
@@ -331,8 +331,11 @@ func (s *ServerService) auditServerDelete(ctx context.Context, ip string, server
 		actorID, actorName = u.ID, u.Username
 	}
 	props, err := json.Marshal(map[string]any{
-		"keep_data": keepData,
-		"data_path": server.DataPath,
+		"keep_data":    keepData,
+		"detach":       detach,
+		"data_path":    server.DataPath,
+		"container_id": server.ContainerID,
+		"port":         server.Port,
 	})
 	if err != nil {
 		s.log.Error("Audit log failed for %s: %v", activity.EventServerDelete, err)
@@ -1769,8 +1772,11 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("server not found"))
 	}
 
+	detach := req.Msg.GetDetach()
+	keepData := detach || req.Msg.GetKeepData()
+
 	var dockerCli *docker.Client
-	if server.ContainerID != "" {
+	if server.ContainerID != "" && !detach {
 		dockerCli, err = s.getDockerClientStrict(server.NodeID)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("docker node %q unavailable during deletion: %w", server.NodeID, err))
@@ -1779,8 +1785,9 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 	// Stop and remove module containers before deleting the server. A module
 	// cleanup or lookup failure must keep the parent row so the remaining
-	// resources stay addressable and deletion can be retried.
-	if s.moduleManager != nil {
+	// resources stay addressable and deletion can be retried. Detach leaves
+	// those containers running with the server container.
+	if s.moduleManager != nil && !detach {
 		modules, err := s.store.ListServerModules(ctx, server.ID)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list server modules before deletion: %w", err))
@@ -1795,7 +1802,7 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 	// Stop and remove the server container before deleting its database row or
 	// data directory. A failed removal must not orphan a live container.
-	if server.ContainerID != "" {
+	if server.ContainerID != "" && !detach {
 		if err := s.runJournaledMutation(ctx, server, "delete", requestID, func() error {
 			if _, stopErr := dockerCli.StopContainer(ctx, server.ContainerID); stopErr != nil {
 				s.log.Warn("Failed to stop container %s during deletion; removal will still be attempted: %v", server.ContainerID, stopErr)
@@ -1811,7 +1818,10 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 
 	// Remove proxy route or direct knock listener only after Docker resources are gone.
 	// If earlier cleanup failed, the live server remains reachable while the caller retries.
-	if s.proxy != nil {
+	// Detach keeps the published port and does not tear down the route in this
+	// call. A later panel start rebuilds routes from remaining rows, so the
+	// proxy name is not kept after a restart.
+	if s.proxy != nil && !detach {
 		if server.ProxyHostname != "" {
 			if err := s.proxy.RemoveServerRoute(server.ID); err != nil {
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove server proxy route: %w", err))
@@ -1822,9 +1832,9 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 	}
 
 	// Remove the data directory before the row. A failure leaves the server
-	// addressable so the same delete can be retried. keep_data leaves the
-	// world directory in place and still removes the panel record.
-	if !req.Msg.GetKeepData() {
+	// addressable so the same delete can be retried. keep_data and detach
+	// leave the world directory in place and still remove the panel record.
+	if !keepData {
 		if err := s.removeServerData(ctx, server); err != nil {
 			s.log.Error("Failed to delete server data: %v", err)
 			code := connect.CodeInternal
@@ -1835,14 +1845,19 @@ func (s *ServerService) DeleteServer(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Delete from database
-	if err := s.store.DeleteServer(ctx, req.Msg.Id); err != nil {
+	// Delete from database. Detach keeps the port lease so a new server cannot
+	// publish the port the left-behind container still binds.
+	deleteRecord := s.store.DeleteServer
+	if detach {
+		deleteRecord = s.store.DeleteServerKeepPorts
+	}
+	if err := deleteRecord(ctx, req.Msg.Id); err != nil {
 		s.log.Error("Failed to delete server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete server"))
 	}
 
 	peerIP := req.Peer().Addr
-	s.auditServerDelete(ctx, peerIP, server, req.Msg.GetKeepData())
+	s.auditServerDelete(ctx, peerIP, server, keepData, detach)
 
 	return connect.NewResponse(&v1.DeleteServerResponse{}), nil
 }

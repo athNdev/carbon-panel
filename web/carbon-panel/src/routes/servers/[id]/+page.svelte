@@ -245,11 +245,11 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	let confirmDeleteOpen = $state(false);
-	let keepServerData = $state(false);
+	let deleteDisposition = $state<'delete' | 'keep' | 'detach'>('delete');
 
 	async function handleDeleteServer() {
 		if (!server) return;
-		keepServerData = false;
+		deleteDisposition = 'delete';
 		confirmDeleteOpen = true;
 	}
 
@@ -257,17 +257,22 @@ one at https://mozilla.org/MPL/2.0/.
 		if (!server) return;
 		actionLoading = true;
 		const attempt = beginLifecycleRequest(server.id, 'delete');
-		const retainingData = keepServerData;
+		const disposition = deleteDisposition;
 		try {
 			const deleteRequest = create(DeleteServerRequestSchema, {
 				id: server.id,
 				requestId: attempt.requestId,
-				keepData: retainingData
+				keepData: disposition === 'keep',
+				detach: disposition === 'detach'
 			});
 			await rpcClient.server.deleteServer(deleteRequest);
 			serversStore.removeServer(server.id);
 			toast.success(
-				retainingData ? 'Server removed. World files were kept.' : 'Server deleted successfully'
+				disposition === 'detach'
+					? 'Server detached. The container and world files were left in place.'
+					: disposition === 'keep'
+						? 'Server removed. World files were kept.'
+						: 'Server deleted successfully'
 			);
 			goto(resolve('/servers'));
 		} catch (error) {
@@ -927,21 +932,60 @@ one at https://mozilla.org/MPL/2.0/.
 {#if server}
 	<CarbonConfirm
 		bind:open={confirmDeleteOpen}
-		title={keepServerData ? 'Remove server from the panel?' : 'Delete server?'}
-		message={keepServerData
-			? 'This stops and removes the container and drops the server from the panel. The world directory stays on disk.'
-			: 'This will stop and remove the container, delete all files and data, and remove mods and configurations. This action cannot be undone.'}
-		confirmLabel={keepServerData ? 'Remove from panel' : 'Delete Server'}
+		title={deleteDisposition === 'detach'
+			? 'Detach server?'
+			: deleteDisposition === 'keep'
+				? 'Remove server from the panel?'
+				: 'Delete server?'}
+		message={deleteDisposition === 'detach'
+			? 'The container keeps running and the world stays on disk. The panel forgets this server. Its host port stays reserved. A proxy name is dropped the next time the panel starts.'
+			: deleteDisposition === 'keep'
+				? 'This stops and removes the container and drops the server from the panel. The world directory stays on disk.'
+				: 'This will stop and remove the container, delete all files and data, and remove mods and configurations. This action cannot be undone.'}
+		confirmLabel={deleteDisposition === 'detach'
+			? 'Detach server'
+			: deleteDisposition === 'keep'
+				? 'Remove from panel'
+				: 'Delete Server'}
 		danger
 		confirming={actionLoading}
 		onconfirm={confirmDeleteServer}
 	>
 		{#snippet details()}
 			{#if server}{server.name}{/if}
-			<label class="mt-3 flex items-start gap-2 font-sans text-xs text-[#f4f4f4]">
-				<input type="checkbox" bind:checked={keepServerData} disabled={actionLoading} />
-				<span>Keep the world files</span>
-			</label>
+			<fieldset class="mt-3 space-y-2 font-sans text-xs text-[#f4f4f4]">
+				<legend class="mb-1 text-[#c6c6c6]">What to do with the server</legend>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-detail-delete-disposition"
+						value="delete"
+						bind:group={deleteDisposition}
+						disabled={actionLoading}
+					/>
+					<span>Delete the container and the world files</span>
+				</label>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-detail-delete-disposition"
+						value="keep"
+						bind:group={deleteDisposition}
+						disabled={actionLoading}
+					/>
+					<span>Remove the container and keep the world files</span>
+				</label>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-detail-delete-disposition"
+						value="detach"
+						bind:group={deleteDisposition}
+						disabled={actionLoading}
+					/>
+					<span>Leave the container and the world files</span>
+				</label>
+			</fieldset>
 		{/snippet}
 	</CarbonConfirm>
 {/if}

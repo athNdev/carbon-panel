@@ -45,7 +45,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let loadError = $state<string | null>(null);
 	let pendingDelete = $state<Server | null>(null);
 	let confirmOpen = $state(false);
-	let keepServerData = $state(false);
+	let deleteDisposition = $state<'delete' | 'keep' | 'detach'>('delete');
 	// Cold direct loads render before the layout's fetch lands; hold the
 	// empty state until the first fetch settles so "no servers" never
 	// flashes for fleets that simply haven't loaded yet.
@@ -149,7 +149,7 @@ one at https://mozilla.org/MPL/2.0/.
 
 	async function deleteServer(server: Server, event?: MouseEvent) {
 		event?.stopPropagation();
-		keepServerData = false;
+		deleteDisposition = 'delete';
 		pendingDelete = server;
 		confirmOpen = true;
 	}
@@ -159,16 +159,21 @@ one at https://mozilla.org/MPL/2.0/.
 		if (!server) return;
 		loading = true;
 		const attempt = beginLifecycleRequest(server.id, 'delete');
-		const retainingData = keepServerData;
+		const disposition = deleteDisposition;
 		try {
 			await rpcClient.server.deleteServer({
 				id: server.id,
 				requestId: attempt.requestId,
-				keepData: retainingData
+				keepData: disposition === 'keep',
+				detach: disposition === 'detach'
 			});
 			serversStore.removeServer(server.id);
 			toast.success(
-				retainingData ? `Removed ${server.name}. World files were kept.` : `Deleted ${server.name}`
+				disposition === 'detach'
+					? `Detached ${server.name}. The container and world files were left in place.`
+					: disposition === 'keep'
+						? `Removed ${server.name}. World files were kept.`
+						: `Deleted ${server.name}`
 			);
 		} catch (error) {
 			toast.error(
@@ -832,11 +837,21 @@ one at https://mozilla.org/MPL/2.0/.
 
 	<CarbonConfirm
 		bind:open={confirmOpen}
-		title={keepServerData ? 'Remove server from the panel?' : 'Delete server?'}
-		message={keepServerData
-			? 'The container is removed and the server leaves the panel. The world directory stays on disk.'
-			: 'This action cannot be undone. The container and the server files are removed.'}
-		confirmLabel={keepServerData ? 'Remove from panel' : 'Delete Server'}
+		title={deleteDisposition === 'detach'
+			? 'Detach server?'
+			: deleteDisposition === 'keep'
+				? 'Remove server from the panel?'
+				: 'Delete server?'}
+		message={deleteDisposition === 'detach'
+			? 'The container keeps running and the world stays on disk. The panel forgets this server. Its host port stays reserved. A proxy name is dropped the next time the panel starts.'
+			: deleteDisposition === 'keep'
+				? 'The container is removed and the server leaves the panel. The world directory stays on disk.'
+				: 'This action cannot be undone. The container and the server files are removed.'}
+		confirmLabel={deleteDisposition === 'detach'
+			? 'Detach server'
+			: deleteDisposition === 'keep'
+				? 'Remove from panel'
+				: 'Delete Server'}
 		danger
 		confirming={loading}
 		onconfirm={confirmDeleteServer}
@@ -846,10 +861,39 @@ one at https://mozilla.org/MPL/2.0/.
 			{#if pendingDelete}
 				{pendingDelete.name} · {pendingDelete.mcVersion || 'Latest'}
 			{/if}
-			<label class="mt-3 flex items-start gap-2 font-sans text-xs text-[#f4f4f4]">
-				<input type="checkbox" bind:checked={keepServerData} disabled={loading} />
-				<span>Keep the world files</span>
-			</label>
+			<fieldset class="mt-3 space-y-2 font-sans text-xs text-[#f4f4f4]">
+				<legend class="mb-1 text-[#c6c6c6]">What to do with the server</legend>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-delete-disposition"
+						value="delete"
+						bind:group={deleteDisposition}
+						disabled={loading}
+					/>
+					<span>Delete the container and the world files</span>
+				</label>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-delete-disposition"
+						value="keep"
+						bind:group={deleteDisposition}
+						disabled={loading}
+					/>
+					<span>Remove the container and keep the world files</span>
+				</label>
+				<label class="flex items-start gap-2">
+					<input
+						type="radio"
+						name="server-delete-disposition"
+						value="detach"
+						bind:group={deleteDisposition}
+						disabled={loading}
+					/>
+					<span>Leave the container and the world files</span>
+				</label>
+			</fieldset>
 		{/snippet}
 	</CarbonConfirm>
 </div>

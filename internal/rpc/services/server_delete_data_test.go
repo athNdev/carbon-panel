@@ -33,6 +33,9 @@ func TestDeleteServerRemovesLocalDataBeforeTheRow(t *testing.T) {
 	if err := svc.store.CreateServer(ctx, server); err != nil {
 		t.Fatal(err)
 	}
+	if err := svc.store.DB().Create(&db.BackendPortLease{NodeID: server.NodeID, Port: server.Port, ServerID: server.ID}).Error; err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{Id: server.ID})); err != nil {
 		t.Fatal(err)
@@ -42,6 +45,13 @@ func TestDeleteServerRemovesLocalDataBeforeTheRow(t *testing.T) {
 	}
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatalf("local data stat = %v, want removed", err)
+	}
+	var leases []db.BackendPortLease
+	if err := svc.store.DB().Where("server_id = ?", server.ID).Find(&leases).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(leases) != 0 {
+		t.Fatalf("port leases still held: %+v", leases)
 	}
 }
 
@@ -84,6 +94,66 @@ func TestDeleteServerKeepDataLeavesTheWorldAndDropsTheRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	if props["keep_data"] != true || props["data_path"] != dataPath {
+		t.Fatalf("delete audit properties = %s", logs[0].Properties)
+	}
+}
+
+func TestDeleteServerDetachLeavesTheContainerWorldAndPort(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	if svc.docker != nil {
+		_ = svc.docker.Close()
+	}
+	svc.pool = nil
+	svc.docker = nil
+	ctx := context.Background()
+	dataPath := filepath.Join(t.TempDir(), "world")
+	marker := writeServerMarker(t, dataPath)
+
+	server := &db.Server{
+		ID: "detach-local", Name: "Detach Local", NodeID: "test-node",
+		MCVersion: "1.20.1", ModLoader: db.ModLoaderVanilla,
+		Port: 25595, Memory: 2048, Status: db.StatusRunning,
+		DataPath: dataPath, ContainerID: "still-running",
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.store.DB().Create(&db.BackendPortLease{NodeID: server.NodeID, Port: server.Port, ServerID: server.ID}).Error; err != nil {
+		t.Fatal(err)
+	}
+	svc.removeData = func(string) error { t.Fatal("detach removed server data"); return nil }
+
+	if _, err := svc.DeleteServer(ctx, connect.NewRequest(&v1.DeleteServerRequest{
+		Id: server.ID, Detach: true,
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.store.GetServer(ctx, server.ID); err == nil {
+		t.Fatal("server row still exists")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("detached world stat = %v", err)
+	}
+	var leases []db.BackendPortLease
+	if err := svc.store.DB().Where("server_id = ?", server.ID).Find(&leases).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(leases) != 1 || leases[0].Port != server.Port {
+		t.Fatalf("port leases = %+v", leases)
+	}
+
+	var logs []db.ActivityLog
+	if err := svc.store.DB().Where("subject_id = ? AND event = ?", server.ID, activity.EventServerDelete).Find(&logs).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("delete audit count = %d", len(logs))
+	}
+	var props map[string]any
+	if err := json.Unmarshal([]byte(logs[0].Properties), &props); err != nil {
+		t.Fatal(err)
+	}
+	if props["detach"] != true || props["keep_data"] != true || props["container_id"] != server.ContainerID || props["data_path"] != dataPath {
 		t.Fatalf("delete audit properties = %s", logs[0].Properties)
 	}
 }

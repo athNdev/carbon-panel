@@ -186,6 +186,8 @@ message DeleteServerRequest {
   string request_id = 2;
   // keep_data removes the panel record and container but leaves the world directory in place.
   bool keep_data = 3;
+  // detach leaves the container and the world directory in place and keeps the host port reserved.
+  bool detach = 4;
 }
 
 // Empty deletion response

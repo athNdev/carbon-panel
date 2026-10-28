@@ -41,6 +41,9 @@ losing a world is not recoverable by rebuilding the controller.
   controller-local directory removed in its place.
 - `DeleteServer` with `keep_data` drops the panel record and container and
   leaves the world directory where it is. The audit row records that path.
+- `DeleteServer` with `detach` leaves the container and the world directory
+  and keeps that server's host port lease. The audit row records the
+  container id and the path.
 
 # Review
 
