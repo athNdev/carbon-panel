@@ -42,6 +42,8 @@ streamed through the WebSocket hub.
 - A scheduled backup holds the server lifecycle transition until the archive
   finishes. Restore and wake wait, and a backup refuses to start while that
   transition is already held.
+- A scheduled stop and a live modpack file sync take that same transition.
+  The sync releases it before a restart claims it again.
 - Validate cron expressions before persisting them.
 
 # How to check
