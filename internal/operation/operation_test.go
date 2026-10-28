@@ -18,7 +18,9 @@ type fakeStore struct {
 	ops        []db.ServerOperation
 	listErr    error
 	advanceErr error
+	noteErr    error
 	advances   []struct{ id, from, to, detail string }
+	notes      []struct{ id, detail string }
 }
 
 func (f *fakeStore) ListActiveServerOperations(context.Context) ([]db.ServerOperation, error) {
@@ -28,6 +30,11 @@ func (f *fakeStore) ListActiveServerOperations(context.Context) ([]db.ServerOper
 func (f *fakeStore) AdvanceServerOperation(_ context.Context, id, from, to, detail string) error {
 	f.advances = append(f.advances, struct{ id, from, to, detail string }{id, from, to, detail})
 	return f.advanceErr
+}
+
+func (f *fakeStore) NoteActiveServerOperation(_ context.Context, id, detail string) error {
+	f.notes = append(f.notes, struct{ id, detail string }{id, detail})
+	return f.noteErr
 }
 
 type fakeObserver struct {
@@ -100,24 +107,35 @@ func TestRecoverInterruptedDeleteAndMigrationNameTheNextAction(t *testing.T) {
 	store := &fakeStore{ops: []db.ServerOperation{
 		{ID: "op-delete", ServerID: "srv-delete", Kind: "delete", Phase: db.ServerOperationExecuting},
 		{ID: "op-migrate", ServerID: "srv-migrate", Kind: "migrate", Phase: db.ServerOperationExecuting},
+		{ID: "op-restore", ServerID: "srv-restore", Kind: "restore", Phase: db.ServerOperationExecuting},
 	}}
 	observer := &fakeObserver{observed: map[string]Observed{
 		"srv-delete":  {Exists: false},
 		"srv-migrate": {Exists: true, Running: false},
+		"srv-restore": {Exists: true, Running: false},
 	}}
 
 	summary, err := RecoverInterrupted(context.Background(), store, observer, logger.New())
 	if err != nil {
 		t.Fatalf("RecoverInterrupted: %v", err)
 	}
-	if summary.Recovered != 2 || len(store.advances) != 2 {
-		t.Fatalf("summary = %+v, advances = %+v", summary, store.advances)
+	if summary.Recovered != 0 || summary.NeedsReview != 3 || len(store.advances) != 0 {
+		t.Fatalf("summary = %+v, advances = %+v, want the world locks kept", summary, store.advances)
 	}
-	if !contains(store.advances[0].detail, "confirm the container and the world") {
-		t.Fatalf("delete recovery detail = %q", store.advances[0].detail)
+	if len(summary.ReviewIDs) != 0 {
+		t.Fatalf("review ids = %v, want none; a later retry must not release these locks", summary.ReviewIDs)
 	}
-	if !contains(store.advances[1].detail, "confirm which node holds the world") {
-		t.Fatalf("migration recovery detail = %q", store.advances[1].detail)
+	if len(store.notes) != 3 {
+		t.Fatalf("notes = %+v, want one next action per held lock", store.notes)
+	}
+	if !contains(store.notes[0].detail, "confirm the container and the world") {
+		t.Fatalf("delete recovery detail = %q", store.notes[0].detail)
+	}
+	if !contains(store.notes[1].detail, "confirm which node holds the world") {
+		t.Fatalf("migration recovery detail = %q", store.notes[1].detail)
+	}
+	if !contains(store.notes[2].detail, "confirm the world before starting") {
+		t.Fatalf("restore recovery detail = %q", store.notes[2].detail)
 	}
 }
 

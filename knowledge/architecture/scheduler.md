@@ -51,6 +51,8 @@ streamed through the WebSocket hub.
 - A task execution left in the running state across a panel restart is marked
   failed. The recorded reason says to run the task again after the server is
   idle.
+- Boot auto-start and a scheduled start, stop, or restart refuse while a
+  delete, restore, or migration journal row still owns that server.
 - A scheduled stop and a live modpack file sync take that same transition.
   The sync releases it before a restart claims it again.
 - Validate cron expressions before persisting them.

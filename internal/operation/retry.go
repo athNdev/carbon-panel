@@ -61,6 +61,12 @@ func retryOnce(ctx context.Context, store ReviewStore, observer Observer, log *l
 		if op.ActiveServer == nil {
 			continue
 		}
+		if keepsWorldLock(op.Kind) {
+			if log != nil {
+				log.Warn("Interrupted %s operation %s for server %s stays locked until an operator resolves it", op.Kind, op.ID, op.ServerID)
+			}
+			continue
+		}
 		observed, observeErr := observer.Observe(ctx, op.ServerID, op.ContainerID)
 		if observeErr != nil {
 			still = append(still, id)

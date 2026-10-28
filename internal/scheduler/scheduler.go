@@ -811,12 +811,25 @@ func (s *Scheduler) executeCommandTask(ctx context.Context, server *storage.Serv
 	return output, err
 }
 
+func (s *Scheduler) refuseActiveOperation(ctx context.Context, serverID string) error {
+	if s.store == nil {
+		return nil
+	}
+	if err := s.store.AssertNoServerOperation(ctx, serverID); err != nil {
+		return fmt.Errorf("refused while another operation owns the server: %w", err)
+	}
+	return nil
+}
+
 func (s *Scheduler) executeRestartTask(ctx context.Context, server *storage.Server, _ *storage.ScheduledTask) (string, error) {
 	transition, err := docker.TryBeginServerTransition(server.ID)
 	if err != nil {
 		return "", err
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return "", err
+	}
 
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
@@ -871,6 +884,9 @@ func (s *Scheduler) executeStartTask(ctx context.Context, server *storage.Server
 		return "", err
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return "", err
+	}
 
 	if server.ContainerID == "" {
 		return "", fmt.Errorf("server has no container")
@@ -910,6 +926,9 @@ func (s *Scheduler) StartServerForBoot(ctx context.Context, server *storage.Serv
 		return err
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return err
+	}
 	if server.ContainerID == "" {
 		return fmt.Errorf("server has no container")
 	}
@@ -1196,6 +1215,9 @@ func (s *Scheduler) executeStopTask(ctx context.Context, server *storage.Server,
 		return "", fmt.Errorf("stop refused while another lifecycle operation owns the server: %w", err)
 	}
 	defer transition.Release()
+	if err := s.refuseActiveOperation(ctx, server.ID); err != nil {
+		return "", err
+	}
 
 	dockerCli, err := s.dockerForNode(server.NodeID)
 	if err != nil {

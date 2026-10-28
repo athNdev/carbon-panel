@@ -21,6 +21,7 @@ import (
 type Store interface {
 	ListActiveServerOperations(ctx context.Context) ([]db.ServerOperation, error)
 	AdvanceServerOperation(ctx context.Context, id, from, to, detail string) error
+	NoteActiveServerOperation(ctx context.Context, id, detail string) error
 }
 
 // Observed is the container state recovery sees for an interrupted operation.
@@ -62,12 +63,21 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 		observed, observeErr := observer.Observe(ctx, op.ServerID, op.ContainerID)
 		if observeErr != nil {
 			summary.NeedsReview++
+			if keepsWorldLock(op.Kind) {
+				noteHeldWorld(ctx, store, log, op, nextAction(op.Kind)+" Container state could not be read.")
+				continue
+			}
 			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
 			log.Error("Interrupted %s operation %s for server %s requires manual recovery: cannot observe container: %v", op.Kind, op.ID, op.ServerID, observeErr)
 			continue
 		}
 
 		detail := recoveryDetail(op.Kind, observed)
+		if keepsWorldLock(op.Kind) {
+			noteHeldWorld(ctx, store, log, op, detail)
+			summary.NeedsReview++
+			continue
+		}
 		if err := store.AdvanceServerOperation(ctx, op.ID, op.Phase, db.ServerOperationRecovered, detail); err != nil {
 			summary.NeedsReview++
 			summary.ReviewIDs = append(summary.ReviewIDs, op.ID)
@@ -82,20 +92,48 @@ func RecoverInterrupted(ctx context.Context, store Store, observer Observer, log
 	return summary, nil
 }
 
-func recoveryDetail(kind string, observed Observed) string {
-	state := describeObservation(observed)
+// keepsWorldLock reports operations whose container state does not prove the
+// world is safe to start. Those locks stay until an operator resolves them.
+func keepsWorldLock(kind string) bool {
+	switch kind {
+	case "delete", "restore", "migrate":
+		return true
+	default:
+		return false
+	}
+}
+
+func noteHeldWorld(ctx context.Context, store Store, log *logger.Logger, op db.ServerOperation, detail string) {
+	if err := store.NoteActiveServerOperation(ctx, op.ID, detail); err != nil && log != nil {
+		log.Error("Interrupted %s operation %s for server %s stays locked, and the next action could not be recorded: %v", op.Kind, op.ID, op.ServerID, err)
+		return
+	}
+	if log != nil {
+		log.Warn("Interrupted %s operation %s for server %s stays locked until an operator resolves it: %s", op.Kind, op.ID, op.ServerID, detail)
+	}
+}
+
+func nextAction(kind string) string {
 	switch kind {
 	case "backup":
-		return "backup was interrupted before the archive was finalized; run the backup again. " + state
+		return "backup was interrupted before the archive was finalized; run the backup again."
 	case "restore":
-		return "restore was interrupted; confirm the world before starting the server. " + state
+		return "restore was interrupted; confirm the world before starting the server."
 	case "delete":
-		return "delete was interrupted; confirm the container and the world before trying again. " + state
+		return "delete was interrupted; confirm the container and the world before trying again."
 	case "migrate":
-		return "migration was interrupted; confirm which node holds the world before starting the server. " + state
+		return "migration was interrupted; confirm which node holds the world before starting the server."
 	default:
-		return state
+		return ""
 	}
+}
+
+func recoveryDetail(kind string, observed Observed) string {
+	state := describeObservation(observed)
+	if action := nextAction(kind); action != "" {
+		return action + " " + state
+	}
+	return state
 }
 
 func describeObservation(observed Observed) string {

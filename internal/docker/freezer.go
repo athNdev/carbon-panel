@@ -263,6 +263,9 @@ func (m *HibernationManager) WakeServer(ctx context.Context, serverID string) er
 	if err != nil {
 		return fmt.Errorf("server %s not found: %w", serverID, err)
 	}
+	if err := refuseActiveOperation(ctx, m.store, serverID); err != nil {
+		return err
+	}
 
 	if srv.ContainerID == "" {
 		return fmt.Errorf("server %s has no container", serverID)

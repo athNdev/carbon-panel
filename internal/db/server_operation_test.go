@@ -77,6 +77,31 @@ func TestServerOperationJournalLifecycle(t *testing.T) {
 	}
 }
 
+func TestNoteActiveServerOperationKeepsTheLock(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	t.Cleanup(func() { _ = store.Close() })
+
+	op, _, err := store.BeginServerOperation(ctx, "srv-note", "node-1", "", "key-1", "delete", "digest")
+	if err != nil {
+		t.Fatalf("BeginServerOperation: %v", err)
+	}
+	const detail = "delete was interrupted; confirm the container and the world before trying again."
+	if err := store.NoteActiveServerOperation(ctx, op.ID, detail); err != nil {
+		t.Fatalf("NoteActiveServerOperation: %v", err)
+	}
+	if err := store.AssertNoServerOperation(ctx, "srv-note"); err == nil {
+		t.Fatal("noting the next action released the lock")
+	}
+	got, err := store.GetServerOperation(ctx, op.ID)
+	if err != nil {
+		t.Fatalf("GetServerOperation: %v", err)
+	}
+	if got.Phase != ServerOperationPrepared || got.LastError != detail || got.ActiveServer == nil {
+		t.Fatalf("noted operation = %+v", got)
+	}
+}
+
 func TestAdvanceServerOperationRejectsStalePhase(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)

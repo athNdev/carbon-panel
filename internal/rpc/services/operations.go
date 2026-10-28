@@ -7,7 +7,10 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"strings"
+
+	"connectrpc.com/connect"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
 	"github.com/athNdev/carbon-panel/internal/operation"
@@ -20,6 +23,13 @@ import (
 // interleaving (OSS-229).
 func (s *ServerService) runJournaledMutation(ctx context.Context, server *storage.Server, kind, requestID string, mutate func() error) error {
 	return operation.RunJournaled(ctx, s.store, s.log, server, kind, requestID, mutate)
+}
+
+func (s *ServerService) refuseActiveOperation(ctx context.Context, serverID string) error {
+	if err := s.store.AssertNoServerOperation(ctx, serverID); err != nil {
+		return connect.NewError(connect.CodeAborted, fmt.Errorf("refused while another operation owns the server: %w", err))
+	}
+	return nil
 }
 
 func lifecycleRequestID(raw string) (string, error) {

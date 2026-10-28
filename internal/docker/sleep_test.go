@@ -7,7 +7,9 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -152,6 +154,37 @@ func newDeepSleepHarness() (*mockSleepController, *mockSleepCommander, *mockFree
 		controller.mu.Unlock()
 	}
 	return controller, commander, store
+}
+
+type lockingSleepStore struct {
+	*mockFreezerStore
+	err error
+}
+
+func (s lockingSleepStore) AssertNoServerOperation(context.Context, string) error {
+	return s.err
+}
+
+func TestDeepSleepWakeRefusesAnActiveOperation(t *testing.T) {
+	controller, _, store := newDeepSleepHarness()
+	store.servers["srv-sleep"].Status = db.StatusDeepSleep
+	controller.status["cnt-sleep"] = db.StatusStopped
+	guard := lockingSleepStore{
+		mockFreezerStore: store,
+		err:              errors.New("server operation op-delete (delete, phase executing) requires completion or recovery"),
+	}
+	mgr := NewDeepSleepManager(controller, guard, nil, nil, nil)
+
+	err := mgr.WakeServer(context.Background(), "srv-sleep")
+	if err == nil || !strings.Contains(err.Error(), "delete") {
+		t.Fatalf("WakeServer error = %v, want the delete lock to refuse wake", err)
+	}
+	controller.mu.Lock()
+	starts := append([]string(nil), controller.starts...)
+	controller.mu.Unlock()
+	if len(starts) != 0 {
+		t.Fatalf("wake started the container: %v", starts)
+	}
 }
 
 func TestDeepSleepManager_SleepAndWake(t *testing.T) {

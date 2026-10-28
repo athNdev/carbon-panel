@@ -54,6 +54,32 @@ func (f *flakyObserver) Observe(context.Context, string, string) (Observed, erro
 	return f.observed, nil
 }
 
+func TestRetryReviewLeavesADeleteLockHeld(t *testing.T) {
+	serverID := "srv"
+	store := &reviewFake{op: &db.ServerOperation{
+		ID: "op-delete", ServerID: serverID, Kind: "delete", Phase: db.ServerOperationExecuting, ActiveServer: &serverID,
+	}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		RetryReview(ctx, store, &flakyObserver{observed: Observed{Exists: false}}, logger.New(), []string{"op-delete"}, 10*time.Millisecond)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("retry did not finish")
+	}
+	if len(store.advances) != 0 {
+		t.Fatalf("delete lock was released: %+v", store.advances)
+	}
+	if store.op.ActiveServer == nil {
+		t.Fatal("delete lock was cleared")
+	}
+}
+
 func TestRetryReviewReleasesWhenObservationSucceeds(t *testing.T) {
 	serverID := "srv"
 	store := &reviewFake{op: &db.ServerOperation{

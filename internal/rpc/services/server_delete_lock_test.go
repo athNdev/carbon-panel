@@ -60,6 +60,34 @@ func TestDeleteRefusesWhileAJournalLockIsHeld(t *testing.T) {
 	}
 }
 
+func TestStartRefusesWhileAJournalLockIsHeld(t *testing.T) {
+	ctx := context.Background()
+	svc, _ := newDockerPrivilegeTestService(t)
+	server := &storage.Server{
+		ID: "start-while-delete", Name: "Start While Delete", NodeID: "test-node",
+		Port: 25682, Memory: 1024, ContainerID: "still-there", Status: storage.StatusStopped,
+	}
+	if err := svc.store.CreateServer(ctx, server); err != nil {
+		t.Fatalf("CreateServer fixture: %v", err)
+	}
+	if _, _, err := svc.store.BeginServerOperation(ctx, server.ID, server.NodeID, server.ContainerID, "delete-key", "delete", operation.Digest("delete", server)); err != nil {
+		t.Fatalf("BeginServerOperation: %v", err)
+	}
+
+	_, err := svc.StartServer(ctx, connect.NewRequest(&v1.StartServerRequest{Id: server.ID}))
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeAborted {
+		t.Fatalf("StartServer error = %T %v, want CodeAborted", err, err)
+	}
+	stored, err := svc.store.GetServer(ctx, server.ID)
+	if err != nil {
+		t.Fatalf("GetServer: %v", err)
+	}
+	if stored.Status != storage.StatusStopped || stored.ContainerID != "still-there" {
+		t.Fatalf("server after refused start = status %s container %s", stored.Status, stored.ContainerID)
+	}
+}
+
 func TestDeleteWithoutAContainerRemovesTheWorld(t *testing.T) {
 	ctx := context.Background()
 	svc, _ := newDockerPrivilegeTestService(t)
