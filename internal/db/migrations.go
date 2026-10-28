@@ -59,6 +59,16 @@ func (s *Store) Migrate() error {
 		return fmt.Errorf("pre-migration backup failed: %w", err)
 	}
 
+	// Rebuild the port-lease key before AutoMigrate so an existing
+	// (node, port) table becomes (node, port, protocol) without GORM
+	// guessing at the primary key.
+	if err := ensurePortLeaseProtocolKey(s.db); err != nil {
+		return fmt.Errorf("port lease migration failed: %w", err)
+	}
+	if err := ensurePortLeaseAddressKey(s.db); err != nil {
+		return fmt.Errorf("port lease address migration failed: %w", err)
+	}
+
 	// Create all tables/columns
 	if err := s.db.AutoMigrate(allModels()...); err != nil {
 		return fmt.Errorf("schema migration failed: %w", err)
@@ -153,6 +163,18 @@ func migrations() []*gormigrate.Migration {
 					return err
 				}
 				return nil
+			},
+			Rollback: func(tx *gorm.DB) error {
+				return nil
+			},
+		},
+		{
+			ID: "20261028_001_port_lease_protocol",
+			Migrate: func(tx *gorm.DB) error {
+				if err := ensurePortLeaseProtocolKey(tx); err != nil {
+					return err
+				}
+				return ensurePortLeaseAddressKey(tx)
 			},
 			Rollback: func(tx *gorm.DB) error {
 				return nil

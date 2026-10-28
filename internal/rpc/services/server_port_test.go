@@ -160,6 +160,111 @@ func TestCheckNodeHostPortDoesNotUseControllerSocketForRemoteNode(t *testing.T) 
 	}
 }
 
+func TestCheckNodeHostPortTreatsTCPAndUDPAsDifferentBinds(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	remoteAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/containers/json") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[{"Id":"c1","Ports":[{"PrivatePort":19132,"PublicPort":25565,"Type":"udp"},{"PrivatePort":25565,"PublicPort":25566,"Type":"tcp"}]}]`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(remoteAPI.Close)
+	dockerHost := "tcp://" + strings.TrimPrefix(remoteAPI.URL, "http://")
+	remoteClient, err := docker.NewClient(dockerHost, svc.log)
+	if err != nil {
+		t.Fatalf("create remote Docker test client: %v", err)
+	}
+	if err := svc.store.CreateNode(context.Background(), &db.Node{
+		ID: "remote-proto", Name: "Remote Proto", Host: dockerHost,
+		Enabled: true, Status: db.NodeStatusOnline,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	pool := docker.NewClientPool(svc.store, svc.docker, nil)
+	pool.RegisterClient("remote-proto", remoteClient)
+	svc.pool = pool
+	ctx := context.Background()
+
+	if err := svc.checkNodeHostPort(ctx, "remote-proto", 25565); err != nil {
+		t.Fatalf("TCP 25565 is free while only UDP is published: %v", err)
+	}
+	tcpErr := svc.checkNodeHostPort(ctx, "remote-proto", 25566)
+	tcpTaken, ok := tcpErr.(*connect.Error)
+	if !ok || tcpTaken.Code() != connect.CodeInvalidArgument {
+		t.Fatalf("TCP 25566 error = %v, want CodeInvalidArgument", tcpErr)
+	}
+	udpErr := svc.checkNodeHostPortProtocol(ctx, "remote-proto", 25565, "udp")
+	udpTaken, ok := udpErr.(*connect.Error)
+	if !ok || udpTaken.Code() != connect.CodeInvalidArgument {
+		t.Fatalf("UDP 25565 error = %v, want CodeInvalidArgument", udpErr)
+	}
+	if err := svc.checkNodeHostPortProtocol(ctx, "remote-proto", 25566, "udp"); err != nil {
+		t.Fatalf("UDP 25566 is free while only TCP is published: %v", err)
+	}
+}
+
+func TestCreateServerLeasesUDPWithoutTakingTheTCPPort(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostPortBoundUDP = func(int) bool { return false }
+	ctx := ctxWithRole("operator")
+
+	first, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name: "voice-a", NodeId: "test-node", McVersion: "1.20.1", DockerImage: "java21",
+		Port: 25590,
+		AdditionalPorts: []*v1.AdditionalPort{{
+			ContainerPort: 19132, HostPort: 25590, Protocol: "udp",
+		}},
+	}))
+	if err != nil {
+		t.Fatalf("CreateServer: %v", err)
+	}
+	var leased []db.BackendPortLease
+	if err := svc.store.DB().Where("server_id = ? AND protocol = ?", first.Msg.Server.Id, "udp").Find(&leased).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(leased) != 1 || leased[0].Port != 25590 {
+		t.Fatalf("udp leases = %+v, want 25590", leased)
+	}
+
+	_, err = svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name: "voice-b", NodeId: "test-node", McVersion: "1.20.1", DockerImage: "java21",
+		Port: 25591,
+		AdditionalPorts: []*v1.AdditionalPort{{
+			ContainerPort: 19132, HostPort: 25590, Protocol: "udp",
+		}},
+	}))
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeInvalidArgument || !strings.Contains(err.Error(), "already leased") {
+		t.Fatalf("second UDP create error = %v, want the lease to refuse it", err)
+	}
+
+	if _, err := svc.CreateServer(ctx, connect.NewRequest(&v1.CreateServerRequest{
+		Name: "tcp-same-number", NodeId: "test-node", McVersion: "1.20.1", DockerImage: "java21",
+		Port: 25592,
+		AdditionalPorts: []*v1.AdditionalPort{{
+			ContainerPort: 25592, HostPort: 25591, Protocol: "tcp",
+		}},
+	})); err != nil {
+		t.Fatalf("TCP additional port on a free number: %v", err)
+	}
+}
+
+func TestLocalTCPBindDoesNotOccupyUDP(t *testing.T) {
+	svc, _ := newDockerPrivilegeTestService(t)
+	svc.hostPortBound = func(int) bool { return true }
+	svc.hostPortBoundUDP = func(int) bool { return false }
+	if err := svc.checkNodeHostPortProtocol(context.Background(), "test-node", 25570, "udp"); err != nil {
+		t.Fatalf("UDP check used the TCP socket table: %v", err)
+	}
+	err := svc.checkNodeHostPort(context.Background(), "test-node", 25570)
+	connErr, ok := err.(*connect.Error)
+	if !ok || connErr.Code() != connect.CodeInvalidArgument {
+		t.Fatalf("TCP check error = %v, want CodeInvalidArgument", err)
+	}
+}
+
 func TestCheckNodeHostPortFailsClosedWhenRemoteQueryFails(t *testing.T) {
 	svc, _ := newDockerPrivilegeTestService(t)
 	remoteAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

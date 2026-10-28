@@ -130,6 +130,10 @@ func (s *ServerService) migrateServerNow(ctx context.Context, server *storage.Se
 	// or route failure must stay reversible and must never leave the world
 	// without its recoverable source.
 	prevNodeID, prevContainerID, prevStatus := server.NodeID, server.ContainerID, server.Status
+	if err := s.store.MovePortLeases(ctx, server.ID, targetNode.ID); err != nil {
+		rollback(newContainerID)
+		return nil, fmt.Errorf("target node already holds a port this server needs: %w", err)
+	}
 	server.NodeID = targetNode.ID
 	server.ContainerID = newContainerID
 	if isRunning {
@@ -139,6 +143,9 @@ func (s *ServerService) migrateServerNow(ctx context.Context, server *storage.Se
 	}
 	if derr := s.store.UpdateServer(ctx, server); derr != nil {
 		server.NodeID, server.ContainerID, server.Status = prevNodeID, prevContainerID, prevStatus
+		if merr := s.store.MovePortLeases(ctx, server.ID, prevNodeID); merr != nil {
+			s.log.Error("Failed to restore port leases after ownership commit failed: %v", merr)
+		}
 		rollback(newContainerID)
 		return nil, fmt.Errorf("world transferred but ownership commit failed; rolled back: %w", derr)
 	}
@@ -147,6 +154,9 @@ func (s *ServerService) migrateServerNow(ctx context.Context, server *storage.Se
 		if rerr := s.proxy.UpdateServerRoute(server); rerr != nil {
 			// Route and record ownership roll back to the source together.
 			server.NodeID, server.ContainerID, server.Status = prevNodeID, prevContainerID, prevStatus
+			if merr := s.store.MovePortLeases(ctx, server.ID, prevNodeID); merr != nil {
+				s.log.Error("Failed to restore port leases after route cutover failure: %v", merr)
+			}
 			if uerr := s.store.UpdateServer(ctx, server); uerr != nil {
 				s.log.Error("Failed to restore server record after route cutover failure: %v", uerr)
 			}

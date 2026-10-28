@@ -450,6 +450,16 @@ func NewClient(host string, log *logger.Logger, config ...ClientConfig) (*Client
 	return c, nil
 }
 
+// noteFirewall records that a requested DOCKER-USER rule was not applied.
+// Container creation still proceeds. A nil error means the rule is in place
+// or the feature is turned off.
+func (c *Client) noteFirewall(port int, what string, err error) {
+	if err == nil || c == nil || c.log == nil {
+		return
+	}
+	c.log.Warn("%s for port %d was not applied: %v", what, port, err)
+}
+
 // GetFirewallManager returns the firewall manager for DOCKER-USER rules
 func (c *Client) GetFirewallManager() *FirewallManager {
 	return c.firewall
@@ -712,6 +722,11 @@ func additionalPortHostIP(useProxy, exposePublic bool) string {
 	return "127.0.0.1"
 }
 
+// AdditionalPortHostIP is the host address Docker publishes an extra port on.
+func AdditionalPortHostIP(useProxy, exposePublic bool) string {
+	return additionalPortHostIP(useProxy, exposePublic)
+}
+
 // additionalPortBindings is the host publish map for extra ports. Invalid
 // container ports are skipped; CreateContainer has already rejected them.
 func additionalPortBindings(ports []*v1.AdditionalPort, useProxy bool) network.PortMap {
@@ -866,7 +881,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// Apply DOCKER-USER iptables rate limiting & SYN flood protection (MINE-9)
 		if c.firewall != nil && server.Port > 0 {
 			_ = c.firewall.RemoveProxyPortIsolation(ctx, server.Port)
-			_ = c.firewall.ApplyPortRateLimiting(ctx, server.Port, c.config.RateLimitPerMin, c.config.RateLimitBurst)
+			c.noteFirewall(server.Port, "DOCKER-USER rate limiting", c.firewall.ApplyPortRateLimiting(ctx, server.Port, c.config.RateLimitPerMin, c.config.RateLimitBurst))
 		}
 	} else {
 		// Automatic Proxy Port Isolation Guard (MINE-13):
@@ -881,7 +896,7 @@ func (c *Client) CreateContainer(ctx context.Context, server *models.Server, ser
 		// Apply DOCKER-USER iptables proxy port isolation guard
 		if c.firewall != nil && server.Port > 0 {
 			_ = c.firewall.RemovePortRateLimiting(ctx, server.Port, c.config.RateLimitPerMin, c.config.RateLimitBurst)
-			_ = c.firewall.ApplyProxyPortIsolation(ctx, server.Port)
+			c.noteFirewall(server.Port, "DOCKER-USER proxy isolation", c.firewall.ApplyProxyPortIsolation(ctx, server.Port))
 		}
 	}
 	// Add additional port bindings. Proxied servers stay on loopback unless
@@ -1356,11 +1371,20 @@ func (c *Client) StartContainer(ctx context.Context, containerID string) error {
 	return nil
 }
 
-// GetAllocatedHostPorts returns a set of host ports currently allocated/bound by running containers.
+// GetAllocatedHostPorts returns host ports published by running containers
+// for every protocol.
 func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error) {
+	return c.AllocatedHostPorts(ctx, "")
+}
+
+// AllocatedHostPorts returns host ports published with protocol.
+// protocol is "tcp" or "udp". An empty protocol includes every published port.
+// A UDP publish does not occupy the same number on TCP.
+func (c *Client) AllocatedHostPorts(ctx context.Context, protocol string) (map[int]bool, error) {
 	if c == nil || c.docker == nil {
 		return nil, nil
 	}
+	protocol = strings.ToLower(strings.TrimSpace(protocol))
 
 	ctx, cancel := boundedCall(ctx)
 	defer cancel()
@@ -1375,9 +1399,13 @@ func (c *Client) GetAllocatedHostPorts(ctx context.Context) (map[int]bool, error
 	allocated := make(map[int]bool)
 	for _, cont := range listResult.Items {
 		for _, port := range cont.Ports {
-			if port.PublicPort > 0 {
-				allocated[int(port.PublicPort)] = true
+			if port.PublicPort == 0 {
+				continue
 			}
+			if protocol != "" && !strings.EqualFold(port.Type, protocol) {
+				continue
+			}
+			allocated[int(port.PublicPort)] = true
 		}
 	}
 	return allocated, nil

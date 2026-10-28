@@ -68,6 +68,7 @@ type ServerService struct {
 	docker           *docker.Client
 	hostMemoryMB     func(context.Context, string) (int64, error)
 	hostPortBound    func(int) bool
+	hostPortBoundUDP func(int) bool
 	capacityMu       sync.Mutex
 	pool             *docker.ClientPool
 	placementEngine  *docker.PlacementEngine
@@ -117,9 +118,22 @@ func (s *ServerService) getDockerClientStrict(nodeID string) (*docker.Client, er
 	return docker.NewLocator(s.pool, s.docker, s.store).For(context.Background(), nodeID)
 }
 
-// checkNodeHostPort checks Docker allocations on the selected daemon and uses
-// the controller socket table only when that daemon is the local node.
+// checkNodeHostPort checks the game port, which is TCP, on the selected daemon.
+// The controller socket table is used only when that daemon is the local node.
 func (s *ServerService) checkNodeHostPort(ctx context.Context, nodeID string, port int) error {
+	return s.checkNodeHostPortProtocol(ctx, nodeID, port, "tcp")
+}
+
+// checkNodeHostPortProtocol checks one protocol. A publish of the other
+// protocol does not occupy this port.
+func (s *ServerService) checkNodeHostPortProtocol(ctx context.Context, nodeID string, port int, protocol string) error {
+	protocol = strings.ToLower(strings.TrimSpace(protocol))
+	if protocol == "" {
+		protocol = "tcp"
+	}
+	if protocol != "tcp" && protocol != "udp" {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid protocol %s", protocol))
+	}
 	if port < 1 || port > 65535 {
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid host port %d", port))
 	}
@@ -137,15 +151,43 @@ func (s *ServerService) checkNodeHostPort(ctx context.Context, nodeID string, po
 		}
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check port %d on Docker node %s: %w", port, node.Name, err))
 	}
-	allocated, err := cli.GetAllocatedHostPorts(ctx)
+	allocated, err := cli.AllocatedHostPorts(ctx, protocol)
 	if err != nil {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated ports on Docker node %s: %w", node.Name, err))
 	}
 	if allocated[port] {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on Docker node %s", port, node.Name))
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d/%s is already in use on Docker node %s", port, protocol, node.Name))
 	}
-	if node.IsLocal && s.isHostPortBound(port) {
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d is already in use on the local host", port))
+	if node.IsLocal && s.hostPortBoundOn(port, protocol) {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("port %d/%s is already in use on the local host", port, protocol))
+	}
+	return nil
+}
+
+func hostPorts(ports []*v1.AdditionalPort, proxied bool) []storage.HostPort {
+	out := make([]storage.HostPort, 0, len(ports))
+	for _, port := range ports {
+		if port == nil {
+			continue
+		}
+		out = append(out, storage.HostPort{
+			Port:     int(port.HostPort),
+			Protocol: port.Protocol,
+			Address:  docker.AdditionalPortHostIP(proxied, port.GetExposePublic()),
+		})
+	}
+	return out
+}
+
+func (s *ServerService) checkAdditionalHostPorts(ctx context.Context, nodeID string, ports []*v1.AdditionalPort) error {
+	for _, extra := range ports {
+		protocol := extra.GetProtocol()
+		if protocol == "" {
+			protocol = "tcp"
+		}
+		if err := s.checkNodeHostPortProtocol(ctx, nodeID, int(extra.GetHostPort()), protocol); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -155,6 +197,16 @@ func (s *ServerService) isHostPortBound(port int) bool {
 		return s.hostPortBound(port)
 	}
 	return isHostPortBound(port)
+}
+
+func (s *ServerService) hostPortBoundOn(port int, protocol string) bool {
+	if protocol == "udp" {
+		if s.hostPortBoundUDP != nil {
+			return s.hostPortBoundUDP(port)
+		}
+		return isHostPortBoundOn(port, "udp")
+	}
+	return s.isHostPortBound(port)
 }
 
 func (s *ServerService) getHostMemoryMB(ctx context.Context, nodeID string) (int64, error) {
@@ -1008,8 +1060,8 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}
 		usedPorts[portKey] = true
 
-		// Check if port conflicts
-		if int(protoPort.HostPort) == port {
+		// The game port is TCP. A UDP publish of the same number is a different bind.
+		if protocol == "tcp" && int(protoPort.HostPort) == port {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("additional port %d conflicts with main server port", protoPort.HostPort))
 		}
 		if s.config.Proxy.Enabled && slices.Contains(s.config.Proxy.ListenPorts, int(protoPort.HostPort)) {
@@ -1140,7 +1192,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 		}()
 	}
 
-	backendReserved := false
+	portsReserved := false
 	if server.ProxyHostname != "" {
 		used := map[int]bool{}
 		dockerCli, err := s.getDockerClientStrict(server.NodeID)
@@ -1150,7 +1202,7 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			}
 			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated backend ports on node %s: %w", server.NodeID, err))
 		}
-		allocated, err := dockerCli.GetAllocatedHostPorts(ctx)
+		allocated, err := dockerCli.AllocatedHostPorts(ctx, "tcp")
 		if err != nil {
 			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check allocated backend ports on node %s: %w", server.NodeID, err))
 		}
@@ -1160,20 +1212,34 @@ func (s *ServerService) CreateServer(ctx context.Context, req *connect.Request[v
 			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("no free backend port on node: %w", err))
 		}
 		server.Port = gamePort
-		backendReserved = true
+		portsReserved = true
 	}
 	keepLease := false
 	defer func() {
-		if backendReserved && !keepLease {
+		if portsReserved && !keepLease {
 			_ = s.store.ReleaseBackendPorts(context.WithoutCancel(ctx), server.ID)
 		}
 	}()
 
-	// Check port availability on host and target node for non-proxy servers
+	// Check port availability on host and target node for non-proxy servers.
+	// Additional ports use their own protocol, so a UDP publish does not
+	// occupy the TCP game port.
 	if server.ProxyHostname == "" && server.Port > 0 {
 		if err := s.checkNodeHostPort(ctx, server.NodeID, server.Port); err != nil {
 			return nil, err
 		}
+	}
+	if err := s.checkAdditionalHostPorts(ctx, server.NodeID, server.AdditionalPorts); err != nil {
+		return nil, err
+	}
+	if len(server.AdditionalPorts) > 0 {
+		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(server.AdditionalPorts, server.ProxyHostname != "")); err != nil {
+			if errors.Is(err, storage.ErrPortLeaseHeld) {
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to reserve additional ports: %w", err))
+		}
+		portsReserved = true
 	}
 
 	// The creation task continues after this RPC returns. Claim the same
@@ -1534,6 +1600,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		server.DeepSleepTimeoutMinutes = int(*msg.DeepSleepTimeoutMinutes)
 	}
 
+	var rollbackAdditional bool
 	// Handle additional ports update
 	if len(msg.AdditionalPorts) > 0 {
 		// Validate additional ports
@@ -1564,8 +1631,8 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			}
 			usedPorts[portKey] = true
 
-			// Check if port conflicts
-			if int(protoPort.HostPort) == server.Port {
+			// The game port is TCP. A UDP publish of the same number is a different bind.
+			if protocol == "tcp" && int(protoPort.HostPort) == server.Port {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("additional port %d conflicts with main server port", protoPort.HostPort))
 			}
 			if s.config.Proxy.Enabled && slices.Contains(s.config.Proxy.ListenPorts, int(protoPort.HostPort)) {
@@ -1581,6 +1648,23 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 			})
 		}
 
+		if err := s.checkAdditionalHostPorts(ctx, server.NodeID, additionalPorts); err != nil {
+			return nil, err
+		}
+		proxied := server.ProxyHostname != ""
+		previousPorts := hostPorts(server.AdditionalPorts, proxied)
+		if err := s.store.ReplaceAdditionalPortLeases(ctx, server.NodeID, server.ID, hostPorts(additionalPorts, proxied)); err != nil {
+			if errors.Is(err, storage.ErrPortLeaseHeld) {
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to reserve additional ports: %w", err))
+		}
+		rollbackAdditional = true
+		defer func() {
+			if rollbackAdditional {
+				_ = s.store.ReplaceAdditionalPortLeases(context.WithoutCancel(ctx), server.NodeID, server.ID, previousPorts)
+			}
+		}()
 		server.AdditionalPorts = additionalPorts
 		needsRecreation = true
 	}
@@ -1647,6 +1731,7 @@ func (s *ServerService) UpdateServer(ctx context.Context, req *connect.Request[v
 		s.log.Error("Failed to update server: %v", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update server"))
 	}
+	rollbackAdditional = false
 	if capacityLockHeld {
 		s.capacityMu.Unlock()
 		capacityLockHeld = false
@@ -2804,11 +2889,25 @@ func isHostPortBound(port int) bool {
 	return isHostPortBoundWith(port, net.Listen)
 }
 
-func isHostPortBoundWith(port int, listen func(string, string) (net.Listener, error)) bool {
-	candidates := []string{"127.0.0.1", "0.0.0.0", "::1", "::"}
+func isHostPortBoundOn(port int, network string) bool {
+	if network != "udp" {
+		return isHostPortBound(port)
+	}
+	for _, addr := range hostPortCandidates() {
+		conn, err := net.ListenPacket("udp", net.JoinHostPort(addr, strconv.Itoa(port)))
+		if err == nil {
+			_ = conn.Close()
+			continue
+		}
+		if portBindInUse(err) {
+			return true
+		}
+	}
+	return false
+}
 
-	// Also probe every address assigned to a local interface so that ports bound
-	// only to a specific (non-loopback) IP are detected.
+func hostPortCandidates() []string {
+	candidates := []string{"127.0.0.1", "0.0.0.0", "::1", "::"}
 	if ifaces, err := net.Interfaces(); err == nil {
 		for _, iface := range ifaces {
 			addrs, _ := iface.Addrs()
@@ -2826,9 +2925,20 @@ func isHostPortBoundWith(port int, listen func(string, string) (net.Listener, er
 			}
 		}
 	}
+	return candidates
+}
 
+func portBindInUse(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "in use") || strings.Contains(msg, "only one usage")
+}
+
+func isHostPortBoundWith(port int, listen func(string, string) (net.Listener, error)) bool {
 	seen := make(map[string]bool)
-	for _, addr := range candidates {
+	for _, addr := range hostPortCandidates() {
 		if seen[addr] {
 			continue
 		}
@@ -2842,8 +2952,7 @@ func isHostPortBoundWith(port int, listen func(string, string) (net.Listener, er
 		// Only treat address-in-use failures as "bound"; ignore unrelated
 		// errors (e.g. disabled IPv6, permission) so they don't produce
 		// false positives.
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "in use") || strings.Contains(msg, "only one usage") {
+		if portBindInUse(err) {
 			return true
 		}
 	}
@@ -2883,7 +2992,7 @@ func (s *ServerService) GetNextAvailablePort(ctx context.Context, req *connect.R
 		}
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check default Docker host ports for availability: %w", err))
 	}
-	allocated, err := dockerCli.GetAllocatedHostPorts(ctx)
+	allocated, err := dockerCli.AllocatedHostPorts(ctx, "tcp")
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("cannot check default Docker host ports for availability: %w", err))
 	}

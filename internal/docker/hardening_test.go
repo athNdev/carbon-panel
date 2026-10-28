@@ -365,14 +365,14 @@ func TestValidateDockerDevices_RejectsNonEmpty(t *testing.T) {
 }
 
 func TestValidateDockerNetworkMode_RejectsHostAndNone(t *testing.T) {
-	for _, mode := range []string{"host", "HOST", " host ", "none", "None", " NONE "} {
+	for _, mode := range []string{"host", "HOST", " host ", "none", "None", " NONE ", "container:other", "Container:ABC", "container:"} {
 		if err := ValidateDockerNetworkMode(mode); err == nil {
 			t.Errorf("expected network mode %q to be rejected", mode)
 		} else if !errors.Is(err, ErrDockerNetworkModeNotAllowed) {
 			t.Errorf("expected ErrDockerNetworkModeNotAllowed for %q, got %v", mode, err)
 		}
 	}
-	for _, mode := range []string{"", "bridge", "carbon-net"} {
+	for _, mode := range []string{"", "bridge", "default", "carbon-net"} {
 		if err := ValidateDockerNetworkMode(mode); err != nil {
 			t.Errorf("expected network mode %q to be allowed, got %v", mode, err)
 		}

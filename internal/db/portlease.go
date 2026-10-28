@@ -3,13 +3,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 
 	"gorm.io/gorm"
@@ -24,12 +24,37 @@ const (
 // ErrNoBackendPort means every candidate pair on the node is taken.
 var ErrNoBackendPort = errors.New("no free backend port on node")
 
-// BackendPortLease is a node-scoped host port held for one server.
-// Uniqueness is (node, port), so two creates cannot publish the same bind.
+// ErrPortLeaseHeld means another server already holds that node, port, and protocol.
+var ErrPortLeaseHeld = errors.New("host port is already leased")
+
+const (
+	portProtocolTCP     = "tcp"
+	portProtocolUDP     = "udp"
+	portLeaseBackend    = "backend"
+	portLeaseAdditional = "additional"
+	portBindWildcard4   = "0.0.0.0"
+	portBindWildcard6   = "::"
+	portBindLoopback4   = "127.0.0.1"
+)
+
+// HostPort is one advertised bind. An empty protocol means TCP.
+// An empty address means the IPv4 wildcard.
+type HostPort struct {
+	Port     int
+	Protocol string
+	Address  string
+}
+
+// BackendPortLease is a node-scoped host bind held for one server.
+// Uniqueness is (node, port, protocol, address). A wildcard claim occupies
+// every address of that family. TCP and UDP stay separate.
 type BackendPortLease struct {
 	NodeID   string `json:"node_id" gorm:"primaryKey;column:node_id"`
 	Port     int    `json:"port" gorm:"primaryKey"`
+	Protocol string `json:"protocol" gorm:"primaryKey;column:protocol;not null;default:tcp"`
+	Address  string `json:"address" gorm:"primaryKey;column:address;not null;default:'0.0.0.0'"`
 	ServerID string `json:"server_id" gorm:"column:server_id;index"`
+	Purpose  string `json:"purpose" gorm:"column:purpose;not null;default:''"`
 }
 
 func (BackendPortLease) TableName() string { return "backend_port_leases" }
@@ -61,10 +86,10 @@ func (s *Store) ReserveBackendPortPair(ctx context.Context, nodeID, serverID str
 				if used[p] || used[p+backendPortGap] {
 					continue
 				}
-				if err := tx.Create(&BackendPortLease{NodeID: nodeID, Port: p, ServerID: serverID}).Error; err != nil {
+				if err := tx.Create(&BackendPortLease{NodeID: nodeID, Port: p, Protocol: portProtocolTCP, Address: portBindLoopback4, ServerID: serverID, Purpose: portLeaseBackend}).Error; err != nil {
 					return err
 				}
-				if err := tx.Create(&BackendPortLease{NodeID: nodeID, Port: p + backendPortGap, ServerID: serverID}).Error; err != nil {
+				if err := tx.Create(&BackendPortLease{NodeID: nodeID, Port: p + backendPortGap, Protocol: portProtocolTCP, Address: portBindLoopback4, ServerID: serverID, Purpose: portLeaseBackend}).Error; err != nil {
 					return err
 				}
 				game, rcon = p, p+backendPortGap
@@ -98,7 +123,20 @@ func usedBackendPorts(tx *gorm.DB, nodeID, exceptServerID string) (map[int]bool,
 		if lease.ServerID == exceptServerID {
 			continue
 		}
-		used[lease.Port] = true
+		protocol := lease.Protocol
+		if protocol == "" {
+			protocol = portProtocolTCP
+		}
+		if protocol != portProtocolTCP {
+			continue
+		}
+		addr := lease.Address
+		if addr == "" {
+			addr = portBindWildcard4
+		}
+		if addressesConflict(addr, portBindLoopback4) {
+			used[lease.Port] = true
+		}
 	}
 	var servers []Server
 	if err := tx.Select("id", "port").Where("node_id = ? AND port > 0", nodeID).Find(&servers).Error; err != nil {
@@ -112,6 +150,305 @@ func usedBackendPorts(tx *gorm.DB, nodeID, exceptServerID string) (map[int]bool,
 		used[server.Port+backendPortGap] = true
 	}
 	return used, nil
+}
+
+// ReplaceAdditionalPortLeases stores the server's additional binds and
+// drops the additional binds it held before. Backend game and RCON leases
+// stay. A TCP claim does not occupy the UDP port, and the reverse is also
+// true. The call is one transaction, so a conflict leaves the previous
+// additional claims in place.
+func (s *Store) ReplaceAdditionalPortLeases(ctx context.Context, nodeID, serverID string, ports []HostPort) error {
+	if nodeID == "" || serverID == "" {
+		return fmt.Errorf("node and server are required to reserve a host port")
+	}
+	normalized := make([]HostPort, 0, len(ports))
+	seen := map[string]bool{}
+	for _, port := range ports {
+		protocol, err := normalizePortProtocol(port.Protocol)
+		if err != nil {
+			return err
+		}
+		address, err := normalizeBindAddress(port.Address)
+		if err != nil {
+			return err
+		}
+		if port.Port < 1 || port.Port > 65535 {
+			return fmt.Errorf("invalid host port %d", port.Port)
+		}
+		key := fmt.Sprintf("%d/%s/%s", port.Port, protocol, address)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		normalized = append(normalized, HostPort{Port: port.Port, Protocol: protocol, Address: address})
+	}
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("server_id = ? AND purpose = ?", serverID, portLeaseAdditional).Delete(&BackendPortLease{}).Error; err != nil {
+			return err
+		}
+		for _, port := range normalized {
+			if err := additionalBindHeld(tx, nodeID, serverID, port); err != nil {
+				return err
+			}
+			row := BackendPortLease{
+				NodeID: nodeID, Port: port.Port, Protocol: port.Protocol, Address: port.Address,
+				ServerID: serverID, Purpose: portLeaseAdditional,
+			}
+			if err := tx.Create(&row).Error; err != nil {
+				if isUniqueViolation(err) {
+					return fmt.Errorf("%w: %d/%s at %s on node %s", ErrPortLeaseHeld, port.Port, port.Protocol, port.Address, nodeID)
+				}
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+// MovePortLeases moves every lease held by serverID onto targetNodeID.
+// A bind the target already holds for another server is left on the source.
+func (s *Store) MovePortLeases(ctx context.Context, serverID, targetNodeID string) error {
+	if serverID == "" || targetNodeID == "" {
+		return fmt.Errorf("server and target node are required to move port leases")
+	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var leases []BackendPortLease
+		if err := tx.Where("server_id = ?", serverID).Find(&leases).Error; err != nil {
+			return err
+		}
+		if len(leases) == 0 {
+			return nil
+		}
+		for _, lease := range leases {
+			protocol := lease.Protocol
+			if protocol == "" {
+				protocol = portProtocolTCP
+			}
+			addr := lease.Address
+			if addr == "" {
+				addr = portBindWildcard4
+			}
+			var rows []BackendPortLease
+			if err := tx.Where("node_id = ? AND port = ? AND protocol = ? AND server_id <> ?", targetNodeID, lease.Port, protocol, serverID).Find(&rows).Error; err != nil {
+				return err
+			}
+			for _, row := range rows {
+				rowAddr := row.Address
+				if rowAddr == "" {
+					rowAddr = portBindWildcard4
+				}
+				if addressesConflict(rowAddr, addr) {
+					return fmt.Errorf("%w: %d/%s at %s on node %s", ErrPortLeaseHeld, lease.Port, protocol, addr, targetNodeID)
+				}
+			}
+		}
+		return tx.Model(&BackendPortLease{}).Where("server_id = ?", serverID).Update("node_id", targetNodeID).Error
+	})
+}
+
+func additionalBindHeld(tx *gorm.DB, nodeID, serverID string, port HostPort) error {
+	var rows []BackendPortLease
+	if err := tx.Where("node_id = ? AND port = ? AND protocol = ? AND server_id <> ?", nodeID, port.Port, port.Protocol, serverID).Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		addr := row.Address
+		if addr == "" {
+			addr = portBindWildcard4
+		}
+		if addressesConflict(addr, port.Address) {
+			return fmt.Errorf("%w: %d/%s at %s on node %s", ErrPortLeaseHeld, port.Port, port.Protocol, port.Address, nodeID)
+		}
+	}
+	if port.Protocol != portProtocolTCP {
+		return nil
+	}
+	var servers []Server
+	if err := tx.Select("id", "port", "proxy_hostname").
+		Where("node_id = ? AND id <> ? AND port > 0", nodeID, serverID).
+		Find(&servers).Error; err != nil {
+		return err
+	}
+	for _, server := range servers {
+		if server.Port == port.Port {
+			published := portBindWildcard4
+			if server.ProxyHostname != "" {
+				published = portBindLoopback4
+			}
+			if addressesConflict(published, port.Address) {
+				return fmt.Errorf("%w: %d/tcp at %s on node %s", ErrPortLeaseHeld, port.Port, port.Address, nodeID)
+			}
+		}
+		if server.Port+backendPortGap == port.Port && addressesConflict(portBindLoopback4, port.Address) {
+			return fmt.Errorf("%w: %d/tcp at %s on node %s", ErrPortLeaseHeld, port.Port, port.Address, nodeID)
+		}
+	}
+	return nil
+}
+
+func normalizePortProtocol(protocol string) (string, error) {
+	protocol = strings.ToLower(strings.TrimSpace(protocol))
+	if protocol == "" {
+		protocol = portProtocolTCP
+	}
+	if protocol != portProtocolTCP && protocol != portProtocolUDP {
+		return "", fmt.Errorf("invalid port protocol %q", protocol)
+	}
+	return protocol, nil
+}
+
+func normalizeBindAddress(address string) (string, error) {
+	address = strings.TrimSpace(address)
+	switch address {
+	case "", portBindWildcard4:
+		return portBindWildcard4, nil
+	case portBindWildcard6, "[::]":
+		return portBindWildcard6, nil
+	}
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return "", fmt.Errorf("invalid bind address %q", address)
+	}
+	if ip4 := ip.To4(); ip4 != nil {
+		return ip4.String(), nil
+	}
+	return ip.String(), nil
+}
+
+// addressesConflict reports whether two published addresses cannot both hold
+// the same port and protocol. A wildcard occupies every address of its family.
+func addressesConflict(a, b string) bool {
+	if a == b {
+		return true
+	}
+	if a == portBindWildcard4 && !strings.Contains(b, ":") {
+		return true
+	}
+	if b == portBindWildcard4 && !strings.Contains(a, ":") {
+		return true
+	}
+	if a == portBindWildcard6 && strings.Contains(b, ":") {
+		return true
+	}
+	if b == portBindWildcard6 && strings.Contains(a, ":") {
+		return true
+	}
+	return false
+}
+
+// ensurePortLeaseProtocolKey rebuilds a lease table whose primary key is
+// only the node and the port. Existing rows become TCP claims. A table that
+// already keys protocol is left in place.
+func ensurePortLeaseProtocolKey(tx *gorm.DB) error {
+	var count int
+	if err := tx.Raw("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='backend_port_leases'").Scan(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return nil
+	}
+	var createSQL string
+	if err := tx.Raw("SELECT sql FROM sqlite_master WHERE type='table' AND name='backend_port_leases'").Scan(&createSQL).Error; err != nil {
+		return err
+	}
+	normalized := strings.ToLower(createSQL)
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	normalized = strings.ReplaceAll(normalized, "`", "")
+	normalized = strings.ReplaceAll(normalized, "\"", "")
+	normalized = strings.ReplaceAll(normalized, "[", "")
+	normalized = strings.ReplaceAll(normalized, "]", "")
+	if strings.Contains(normalized, "primarykey(node_id,port,protocol)") {
+		return tx.Exec("UPDATE backend_port_leases SET protocol = 'tcp' WHERE protocol IS NULL OR protocol = ''").Error
+	}
+	if err := tx.Exec(`CREATE TABLE backend_port_leases_proto (
+		node_id text NOT NULL,
+		port integer NOT NULL,
+		protocol text NOT NULL DEFAULT 'tcp',
+		server_id text,
+		purpose text NOT NULL DEFAULT '',
+		PRIMARY KEY (node_id, port, protocol)
+	)`).Error; err != nil {
+		return err
+	}
+	insert := `INSERT INTO backend_port_leases_proto (node_id, port, protocol, server_id, purpose)
+		SELECT node_id, port, 'tcp', server_id, '' FROM backend_port_leases`
+	if strings.Contains(normalized, "protocol") {
+		purposeExpr := "''"
+		if strings.Contains(normalized, "purpose") {
+			purposeExpr = "IFNULL(purpose, '')"
+		}
+		insert = `INSERT INTO backend_port_leases_proto (node_id, port, protocol, server_id, purpose)
+			SELECT node_id, port, CASE WHEN protocol IS NULL OR protocol = '' THEN 'tcp' ELSE protocol END, server_id, ` + purposeExpr + ` FROM backend_port_leases`
+	}
+	if err := tx.Exec(insert).Error; err != nil {
+		return err
+	}
+	if err := tx.Exec("DROP TABLE backend_port_leases").Error; err != nil {
+		return err
+	}
+	if err := tx.Exec("ALTER TABLE backend_port_leases_proto RENAME TO backend_port_leases").Error; err != nil {
+		return err
+	}
+	return tx.Exec("CREATE INDEX IF NOT EXISTS idx_backend_port_leases_server_id ON backend_port_leases (server_id)").Error
+}
+
+// ensurePortLeaseAddressKey adds the bind address to the lease key. Rows
+// that predate the column become IPv4 wildcard claims, which still overlap
+// every IPv4 address of that port.
+func ensurePortLeaseAddressKey(tx *gorm.DB) error {
+	var count int
+	if err := tx.Raw("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='backend_port_leases'").Scan(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return nil
+	}
+	var createSQL string
+	if err := tx.Raw("SELECT sql FROM sqlite_master WHERE type='table' AND name='backend_port_leases'").Scan(&createSQL).Error; err != nil {
+		return err
+	}
+	normalized := strings.ToLower(createSQL)
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	normalized = strings.ReplaceAll(normalized, "`", "")
+	normalized = strings.ReplaceAll(normalized, "\"", "")
+	normalized = strings.ReplaceAll(normalized, "'", "")
+	normalized = strings.ReplaceAll(normalized, "[", "")
+	normalized = strings.ReplaceAll(normalized, "]", "")
+	if strings.Contains(normalized, "primarykey(node_id,port,protocol,address)") {
+		return tx.Exec("UPDATE backend_port_leases SET address = '0.0.0.0' WHERE address IS NULL OR address = ''").Error
+	}
+	if err := tx.Exec(`CREATE TABLE backend_port_leases_addr (
+		node_id text NOT NULL,
+		port integer NOT NULL,
+		protocol text NOT NULL DEFAULT 'tcp',
+		address text NOT NULL DEFAULT '0.0.0.0',
+		server_id text,
+		purpose text NOT NULL DEFAULT '',
+		PRIMARY KEY (node_id, port, protocol, address)
+	)`).Error; err != nil {
+		return err
+	}
+	protocolExpr := "'tcp'"
+	if strings.Contains(normalized, "protocol") {
+		protocolExpr = "CASE WHEN protocol IS NULL OR protocol = '' THEN 'tcp' ELSE protocol END"
+	}
+	purposeExpr := "''"
+	if strings.Contains(normalized, "purpose") {
+		purposeExpr = "IFNULL(purpose, '')"
+	}
+	insert := `INSERT INTO backend_port_leases_addr (node_id, port, protocol, address, server_id, purpose)
+		SELECT node_id, port, ` + protocolExpr + `, '0.0.0.0', server_id, ` + purposeExpr + ` FROM backend_port_leases`
+	if err := tx.Exec(insert).Error; err != nil {
+		return err
+	}
+	if err := tx.Exec("DROP TABLE backend_port_leases").Error; err != nil {
+		return err
+	}
+	if err := tx.Exec("ALTER TABLE backend_port_leases_addr RENAME TO backend_port_leases").Error; err != nil {
+		return err
+	}
+	return tx.Exec("CREATE INDEX IF NOT EXISTS idx_backend_port_leases_server_id ON backend_port_leases (server_id)").Error
 }
 
 func isUniqueViolation(err error) bool {

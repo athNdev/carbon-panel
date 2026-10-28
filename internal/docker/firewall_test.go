@@ -7,6 +7,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strconv"
 	"strings"
@@ -205,6 +206,23 @@ func TestIptablesStubProcess(t *testing.T) {
 		}
 	}
 	os.Exit(0)
+}
+
+func TestFirewallReportsUnsupportedWhenEnforcementWasRequested(t *testing.T) {
+	fm := NewFirewallManager(nil, true, 10, 20)
+	fm.iptablesPath = ""
+	ctx := context.Background()
+	if err := fm.ApplyPortRateLimiting(ctx, 25565, 10, 20); !errors.Is(err, ErrFirewallUnsupported) {
+		t.Fatalf("rate limit error = %v, want ErrFirewallUnsupported", err)
+	}
+	if err := fm.ApplyProxyPortIsolation(ctx, 25565); !errors.Is(err, ErrFirewallUnsupported) {
+		t.Fatalf("isolation error = %v, want ErrFirewallUnsupported", err)
+	}
+	off := NewFirewallManager(nil, false, 10, 20)
+	off.iptablesPath = ""
+	if err := off.ApplyPortRateLimiting(ctx, 25565, 10, 20); err != nil {
+		t.Fatalf("disabled rate limit error = %v", err)
+	}
 }
 
 func TestFirewallManager_DisabledOrNoBinary(t *testing.T) {

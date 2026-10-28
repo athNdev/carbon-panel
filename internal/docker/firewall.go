@@ -7,6 +7,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -14,6 +15,10 @@ import (
 
 	"github.com/athNdev/carbon-panel/pkg/logger"
 )
+
+// ErrFirewallUnsupported means rate limiting or proxy isolation was requested
+// and this host cannot apply DOCKER-USER rules. It is not a successful apply.
+var ErrFirewallUnsupported = errors.New("DOCKER-USER firewall enforcement is not available on this host")
 
 // FirewallManager manages DOCKER-USER chain iptables rules for Minecraft ports
 type FirewallManager struct {
@@ -85,17 +90,28 @@ func (f *FirewallManager) BuildPortRules(port int, ratePerMin, burst int) [][]st
 	}
 }
 
+func (f *FirewallManager) enforceReady() error {
+	if f == nil || !f.enabled {
+		return nil
+	}
+	if f.iptablesPath == "" {
+		return ErrFirewallUnsupported
+	}
+	return nil
+}
+
 // ApplyPortRateLimiting applies DOCKER-USER chain rules for the given port.
 //
 // Rules are inserted at increasing positions (1, 2, 3, ...) so the chain order
 // matches BuildPortRules' evaluation order. Inserting every rule at position 1
 // would reverse the order and put the catch-all DROP first, blackholing the
-// port.
+// port. A requested apply on a host with no iptables returns
+// ErrFirewallUnsupported instead of a successful result.
 func (f *FirewallManager) ApplyPortRateLimiting(ctx context.Context, port int, ratePerMin, burst int) error {
-	if !f.enabled || f.iptablesPath == "" {
-		if f.log != nil {
-			f.log.Debug("iptables DOCKER-USER rate limiting skipped (enabled=%v, iptables=%s)", f.enabled, f.iptablesPath)
-		}
+	if err := f.enforceReady(); err != nil {
+		return err
+	}
+	if f == nil || !f.enabled {
 		return nil
 	}
 
@@ -166,7 +182,13 @@ func (f *FirewallManager) BuildIsolationRules(port int) [][]string {
 
 // ApplyProxyPortIsolation isolates a proxied server port in the DOCKER-USER chain
 func (f *FirewallManager) ApplyProxyPortIsolation(ctx context.Context, port int) error {
-	if !f.enabled || f.iptablesPath == "" || port <= 0 {
+	if port <= 0 {
+		return nil
+	}
+	if err := f.enforceReady(); err != nil {
+		return err
+	}
+	if f == nil || !f.enabled {
 		return nil
 	}
 
