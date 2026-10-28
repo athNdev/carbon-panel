@@ -41,6 +41,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The landing page is plain static HTML/CSS/JS — no build step required.
+      # QA harnesses share the homepage title, so they stay in the repo and off the public site.
+      - name: Omit QA pages
+        run: rm -f landing/qa-*.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
