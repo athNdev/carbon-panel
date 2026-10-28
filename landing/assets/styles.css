@@ -2176,6 +2176,21 @@ table.compare .icon { width: 16px; height: 16px; flex: none; }
   .nav-links.open { display: flex; }
   .nav-links a { padding: 12px 14px; font-size: 15px; }
   .nav-toggle { display: inline-flex; }
+  /* Keep navigation available when JavaScript cannot open the menu. */
+  html:not(.js) .nav { position: static; height: auto; }
+  html:not(.js) .nav-inner { flex-wrap: wrap; padding-top: 12px; }
+  html:not(.js) .nav-links {
+    display: flex;
+    position: static;
+    order: 3;
+    flex: 0 0 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px 0 12px;
+    border: 0;
+  }
+  html:not(.js) .nav-links a { padding: 8px; font-size: 14px; }
+  html:not(.js) .nav-toggle { display: none; }
   .gh-star .count { display: none; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .stat:nth-child(2) { border-right: none; }
@@ -2191,6 +2206,8 @@ table.compare .icon { width: 16px; height: 16px; flex: none; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .footer-brand { grid-column: span 2; }
 }
+
+html:not(.js) .copy-btn { display: none; }
 
 @media (max-width: 620px) {
   .container { padding: 0 20px; }
