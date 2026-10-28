@@ -8,6 +8,7 @@ code_refs:
   - internal/operation
   - internal/db/server_operation.go
   - cmd/carbon-panel/operations.go
+  - internal/db/portlease.go
 sources:
   - title: Server operation runbook
     resource: ../../docs/runbook-server-operations.md
@@ -28,6 +29,9 @@ behind an operation lock.
   read when the daemon returns.
 - `-operations resolve` clears the lock and writes a note. It must not stop,
   remove, or prune containers.
+- `-operations release-port` frees host ports whose server row is already
+  gone. It must refuse a server that still exists, and it must not stop a
+  container or delete world files.
 - Finished journal rows may be deleted after 30 days. An active lock may not.
 
 # Read next

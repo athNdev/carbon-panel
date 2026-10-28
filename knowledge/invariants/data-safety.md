@@ -35,6 +35,27 @@ losing a world is not recoverable by rebuilding the controller.
 - Backup and restore must be tested; a backup that cannot be restored is not a
   backup.
 - Remote archive paths must not silently read the controller filesystem.
+- Deleting a server removes its directory on the owning node's storage
+  before the database row. A failed removal keeps the row so the delete
+  can be retried. A remote node without shared storage does not have a
+  controller-local directory removed in its place.
+- Every delete writes a disposition row first and keeps it after the panel
+  row is gone. The row records delete, keep_data, or detach, and it stays
+  unsettled until that choice is recorded. A retry of a delete whose row is
+  already gone only settles that record. It does not delete files again.
+- Panel startup resumes an unsettled disposition. A pending delete continues
+  the original choice. A disposition that already recorded the world outcome
+  only removes the remaining panel row.
+- `DeleteServer` with `keep_data` drops the panel record and container and
+  leaves the world directory where it is. The audit row records that path.
+- `DeleteServer` with `detach` leaves the container and the world directory
+  and keeps that server's host port lease. The audit row records the
+  container id and the path. `-operations release-port` frees that lease
+  only after the panel row is gone, and it does not stop the container or
+  delete the world.
+- `ExportWorld` zips the server directory on the owning node's storage into
+  a download and leaves the container, the world, and the panel row in
+  place. A remote node without shared storage is refused.
 
 # Review
 

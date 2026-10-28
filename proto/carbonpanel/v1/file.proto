@@ -39,6 +39,8 @@ service FileService {
   rpc CreateArchive(CreateArchiveRequest) returns (CreateArchiveResponse);
   // Download multiple files/folders as a zip
   rpc DownloadArchive(DownloadArchiveRequest) returns (DownloadArchiveResponse);
+  // Export the server world as a zip. The server, container, and world directory stay.
+  rpc ExportWorld(ExportWorldRequest) returns (ExportWorldResponse);
   // Initiate a single-file download session (actual bytes served via GET /api/v1/download/{session_id})
   rpc InitFileDownload(InitFileDownloadRequest) returns (InitFileDownloadResponse);
   // Poll extraction progress
@@ -187,6 +189,20 @@ message DownloadArchiveResponse {
   string session_id = 1;
   string filename = 2;
   int64 total_size = 3;
+}
+
+// Server world to export
+message ExportWorldRequest {
+  string server_id = 1;
+}
+
+// Download session for the exported world
+message ExportWorldResponse {
+  string session_id = 1;
+  string filename = 2;
+  int64 total_size = 3;
+  // World directory that was copied into the zip and left in place.
+  string data_path = 4;
 }
 
 // File rename parameters

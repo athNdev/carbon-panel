@@ -29,4 +29,18 @@ carbon-panel -config config.yaml -operations resolve -operation-id <id> -operati
 container has been checked by hand. It records the note, marks the row
 recovered, and clears the lock. It does not stop, remove, or prune containers.
 
+## Release a port left by detach
+
+Detaching a server removes its panel row and leaves the container, the world,
+and the host port lease. After the container is stopped by hand, release the
+lease so another server can use the port:
+
+```sh
+carbon-panel -config config.yaml -operations ports
+carbon-panel -config config.yaml -operations release-port -server-id <server-id>
+```
+
+`release-port` refuses while that server row still exists. It does not stop
+the container or delete the world.
+
 Finished rows are deleted after 30 days. A row that still holds a lock is kept.

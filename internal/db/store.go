@@ -186,23 +186,28 @@ func (s *Store) UpdateServerFields(ctx context.Context, id string, fields map[st
 }
 
 func (s *Store) DeleteServer(ctx context.Context, id string) error {
-	// Delete with associations
+	return s.deleteServer(ctx, id, true)
+}
+
+// DeleteServerKeepPorts removes the panel record and leaves the host port
+// leases in place. A detached container still binds those ports.
+func (s *Store) DeleteServerKeepPorts(ctx context.Context, id string) error {
+	return s.deleteServer(ctx, id, false)
+}
+
+func (s *Store) deleteServer(ctx context.Context, id string, releasePorts bool) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Delete mods
 		if err := tx.Where("server_id = ?", id).Delete(&Mod{}).Error; err != nil {
 			return err
 		}
-
-		// Delete config
 		if err := tx.Where("server_id = ?", id).Delete(&ServerConfig{}).Error; err != nil {
 			return err
 		}
-
-		if err := tx.Where("server_id = ?", id).Delete(&BackendPortLease{}).Error; err != nil {
-			return err
+		if releasePorts {
+			if err := tx.Where("server_id = ?", id).Delete(&BackendPortLease{}).Error; err != nil {
+				return err
+			}
 		}
-
-		// Delete server
 		return tx.Delete(&Server{}, "id = ?", id).Error
 	})
 }

@@ -93,6 +93,7 @@ var ProcedurePermissions = map[string]ProcedurePermission{
 	"/carbonpanel.v1.FileService/CopyFile":                 {Resource: ResourceFiles, Action: ActionCreate, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.FileService/CreateArchive":            {Resource: ResourceFiles, Action: ActionCreate, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.FileService/DownloadArchive":          {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
+	"/carbonpanel.v1.FileService/ExportWorld":              {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.FileService/InitFileDownload":         {Resource: ResourceFiles, Action: ActionRead, ObjectIDField: "server_id"},
 	"/carbonpanel.v1.FileService/GetExtractionStatus":      {Resource: ResourceFiles, Action: ActionRead},
 	"/carbonpanel.v1.FileService/DownloadRemoteArchive":    {Resource: ResourceFiles, Action: ActionCreate, ObjectIDField: "server_id"},
