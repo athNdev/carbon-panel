@@ -33,8 +33,11 @@ one at https://mozilla.org/MPL/2.0/.
 	import { copyToClipboard } from '$lib/utils/clipboard';
 	import { CarbonInlineLoading } from '$lib/components/carbon';
 	import type { Server } from '$lib/proto/carbonpanel/v1/common_pb';
-	import { ServerStatus } from '$lib/proto/carbonpanel/v1/common_pb';
-	import type { ConfigCategory, ConfigProperty } from '$lib/proto/carbonpanel/v1/config_pb';
+	import {
+		ConfigApplyWindow,
+		type ConfigCategory,
+		type ConfigProperty
+	} from '$lib/proto/carbonpanel/v1/config_pb';
 	import ScrollToTop from './scroll-to-top.svelte';
 
 	interface Props {
@@ -50,6 +53,11 @@ one at https://mozilla.org/MPL/2.0/.
 	let loading = $state(false);
 	let saving = $state(false);
 	let syncing = $state(false);
+	let applyWindow = $state<'next' | 'time' | 'idle'>('next');
+	let applyAtLocal = $state('');
+	let idleMinutes = $state(15);
+	let batchOpen = $state(false);
+	let batchItems = $state<Array<{ id: string; kind: string; action: string; summary: string }>>([]);
 	let categories = $state<ConfigCategory[]>([]);
 	let activeCategory = $state<string>('');
 	let highlightedField = $state<string | null>(null);
@@ -62,7 +70,6 @@ one at https://mozilla.org/MPL/2.0/.
 
 	// Derived state
 	let isSaving = $derived(externalSaving || saving);
-	let isServerRunning = $derived(!!server && server.status === ServerStatus.RUNNING);
 
 	// Get filtered categories (hide empty ones and filter system fields for global)
 	let filteredCategories = $derived.by(() => {
@@ -221,9 +228,42 @@ one at https://mozilla.org/MPL/2.0/.
 	// Initialize URL hash handling
 	onMount(() => {
 		checkUrlHash();
+		void loadBatch();
 		window.addEventListener('hashchange', checkUrlHash);
 		return () => window.removeEventListener('hashchange', checkUrlHash);
 	});
+
+	async function loadBatch() {
+		if (!server) return;
+		try {
+			const batch = await rpcClient.config.getUpdateBatch({ serverId: server.id });
+			batchOpen = batch.open;
+			batchItems = batch.items ?? [];
+			if (batch.window === ConfigApplyWindow.AT_TIME) applyWindow = 'time';
+			else if (batch.window === ConfigApplyWindow.IDLE) applyWindow = 'idle';
+			else if (batch.open) applyWindow = 'next';
+			if (batch.idleMinutes > 0) idleMinutes = batch.idleMinutes;
+			if (batch.applyAtUnix) {
+				const when = new Date(Number(batch.applyAtUnix) * 1000);
+				const pad = (n: number) => String(n).padStart(2, '0');
+				applyAtLocal = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T${pad(when.getHours())}:${pad(when.getMinutes())}`;
+			}
+		} catch (error) {
+			console.error(error);
+		}
+	}
+
+	async function discardStaged(itemId: string) {
+		if (!server) return;
+		try {
+			await rpcClient.config.discardUpdateBatch({ serverId: server.id, itemId });
+			await loadBatch();
+			toast.success(itemId ? 'Staged item discarded' : 'Staged batch discarded');
+		} catch (error) {
+			toast.error('Failed to discard the staged update');
+			console.error(error);
+		}
+	}
 
 	// React to config prop changes (for global settings)
 	let previousConfig = $state<ConfigCategory[] | undefined>(undefined);
@@ -243,6 +283,7 @@ one at https://mozilla.org/MPL/2.0/.
 			untrack(() => {
 				previousServerId = server!.id;
 				loadServerConfig();
+				void loadBatch();
 			});
 		}
 	});
@@ -309,12 +350,27 @@ one at https://mozilla.org/MPL/2.0/.
 		currentEnabled = newCurrentEnabled;
 	}
 
-	async function handleSave() {
+	async function handleSave(stage = true) {
 		if (!hasChanges) {
 			toast.info('No changes to save');
 			return;
 		}
 
+		const stageUpdate = !!server && stage;
+		if (stageUpdate && applyWindow === 'time' && !applyAtLocal) {
+			toast.error('Choose when the batch should apply');
+			return;
+		}
+		if (stageUpdate && applyWindow === 'idle' && idleMinutes < 1) {
+			toast.error('Idle minutes must be at least 1');
+			return;
+		}
+		const windowValue =
+			applyWindow === 'time'
+				? ConfigApplyWindow.AT_TIME
+				: applyWindow === 'idle'
+					? ConfigApplyWindow.IDLE
+					: ConfigApplyWindow.NEXT_RESTART;
 		saving = true;
 		try {
 			const updates: Record<string, string> = {};
@@ -333,18 +389,31 @@ one at https://mozilla.org/MPL/2.0/.
 			} else if (server) {
 				const response = await rpcClient.config.updateServerConfig({
 					serverId: server.id,
-					updates
+					updates,
+					stage: stageUpdate,
+					window: stageUpdate ? windowValue : ConfigApplyWindow.UNSPECIFIED,
+					applyAtUnix:
+						stageUpdate && applyWindow === 'time'
+							? BigInt(Math.floor(new Date(applyAtLocal).getTime() / 1000))
+							: 0n,
+					idleMinutes: stageUpdate && applyWindow === 'idle' ? idleMinutes : 0
 				});
 				processConfig(response.categories);
+				await loadBatch();
 			}
 
-			toast.success('Configuration saved');
-
-			if (server && isServerRunning) {
-				toast.info('Restart the server for changes to take effect');
+			toast.success(stageUpdate ? 'Configuration staged' : 'Configuration saved');
+			if (stageUpdate) {
+				const when =
+					applyWindow === 'time'
+						? 'at the chosen time'
+						: applyWindow === 'idle'
+							? `after ${idleMinutes} idle minutes`
+							: 'on the next restart';
+				toast.info(`The server was not restarted. These changes apply ${when}.`);
 			}
 		} catch (error) {
-			toast.error('Failed to save configuration');
+			toast.error(stageUpdate ? 'Failed to stage configuration' : 'Failed to save configuration');
 			console.error(error);
 		} finally {
 			saving = false;
@@ -500,7 +569,6 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	function canToggleField(prop: ConfigProperty): boolean {
-		if (isServerRunning) return false;
 		if (prop.required) return false;
 		if (prop.system) return false;
 		return true;
@@ -547,16 +615,27 @@ one at https://mozilla.org/MPL/2.0/.
 				<button
 					type="button"
 					onclick={handleReset}
-					disabled={loading || isServerRunning || !hasChanges}
+					disabled={loading || !hasChanges}
 					class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none border border-[#393939] bg-[#353535] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#393939] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<RefreshCw class="mr-2 h-3.5 w-3.5" />
 					<span>Reset</span>
 				</button>
+				{#if server}
+					<button
+						type="button"
+						onclick={() => handleSave(false)}
+						disabled={loading || isSaving || !hasChanges}
+						title="Save these values and restart the container"
+						class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none border border-[#393939] bg-[#353535] px-3 font-sans text-xs text-[#f4f4f4] transition-colors hover:bg-[#393939] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						<span>Apply now</span>
+					</button>
+				{/if}
 				<button
 					type="button"
-					onclick={handleSave}
-					disabled={loading || isSaving || isServerRunning || !hasChanges}
+					onclick={() => handleSave(true)}
+					disabled={loading || isSaving || !hasChanges}
 					class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-none bg-[#0f62fe] px-4 font-sans text-xs font-medium text-white transition-colors hover:bg-[#0353e9] disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					{#if isSaving}
@@ -564,7 +643,7 @@ one at https://mozilla.org/MPL/2.0/.
 					{:else}
 						<Save class="mr-2 h-3.5 w-3.5" />
 					{/if}
-					<span>Save</span>
+					<span>{server ? 'Stage' : 'Save'}</span>
 				</button>
 			</div>
 		</div>
@@ -747,7 +826,7 @@ one at https://mozilla.org/MPL/2.0/.
 										id={prop.key}
 										checked={getBooleanValue(prop)}
 										onCheckedChange={(checked) => updateValue(prop.key, checked)}
-										disabled={prop.system || !isEnabled || isServerRunning}
+										disabled={prop.system || !isEnabled}
 									/>
 									<span class="text-xs text-[#c6c6c6] {!isEnabled ? 'text-[#8d8d8d]' : ''}">
 										{getBooleanValue(prop) ? 'Enabled' : 'Disabled'}
@@ -758,7 +837,7 @@ one at https://mozilla.org/MPL/2.0/.
 									type="single"
 									value={getDisplayValue(prop)}
 									onValueChange={(value) => updateValue(prop.key, value ?? '')}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 								>
 									<SelectTrigger
 										class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] {!isEnabled
@@ -784,7 +863,7 @@ one at https://mozilla.org/MPL/2.0/.
 									value={getDisplayValue(prop)}
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
 										? 'opacity-60'
 										: ''}"
@@ -796,7 +875,7 @@ one at https://mozilla.org/MPL/2.0/.
 									value={getDisplayValue(prop)}
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
 										? 'opacity-60'
 										: ''}"
@@ -808,7 +887,7 @@ one at https://mozilla.org/MPL/2.0/.
 									value={getDisplayValue(prop)}
 									placeholder={prop.defaultValue ?? ''}
 									oninput={(e) => updateValue(prop.key, e.currentTarget.value)}
-									disabled={prop.system || !isEnabled || isServerRunning}
+									disabled={prop.system || !isEnabled}
 									class="h-9 rounded-none border border-[#525252] bg-[#161616] text-[#f4f4f4] placeholder:text-[#6f6f6f] {!isEnabled
 										? 'opacity-60'
 										: ''}"
@@ -880,10 +959,84 @@ one at https://mozilla.org/MPL/2.0/.
 				</div>
 			</div>
 
-			{#if server && isServerRunning}
-				<div class="rounded-none border-t border-[#f1c21b]/30 bg-[#f1c21b]/10 p-4">
-					<p class="font-mono text-xs text-[#f1c21b]">
-						Server must be stopped to modify configuration. Changes will take effect after restart.
+			{#if server}
+				<div class="space-y-3 rounded-none border-t border-[#393939] bg-[#262626] p-4">
+					<div class="flex flex-wrap items-end gap-3">
+						<label class="flex flex-col gap-1 font-mono text-xs text-[#c6c6c6]">
+							Apply window
+							<select
+								bind:value={applyWindow}
+								class="h-8 border border-[#393939] bg-[#161616] px-2 text-[#f4f4f4]"
+							>
+								<option value="next">On next restart</option>
+								<option value="time">At a time</option>
+								<option value="idle">After idle</option>
+							</select>
+						</label>
+						{#if applyWindow === 'time'}
+							<label class="flex flex-col gap-1 font-mono text-xs text-[#c6c6c6]">
+								UTC is stored from this local time
+								<input
+									type="datetime-local"
+									bind:value={applyAtLocal}
+									class="h-8 border border-[#393939] bg-[#161616] px-2 text-[#f4f4f4]"
+								/>
+							</label>
+						{/if}
+						{#if applyWindow === 'idle'}
+							<label class="flex flex-col gap-1 font-mono text-xs text-[#c6c6c6]">
+								Minutes with nobody online
+								<input
+									type="number"
+									min="1"
+									value={idleMinutes}
+									oninput={(event) => {
+										const target = event.currentTarget as HTMLInputElement;
+										idleMinutes = Number(target.value) || 0;
+									}}
+									class="h-8 w-24 border border-[#393939] bg-[#161616] px-2 text-[#f4f4f4]"
+								/>
+							</label>
+						{/if}
+					</div>
+					{#if batchOpen}
+						<ul class="space-y-1">
+							{#each batchItems as item (item.id)}
+								<li
+									class="flex items-center justify-between gap-3 font-mono text-xs text-[#f4f4f4]"
+								>
+									<span>{item.summary}</span>
+									<button
+										type="button"
+										onclick={() => discardStaged(item.id)}
+										class="h-7 cursor-pointer border border-[#393939] px-2 text-[#c6c6c6] hover:text-white"
+									>
+										Discard
+									</button>
+								</li>
+							{/each}
+						</ul>
+						<button
+							type="button"
+							onclick={() => discardStaged('')}
+							class="h-8 cursor-pointer border border-[#393939] px-3 font-mono text-xs text-[#c6c6c6] hover:text-white"
+						>
+							Discard batch
+						</button>
+					{/if}
+					<p class="font-mono text-xs text-[#c6c6c6]">
+						Stage keeps the server as it is, including while it is frozen or in deep sleep.
+						{#if applyWindow === 'time'}
+							The batch applies at the chosen time, even if that time passed while the panel was
+							down.
+						{:else if applyWindow === 'idle'}
+							The batch applies after the server has had nobody online for the chosen minutes. A
+							player joining starts that wait over. Deep sleep stays stopped. A frozen server
+							restarts once.
+						{:else}
+							The batch applies on the next restart.
+						{/if}
+						Apply now restarts the container.
 					</p>
 				</div>
 			{/if}

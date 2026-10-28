@@ -3,7 +3,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
@@ -12,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,6 +56,28 @@ func DiffMaps(current, desired map[string]any) map[string]any {
 	return diff
 }
 
+// stagedConfigStillMatches reports whether the live values of the keys captured
+// at stage time are unchanged. An empty base payload is a legacy row.
+func stagedConfigStillMatches(live map[string]any, basePayload string) error {
+	if strings.TrimSpace(basePayload) == "" {
+		return nil
+	}
+	var expected map[string]any
+	if err := json.Unmarshal([]byte(basePayload), &expected); err != nil {
+		return fmt.Errorf("staged base payload is corrupt: %w", err)
+	}
+	for key, want := range expected {
+		have, ok := live[key]
+		if !ok {
+			have = nil
+		}
+		if !reflect.DeepEqual(have, want) {
+			return fmt.Errorf("%w: %s", ErrStagedConfigMoved, key)
+		}
+	}
+	return nil
+}
+
 // MergeMaps returns base with every entry of overlay applied on top.
 func MergeMaps(base, overlay map[string]any) map[string]any {
 	out := make(map[string]any, len(base)+len(overlay))
@@ -98,22 +120,83 @@ func validateStagedConfigFields(config *ServerConfig, changes map[string]any) er
 	return nil
 }
 
+// ErrStagedConfigMoved is returned when a live field changed after it was staged.
+var ErrStagedConfigMoved = errors.New("staged config field changed since it was recorded")
+
 // StageConfigChange records changes as a diff vs the live config. It works
 // regardless of the instance's operational state — nothing is applied here.
 func (s *Store) StageConfigChange(ctx context.Context, serverID string, changes map[string]any, mode StagedApplyMode, cronExpr string) (*StagedConfigChange, error) {
+	return s.stageConfigChange(ctx, serverID, changes, stageConfigOptions{Mode: mode, CronExpr: cronExpr})
+}
+
+// StageServerConfigUpdate records a config diff on the server's one open batch
+// and sets that batch's apply window. Other staged rows in the batch adopt
+// the same window. The live config and the container are left unchanged.
+func (s *Store) StageServerConfigUpdate(ctx context.Context, serverID string, changes map[string]any, window UpdateWindow, applyAt *time.Time, idleMinutes int) (*StagedConfigChange, error) {
+	mode, err := modeForWindow(window, applyAt, idleMinutes)
+	if err != nil {
+		return nil, err
+	}
+	return s.stageConfigChange(ctx, serverID, changes, stageConfigOptions{
+		Mode:           mode,
+		ApplyAt:        applyAt,
+		IdleMinutes:    idleMinutes,
+		Window:         window,
+		SetBatchWindow: true,
+	})
+}
+
+type stageConfigOptions struct {
+	Mode           StagedApplyMode
+	CronExpr       string
+	ApplyAt        *time.Time
+	IdleMinutes    int
+	Window         UpdateWindow
+	SetBatchWindow bool
+}
+
+func modeForWindow(window UpdateWindow, applyAt *time.Time, idleMinutes int) (StagedApplyMode, error) {
+	switch window {
+	case UpdateWindowNextRestart:
+		return StagedApplyOnRestart, nil
+	case UpdateWindowAtTime:
+		if applyAt == nil || applyAt.IsZero() {
+			return "", fmt.Errorf("apply time is required")
+		}
+		return StagedApplyAtTime, nil
+	case UpdateWindowIdle:
+		if idleMinutes <= 0 {
+			return "", fmt.Errorf("idle minutes must be positive")
+		}
+		return StagedApplyIdle, nil
+	default:
+		return "", fmt.Errorf("unknown update window %q", window)
+	}
+}
+
+func (s *Store) stageConfigChange(ctx context.Context, serverID string, changes map[string]any, opts stageConfigOptions) (*StagedConfigChange, error) {
+	mode := opts.Mode
+	cronExpr := opts.CronExpr
 	if serverID == "" {
 		return nil, fmt.Errorf("server id is required")
 	}
 	if len(changes) == 0 {
 		return nil, fmt.Errorf("no changes supplied")
 	}
-	if mode != StagedApplyOnRestart && mode != StagedApplyScheduled {
-		return nil, fmt.Errorf("apply mode must be %q or %q", StagedApplyOnRestart, StagedApplyScheduled)
-	}
-	if mode == StagedApplyScheduled {
+	switch mode {
+	case StagedApplyOnRestart, StagedApplyAtTime, StagedApplyIdle:
+	case StagedApplyScheduled:
 		if err := ValidateCronExpr(cronExpr); err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("apply mode must be %q, %q, %q, or %q", StagedApplyOnRestart, StagedApplyScheduled, StagedApplyAtTime, StagedApplyIdle)
+	}
+	if mode == StagedApplyAtTime && (opts.ApplyAt == nil || opts.ApplyAt.IsZero()) {
+		return nil, fmt.Errorf("apply time is required")
+	}
+	if mode == StagedApplyIdle && opts.IdleMinutes <= 0 {
+		return nil, fmt.Errorf("idle minutes must be positive")
 	}
 
 	if _, err := s.GetServer(ctx, serverID); err != nil {
@@ -143,19 +226,90 @@ func (s *Store) StageConfigChange(ctx context.Context, serverID string, changes 
 	if err != nil {
 		return nil, err
 	}
+	baseSnap := make(map[string]any, len(diff))
+	for key := range diff {
+		if value, ok := current[key]; ok {
+			baseSnap[key] = value
+		} else {
+			baseSnap[key] = nil
+		}
+	}
+	basePayload, err := json.Marshal(baseSnap)
+	if err != nil {
+		return nil, err
+	}
+
+	window := string(opts.Window)
+	if window == "" {
+		window = string(mode)
+	}
+	batch, err := s.ensureOpenBatch(ctx, serverID, window)
+	if err != nil {
+		return nil, err
+	}
+	if opts.SetBatchWindow {
+		batch.Window = string(opts.Window)
+		batch.ApplyAt = opts.ApplyAt
+		batch.IdleMinutes = opts.IdleMinutes
+		if err := s.db.WithContext(ctx).Save(batch).Error; err != nil {
+			return nil, err
+		}
+		if err := s.db.WithContext(ctx).Model(&StagedConfigChange{}).
+			Where("batch_id = ? AND status = ?", batch.ID, string(StagedStatusStaged)).
+			Updates(map[string]any{
+				"apply_mode":   string(mode),
+				"apply_at":     opts.ApplyAt,
+				"idle_minutes": opts.IdleMinutes,
+			}).Error; err != nil {
+			return nil, err
+		}
+	}
 
 	staged := &StagedConfigChange{
-		ID:        uuid.New().String(),
-		ServerID:  serverID,
-		Payload:   string(payload),
-		ApplyMode: mode,
-		CronExpr:  cronExpr,
-		Status:    StagedStatusStaged,
+		ID:          uuid.New().String(),
+		ServerID:    serverID,
+		BatchID:     batch.ID,
+		Payload:     string(payload),
+		BasePayload: string(basePayload),
+		ApplyMode:   mode,
+		CronExpr:    cronExpr,
+		ApplyAt:     opts.ApplyAt,
+		IdleMinutes: opts.IdleMinutes,
+		Status:      StagedStatusStaged,
 	}
 	if err := s.db.WithContext(ctx).Create(staged).Error; err != nil {
 		return nil, err
 	}
 	return staged, nil
+}
+
+func (s *Store) ensureOpenBatch(ctx context.Context, serverID, window string) (*ServerUpdateBatch, error) {
+	var batch ServerUpdateBatch
+	err := s.db.WithContext(ctx).Where("open_key = ?", serverID).First(&batch).Error
+	if err == nil {
+		return &batch, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	key := serverID
+	batch = ServerUpdateBatch{
+		ID:       uuid.New().String(),
+		ServerID: serverID,
+		OpenKey:  &key,
+		Window:   window,
+		Status:   UpdateBatchOpen,
+	}
+	if err := s.db.WithContext(ctx).Create(&batch).Error; err != nil {
+		if isUniqueViolation(err) {
+			if err := s.db.WithContext(ctx).Where("open_key = ?", serverID).First(&batch).Error; err != nil {
+				return nil, err
+			}
+			return &batch, nil
+		}
+		return nil, err
+	}
+	return &batch, nil
 }
 
 // ListStagedConfigChanges returns staged records for a server, newest first.
@@ -192,6 +346,47 @@ func (s *Store) DiscardStagedConfigChange(ctx context.Context, id string) error 
 	}
 	staged.Status = StagedStatusDiscarded
 	return s.db.WithContext(ctx).Save(staged).Error
+}
+
+// StagedConfigConflict reports whether a live field moved after a staged row
+// in the batch was recorded. It does not write the live config.
+func (s *Store) StagedConfigConflict(ctx context.Context, serverID, batchID string) error {
+	var rows []StagedConfigChange
+	if err := s.db.WithContext(ctx).
+		Where("server_id = ? AND batch_id = ? AND status = ?", serverID, batchID, StagedStatusStaged).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	live := &ServerConfig{}
+	err := s.db.WithContext(ctx).Where("server_id = ?", serverID).First(live).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		live = s.CreateDefaultServerConfig(serverID)
+	} else if err != nil {
+		return err
+	}
+	base, err := ServerConfigToMap(live)
+	if err != nil {
+		return err
+	}
+	for i := range rows {
+		if err := stagedConfigStillMatches(base, rows[i].BasePayload); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ListBatchConfig returns staged config rows still waiting in one batch, oldest first.
+func (s *Store) ListBatchConfig(ctx context.Context, batchID string) ([]*StagedConfigChange, error) {
+	var rows []*StagedConfigChange
+	err := s.db.WithContext(ctx).
+		Where("batch_id = ? AND status = ?", batchID, StagedStatusStaged).
+		Order("created_at asc").
+		Find(&rows).Error
+	return rows, err
 }
 
 // ApplyStagedConfigChange merges a staged diff into the live ServerConfig and
@@ -236,6 +431,9 @@ func (s *Store) ApplyStagedConfigChange(ctx context.Context, id string) (*Staged
 
 		base, err := ServerConfigToMap(live)
 		if err != nil {
+			return err
+		}
+		if err := stagedConfigStillMatches(base, staged.BasePayload); err != nil {
 			return err
 		}
 

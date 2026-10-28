@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -114,6 +115,10 @@ func (s *ConfigService) UpdateServerConfig(ctx context.Context, req *connect.Req
 			s.log.Error("Failed to get server config: %v", err)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to get server configuration"))
 		}
+	}
+
+	if msg.GetStage() {
+		return s.stageServerConfig(ctx, config, msg)
 	}
 
 	// Apply updates w/ reflection
@@ -289,6 +294,70 @@ func (s *ConfigService) SyncGlobalSettingsToServers(ctx context.Context, req *co
 		UpdatedServersCount: int32(updatedCount),
 		Message:             msg,
 	}), nil
+}
+
+func (s *ConfigService) stageServerConfig(ctx context.Context, config *storage.ServerConfig, msg *v1.UpdateServerConfigRequest) (*connect.Response[v1.UpdateServerConfigResponse], error) {
+	window, applyAt, idleMinutes, err := configStageWindow(msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	copied := *config
+	if err := applyConfigUpdates(&copied, msg.Updates); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	current, err := storage.ServerConfigToMap(config)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read server configuration"))
+	}
+	desired, err := storage.ServerConfigToMap(&copied)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read server configuration"))
+	}
+	diff := storage.DiffMaps(current, desired)
+	if len(diff) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no differences vs current config"))
+	}
+	if _, err := s.store.StageServerConfigUpdate(ctx, msg.ServerId, diff, window, applyAt, idleMinutes); err != nil {
+		return nil, connect.NewError(stageErrorCode(err), err)
+	}
+	categories, err := buildConfigCategories(config)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to format configuration"))
+	}
+	return connect.NewResponse(&v1.UpdateServerConfigResponse{
+		Categories: categories,
+		Staged:     true,
+	}), nil
+}
+
+func stageErrorCode(err error) connect.Code {
+	if strings.Contains(err.Error(), "server not found") {
+		return connect.CodeNotFound
+	}
+	if strings.Contains(err.Error(), "failed to") {
+		return connect.CodeInternal
+	}
+	return connect.CodeInvalidArgument
+}
+
+func configStageWindow(msg *v1.UpdateServerConfigRequest) (storage.UpdateWindow, *time.Time, int, error) {
+	switch msg.GetWindow() {
+	case v1.ConfigApplyWindow_CONFIG_APPLY_WINDOW_UNSPECIFIED, v1.ConfigApplyWindow_CONFIG_APPLY_WINDOW_NEXT_RESTART:
+		return storage.UpdateWindowNextRestart, nil, 0, nil
+	case v1.ConfigApplyWindow_CONFIG_APPLY_WINDOW_AT_TIME:
+		if msg.GetApplyAtUnix() == 0 {
+			return "", nil, 0, errors.New("apply time is required")
+		}
+		at := time.Unix(msg.GetApplyAtUnix(), 0).UTC()
+		return storage.UpdateWindowAtTime, &at, 0, nil
+	case v1.ConfigApplyWindow_CONFIG_APPLY_WINDOW_IDLE:
+		if msg.GetIdleMinutes() <= 0 {
+			return "", nil, 0, errors.New("idle minutes must be positive")
+		}
+		return storage.UpdateWindowIdle, nil, int(msg.GetIdleMinutes()), nil
+	default:
+		return "", nil, 0, errors.New("unknown update window")
+	}
 }
 
 func (s *ConfigService) recreateContainer(ctx context.Context, server *storage.Server, config *storage.ServerConfig) error {

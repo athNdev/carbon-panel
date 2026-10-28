@@ -103,12 +103,15 @@ message UpdateFileRequest {
   string server_id = 1;
   string path = 2;
   bytes content = 3;
+  // stage keeps the new bytes out of the live path until the batch applies.
+  bool stage = 4;
 }
 
 // Update confirmation
 message UpdateFileResponse {
   string message = 1;
   string path = 2;
+  bool staged = 3;
 }
 
 // File to delete
@@ -116,6 +119,8 @@ message DeleteFileRequest {
   string server_id = 1;
   string path = 2;
   repeated string paths = 3; // Bulk delete
+  // stage records the deletion and leaves the live files in place.
+  bool stage = 4;
 }
 
 // Empty delete response

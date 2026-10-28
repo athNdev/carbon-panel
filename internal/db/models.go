@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
@@ -84,30 +83,30 @@ const (
 )
 
 type Server struct {
-	ID              string               `json:"id" gorm:"primaryKey"`
-	Name            string               `json:"name" gorm:"not null"`
-	Description     string               `json:"description"`
-	ModLoader       ModLoader            `json:"mod_loader" gorm:"not null"`
-	MCVersion       string               `json:"mc_version" gorm:"not null;column:mc_version"`
-	NodeID          string               `json:"node_id" gorm:"column:node_id;default:'default'"`
-	ContainerID     string               `json:"container_id" gorm:"column:container_id"`
-	Status          ServerStatus         `json:"status" gorm:"not null"`
-	Port            int                  `json:"port"`
-	ProxyPort       int                  `json:"proxy_port" gorm:"column:proxy_port"`
-	ProxyHostname   string               `json:"proxy_hostname" gorm:"column:proxy_hostname;uniqueIndex:idx_proxy_hostname_listener,where:proxy_hostname != ''"`
-	ProxyListenerID string               `json:"proxy_listener_id" gorm:"column:proxy_listener_id;uniqueIndex:idx_proxy_hostname_listener,where:proxy_listener_id != ''"` // Which listener this server uses
-	MaxPlayers      int                  `json:"max_players" gorm:"default:20;column:max_players"`
-	Memory          int                  `json:"memory" gorm:"default:4096"` // in MB (allocated) - IMPORTANT: This applies to the container's memory allocation first, then used to calc the JVM min/max for mc server proc inside w/ overhead
-	CreatedAt       time.Time            `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time            `json:"updated_at" gorm:"autoUpdateTime"`
-	LastStarted     *time.Time           `json:"last_started" gorm:"column:last_started"`
-	JavaVersion     string               `json:"java_version" gorm:"column:java_version"`
-	DockerImage     string               `json:"docker_image" gorm:"column:docker_image"`
-	DataPath        string               `json:"data_path" gorm:"not null;column:data_path"`
-	Detached        bool                 `json:"detached" gorm:"default:false;column:detached"`                             // Detach server container from Carbon Panel lifecycle (default: false)
-	AutoStart       bool                 `json:"auto_start" gorm:"default:false;column:auto_start"`                         // Start server when Carbon Panel starts (default: false)
-	AutoHibernate   bool                 `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`                 // Sleep/wake container on idle via cgroup freezer (MINE-18)
-	IdleTimeoutMinutes int               `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"`       // Minutes idle before auto-hibernating
+	ID                 string       `json:"id" gorm:"primaryKey"`
+	Name               string       `json:"name" gorm:"not null"`
+	Description        string       `json:"description"`
+	ModLoader          ModLoader    `json:"mod_loader" gorm:"not null"`
+	MCVersion          string       `json:"mc_version" gorm:"not null;column:mc_version"`
+	NodeID             string       `json:"node_id" gorm:"column:node_id;default:'default'"`
+	ContainerID        string       `json:"container_id" gorm:"column:container_id"`
+	Status             ServerStatus `json:"status" gorm:"not null"`
+	Port               int          `json:"port"`
+	ProxyPort          int          `json:"proxy_port" gorm:"column:proxy_port"`
+	ProxyHostname      string       `json:"proxy_hostname" gorm:"column:proxy_hostname;uniqueIndex:idx_proxy_hostname_listener,where:proxy_hostname != ''"`
+	ProxyListenerID    string       `json:"proxy_listener_id" gorm:"column:proxy_listener_id;uniqueIndex:idx_proxy_hostname_listener,where:proxy_listener_id != ''"` // Which listener this server uses
+	MaxPlayers         int          `json:"max_players" gorm:"default:20;column:max_players"`
+	Memory             int          `json:"memory" gorm:"default:4096"` // in MB (allocated) - IMPORTANT: This applies to the container's memory allocation first, then used to calc the JVM min/max for mc server proc inside w/ overhead
+	CreatedAt          time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt          time.Time    `json:"updated_at" gorm:"autoUpdateTime"`
+	LastStarted        *time.Time   `json:"last_started" gorm:"column:last_started"`
+	JavaVersion        string       `json:"java_version" gorm:"column:java_version"`
+	DockerImage        string       `json:"docker_image" gorm:"column:docker_image"`
+	DataPath           string       `json:"data_path" gorm:"not null;column:data_path"`
+	Detached           bool         `json:"detached" gorm:"default:false;column:detached"`                      // Detach server container from Carbon Panel lifecycle (default: false)
+	AutoStart          bool         `json:"auto_start" gorm:"default:false;column:auto_start"`                  // Start server when Carbon Panel starts (default: false)
+	AutoHibernate      bool         `json:"auto_hibernate" gorm:"default:false;column:auto_hibernate"`          // Sleep/wake container on idle via cgroup freezer (MINE-18)
+	IdleTimeoutMinutes int          `json:"idle_timeout_minutes" gorm:"default:10;column:idle_timeout_minutes"` // Minutes idle before auto-hibernating
 
 	// Deep sleep: stop container on idle (zero RAM), boot on login via proxy (MINE-121).
 	AutoDeepSleep           bool `json:"auto_deep_sleep" gorm:"default:false;column:auto_deep_sleep"`
@@ -373,7 +372,7 @@ type IndexedModpackFile struct {
 	GameVersions     string          `json:"game_versions"` // JSON array stored as string
 	ModLoader        string          `json:"mod_loader" gorm:"column:mod_loader"`
 	ServerPackFileID *string         `json:"server_pack_file_id" gorm:"column:server_pack_file_id"`
-	Sha256           string          `json:"sha256" gorm:"column:sha256"`                         // SHA256 checksum (MOD-4)
+	Sha256           string          `json:"sha256" gorm:"column:sha256"` // SHA256 checksum (MOD-4)
 	Modpack          *IndexedModpack `json:"-" gorm:"foreignKey:ModpackID;constraint:OnDelete:CASCADE"`
 }
 
@@ -394,10 +393,10 @@ type ProxyConfig struct {
 
 // ProxyListener represents an individual proxy listening port configuration
 type ProxyListener struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
-	Port        int       `json:"port" gorm:"not null;uniqueIndex"`
-	Name        string    `json:"name"` // e.g., "Primary", "Secondary", "Development"
-	Description string    `json:"description"`
+	ID            string    `json:"id" gorm:"primaryKey"`
+	Port          int       `json:"port" gorm:"not null;uniqueIndex"`
+	Name          string    `json:"name"` // e.g., "Primary", "Secondary", "Development"
+	Description   string    `json:"description"`
 	Enabled       bool      `json:"enabled" gorm:"not null;default:true"`
 	IsDefault     bool      `json:"is_default" gorm:"not null;default:false"`
 	ProxyProtocol bool      `json:"proxy_protocol" gorm:"not null;default:false"`
@@ -500,8 +499,25 @@ type ServerSnapshot struct {
 type StagedApplyMode string
 
 const (
-	StagedApplyOnRestart StagedApplyMode = "on_restart" // applied on next server restart
-	StagedApplyScheduled StagedApplyMode = "scheduled"  // applied once its cron schedule fires
+	StagedApplyOnRestart StagedApplyMode = "on_restart" // applied on the next explicit restart
+	StagedApplyScheduled StagedApplyMode = "scheduled"  // legacy cron row; the scheduler tick does not apply it
+	StagedApplyAtTime    StagedApplyMode = "at_time"    // waits for an absolute time, then one restart
+	StagedApplyIdle      StagedApplyMode = "idle"       // waits until the server has been empty, then one restart
+)
+
+// UpdateWindow is the single apply window for a server's open batch.
+type UpdateWindow string
+
+const (
+	UpdateWindowNextRestart UpdateWindow = "next_restart"
+	UpdateWindowAtTime      UpdateWindow = "at_time"
+	UpdateWindowIdle        UpdateWindow = "idle"
+)
+
+const (
+	UpdateBatchOpen      = "open"
+	UpdateBatchApplied   = "applied"
+	UpdateBatchDiscarded = "discarded"
 )
 
 // StagedStatus defines the lifecycle state of a staged config change.
@@ -517,18 +533,21 @@ const (
 // StagedConfigChange records a config change made to an instance regardless of
 // its operational state. Payload holds the diff vs the live ServerConfig at
 // stage time (JSON object of ServerConfig json field names to values).
-// MVP scope: one-shot semantics — a "scheduled" change applies the first time
-// its cron expression fires after creation, then flips to "applied".
-// Remaining work (see staged_config.go): recurring schedules, per-field
-// conflict detection when the live config moved since staging, RBAC-gated
+// A future at_time or idle row stays staged across an incidental restart.
+// The scheduler tick does not merge a due cron row into the live config.
+// Remaining work: the window executor that restarts once (OSS-285), RBAC-gated
 // approvals, and audit linkage.
 type StagedConfigChange struct {
 	ID              string          `json:"id" gorm:"primaryKey"`
 	ServerID        string          `json:"server_id" gorm:"not null;index;column:server_id"`
-	Payload         string          `json:"payload" gorm:"type:text;column:payload"` // JSON diff vs live config
+	BatchID         string          `json:"batch_id,omitempty" gorm:"index;column:batch_id"`
+	Payload         string          `json:"payload" gorm:"type:text;column:payload"`                             // JSON diff vs live config
+	BasePayload     string          `json:"base_payload,omitempty" gorm:"type:text;column:base_payload"`         // live values of touched keys at stage time
 	PreviousPayload string          `json:"previous_payload,omitempty" gorm:"type:text;column:previous_payload"` // JSON diff of previous values before apply (SCH-1)
 	ApplyMode       StagedApplyMode `json:"apply_mode" gorm:"not null;column:apply_mode"`
 	CronExpr        string          `json:"cron_expr" gorm:"column:cron_expr"` // required when ApplyMode == scheduled
+	ApplyAt         *time.Time      `json:"apply_at,omitempty" gorm:"column:apply_at"`
+	IdleMinutes     int             `json:"idle_minutes,omitempty" gorm:"column:idle_minutes"`
 	Status          StagedStatus    `json:"status" gorm:"not null;default:staged;index"`
 	CreatedAt       time.Time       `json:"created_at" gorm:"autoCreateTime;index"`
 	AppliedAt       *time.Time      `json:"applied_at,omitempty" gorm:"column:applied_at"`
@@ -536,15 +555,63 @@ type StagedConfigChange struct {
 	Server          *Server         `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
 }
 
+// ServerUpdateBatch is the one open set of staged updates for a server.
+// OpenKey is the server id while the batch is open and nil afterward, so two
+// open batches for the same server cannot be inserted.
+type ServerUpdateBatch struct {
+	ID          string     `json:"id" gorm:"primaryKey"`
+	ServerID    string     `json:"server_id" gorm:"not null;index;column:server_id"`
+	OpenKey     *string    `json:"-" gorm:"uniqueIndex;column:open_key"`
+	Window      string     `json:"window" gorm:"not null"`
+	ApplyAt     *time.Time `json:"apply_at,omitempty" gorm:"column:apply_at"`
+	IdleMinutes int        `json:"idle_minutes,omitempty" gorm:"column:idle_minutes"`
+	IdleSince   *time.Time `json:"idle_since,omitempty" gorm:"column:idle_since"`
+	Status      string     `json:"status" gorm:"not null;index"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+// Staged content kinds and actions. Bytes for install and replace live under
+// the server data root at .carbon-panel/staged, never in mods, datapacks, or
+// the world, until a later apply window copies them.
+const (
+	StagedKindMod      = "mod"
+	StagedKindDatapack = "datapack"
+	StagedKindFile     = "file"
+	StagedKindModpack  = "modpack"
+	StagedKindModule   = "module"
+
+	StagedActionInstall = "install"
+	StagedActionReplace = "replace"
+	StagedActionDelete  = "delete"
+)
+
+// StagedContentChange is one mod, datapack, or file edit waiting in a batch.
+// StagePath is empty for a delete, which records the live path to remove later.
+type StagedContentChange struct {
+	ID         string       `json:"id" gorm:"primaryKey"`
+	ServerID   string       `json:"server_id" gorm:"not null;index;column:server_id"`
+	BatchID    string       `json:"batch_id" gorm:"not null;index;column:batch_id"`
+	Kind       string       `json:"kind" gorm:"not null"`
+	Action     string       `json:"action" gorm:"not null"`
+	TargetPath string       `json:"target_path" gorm:"not null;column:target_path"`
+	StagePath  string       `json:"stage_path,omitempty" gorm:"column:stage_path"`
+	FileName   string       `json:"file_name" gorm:"column:file_name"`
+	Status     StagedStatus `json:"status" gorm:"not null;index"`
+	CreatedAt  time.Time    `json:"created_at" gorm:"autoCreateTime"`
+	AppliedAt  *time.Time   `json:"applied_at,omitempty" gorm:"column:applied_at"`
+	Server     *Server      `json:"-" gorm:"foreignKey:ServerID;constraint:OnDelete:CASCADE"`
+}
+
 // TaskType defines the type of scheduled task
 type TaskType string
 
 const (
-	TaskTypeCommand TaskType = "command" // Execute an RCON command
-	TaskTypeBackup  TaskType = "backup"  // Create a backup
-	TaskTypeRestart TaskType = "restart" // Restart the server
-	TaskTypeStart   TaskType = "start"   // Start the server
-	TaskTypeStop    TaskType = "stop"    // Stop the server
+	TaskTypeCommand       TaskType = "command"        // Execute an RCON command
+	TaskTypeBackup        TaskType = "backup"         // Create a backup
+	TaskTypeRestart       TaskType = "restart"        // Restart the server
+	TaskTypeStart         TaskType = "start"          // Start the server
+	TaskTypeStop          TaskType = "stop"           // Stop the server
 	TaskTypeScript        TaskType = "script"         // Run a custom script
 	TaskTypeWebhook       TaskType = "webhook"        // Send an HTTP webhook
 	TaskTypeModpackUpdate TaskType = "modpack_update" // Periodically fetch and update modpack from Git/source
@@ -596,7 +663,7 @@ type ScheduledTask struct {
 	Timeout       int  `json:"timeout" gorm:"default:300"`          // Timeout in seconds (default 5 min)
 	RetryCount    int  `json:"retry_count" gorm:"default:0"`        // Number of retries on failure
 	RetryDelay    int  `json:"retry_delay" gorm:"default:60"`       // Delay between retries in seconds
-	RequireOnline bool `json:"require_online"`  // Only run if server is online
+	RequireOnline bool `json:"require_online"`                      // Only run if server is online
 	FailureNotify bool `json:"failure_notify" gorm:"default:false"` // Notify on failure (future feature)
 
 	// Chain settings (MINE-142): tasks with the same ParentTaskID run in
@@ -665,7 +732,7 @@ type BackupRecord struct {
 	SizeBytes int64  `json:"size_bytes" gorm:"column:size_bytes"`
 	SHA256    string `json:"sha256"`
 	Locked    bool   `json:"locked" gorm:"default:false"`
-	Status    string `json:"status" gorm:"default:complete"` // complete, restoring, failed
+	Status    string `json:"status" gorm:"default:complete"`      // complete, restoring, failed
 	RemoteKey string `json:"remote_key" gorm:"column:remote_key"` // S3 object key when offloaded (MINE-138)
 	// Encrypted marks an authenticated-encrypted artifact (OSS-236);
 	// EncryptionKeyID is the non-secret key label recorded for rotation and

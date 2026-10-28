@@ -6,7 +6,6 @@
 // If a copy of the MPL was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-
 package db
 
 import (
@@ -47,6 +46,8 @@ func allModels() []any {
 		&Node{},
 		&ServerSnapshot{},
 		&StagedConfigChange{},
+		&ServerUpdateBatch{},
+		&StagedContentChange{},
 		&BackendPortLease{},
 		&ServerOperation{},
 		&IdempotencyKey{},

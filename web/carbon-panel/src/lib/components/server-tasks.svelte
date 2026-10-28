@@ -118,6 +118,7 @@ one at https://mozilla.org/MPL/2.0/.
 	let gitBranch = $state('main');
 	let gitTargetSubfolder = $state('');
 	let gitRestartImmediately = $state(true);
+	let gitStageIntoBatch = $state(false);
 	let gitAuthToken = $state('');
 
 	const dialogSections = $derived<
@@ -409,6 +410,7 @@ one at https://mozilla.org/MPL/2.0/.
 		gitBranch = 'main';
 		gitTargetSubfolder = '';
 		gitRestartImmediately = true;
+		gitStageIntoBatch = false;
 		gitAuthToken = '';
 		selectedTask = null;
 	}
@@ -485,6 +487,7 @@ one at https://mozilla.org/MPL/2.0/.
 				gitBranch = cfg.branch || 'main';
 				gitTargetSubfolder = cfg.target_subfolder || '';
 				gitRestartImmediately = cfg.restart_immediately ?? true;
+				gitStageIntoBatch = cfg.stage_into_batch === true;
 				gitAuthToken = cfg.auth_token || '';
 			} catch {
 				// Invalid config — leave defaults
@@ -529,6 +532,7 @@ one at https://mozilla.org/MPL/2.0/.
 					branch: gitBranch.trim() || 'main',
 					target_subfolder: gitTargetSubfolder.trim(),
 					restart_immediately: gitRestartImmediately,
+					stage_into_batch: gitStageIntoBatch,
 					auth_token: gitAuthToken.trim()
 				});
 			default:
@@ -1378,6 +1382,19 @@ one at https://mozilla.org/MPL/2.0/.
 												Required only for private GitHub / GitLab repositories.
 											</p>
 										</div>
+										<label
+											class="flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+										>
+											<Switch bind:checked={gitStageIntoBatch} class="mt-0.5" />
+											<div class="space-y-1">
+												<span class="font-medium">Stage into the open batch</span>
+												<p class="text-sm text-muted-foreground">
+													The fetched pack joins the server's open update batch. The live pack stays
+													as it is, and this task does not restart the server. The batch window
+													applies the pack with any other staged changes.
+												</p>
+											</div>
+										</label>
 										<label
 											class="flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
 										>

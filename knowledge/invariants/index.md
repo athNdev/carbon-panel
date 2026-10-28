@@ -8,3 +8,4 @@
 - [Data safety](data-safety.md) — Worlds, databases, backups and snapshots are persistent user data and must survive build, development and cleanup commands.
 - [Fail-closed authorization](authz-fail-closed.md) — Unmapped RPCs and resource scopes are denied; a usable RPC needs an explicit permission mapping and a negative test.
 - [Secrets and endpoints](secrets-and-endpoints.md) — Credentials, tokens, private endpoints and workstation paths never enter tracked source or the knowledge base.
+- [Staged server updates](staged-updates.md) — Staging a config, mod, datapack, file, modpack, or module edit records the open batch and does not restart the server or write the live tree.

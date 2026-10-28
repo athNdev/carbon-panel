@@ -77,11 +77,14 @@ message InstallDatapackRequest {
   string game_version = 3;
   string file_name = 4; // optional override for the stored filename
   string indexer = 5;   // provider that resolved datapack_id (empty: try all)
+  // stage keeps the archive out of the world until the batch applies.
+  bool stage = 6;
 }
 
 // InstallDatapackResponse reports the installed datapack.
 message InstallDatapackResponse {
   InstalledDatapack datapack = 1;
+  bool staged = 2;
 }
 
 // UploadDatapackRequest imports a previously uploaded datapack archive.
@@ -89,12 +92,15 @@ message UploadDatapackRequest {
   string server_id = 1;
   string upload_session_id = 2;
   string file_name = 3; // optional override for the stored filename
+  // stage keeps the archive out of the world until the batch applies.
+  bool stage = 4;
 }
 
 // UploadDatapackResponse reports the imported datapack.
 message UploadDatapackResponse {
   InstalledDatapack datapack = 1;
   string message = 2;
+  bool staged = 3;
 }
 
 // ListDatapacksRequest lists the datapacks installed in the world.

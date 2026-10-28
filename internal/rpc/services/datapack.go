@@ -224,15 +224,6 @@ func (s *DatapackService) InstallDatapack(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("could not find a datapack file: %w", err))
 	}
 
-	root, err := dataRootFor(ctx, s.store, server, true)
-	if err != nil {
-		return nil, storageError(err)
-	}
-	datapacksDir := minecraft.GetDatapacksPath(root, "")
-	if err := os.MkdirAll(datapacksDir, 0755); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create datapacks directory: %w", err))
-	}
-
 	filename := strings.TrimSpace(msg.FileName)
 	if filename == "" {
 		filename = filepath.Base(file.Filename)
@@ -240,7 +231,34 @@ func (s *DatapackService) InstallDatapack(ctx context.Context, req *connect.Requ
 	if err := minecraft.ValidateDatapackFilename(filename); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	destPath := filepath.Join(datapacksDir, filename)
+
+	var destPath string
+	removeDownload := func() {}
+	if msg.GetStage() {
+		acc, accErr := serverAccessor(ctx, s.store, server)
+		if accErr != nil {
+			return nil, stageContentError(accErr)
+		}
+		_ = acc.Close()
+		tmp, tmpErr := os.CreateTemp("", "staged-datapack-*.zip")
+		if tmpErr != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stage datapack: %w", tmpErr))
+		}
+		destPath = tmp.Name()
+		_ = tmp.Close()
+		removeDownload = func() { _ = os.Remove(destPath) }
+	} else {
+		root, rootErr := dataRootFor(ctx, s.store, server, true)
+		if rootErr != nil {
+			return nil, storageError(rootErr)
+		}
+		datapacksDir := minecraft.GetDatapacksPath(root, "")
+		if err := os.MkdirAll(datapacksDir, 0755); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create datapacks directory: %w", err))
+		}
+		destPath = filepath.Join(datapacksDir, filename)
+	}
+	defer removeDownload()
 
 	if err := minecraft.DownloadDatapackArchiveFrom(ctx, indexers.DatapackIndexerOrigin(resolved), file.DownloadURL, destPath); err != nil {
 		s.log.Error("Failed to download datapack %s: %v", file.DownloadURL, err)
@@ -261,6 +279,27 @@ func (s *DatapackService) InstallDatapack(ctx context.Context, req *connect.Requ
 	info, statErr := os.Stat(destPath)
 	if statErr != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("installed datapack missing: %w", statErr))
+	}
+
+	if msg.GetStage() {
+		data, readErr := os.ReadFile(destPath)
+		if readErr != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("read datapack: %w", readErr))
+		}
+		target := minecraft.DefaultLevelName + "/datapacks/" + filename
+		if _, stageErr := stageContentBytes(ctx, s.store, server, storage.StagedKindDatapack, storage.StagedActionInstall, target, filename, data); stageErr != nil {
+			_ = os.Remove(destPath)
+			return nil, stageContentError(stageErr)
+		}
+		s.log.Info("Staged datapack %s for server %s", filename, server.ID)
+		return connect.NewResponse(&v1.InstallDatapackResponse{
+			Datapack: withPackFormat(&v1.InstalledDatapack{
+				FileName:    filename,
+				DisplayName: displayNameFromFilename(filename),
+				Size:        info.Size(),
+			}, destPath, server.MCVersion),
+			Staged: true,
+		}), nil
 	}
 
 	s.log.Info("Installed datapack %s for server %s", filename, server.ID)
@@ -316,6 +355,30 @@ func (s *DatapackService) UploadDatapack(ctx context.Context, req *connect.Reque
 			return fail(connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("uploaded file is not a valid datapack: %w", err)))
 		}
 		s.log.Info("Normalized wrapped datapack archive %s for server %s", filename, server.ID)
+	}
+
+	if msg.GetStage() {
+		data, readErr := os.ReadFile(tempPath)
+		if readErr != nil {
+			return fail(connect.NewError(connect.CodeInternal, fmt.Errorf("read uploaded datapack: %w", readErr)))
+		}
+		target := minecraft.DefaultLevelName + "/datapacks/" + filename
+		if _, stageErr := stageContentBytes(ctx, s.store, server, storage.StagedKindDatapack, storage.StagedActionInstall, target, filename, data); stageErr != nil {
+			return fail(stageContentError(stageErr))
+		}
+		pack := withPackFormat(&v1.InstalledDatapack{
+			FileName:    filename,
+			DisplayName: displayNameFromFilename(filename),
+			Size:        int64(len(data)),
+		}, tempPath, server.MCVersion)
+		_ = os.Remove(tempPath)
+		_ = s.uploadManager.CleanupSession(msg.UploadSessionId)
+		s.log.Info("Staged datapack %s for server %s", filename, server.ID)
+		return connect.NewResponse(&v1.UploadDatapackResponse{
+			Datapack: pack,
+			Message:  "Datapack staged. The world was not changed.",
+			Staged:   true,
+		}), nil
 	}
 
 	root, err := dataRootFor(ctx, s.store, server, true)

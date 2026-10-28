@@ -7,38 +7,88 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	storage "github.com/athNdev/carbon-panel/internal/db"
-	"github.com/athNdev/carbon-panel/internal/docker"
+	"github.com/athNdev/carbon-panel/internal/staging"
 )
 
-// applyDueStagedConfigs applies staged config changes whose cron schedule has
-// fired (one-shot semantics: each record applies once, then flips to
-// "applied"). It runs on every scheduler tick before task dispatch so
-// scheduled rollouts land without operator intervention. Failures are logged
-// per record and never abort the tick.
-//
-// Wiring: called from checkAndRunDueTasks.
+// applyDueStagedConfigs used to merge a due cron diff into the live
+// ServerConfig without restarting the container. That applied the database
+// row while a running, frozen, or deep-sleeping process kept the old env.
+// Rows now wait for an explicit apply window (OSS-283 / OSS-285).
 func (s *Scheduler) applyDueStagedConfigs(ctx context.Context) {
-	due, err := s.store.ListDueScheduledStagedChanges(ctx, time.Now())
-	if err != nil {
-		s.log.Error("Failed to list due staged config changes: %v", err)
+	if s == nil || s.store == nil {
 		return
 	}
-	for _, staged := range due {
-		transition, err := docker.TryBeginServerTransition(staged.ServerID)
-		if err != nil {
-			continue
-		}
-		applied, err := s.store.ApplyStagedConfigChange(ctx, staged.ID)
-		transition.Release()
-		if err != nil {
-			s.log.Error("Failed to apply staged config change %s for server %s: %v", staged.ID, staged.ServerID, err)
-			continue
-		}
-		s.log.Info("Applied scheduled staged config change %s to server %s", applied.ID, applied.ServerID)
+	var players func(serverID string) (int, bool)
+	s.mu.RLock()
+	if s.playerCount != nil {
+		count := s.playerCount
+		players = func(serverID string) (int, bool) { return count(serverID), true }
 	}
+	s.mu.RUnlock()
+	if err := staging.Sweep(ctx, s.store, s.log, time.Now(), players, s.publishStagedBatch); err != nil && s.log != nil {
+		s.log.Error("Failed to apply a staged update batch: %v", err)
+	}
+}
+
+func (s *Scheduler) publishStagedBatch(ctx context.Context, server *storage.Server, plan staging.Plan) error {
+	if server == nil {
+		return errors.New("server is required")
+	}
+	for _, id := range plan.ModuleIDs {
+		if s.recreateModule == nil {
+			return errors.New("module recreate is not configured")
+		}
+		if err := s.recreateModule(ctx, id); err != nil {
+			return err
+		}
+	}
+	if server.ContainerID == "" || !plan.TouchesContainer() {
+		return nil
+	}
+	if plan.SaveAll && s.sender != nil {
+		if _, err := s.sender.SendCommand(ctx, server.ID, "save-all"); err != nil && s.log != nil {
+			s.log.Warn("save-all before staged apply failed for %s: %v", server.ID, err)
+		}
+	}
+	if s.docker == nil {
+		return errors.New("docker client is not configured")
+	}
+	if plan.Recreate {
+		cfg, err := s.store.GetServerConfig(ctx, server.ID)
+		if err != nil {
+			return err
+		}
+		if cfg == nil {
+			return errors.New("server configuration is empty")
+		}
+		result, err := s.docker.RecreateContainer(ctx, server.ContainerID, server, cfg)
+		if err != nil {
+			return err
+		}
+		if result != nil && result.NewContainerID != "" && result.NewContainerID != server.ContainerID {
+			server.ContainerID = result.NewContainerID
+			if err := s.store.UpdateServer(ctx, server); err != nil {
+				return err
+			}
+		}
+		if plan.StartAfter && (result == nil || !result.WasRunning) {
+			return s.docker.StartContainer(ctx, server.ContainerID)
+		}
+		return nil
+	}
+	if plan.Restart {
+		if _, err := s.docker.StopContainer(ctx, server.ContainerID); err != nil {
+			return err
+		}
+		if plan.StartAfter {
+			return s.docker.StartContainer(ctx, server.ContainerID)
+		}
+	}
+	return nil
 }
 
 // stagedConfigStore is the subset of storage.Store used for staged rollouts,

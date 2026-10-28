@@ -19,6 +19,10 @@ service ConfigService {
   rpc GetServerConfig(GetServerConfigRequest) returns (GetServerConfigResponse);
   // Update server environment variables
   rpc UpdateServerConfig(UpdateServerConfigRequest) returns (UpdateServerConfigResponse);
+  // Read the server's one open staged batch.
+  rpc GetUpdateBatch(GetUpdateBatchRequest) returns (GetUpdateBatchResponse);
+  // Drop one staged item, or the whole batch when item_id is empty.
+  rpc DiscardUpdateBatch(DiscardUpdateBatchRequest) returns (DiscardUpdateBatchResponse);
   // Fetch system-wide defaults
   rpc GetGlobalSettings(GetGlobalSettingsRequest) returns (GetGlobalSettingsResponse);
   // Update system-wide defaults
@@ -58,15 +62,33 @@ message GetServerConfigResponse {
   repeated ConfigCategory categories = 1;
 }
 
+// When a staged config edit should be applied. Unspecified with stage=false
+// saves the live config and recreates the container.
+enum ConfigApplyWindow {
+  CONFIG_APPLY_WINDOW_UNSPECIFIED = 0;
+  CONFIG_APPLY_WINDOW_NEXT_RESTART = 1;
+  CONFIG_APPLY_WINDOW_AT_TIME = 2;
+  CONFIG_APPLY_WINDOW_IDLE = 3;
+}
+
 // Config fields to update
 message UpdateServerConfigRequest {
   string server_id = 1;
   map<string, string> updates = 2;
+  // stage records the diff and leaves the running container alone.
+  bool stage = 3;
+  ConfigApplyWindow window = 4;
+  // UTC unix seconds. Required when window is AT_TIME.
+  int64 apply_at_unix = 5;
+  // Required when window is IDLE.
+  int32 idle_minutes = 6;
 }
 
 // Updated server settings
 message UpdateServerConfigResponse {
   repeated ConfigCategory categories = 1;
+  // staged is true when the diff was recorded and the container was not recreated.
+  bool staged = 2;
 }
 
 // Empty global settings request
@@ -98,3 +120,36 @@ message SyncGlobalSettingsToServersResponse {
   int32 updated_servers_count = 1;
   string message = 2;
 }
+
+// One staged config diff or content edit.
+message StagedUpdateItem {
+  string id = 1;
+  string kind = 2;
+  string action = 3;
+  string summary = 4;
+}
+
+// Request for the server's open update batch.
+message GetUpdateBatchRequest {
+  string server_id = 1;
+}
+
+// The open batch, its window, and the items waiting in it.
+message GetUpdateBatchResponse {
+  bool open = 1;
+  ConfigApplyWindow window = 2;
+  // UTC unix seconds. Zero when the window is not a timestamp.
+  int64 apply_at_unix = 3;
+  int32 idle_minutes = 4;
+  repeated StagedUpdateItem items = 5;
+}
+
+// Drop one staged item, or the whole batch when item_id is empty.
+message DiscardUpdateBatchRequest {
+  string server_id = 1;
+  // Empty discards the whole open batch.
+  string item_id = 2;
+}
+
+// Empty after the item or batch is discarded.
+message DiscardUpdateBatchResponse {}
