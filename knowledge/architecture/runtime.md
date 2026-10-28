@@ -49,7 +49,8 @@ Other repositories are rejected. A tag stays a tag in the database so the
 image picker still matches it. An image that is already on the daemon is
 used without a registry check. Concurrent pulls of the same reference on
 one client share one request, and a pull is success only after the daemon
-reports that image present. The image ID of the container that last came
+reports that image present. A registry rate limit or an access denial is
+named in the pull error, with the daemon message kept. The image ID of the container that last came
 up stays recorded when a later pull or recreate fails. The registry repo
 digest for that repository is stored beside the image ID and stays empty
 when the daemon has no repo digest. A tag change is

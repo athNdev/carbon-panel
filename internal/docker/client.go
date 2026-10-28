@@ -1817,17 +1817,34 @@ func (c *Client) ExecCommand(ctx context.Context, containerID string, command st
 func (c *Client) pullImage(ctx context.Context, imageName string) error {
 	reader, err := c.docker.ImagePull(ctx, imageName, client.ImagePullOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
+		return explainPullError(imageName, err)
 	}
 	// Docker reports some pull failures as JSON messages in an otherwise
 	// successful HTTP response. The SDK's Wait consumes and decodes those
 	// messages, returning embedded daemon errors, transport errors, and
 	// context cancellation while still draining successful progress streams.
 	if err = reader.Wait(ctx); err != nil {
-		return fmt.Errorf("failed to complete image pull for %s: %w", imageName, err)
+		return explainPullError(imageName, err)
 	}
 
 	return nil
+}
+
+// explainPullError names a registry rate limit or an access denial and keeps
+// the daemon's own message. Other failures stay a plain pull error.
+func explainPullError(imageName string, err error) error {
+	if err == nil {
+		return nil
+	}
+	text := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(text, "toomanyrequests") || strings.Contains(text, "rate limit"):
+		return fmt.Errorf("image %s was not pulled because the registry rate limit was reached: %w", imageName, err)
+	case strings.Contains(text, "unauthorized") || strings.Contains(text, "authentication required") || strings.Contains(text, "pull access denied") || strings.Contains(text, "insufficient_scope"):
+		return fmt.Errorf("image %s was not pulled because the registry denied access: %w", imageName, err)
+	default:
+		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
+	}
 }
 
 func (c *Client) GetDockerImages() []DockerImageTag {

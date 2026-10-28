@@ -63,11 +63,35 @@ func TestPullImageReturnsEmbeddedDockerStreamError(t *testing.T) {
 	if err == nil {
 		t.Fatal("pullImage returned nil for a Docker error frame in an HTTP 200 response")
 	}
-	if !strings.Contains(err.Error(), "pull access denied for example") {
-		t.Fatalf("pullImage error %q does not include embedded Docker error", err)
+	if !strings.Contains(err.Error(), "registry denied access") || !strings.Contains(err.Error(), "pull access denied for example") {
+		t.Fatalf("pullImage error %q does not name the access denial", err)
 	}
 	if pullRequests != 1 {
 		t.Fatalf("image pull requests = %d, want 1", pullRequests)
+	}
+}
+
+func TestPullImageNamesARegistryRateLimit(t *testing.T) {
+	httpServer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/_ping":
+			w.Header().Set("Api-Version", "1.45")
+			w.Header().Set("Ostype", "linux")
+			w.WriteHeader(http.StatusOK)
+		case "/v1.45/images/create":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"errorDetail":{"message":"toomanyrequests: You have reached your pull rate limit"},"error":"toomanyrequests: You have reached your pull rate limit"}` + "\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	c, cleanup := newImagePullTestClient(t, httpServer)
+	t.Cleanup(cleanup)
+
+	err := c.pullImage(context.Background(), "example")
+	if err == nil || !strings.Contains(err.Error(), "registry rate limit was reached") || !strings.Contains(err.Error(), "toomanyrequests") {
+		t.Fatalf("pullImage error = %v", err)
 	}
 }
 
