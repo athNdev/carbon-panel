@@ -32,14 +32,17 @@ type ServerOperation struct {
 	NodeID     string
 	// EndpointGeneration is the node endpoint this operation was bound to.
 	EndpointGeneration int64
-	ContainerID        string
-	Kind               string
-	PayloadHash        string
-	Phase              string
-	LastError          string
-	ActiveServer       *string `gorm:"uniqueIndex"`
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	// DaemonID is the Docker daemon id accepted for that endpoint at the time
+	// the operation was recorded. Empty when the node had not been observed yet.
+	DaemonID     string
+	ContainerID  string
+	Kind         string
+	PayloadHash  string
+	Phase        string
+	LastError    string
+	ActiveServer *string `gorm:"uniqueIndex"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (s *Store) BeginServerOperation(ctx context.Context, serverID, nodeID, containerID, key, kind, digest string) (*ServerOperation, bool, error) {
@@ -50,12 +53,12 @@ func (s *Store) BeginServerOperation(ctx context.Context, serverID, nodeID, cont
 	reused := false
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		lookupErr := tx.Where("server_id = ? AND request_key = ?", serverID, key).First(&op).Error
-		generation, genErr := endpointGeneration(tx, nodeID)
-		if genErr != nil {
-			return genErr
+		binding, bindErr := lookupNodeBinding(tx, nodeID)
+		if bindErr != nil {
+			return bindErr
 		}
 		if lookupErr == nil {
-			if op.PayloadHash != digest || op.Kind != kind || op.NodeID != nodeID || op.ContainerID != containerID || op.EndpointGeneration != generation {
+			if op.PayloadHash != digest || op.Kind != kind || op.NodeID != nodeID || op.ContainerID != containerID || op.EndpointGeneration != binding.generation || daemonIdentityConflicts(op.DaemonID, binding.daemonID) {
 				return errors.New("idempotency key conflicts with existing operation identity or payload")
 			}
 			reused = true
@@ -64,25 +67,34 @@ func (s *Store) BeginServerOperation(ctx context.Context, serverID, nodeID, cont
 		if !errors.Is(lookupErr, gorm.ErrRecordNotFound) {
 			return lookupErr
 		}
-		op = ServerOperation{ID: uuid.NewString(), ServerID: serverID, NodeID: nodeID, ContainerID: containerID, EndpointGeneration: generation, RequestKey: key, Kind: kind, PayloadHash: digest, Phase: ServerOperationPrepared, ActiveServer: &serverID}
+		op = ServerOperation{ID: uuid.NewString(), ServerID: serverID, NodeID: nodeID, ContainerID: containerID, EndpointGeneration: binding.generation, DaemonID: binding.daemonID, RequestKey: key, Kind: kind, PayloadHash: digest, Phase: ServerOperationPrepared, ActiveServer: &serverID}
 		return tx.Create(&op).Error
 	})
 	return &op, reused, err
 }
 
-func endpointGeneration(tx *gorm.DB, nodeID string) (int64, error) {
+type nodeBinding struct {
+	generation int64
+	daemonID   string
+}
+
+func lookupNodeBinding(tx *gorm.DB, nodeID string) (nodeBinding, error) {
 	if strings.TrimSpace(nodeID) == "" {
-		return 0, nil
+		return nodeBinding{}, nil
 	}
 	var node Node
 	err := tx.Where("id = ?", nodeID).First(&node).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return 0, nil
+		return nodeBinding{}, nil
 	}
 	if err != nil {
-		return 0, err
+		return nodeBinding{}, err
 	}
-	return node.EndpointGeneration, nil
+	return nodeBinding{generation: node.EndpointGeneration, daemonID: node.DaemonID}, nil
+}
+
+func daemonIdentityConflicts(recorded, current string) bool {
+	return recorded != "" && current != "" && recorded != current
 }
 
 func (s *Store) AdvanceServerOperation(ctx context.Context, id, from, to, detail string) error {

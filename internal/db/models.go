@@ -954,10 +954,13 @@ type Node struct {
 	// EndpointGeneration increases when the Docker host or TLS material changes.
 	// An operation records the value it observed so a later endpoint is not
 	// mistaken for this one.
-	EndpointGeneration int64      `json:"endpoint_generation" gorm:"column:endpoint_generation;default:1"`
-	LastHeartbeat      *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
-	CreatedAt          time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt          time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	EndpointGeneration int64 `json:"endpoint_generation" gorm:"column:endpoint_generation;default:1"`
+	// DaemonID is the Docker daemon id accepted for this endpoint. Empty until
+	// the first successful observation. A different id is not accepted silently.
+	DaemonID      string     `json:"daemon_id,omitempty" gorm:"column:daemon_id"`
+	LastHeartbeat *time.Time `json:"last_heartbeat" gorm:"column:last_heartbeat"`
+	CreatedAt     time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt     time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 
 	// Runtime stats (not persisted to DB)
 	AllocatedMemoryMB int64 `json:"allocated_memory_mb" gorm:"-"`

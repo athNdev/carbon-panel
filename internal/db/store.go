@@ -1310,7 +1310,7 @@ func (s *Store) CreateNode(ctx context.Context, node *Node) error {
 	if node.EndpointGeneration == 0 {
 		node.EndpointGeneration = 1
 	}
-	err := s.db.WithContext(ctx).Select("ID", "Name", "Host", "AdvertisedIP", "TLSCACert", "TLSCert", "TLSKey", "TLSEnabled", "TLSSkipVerify", "MaxMemoryMB", "MaxServers", "Enabled", "Status", "IsLocal", "StorageRoot", "ControllerStorageRoot", "EndpointGeneration", "LastHeartbeat", "CreatedAt", "UpdatedAt").Create(node).Error
+	err := s.db.WithContext(ctx).Select("ID", "Name", "Host", "AdvertisedIP", "TLSCACert", "TLSCert", "TLSKey", "TLSEnabled", "TLSSkipVerify", "MaxMemoryMB", "MaxServers", "Enabled", "Status", "IsLocal", "StorageRoot", "ControllerStorageRoot", "EndpointGeneration", "DaemonID", "LastHeartbeat", "CreatedAt", "UpdatedAt").Create(node).Error
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}

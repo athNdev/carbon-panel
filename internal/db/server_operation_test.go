@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -101,7 +102,7 @@ func TestOperationRecordsTheEndpointGeneration(t *testing.T) {
 	store := newTestStore(t)
 	t.Cleanup(func() { _ = store.Close() })
 
-	node := &Node{ID: "node-gen", Name: "Gen", Host: "tcp://10.0.0.2:2375", Enabled: true, Status: NodeStatusOnline}
+	node := &Node{ID: "node-gen", Name: "Gen", Host: "tcp://10.0.0.2:2375", Enabled: true, Status: NodeStatusOnline, DaemonID: "daemon-a"}
 	if err := store.CreateNode(ctx, node); err != nil {
 		t.Fatalf("CreateNode: %v", err)
 	}
@@ -113,8 +114,8 @@ func TestOperationRecordsTheEndpointGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginServerOperation: %v", err)
 	}
-	if op.EndpointGeneration != 1 {
-		t.Fatalf("operation generation = %d, want 1", op.EndpointGeneration)
+	if op.EndpointGeneration != 1 || op.DaemonID != "daemon-a" {
+		t.Fatalf("operation identity = generation %d daemon %q, want 1 and daemon-a", op.EndpointGeneration, op.DaemonID)
 	}
 
 	node.Status = NodeStatusOffline
@@ -146,7 +147,18 @@ func TestOperationRecordsTheEndpointGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BeginServerOperation after generation bump: %v", err)
 	}
-	if next.EndpointGeneration != 2 {
-		t.Fatalf("new operation generation = %d, want 2", next.EndpointGeneration)
+	if next.EndpointGeneration != 2 || next.DaemonID != "daemon-a" {
+		t.Fatalf("new operation identity = generation %d daemon %q, want 2 and daemon-a", next.EndpointGeneration, next.DaemonID)
+	}
+
+	node.DaemonID = "daemon-b"
+	if err := store.UpdateNode(ctx, node); err != nil {
+		t.Fatalf("daemon id update: %v", err)
+	}
+	if node.EndpointGeneration != 2 {
+		t.Fatalf("daemon id update generation = %d, want 2", node.EndpointGeneration)
+	}
+	if _, _, err := store.BeginServerOperation(ctx, "srv-gen", node.ID, "c1", "key-2", "start", "digest-2"); err == nil || !strings.Contains(err.Error(), "conflicts") {
+		t.Fatalf("repeat after daemon change = %v, want an identity conflict", err)
 	}
 }

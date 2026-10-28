@@ -7,6 +7,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,6 +22,21 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/moby/moby/client"
 )
+
+// ErrDaemonIdentity is returned when a node answers with a different Docker
+// daemon than the one already accepted for that endpoint.
+var ErrDaemonIdentity = errors.New("docker: daemon identity mismatch")
+
+// pingDocker and readDaemonIdentity are the live daemon calls PingNode makes.
+// Tests replace them so identity behavior does not require a running daemon.
+var pingDocker = func(ctx context.Context, cli *Client) error {
+	_, err := cli.Ping(ctx)
+	return err
+}
+
+var readDaemonIdentity = func(ctx context.Context, cli *Client) (string, error) {
+	return cli.DaemonID(ctx)
+}
 
 // NodeStore defines the DB interface needed by ClientPool
 type NodeStore interface {
@@ -375,6 +391,26 @@ func (p *ClientPool) dropCachedClient(nodeID string) {
 	}
 }
 
+// applyDaemonIdentity records the first observed daemon id. A later id that
+// differs is refused and the accepted id is left unchanged.
+func applyDaemonIdentity(node *models.Node, observed string) error {
+	if node == nil {
+		return fmt.Errorf("node is nil")
+	}
+	observed = strings.TrimSpace(observed)
+	if observed == "" {
+		return fmt.Errorf("docker daemon reported an empty id")
+	}
+	if node.DaemonID == "" {
+		node.DaemonID = observed
+		return nil
+	}
+	if node.DaemonID != observed {
+		return fmt.Errorf("%w: node %q", ErrDaemonIdentity, node.ID)
+	}
+	return nil
+}
+
 func endpointChanged(cached, current *models.Node) bool {
 	if cached == nil || current == nil {
 		return false
@@ -431,8 +467,7 @@ func (p *ClientPool) PingNode(ctx context.Context, nodeID string) (bool, error) 
 		return false, fmt.Errorf("failed to get client for node %s: %w", nodeID, err)
 	}
 
-	_, err = cli.Ping(ctx)
-	if err != nil {
+	if err = pingDocker(ctx, cli); err != nil {
 		node.Status = models.NodeStatusOffline
 		_ = p.store.UpdateNode(ctx, node)
 		if nodeID != p.defaultNodeID && !node.IsLocal {
@@ -444,6 +479,19 @@ func (p *ClientPool) PingNode(ctx context.Context, nodeID string) (bool, error) 
 			p.mu.Unlock()
 		}
 		return false, fmt.Errorf("ping failed for node %s: %w", nodeID, err)
+	}
+
+	daemonID, idErr := readDaemonIdentity(ctx, cli)
+	if idErr != nil {
+		node.Status = models.NodeStatusOffline
+		_ = p.store.UpdateNode(ctx, node)
+		return false, fmt.Errorf("daemon identity for node %s could not be read: %w", nodeID, idErr)
+	}
+	if err := applyDaemonIdentity(node, daemonID); err != nil {
+		p.dropCachedClient(nodeID)
+		node.Status = models.NodeStatusOffline
+		_ = p.store.UpdateNode(ctx, node)
+		return false, err
 	}
 
 	// Ensure network and cache host memory capacity

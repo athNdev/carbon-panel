@@ -7,6 +7,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -230,6 +231,52 @@ func TestGetClientStrictDropsAClientWhenTheGenerationChanges(t *testing.T) {
 	}
 	if got == stale {
 		t.Fatal("generation change reused the cached client")
+	}
+}
+
+func TestPingNodeAcceptsTheFirstDaemonAndRefusesAReplacement(t *testing.T) {
+	log := logger.New()
+	remote := &Client{log: log}
+	store := newMockNodeStore(&models.Node{
+		ID: "remote-b", Name: "B", Host: "tcp://10.0.0.2:2375", Enabled: true,
+		Status: models.NodeStatusOffline, EndpointGeneration: 1,
+	})
+	pool := NewClientPool(store, &Client{log: log}, log)
+	t.Cleanup(func() { _ = pool.Close() })
+	pool.RegisterClient("remote-b", remote)
+
+	origPing := pingDocker
+	origID := readDaemonIdentity
+	t.Cleanup(func() {
+		pingDocker = origPing
+		readDaemonIdentity = origID
+	})
+	pingDocker = func(context.Context, *Client) error { return nil }
+	readDaemonIdentity = func(context.Context, *Client) (string, error) { return "daemon-a", nil }
+
+	ok, err := pool.PingNode(context.Background(), "remote-b")
+	if err != nil || !ok {
+		t.Fatalf("first ping = %v %v", ok, err)
+	}
+	got, err := store.GetNode(context.Background(), "remote-b")
+	if err != nil || got.DaemonID != "daemon-a" || got.Status != models.NodeStatusOnline || got.EndpointGeneration != 1 {
+		t.Fatalf("node after accept = %+v %v", got, err)
+	}
+
+	readDaemonIdentity = func(context.Context, *Client) (string, error) { return "daemon-b", nil }
+	ok, err = pool.PingNode(context.Background(), "remote-b")
+	if ok || !errors.Is(err, ErrDaemonIdentity) {
+		t.Fatalf("replacement ping = %v %v, want ErrDaemonIdentity", ok, err)
+	}
+	got, err = store.GetNode(context.Background(), "remote-b")
+	if err != nil || got.DaemonID != "daemon-a" || got.Status != models.NodeStatusOffline {
+		t.Fatalf("node after mismatch = %+v %v", got, err)
+	}
+	pool.mu.RLock()
+	_, stillCached := pool.clients["remote-b"]
+	pool.mu.RUnlock()
+	if stillCached {
+		t.Fatal("mismatched daemon kept the cached client")
 	}
 }
 
