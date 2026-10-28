@@ -1709,43 +1709,82 @@ body > footer {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg);
-  overflow: hidden;
-  overflow-x: auto;
+  overflow: auto;
   overscroll-behavior-x: contain;
 }
 table.compare {
   width: 100%;
-  border-collapse: collapse;
-  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 760px;
 }
 table.compare thead th {
   text-align: left;
-  padding: 20px 22px;
-  background: var(--layer-02);
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  vertical-align: bottom;
+  padding: 20px 22px 16px;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border);
 }
+table.compare thead th:first-child {
+  width: 34%;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+table.compare thead th.hl,
+table.compare td.col-hl {
+  width: 24%;
+  background:
+    linear-gradient(rgba(15, 98, 254, 0.16), rgba(15, 98, 254, 0.16)),
+    var(--layer-01);
+  box-shadow:
+    inset 1px 0 0 rgba(120, 169, 255, 0.28),
+    inset -1px 0 0 rgba(120, 169, 255, 0.28);
+}
 table.compare thead th.hl {
   color: var(--text-primary);
-  background: var(--layer-03);
+  border-bottom-color: rgba(120, 169, 255, 0.16);
+  box-shadow:
+    inset 0 2px 0 var(--accent),
+    inset 1px 0 0 rgba(120, 169, 255, 0.28),
+    inset -1px 0 0 rgba(120, 169, 255, 0.28);
 }
 table.compare thead th .prod {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  white-space: nowrap;
 }
-table.compare thead th .prod .mark { width: 18px; height: 18px; }
+table.compare thead th .prod .mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+}
 table.compare tbody td {
-  padding: 18px 22px;
+  padding: 16px 22px;
   border-bottom: 1px solid var(--border);
   font-size: 14.5px;
   color: var(--text-secondary);
+  vertical-align: middle;
 }
 table.compare tbody tr:last-child td { border-bottom: none; }
+table.compare tbody tr:last-child td.col-hl {
+  border-bottom: none;
+  box-shadow:
+    inset 1px 0 0 rgba(120, 169, 255, 0.28),
+    inset -1px 0 0 rgba(120, 169, 255, 0.28),
+    inset 0 -1px 0 rgba(120, 169, 255, 0.28);
+}
 table.compare tbody tr {
   transition: background-color var(--dur) var(--ease);
 }
@@ -1753,14 +1792,18 @@ table.compare tbody tr:hover td {
   background: var(--layer-01);
 }
 table.compare tbody tr:hover td.col-hl {
-  background: rgba(15, 98, 254, 0.12);
+  background:
+    linear-gradient(rgba(15, 98, 254, 0.26), rgba(15, 98, 254, 0.26)),
+    var(--layer-01);
 }
 table.compare tbody td:first-child {
   color: var(--text-primary);
   font-weight: 500;
 }
 table.compare td.col-hl {
-  background: rgba(15, 98, 254, 0.06);
+  color: var(--text-primary);
+  font-weight: 500;
+  border-bottom-color: rgba(120, 169, 255, 0.14);
 }
 table.compare .cell {
   display: inline-flex;
@@ -1770,11 +1813,40 @@ table.compare .cell {
 table.compare .yes { color: var(--success); }
 table.compare .no { color: var(--error); }
 table.compare .partial { color: var(--warning); }
-table.compare .icon { width: 18px; height: 18px; }
+table.compare .icon { width: 16px; height: 16px; flex: none; }
 .compare-note {
   margin-top: 16px;
   font-size: 12.5px;
   color: var(--text-tertiary);
+}
+@media (max-width: 800px) {
+  table.compare { min-width: 700px; }
+  table.compare thead th,
+  table.compare tbody td { padding-left: 14px; padding-right: 14px; }
+  table.compare thead th:first-child,
+  table.compare tbody td:first-child {
+    width: 156px;
+    min-width: 156px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg);
+  }
+  table.compare thead th.hl,
+  table.compare td.col-hl {
+    width: 176px;
+    min-width: 176px;
+    position: sticky;
+    left: 156px;
+    z-index: 1;
+  }
+  table.compare thead th:nth-child(n + 3),
+  table.compare tbody td:nth-child(n + 3) {
+    min-width: 168px;
+  }
+  table.compare tbody tr:hover td:first-child {
+    background: var(--layer-01);
+  }
 }
 
 /* ============================================================
@@ -2597,11 +2669,6 @@ table.compare .icon { width: 18px; height: 18px; }
   pointer-events: none;
   background: radial-gradient(ellipse, rgba(15, 98, 254, 0.26) 0%, rgba(15, 98, 254, 0.08) 42%, transparent 70%);
 }
-table.compare thead th.hl {
-  background: rgba(15, 98, 254, 0.28);
-  box-shadow: inset 0 -1px 0 rgba(120, 169, 255, 0.35);
-}
-
 .oss::after {
   content: "";
   position: absolute;
