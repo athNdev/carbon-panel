@@ -282,17 +282,22 @@ func ValidateDockerDevices(devices []string) error {
 	return nil
 }
 
-// ValidateDockerNetworkMode rejects the confinement-breaking network modes.
-// "host" shares the host network namespace and "none" breaks the panel's
-// proxy/networking assumptions; anything else (empty/default, named
-// networks) is left alone.
+// ValidateDockerNetworkMode rejects network modes that do not publish the
+// host ports the panel leases. "host" and "none" do not publish port
+// bindings. "container:<name>" joins another container's network stack and
+// ignores this container's bindings. Bridge and named networks still publish
+// the leased address, protocol, and port.
 func ValidateDockerNetworkMode(mode string) error {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
+	trimmed := strings.TrimSpace(mode)
+	lowered := strings.ToLower(trimmed)
+	switch lowered {
 	case "host", "none":
-		return fmt.Errorf("%w: %q", ErrDockerNetworkModeNotAllowed, mode)
-	default:
-		return nil
+		return fmt.Errorf("%w: %q does not publish the leased host ports", ErrDockerNetworkModeNotAllowed, trimmed)
 	}
+	if strings.HasPrefix(lowered, "container:") {
+		return fmt.Errorf("%w: %q uses another container's network stack and ignores the leased port bindings", ErrDockerNetworkModeNotAllowed, trimmed)
+	}
+	return nil
 }
 
 // ValidateDockerOverridesConfinement is the single authoritative entry point

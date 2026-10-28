@@ -46,6 +46,10 @@ wrong host. That is a data-safety bug, not a degraded mode.
 - DOCKER-USER rate limiting and proxy isolation report that enforcement is
   unavailable when it was requested and iptables cannot run. The container is
   still created. A disabled firewall is not described as applied.
+- Network modes `host`, `none`, and `container:<name>` are refused. They do
+  not publish the host ports recorded by the lease. Bridge and named networks
+  still publish that address, protocol, and port. A failed create keeps the
+  requested port.
 
 # How to check
 
