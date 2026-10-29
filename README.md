@@ -12,7 +12,7 @@ one at https://mozilla.org/MPL/2.0/.
   <img src="assets/banner.svg" alt="Carbon Panel. Your Minecraft servers. Your infrastructure." width="100%" />
 
   <p><strong>Self-hosted Minecraft server management, built around the way you play.</strong></p>
-  <p>Build modpacks, manage datapacks, prepare updates, and let idle servers rest.<br />
+  <p>Create and share modpacks, find and add datapacks, prepare updates, and let idle servers rest.<br />
   Run your worlds in Docker containers on infrastructure you control.</p>
 
   <p>
@@ -33,17 +33,18 @@ one at https://mozilla.org/MPL/2.0/.
 
 ## Make the world yours
 
-### Modpack Studio
+### Modpack Studio: create, export and share
 
-Build a pack in one place. Search CurseForge and Modrinth, work with dependencies
-and Minecraft/loader versions, or import a pack you already have. Deploy it to a
-server or export it to share using supported formats such as packwiz and `.mrpack`.
+Create a modpack in one place: choose your Minecraft version and loader, search
+CurseForge and Modrinth for mods, and work with their dependencies. Export your
+pack in formats such as `.mrpack` and packwiz to share with friends or a community,
+or deploy it to a server.
 
-### Datapacks
+### Find datapacks and add them to your server
 
-Shape a world without requiring a mod loader. Browse and install datapacks, upload
-your own ZIP, and manage the packs in a world's datapacks directory. Pack-format
-warnings help identify compatibility issues.
+Search and browse datapacks in the panel, then install them on your server. You
+can also upload your own ZIP and manage the packs in a world's datapacks directory.
+Pack-format warnings help identify compatibility issues.
 
 ### Staged updates
 
@@ -73,7 +74,7 @@ depend on the server version, host and idle-mode configuration.
 | --- | --- |
 | Server management | Vanilla, Paper, Purpur, Fabric, Quilt, Forge, NeoForge, Bedrock and more; per-server containers and resource limits. |
 | Player routing | Hostname-aware proxy routing, Velocity forwarding, PROXY protocol and Bedrock UDP support. |
-| Modpacks and content | Modpack Studio, CurseForge/Modrinth discovery, pack imports/exports, mods and datapacks. |
+| Modpacks and content | Create and share modpacks in multiple formats; search for and add datapacks. |
 | Updates and scheduling | Staged configuration/content batches, scheduled or idle apply windows, task chains and webhooks. |
 | Everyday operations | Live console and RCON, file browsing/editing, archive handling and resumable transfers. |
 | Backups | World-aware server backups, retention and S3-compatible offsite storage. |
