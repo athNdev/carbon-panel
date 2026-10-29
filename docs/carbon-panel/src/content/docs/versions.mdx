@@ -1,0 +1,27 @@
+---
+title: Documentation version
+description: The application snapshot used to build this documentation.
+---
+{/* SPDX-License-Identifier: MPL-2.0 */}
+import version from '../../../../website-source.json';
+
+## Current documentation
+
+<p><strong>{version.label}</strong></p>
+<p>Application commit: <a href={version.repository + '/tree/' + version.revision}><code>{version.revision}</code></a></p>
+
+The guides, configuration examples, Compose files, identity-provider examples, and generated API schema are taken from this exact commit. The website's navigation and visual theme can be updated independently.
+
+This is a development snapshot. Carbon Panel had no published GitHub releases when this pin was selected. Older tags, including prerelease tags, are not presented as a release of this snapshot.
+
+## Match your installation
+
+Check the version or commit used to build your installation before following a guide. Later development changes may differ from the snapshot documented here.
+
+The API reference describes the pinned schema. Your running panel remains the authority for the API it actually serves.
+
+## Updating the pin
+
+Maintainers update `docs/website-source.json` deliberately, review the guides and examples against that commit, and rebuild the complete website. The site build checks links and generates its API reference from the same source.
+
+Repository pages linked from these docs use the pinned commit where an exact file version is needed.

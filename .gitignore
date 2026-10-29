@@ -464,3 +464,6 @@ result
 
 # The root knowledge MCP configuration is committed and contains no credentials.
 !/.mcp.json
+
+# Combined marketing site and pinned documentation build output.
+/.website-build/

@@ -13,10 +13,16 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://docs.carbon-panel.local',
+	site: process.env.WEBSITE_ORIGIN || 'https://athn.dev',
+	base: process.env.DOCS_BASE_PATH || '/carbonpanel/docs/',
+	trailingSlash: 'always',
 	integrations: [
 		starlight({
 			title: 'Carbon Panel',
+			components: {
+				SiteTitle: './src/components/SiteTitle.astro',
+				Banner: './src/components/VersionBanner.astro',
+			},
 			logo: {
 				dark: './public/brand-mark-light.svg',
 				light: './public/brand-mark-dark.svg',
@@ -25,9 +31,10 @@ export default defineConfig({
 			customCss: ['./src/styles/custom.css'],
 			favicon: '/favicon.png',
 			social: [
-				{ icon: 'github', label: 'GitHub', href: 'https://github.com/athNdev/carbon-panel' },
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/athNdev/carbonpanel' },
 			],
 			sidebar: [
+				{ label: 'Documentation home', slug: '' },
 				{ label: 'Introduction', slug: 'introduction' },
 				{
 					label: 'Getting Started',
@@ -58,7 +65,8 @@ export default defineConfig({
 				{ label: 'Troubleshooting', slug: 'troubleshooting' },
 				{ label: 'API Reference', slug: 'api' },
 				{ label: 'Changelog', slug: 'changelog' },
-{ label: 'Contributing', slug: 'contributing' },
+				{ label: 'Documentation version', slug: 'versions' },
+				{ label: 'Contributing', slug: 'contributing' },
 			],
 		}),
 	],
