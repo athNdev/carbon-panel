@@ -94,7 +94,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261029f" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261029g" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -225,6 +225,7 @@
         <a href="#how">How it works</a>
         <a href="#compare">Why Carbon</a>
         <a href="#faq">FAQ</a>
+        <a href="./docs/">Docs</a>
       </nav>
 
       <div class="nav-actions">
@@ -233,7 +234,7 @@
           <span>Star</span>
           <span class="count" data-star-count hidden></span>
         </a>
-        <a class="btn btn-primary" href="https://github.com/athNdev/carbonpanel#getting-started" target="_blank" rel="noopener">Get started</a>
+        <a class="btn btn-primary" href="./docs/getting-started/docker-compose/">Get started</a>
         <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
           <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
         </button>
@@ -265,7 +266,7 @@
           </p>
 
           <div class="hero-cta">
-            <a class="btn btn-primary btn-lg" href="https://github.com/athNdev/carbonpanel#getting-started" target="_blank" rel="noopener">
+            <a class="btn btn-primary btn-lg" href="./docs/getting-started/docker-compose/">
               Get started
               <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
             </a>
@@ -273,6 +274,13 @@
               <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
               View on GitHub
             </a>
+          </div>
+
+          <div class="hero-highlights" aria-label="Explore Carbon Panel">
+            <a href="#modpack-studio">Modpack Studio</a>
+            <a href="#datapacks">Datapacks</a>
+            <a href="#staged-updates">Staged updates</a>
+            <a href="#idle-modes">Wake on join</a>
           </div>
 
           <div class="install">
@@ -353,6 +361,78 @@
           <p>Inspect it, adapt it and make it yours.</p>
           <span class="stat-detail">MPL-2.0 licensed</span>
         </div>
+      </div>
+    </section>
+
+    <section class="signature section" id="features" aria-labelledby="signature-title">
+      <div class="container">
+        <div class="section-head center">
+          <p class="eyebrow">More than start and stop</p>
+          <h2 id="signature-title">Make the world yours.</h2>
+          <p>Build the pack your friends want to play. Shape the world. Let changes wait for the right moment, and idle servers rest.</p>
+        </div>
+        <div class="signature-grid">
+          <article class="signature-card" id="modpack-studio">
+            <div class="signature-copy">
+              <span class="signature-number">01 / MODPACK STUDIO</span>
+              <h3>A whole modpack.<br />One place to build it.</h3>
+              <p>Modpack Studio brings discovery, dependencies, and pack management together. Find mods on CurseForge and Modrinth, import an existing pack, then deploy it to a server or export it to share.</p>
+              <div class="t-tags"><span>CurseForge + Modrinth</span><span>packwiz</span><span>.mrpack</span></div>
+            </div>
+            <div class="signature-visual pack-visual" role="img" aria-label="Illustration of a pack assembled from mods, resolved dependencies, and a deployable manifest.">
+              <div class="visual-label"><svg class="icon"><use href="#i-puzzle"/></svg> Weekend survival <span>FABRIC</span></div>
+              <div class="pack-row"><span>Mods</span><b>Your selection</b></div>
+              <div class="pack-row"><span>Dependencies</span><b>Resolved together</b></div>
+              <div class="pack-row"><span>Manifest</span><b>Ready to share</b></div>
+              <div class="visual-foot">Find <span>→</span> Build <span>→</span> Deploy</div>
+            </div>
+          </article>
+          <article class="signature-card" id="datapacks">
+            <div class="signature-copy">
+              <span class="signature-number">02 / DATAPACKS</span>
+              <h3>A different world.<br />No mod loader required.</h3>
+              <p>Browse and install datapacks, or upload your own ZIP. Manage the packs in your world from the panel, with pack-format warnings to help spot compatibility issues.</p>
+              <div class="t-tags"><span>Browse + install</span><span>ZIP uploads</span><span>Vanilla datapacks</span></div>
+            </div>
+            <div class="signature-visual data-visual" role="img" aria-label="Illustration of datapacks inside a Minecraft world's datapacks directory.">
+              <div class="visual-label"><svg class="icon"><use href="#i-folder"/></svg> Your world <span>VANILLA</span></div>
+              <div class="data-path">world / datapacks</div>
+              <div class="data-pack"><svg class="icon"><use href="#i-database"/></svg><span>World generation</span><span>.zip</span></div>
+              <div class="data-pack"><svg class="icon"><use href="#i-database"/></svg><span>Custom recipes</span><span>.zip</span></div>
+              <div class="visual-foot">Small packs. A world of possibilities.</div>
+            </div>
+          </article>
+          <article class="signature-card" id="staged-updates">
+            <div class="signature-copy">
+              <span class="signature-number">03 / STAGED UPDATES</span>
+              <h3>Prepare the update.<br />Pick the moment.</h3>
+              <p>Queue compatible configuration and content changes in one staged batch. Apply them on the next restart, at a scheduled time, or after an idle window, instead of interrupting everyone for each edit.</p>
+              <div class="t-tags"><span>One batch</span><span>Next restart</span><span>Scheduled or idle</span></div>
+            </div>
+            <div class="signature-visual update-visual" role="img" aria-label="Illustration of configuration, mods, and datapacks waiting in a staged batch for a scheduled restart.">
+              <div class="visual-label"><svg class="icon"><use href="#i-clock"/></svg> Update batch <span>STAGED</span></div>
+              <div class="update-items"><span>Configuration</span><span>Mods</span><span>Datapacks</span></div>
+              <div class="update-track"><span>Prepare</span><i></i><span>Wait</span><i></i><span>Apply</span></div>
+              <div class="visual-foot">Staging leaves the live server untouched.<br />Applying a running server's batch includes a restart.</div>
+            </div>
+          </article>
+          <article class="signature-card" id="idle-modes">
+            <div class="signature-copy">
+              <span class="signature-number">04 / SLEEP &amp; WAKE</span>
+              <h3>Let it sleep.<br />Join to wake it.</h3>
+              <p>Choose how an empty server rests. Native pause stops ticking on supported versions. Freeze suspends the process in memory. Deep sleep stops it to release JVM memory, then a player connection starts it again.</p>
+              <div class="t-tags"><span>Pause</span><span>Freeze</span><span>Deep sleep</span><span>Wake on join</span></div>
+            </div>
+            <div class="signature-visual rest-visual" role="img" aria-label="Idle modes: freeze retains memory, deep sleep stops the JVM, and a player join triggers a wake.">
+              <div class="visual-label"><svg class="icon"><use href="#i-zap"/></svg> Quiet until game time</div>
+              <div class="rest-mode"><span>Freeze</span><b>Keep memory. Suspend work.</b></div>
+              <div class="rest-mode"><span>Deep sleep</span><b>Stop the JVM. Free its memory.</b></div>
+              <div class="rest-mode wake"><span>Player joins</span><b>Wake. Reconnect. Play.</b></div>
+              <div class="visual-foot">The panel and proxy keep running.<br />Cold starts take time; a player may need to retry.</div>
+            </div>
+          </article>
+        </div>
+        <p class="signature-note">Feature illustrations · example content <span>·</span> <a href="./docs/">Explore the documentation →</a></p>
       </div>
     </section>
 
@@ -453,7 +533,7 @@
     <!-- ============================================================
          FEATURE BENTO
          ============================================================ -->
-    <section class="section" id="features">
+    <section class="section" id="platform">
       <div class="container">
         <div class="section-head center reveal">
           <h2>A control plane, not a start button.</h2>
@@ -789,7 +869,7 @@
     <section class="section" id="how">
       <div class="container">
         <div class="section-head center reveal">
-          <h2>From clone to players in minutes.</h2>
+          <h2>From setup to your first players.</h2>
           <p>Run the panel on your own infrastructure with Docker and a browser.</p>
         </div>
 
@@ -797,7 +877,7 @@
           <div class="step reveal">
             <div class="step-num">1</div>
             <h3>Install the panel</h3>
-            <p>Clone the repo and bring the stack up with Docker Compose. SQLite and the proxy are configured out of the box.</p>
+              <p>Download Carbon Panel from GitHub and start it with Docker Compose. SQLite and the proxy are configured out of the box.</p>
             <code id="step-1"><span class="prompt">$</span> docker compose up -d</code>
             <div class="step-connect"></div>
           </div>
@@ -1016,7 +1096,7 @@
             <div class="faq-body">
               Clone the repository and run it with Docker Compose, or build from source with Go
               and Bun. The
-              <a href="https://github.com/athNdev/carbonpanel#getting-started" target="_blank" rel="noopener">getting-started guide</a>
+              <a href="./docs/getting-started/docker-compose/">getting-started guide</a>
               walks through Docker Compose, Proxmox LXC, prebuilt binaries and source builds.
             </div>
           </details>
@@ -1036,7 +1116,7 @@
             server today.
           </p>
           <div class="hero-cta">
-            <a class="btn btn-primary btn-lg" href="https://github.com/athNdev/carbonpanel#getting-started" target="_blank" rel="noopener">
+            <a class="btn btn-primary btn-lg" href="./docs/getting-started/docker-compose/">
               Get started
               <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
             </a>
@@ -1087,10 +1167,10 @@
         <div class="footer-col">
           <h4>Docs</h4>
           <ul>
-            <li><a href="https://github.com/athNdev/carbonpanel#getting-started" target="_blank" rel="noopener">Getting started</a></li>
-            <li><a href="https://github.com/athNdev/carbonpanel/blob/main/config.example.yaml" target="_blank" rel="noopener">Configuration</a></li>
-            <li><a href="https://github.com/athNdev/carbonpanel" target="_blank" rel="noopener">API reference</a></li>
-            <li><a href="https://github.com/athNdev/carbonpanel/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></li>
+            <li><a href="./docs/getting-started/docker-compose/">Getting started</a></li>
+            <li><a href="./docs/configuration/">Configuration</a></li>
+            <li><a href="./docs/api/">API reference</a></li>
+            <li><a href="./docs/changelog/">Changelog</a></li>
           </ul>
         </div>
 

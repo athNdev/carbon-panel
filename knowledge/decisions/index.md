@@ -5,3 +5,4 @@
 ## Concepts
 
 - [Architecture decisions](adrs.md) — Index of the accepted ADRs and the concept each one governs.
+- [Website and documentation publication](website-docs.md) — Publish the homepage and commit-pinned application documentation as one Pages artifact with independent presentation.

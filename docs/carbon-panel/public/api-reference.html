@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.2"></script>
   <style>
     a[href="https://www.scalar.com"] { display: none !important; }
     div.border-sidebar-border:has(a.open-api-client-button) { padding-top: 20px; }
@@ -18,9 +18,8 @@
   <div id="api-reference"></div>
   <script>
     window.Scalar.createApiReference('#api-reference', {
-      url: '/schemav1.yaml',
+      url: './schemav1.yaml',
       showDeveloperTools: 'never',
-      showToolbar: 'never',
       hideTestRequestButton: true,
       baseServerURL: '',
       agent: {
