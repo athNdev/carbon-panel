@@ -12916,7 +12916,7 @@
               }
             },
             {
-              "id": 131,
+              "id": 133,
               "kind": {
                 "type": "text",
                 "kind": {
@@ -12928,11 +12928,11 @@
                   0.0,
                   1.0,
                   96.0,
-                  474.0
+                  456.0
                 ],
                 "runs": [
                   {
-                    "text": "Modpack Studio  ·  Datapacks  ·  Staged updates",
+                    "text": "Create a modpack. Export and share it.",
                     "style": {
                       "font_family": "Inter",
                       "font_style": "Regular",
@@ -12976,7 +12976,7 @@
               }
             },
             {
-              "id": 132,
+              "id": 134,
               "kind": {
                 "type": "text",
                 "kind": {
@@ -12988,11 +12988,71 @@
                   0.0,
                   1.0,
                   96.0,
-                  520.0
+                  500.0
                 ],
                 "runs": [
                   {
-                    "text": "Sleep. Freeze. Wake on join.",
+                    "text": "Search datapacks. Add them to your server.",
+                    "style": {
+                      "font_family": "Inter",
+                      "font_style": "Regular",
+                      "size": 25.0,
+                      "tracking": 0.0,
+                      "baseline_shift": 0.0,
+                      "h_scale": 100.0,
+                      "v_scale": 100.0,
+                      "rotation": 0.0,
+                      "fill": {
+                        "type": "solid",
+                        "color": {
+                          "model": "rgb",
+                          "r": 0.7764706,
+                          "g": 0.7764706,
+                          "b": 0.7764706
+                        }
+                      },
+                      "stroke": {
+                        "type": "none"
+                      },
+                      "stroke_width": 0.0,
+                      "underline": false,
+                      "strikethrough": false,
+                      "all_caps": false
+                    }
+                  }
+                ],
+                "para": {
+                  "justify": "Left",
+                  "justify_auto": true,
+                  "left_indent": 0.0,
+                  "right_indent": 0.0,
+                  "first_line_indent": 0.0,
+                  "space_before": 0.0,
+                  "space_after": 0.0,
+                  "hyphenate": false,
+                  "mojikumi": "lineEndHalf",
+                  "burasagari": "standard"
+                }
+              }
+            },
+            {
+              "id": 135,
+              "kind": {
+                "type": "text",
+                "kind": {
+                  "kind": "point"
+                },
+                "xf": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  96.0,
+                  544.0
+                ],
+                "runs": [
+                  {
+                    "text": "Stage updates. Sleep. Freeze. Wake on join.",
                     "style": {
                       "font_family": "Inter",
                       "font_style": "Regular",
@@ -13971,7 +14031,7 @@
     },
     "raster_effects_ppi": 72.0,
     "images": {},
-    "next_id": 133,
+    "next_id": 136,
     "metadata": {
       "author": "",
       "authorTitle": "",
@@ -13982,7 +14042,7 @@
       "copyrightNotice": "",
       "copyrightUrl": "",
       "created": 1793235569,
-      "modified": 1793235569
+      "modified": 1793251635
     }
   },
   "images": {}

@@ -13,7 +13,7 @@ import starlight from '@astrojs/starlight';
 
 const websiteOrigin = process.env.WEBSITE_ORIGIN || 'https://athn.dev';
 const websiteBase = process.env.WEBSITE_BASE_PATH || '/carbonpanel/';
-const socialImage = new URL(websiteBase + 'assets/og.png?v=20261029h', websiteOrigin).href;
+const socialImage = new URL(websiteBase + 'assets/og.png?v=20261029i', websiteOrigin).href;
 
 // https://astro.build/config
 export default defineConfig({
@@ -38,9 +38,9 @@ export default defineConfig({
 				{ tag: 'meta', attrs: { property: 'og:image:type', content: 'image/png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
 				{ tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
-				{ tag: 'meta', attrs: { property: 'og:image:alt', content: 'Carbon Panel. Modpack Studio, datapacks, staged updates, and wake on join.' } },
+				{ tag: 'meta', attrs: { property: 'og:image:alt', content: 'Carbon Panel. Create and share modpacks, search and add datapacks, stage updates, and wake on join.' } },
 				{ tag: 'meta', attrs: { name: 'twitter:image', content: socialImage } },
-				{ tag: 'meta', attrs: { name: 'twitter:image:alt', content: 'Carbon Panel. Modpack Studio, datapacks, staged updates, and wake on join.' } },
+				{ tag: 'meta', attrs: { name: 'twitter:image:alt', content: 'Carbon Panel. Create and share modpacks, search and add datapacks, stage updates, and wake on join.' } },
 			],
 			favicon: '/favicon.png',
 			social: [
