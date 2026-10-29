@@ -94,7 +94,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./assets/styles.css?v=20261029e" />
+  <link rel="stylesheet" href="./assets/styles.css?v=20261029f" />
   <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -247,7 +247,7 @@
          HERO
          ============================================================ -->
     <section class="hero">
-      <div class="container hero-grid">
+      <div class="container hero-inner">
         <div class="hero-copy">
           <div class="hero-badge">
             <span class="tag"><span class="dot"></span>Open source</span>
@@ -283,59 +283,6 @@
           </div>
         </div>
 
-        <!-- Hero product mockup -->
-        <div class="hero-visual reveal">
-          <div class="mock" role="img" aria-label="Illustration of the Carbon Panel Cluster Overview, showing example server statistics, server status and recent activity">
-            <div class="mock-header">
-              <span class="mock-menu">☰</span>
-              <img src="./assets/brand-mark-light.svg" alt="" />
-              <strong>Carbon Panel</strong>
-              <span class="mock-running">RUNNING: <b>2 / 3</b></span>
-              <span class="mock-avatar">AD</span>
-            </div>
-            <div class="mock-body">
-              <div class="mock-rail">
-                <div class="mock-nav-item active"><svg class="icon"><use href="#i-layout"/></svg><span>Overview</span></div>
-                <div class="mock-nav-item"><svg class="icon"><use href="#i-server"/></svg><span>Servers</span></div>
-                <div class="mock-nav-item"><svg class="icon"><use href="#i-plus"/></svg><span>Create Server</span></div>
-                <div class="mock-nav-item"><svg class="icon"><use href="#i-puzzle"/></svg><span>Modpack Studio</span></div>
-                <div class="mock-nav-item"><svg class="icon"><use href="#i-box"/></svg><span>Modpacks &amp; Manifests</span></div>
-                <div class="mock-nav-item"><svg class="icon"><use href="#i-route"/></svg><span>Modules &amp; Sidecars</span></div>
-                <div class="mock-nav-item"><svg class="icon"><use href="#i-settings"/></svg><span>Settings</span></div>
-                <div class="mock-node"><span>HOME NODE</span><b>ONLINE</b><small>PORT 8080 · CARBON V11</small></div>
-              </div>
-              <div class="mock-main">
-                <div class="mock-title">
-                  <div><div class="mock-heading">Cluster Overview <span>Carbon Panel</span></div><p>Hardware utilization, game servers status, and network routing topology</p></div>
-                  <div class="mock-actions"><span>Refresh</span><b>＋ Create Server</b></div>
-                </div>
-                <div class="mock-stats">
-                  <div class="mock-stat"><div class="k">Total Servers</div><div class="v">3</div><div class="mock-stat-footer"><span>▪ 2 ACTIVE</span><span>0 STOPPED</span></div></div>
-                  <div class="mock-stat"><div class="k">Active Players</div><div class="v">8</div><div class="mock-stat-footer"><span>▪ 8 ONLINE</span><span>MAX: 60</span></div></div>
-                  <div class="mock-stat"><div class="k">Memory Allocation</div><div class="v">4.8<small> / 12.0 GB</small></div><div class="mock-progress"><i></i></div><div class="mock-stat-footer"><span>▪ 40% UTILIZED</span></div></div>
-                  <div class="mock-stat"><div class="k">Cluster Performance</div><div class="v mock-good">19.9<small> AVG TPS</small></div><div class="mock-stat-footer"><span>▪ HEALTHY</span><span>18% CPU</span></div></div>
-                </div>
-                <div class="mock-panels">
-                  <div class="mock-panel mock-server-panel">
-                    <div class="mock-panel-title"><div><strong>Server Overview</strong><small>Instance telemetry &amp; state across cluster</small></div><span>VIEW ALL (3) ›</span></div>
-                    <div class="mock-table-head"><span>SERVER</span><span>STATUS</span><span>VERSION</span><span>METRICS</span></div>
-                    <div class="mock-table-row"><span><b>survival</b><small>7a92c813</small></span><span><i class="mock-tag running">RUNNING</i></span><span>1.21.1</span><span>6/40 <em>19.9</em></span></div>
-                    <div class="mock-table-row"><span><b>creative</b><small>c4e12a90</small></span><span><i class="mock-tag running">RUNNING</i></span><span>1.21.1</span><span>2/20 <em>20.0</em></span></div>
-                    <div class="mock-table-row"><span><b>modded</b><small>f3b24c17</small></span><span><i class="mock-tag sleeping">DEEPSLEEP</i></span><span>1.20.1</span><span class="mock-sleep">DEEP SLEEP</span></div>
-                  </div>
-                  <div class="mock-panel mock-activity">
-                    <div class="mock-panel-title"><div><strong>Recent Activity</strong><small>Latest lifecycle and cluster events</small></div><span>◷</span></div>
-                    <div class="mock-activity-head"><span>EVENT / INSTANCE</span><span>TIMESTAMP</span></div>
-                    <div class="mock-activity-row"><span class="mock-pip"></span><span><b>survival</b><small>Started</small></span><time>2h ago</time></div>
-                    <div class="mock-activity-row"><span class="mock-pip"></span><span><b>creative</b><small>Started</small></span><time>4h ago</time></div>
-                    <div class="mock-activity-row"><span class="mock-pip sleeping"></span><span><b>modded</b><small>Activity</small></span><time>1d ago</time></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p class="mock-caption">Carbon Panel overview · example data</p>
-        </div>
       </div>
     </section>
 
@@ -380,30 +327,80 @@
     <!-- ============================================================
          STATS STRIP
          ============================================================ -->
-    <section class="stats" aria-label="Key figures">
-      <div class="container">
-        <div class="stats-grid">
-          <div class="stat reveal">
-            <div class="num">11<span class="unit">+</span></div>
-            <div class="label">Server types</div>
-            <div class="sub">vanilla → paper, fabric, forge</div>
-          </div>
-          <div class="stat reveal">
-            <div class="num">0<span class="unit"> B</span></div>
-            <div class="label">Server process RAM in deep-sleep</div>
-            <div class="sub">wakes when a player connects</div>
-          </div>
-          <div class="stat reveal">
-            <div class="num">Nodes</div>
-            <div class="label">Machines, one panel</div>
-            <div class="sub">home machine, homelab, cloud VPS</div>
-          </div>
-          <div class="stat reveal">
-            <div class="num">MPL<span class="unit">-2.0</span></div>
-            <div class="label">Permanently open</div>
-            <div class="sub">free as in cost and speech</div>
-          </div>
+    <section class="stats" aria-label="Built for your way of hosting">
+      <div class="container stats-grid">
+        <div class="stat">
+          <svg class="icon" aria-hidden="true"><use href="#i-box"/></svg>
+          <h2>Play your way</h2>
+          <p>Vanilla, Paper, Fabric, Forge and more.</p>
+          <span class="stat-detail">11+ server types</span>
         </div>
+        <div class="stat">
+          <svg class="icon" aria-hidden="true"><use href="#i-zap"/></svg>
+          <h2>Rest. Then resume.</h2>
+          <p>Let idle servers sleep and wake on join.</p>
+          <span class="stat-detail">Wake-on-connect</span>
+        </div>
+        <div class="stat">
+          <svg class="icon" aria-hidden="true"><use href="#i-server"/></svg>
+          <h2>Your machines</h2>
+          <p>At home, in your homelab or on a VPS.</p>
+          <span class="stat-detail">One self-hosted panel</span>
+        </div>
+        <div class="stat">
+          <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+          <h2>Open by design</h2>
+          <p>Inspect it, adapt it and make it yours.</p>
+          <span class="stat-detail">MPL-2.0 licensed</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-preview section" aria-labelledby="preview-title">
+      <div class="container">
+        <div class="preview-intro">
+          <div>
+            <p class="eyebrow">A view of what's running</p>
+            <h2 id="preview-title">Your worlds. In view.</h2>
+          </div>
+          <p>A little less administration. A little more time to play.</p>
+        </div>
+        <div class="concept" role="img" aria-label="Product concept showing three example Minecraft servers: Survival and Creative online, and Modded in deep sleep. This is an illustration, not the current application interface.">
+          <div class="concept-toolbar">
+            <div class="concept-workspace"><img src="./assets/brand-mark-light.svg" alt="" /><span>My workspace <span class="concept-divider">/</span> <strong>Servers</strong></span></div>
+            <span class="concept-count"><span></span> 2 online <i>·</i> 1 sleeping</span>
+          </div>
+          <div class="concept-grid">
+            <div class="server-concept featured">
+              <div class="server-concept-top"><span class="concept-server-icon"><svg class="icon"><use href="#i-server"/></svg></span><span class="concept-status"><i></i> Online</span></div>
+              <p class="concept-type">PAPER · 1.21.1</p>
+              <h3>Survival</h3>
+              <p class="concept-address">survival.mc.example.com</p>
+              <div class="concept-metrics"><span>Players <b>6 <small>/ 40</small></b></span><span>Memory <b>3.2 <small>GB</small></b></span><span>TPS <b>20.0</b></span></div>
+              <div class="concept-load"><span>Memory usage</span><span>53%</span><div><i style="--usage:53%"></i></div></div>
+              <div class="concept-card-footer"><span><svg class="icon"><use href="#i-terminal"/></svg> Console</span><span>Manage <svg class="icon"><use href="#i-arrow"/></svg></span></div>
+            </div>
+            <div class="server-concept">
+              <div class="server-concept-top"><span class="concept-server-icon"><svg class="icon"><use href="#i-box"/></svg></span><span class="concept-status"><i></i> Online</span></div>
+              <p class="concept-type">FABRIC · 1.21.1</p>
+              <h3>Creative</h3>
+              <p class="concept-address">creative.mc.example.com</p>
+              <div class="concept-metrics"><span>Players <b>2 <small>/ 20</small></b></span><span>Memory <b>1.6 <small>GB</small></b></span><span>TPS <b>20.0</b></span></div>
+              <div class="concept-load"><span>Memory usage</span><span>40%</span><div><i style="--usage:40%"></i></div></div>
+              <div class="concept-card-footer"><span><svg class="icon"><use href="#i-terminal"/></svg> Console</span><span>Manage <svg class="icon"><use href="#i-arrow"/></svg></span></div>
+            </div>
+            <div class="server-concept sleeping">
+              <div class="server-concept-top"><span class="concept-server-icon"><svg class="icon"><use href="#i-puzzle"/></svg></span><span class="concept-status"><i></i> Deep sleep</span></div>
+              <p class="concept-type">NEOFORGE · 1.21.1</p>
+              <h3>Modded</h3>
+              <p class="concept-address">modded.mc.example.com</p>
+              <div class="concept-rest"><svg class="icon"><use href="#i-zap"/></svg><strong>Ready when you are.</strong><span>Wakes when a player connects.</span></div>
+              <div class="concept-card-footer"><span>Resting for 2 hours</span><span>Manage <svg class="icon"><use href="#i-arrow"/></svg></span></div>
+            </div>
+          </div>
+          <div class="concept-event"><span class="concept-event-dot"></span><span><strong>Survival</strong> is ready for players.</span><span>Just now</span></div>
+        </div>
+        <p class="concept-caption">Product concept · example data · interface in development</p>
       </div>
     </section>
 
