@@ -8,6 +8,7 @@
 
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit
 import unittest
 
 
@@ -36,6 +37,18 @@ class InstallCommandParser(HTMLParser):
             self.command_parts.append(data)
 
 
+class PreviewMetadataParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.metadata = {}
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "meta":
+            key = attrs.get("property", attrs.get("name", ""))
+            self.metadata[key] = attrs.get("content", "")
+
+
 class LandingPageTests(unittest.TestCase):
     def test_copy_target_contains_a_runnable_command_without_the_prompt(self):
         page = Path(__file__).resolve().parent.parent / "landing" / "index.html"
@@ -46,6 +59,20 @@ class LandingPageTests(unittest.TestCase):
             "".join(parser.command_parts).strip(),
             "git clone https://github.com/athNdev/carbonpanel && cd carbonpanel",
         )
+
+    def test_social_previews_have_no_em_dash_and_share_a_real_image(self):
+        root = Path(__file__).resolve().parent.parent
+        parser = PreviewMetadataParser()
+        parser.feed((root / "landing/index.html").read_text(encoding="utf-8"))
+        metadata = parser.metadata
+        for key in ("og:title", "og:description", "og:image:alt",
+                    "twitter:title", "twitter:description", "twitter:image:alt"):
+            self.assertTrue(metadata[key], key)
+            self.assertNotIn(chr(0x2014), metadata[key], key)
+        self.assertEqual(metadata["og:image"], metadata["twitter:image"])
+        image = urlsplit(metadata["og:image"])
+        self.assertTrue(image.query, "A replaced preview needs a cache version")
+        self.assertTrue((root / "landing" / image.path.removeprefix("/carbonpanel/")).is_file())
 
 
 if __name__ == "__main__":

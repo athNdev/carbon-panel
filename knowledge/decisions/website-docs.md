@@ -27,6 +27,8 @@ sources:
   pin. Display the pin on every documentation page.
 - A development commit must be labelled as a development snapshot. Do not infer
   a stable release from a package version or an inherited tag.
+- Homepage and documentation previews share the versioned social card documented
+  in `assets/branding/README.md`. Keep preview metadata free of em dashes.
 
 # Rationale
 

@@ -16,6 +16,7 @@ Minecraft world; the wordmark gives the project a practical, technical tone.
 | `sizes/horizontal-{24,40,64}px-{dark,light}.png` | Transparent 1x raster exports of those lockups. |
 | `sizes/mark-{24,40,64}px-{dark,light}.png` | Transparent, square symbol-only raster exports. |
 | `approved-logo.vectorcraft` | Editable VectorCraft source and the approved comparison sheet. |
+| `social-preview.vectorcraft` | Editable 1200 by 630 social card with the approved identity and feature messaging. |
 
 `dark` means dark artwork for a light background (`#202427`); `light` means
 light artwork for a dark background (`#f4f4f4`). All SVG text has been
@@ -48,3 +49,18 @@ when a fixed-size raster image is required.
 
 The application, landing page and documentation each contain deployable
 copies of the approved artwork; update those copies when the master changes.
+
+## Repository and social previews
+
+`assets/banner.svg` is the root README banner. `landing/assets/og.svg` and
+`landing/assets/og.png` are the social-card exports. Open
+`social-preview.vectorcraft` in VectorCraft to edit the card; export its first
+artboard as SVG with text outlined and PNG at 1x (1200 by 630). The editable card
+uses Inter for its feature captions; the exported SVG contains paths and needs
+no installed fonts.
+
+The homepage and documentation share the versioned PNG URL in their Open Graph
+and Twitter metadata. Advance its query version when replacing the artwork.
+Keep preview titles, descriptions and alt text free of em dashes. A repository
+social preview is a separate GitHub setting: upload the same PNG there after
+reviewing the export.

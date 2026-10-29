@@ -11,9 +11,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
+const websiteOrigin = process.env.WEBSITE_ORIGIN || 'https://athn.dev';
+const websiteBase = process.env.WEBSITE_BASE_PATH || '/carbonpanel/';
+const socialImage = new URL(websiteBase + 'assets/og.png?v=20261029h', websiteOrigin).href;
+
 // https://astro.build/config
 export default defineConfig({
-	site: process.env.WEBSITE_ORIGIN || 'https://athn.dev',
+	site: websiteOrigin,
 	base: process.env.DOCS_BASE_PATH || '/carbonpanel/docs/',
 	trailingSlash: 'always',
 	integrations: [
@@ -29,6 +33,15 @@ export default defineConfig({
 				alt: '',
 			},
 			customCss: ['./src/styles/custom.css'],
+			head: [
+				{ tag: 'meta', attrs: { property: 'og:image', content: socialImage } },
+				{ tag: 'meta', attrs: { property: 'og:image:type', content: 'image/png' } },
+				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+				{ tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+				{ tag: 'meta', attrs: { property: 'og:image:alt', content: 'Carbon Panel. Modpack Studio, datapacks, staged updates, and wake on join.' } },
+				{ tag: 'meta', attrs: { name: 'twitter:image', content: socialImage } },
+				{ tag: 'meta', attrs: { name: 'twitter:image:alt', content: 'Carbon Panel. Modpack Studio, datapacks, staged updates, and wake on join.' } },
+			],
 			favicon: '/favicon.png',
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/athNdev/carbonpanel' },
