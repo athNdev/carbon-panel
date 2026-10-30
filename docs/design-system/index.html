@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" data-carbon-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="dark light" />
+		<title>Carbon design system</title>
+		<link rel="stylesheet" href="../../web/carbon-panel/src/lib/design-system/tokens.css" />
+		<link rel="stylesheet" href="./site.css" />
+		<script src="./site.js" defer></script>
+	</head>
+	<body>
+		<a class="skip-link" href="#main">Skip to content</a>
+		<header class="topbar">
+			<a class="wordmark" href="#top" aria-label="Carbon design system home"><span class="mark" aria-hidden="true">C</span><span>Carbon <span class="wordmark-sub">/ Design system</span></span></a>
+			<button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to light preview">Light preview <span aria-hidden="true">◐</span></button>
+		</header>
+		<details class="mobile-nav">
+			<summary>Explore the system</summary>
+			<nav aria-label="Design system sections"><a href="#overview">Overview</a><a href="#color">Color</a><a href="#type">Typography</a><a href="#space">Layout &amp; spacing</a><a href="#elevation">Elevation</a><a href="#motion">Motion</a><a href="#components">Components</a><a href="#patterns">Patterns &amp; content</a><a href="#accessibility">Accessibility</a><a href="#workflow">Using the system</a></nav>
+		</details>
+		<div class="layout" id="top">
+			<aside class="sidebar" aria-label="Page sections">
+				<p class="side-label">THE SYSTEM</p>
+				<nav aria-label="Design system sections">
+					<a href="#overview">Overview</a><a href="#color">Color</a><a href="#type">Typography</a><a href="#space">Layout &amp; spacing</a><a href="#elevation">Elevation</a><a href="#motion">Motion</a><a href="#components">Components</a><a href="#patterns">Patterns &amp; content</a><a href="#accessibility">Accessibility</a><a href="#workflow">Using the system</a>
+				</nav>
+				<p class="side-note">Shared by Carbon Panel<br />and Carbon Cloud</p>
+			</aside>
+			<main id="main">
+				<section class="hero" id="overview" aria-labelledby="hero-title">
+					<p class="eyebrow"><span class="eyebrow-dot"></span> FOUNDATION / 01 <span class="draft">WORKING SYSTEM</span></p>
+					<h1 id="hero-title">A clearer way<br /><span>to build Carbon.</span></h1>
+					<p class="hero-copy">One shared language for the tools people use to run their Minecraft servers. Practical foundations, accessible interactions, and room to evolve.</p>
+					<div class="hero-actions"><a class="button primary" href="#color">Explore the foundations <span aria-hidden="true">↗</span></a><a class="button secondary" href="./README.md">Read the guide <span aria-hidden="true">→</span></a></div>
+					<div class="hero-meta"><span>01 / FOUNDATIONS</span><span>02 / COMPONENTS</span><span>03 / EXPERIENCE</span></div>
+				</section>
+
+				<section class="section" id="color" aria-labelledby="color-title">
+					<div class="section-heading"><div><p class="eyebrow">01 / FOUNDATIONS</p><h2 id="color-title">Color with purpose.</h2></div><p>Semantic roles keep interfaces consistent as themes and product needs change.</p></div>
+					<div class="swatches">
+						<div class="swatch"><span class="color" style="background:var(--background)"></span><strong>Background</strong><code>--background</code></div>
+						<div class="swatch"><span class="color" style="background:var(--card)"></span><strong>Surface</strong><code>--card</code></div>
+						<div class="swatch"><span class="color" style="background:var(--popover)"></span><strong>Raised</strong><code>--popover</code></div>
+						<div class="swatch"><span class="color" style="background:var(--primary)"></span><strong>Primary</strong><code>--primary</code></div>
+						<div class="swatch"><span class="color" style="background:var(--destructive)"></span><strong>Danger</strong><code>--destructive</code></div>
+						<div class="swatch"><span class="color" style="background:var(--success)"></span><strong>Success</strong><code>--success</code></div>
+						<div class="swatch"><span class="color" style="background:var(--warning)"></span><strong>Warning</strong><code>--warning</code></div>
+						<div class="swatch"><span class="color" style="background:var(--ring)"></span><strong>Focus</strong><code>--ring</code></div>
+					</div>
+					<p class="annotation">Fills and text use separate roles. Status always has a text label; color is a supporting cue.</p>
+				</section>
+
+				<section class="section" id="type" aria-labelledby="type-title">
+					<div class="section-heading"><div><p class="eyebrow">02 / FOUNDATIONS</p><h2 id="type-title">Type that works.</h2></div><p>IBM Plex for product interfaces, with dependable system fallbacks.</p></div>
+					<div class="type-grid"><div class="type-specimen"><span class="spec-label">INTERFACE / IBM PLEX SANS</span><p class="type-display">Manage with<br />confidence.</p><p>Clear labels and plain language make complex operations feel understandable.</p></div><div class="type-specimen mono-specimen"><span class="spec-label">TECHNICAL / IBM PLEX MONO</span><p>play.example.net:25565<br />12 / 20 players<br />2.4 GiB memory</p><p>Use monospace for code, addresses and logs.</p></div></div>
+				</section>
+
+				<section class="section" id="space" aria-labelledby="space-title">
+					<div class="section-heading"><div><p class="eyebrow">03 / FOUNDATIONS</p><h2 id="space-title">A steady rhythm.</h2></div><p>Spacing and control sizes create a predictable, readable interface.</p></div>
+					<div class="space-grid"><div><span class="spec-label">SPACING / PX</span><div class="space-steps"><span style="--step:4px">4</span><span style="--step:8px">8</span><span style="--step:12px">12</span><span style="--step:16px">16</span><span style="--step:24px">24</span><span style="--step:32px">32</span><span style="--step:48px">48</span></div></div><div><span class="spec-label">CONTROLS / PX</span><p class="large-number">32 <span>/</span> 40 <span>/</span> 48 <span>/</span> 64</p><p class="muted">40 px is the default. The current geometry is square and grid-aligned.</p></div></div>
+				</section>
+
+				<section class="section" id="elevation" aria-labelledby="elevation-title">
+					<div class="section-heading"><div><p class="eyebrow">04 / FOUNDATIONS</p><h2 id="elevation-title">Depth, kept quiet.</h2></div><p>Borders describe structure. Shadows distinguish floating layers when needed.</p></div>
+					<div class="elevation-grid"><div class="elevation-card flat"><span class="spec-label">LEVEL 00</span><strong>Flat</strong><code>--carbon-shadow-none</code><p>Default surfaces and dense layouts.</p></div><div class="elevation-card raised"><span class="spec-label">LEVEL 01</span><strong>Raised</strong><code>--carbon-shadow-raised</code><p>Transient menus and floating content.</p></div><div class="elevation-card overlay"><span class="spec-label">LEVEL 02</span><strong>Overlay</strong><code>--carbon-shadow-overlay</code><p>Dialogs and other modal layers.</p></div></div>
+				</section>
+
+				<section class="section" id="motion" aria-labelledby="motion-title">
+					<div class="section-heading"><div><p class="eyebrow">05 / FOUNDATIONS</p><h2 id="motion-title">Motion with intent.</h2></div><p>Fast feedback, restrained entrances, and a static alternative for reduced motion.</p></div>
+					<div class="motion-grid"><div class="motion-demo"><span class="spec-label">LIVE EXAMPLE / RISE IN</span><div class="motion-stage"><div class="motion-object" data-motion-object><span class="status-dot"></span> Server ready</div></div><button class="button secondary" type="button" data-replay>Replay animation <span aria-hidden="true">↻</span></button><p class="muted" data-motion-status aria-live="polite">200 ms · 6 px · ease out</p></div><div class="motion-specs"><div><span>Instant / controls</span><code>100 ms</code></div><div><span>Route change</span><code>140 ms</code></div><div><span>Fast / state</span><code>150 ms</code></div><div><span>Base / entrance</span><code>200 ms</code></div><div><span>Slow / deliberate</span><code>300 ms</code></div><div><span>Surface / infrequent</span><code>500 ms</code></div></div></div>
+					<p class="annotation">Transitions are interruptible. Animate color, opacity and transform deliberately; motion never carries the only state cue. Respect reduced-motion preferences.</p>
+				</section>
+
+				<section class="section" id="components" aria-labelledby="components-title">
+					<div class="section-heading"><div><p class="eyebrow">06 / COMPONENTS</p><h2 id="components-title">A common vocabulary.</h2></div><p>Examples show shared roles. Product components remain separately implemented.</p></div>
+					<div class="component-board"><div><span class="spec-label">ACTIONS</span><div class="sample-row"><button class="button primary" type="button">Primary action</button><button class="button secondary" type="button">Secondary</button><button class="button danger" type="button">Destructive</button><button class="button secondary" type="button" disabled>Disabled</button></div></div><div><span class="spec-label">STATUS</span><div class="sample-row"><span class="tag good">Running</span><span class="tag neutral">Stopped</span><span class="tag warning">Warning</span><span class="tag bad">Error</span></div></div><div><span class="spec-label">FORM FIELD</span><label for="sample-name">Server name</label><input id="sample-name" value="Survival" aria-describedby="sample-hint" /><small id="sample-hint">Choose a name people can recognize.</small></div></div>
+				</section>
+
+				<section class="section" id="patterns" aria-labelledby="patterns-title">
+					<div class="section-heading"><div><p class="eyebrow">07 / EXPERIENCE</p><h2 id="patterns-title">Design for the whole task.</h2></div><p>Every screen must explain the current state and make the next step clear.</p></div>
+					<div class="principle-grid"><article><span>01</span><h3>Show the real state</h3><p>Separate empty, loading, stale and failed data. Unknown is not zero.</p></article><article><span>02</span><h3>Make consequences clear</h3><p>Name the resource and outcome before destructive or billable actions.</p></article><article><span>03</span><h3>Help people recover</h3><p>Preserve input and offer a useful next step when something fails.</p></article></div>
+				</section>
+
+				<section class="section" id="accessibility" aria-labelledby="accessibility-title">
+					<div class="section-heading"><div><p class="eyebrow">08 / EXPERIENCE</p><h2 id="accessibility-title">Access is a foundation.</h2></div><p>Build and test for keyboard, assistive technology, zoom and different preferences.</p></div>
+					<div class="access-grid"><p><strong>4.5:1</strong><span>normal text contrast target</span></p><p><strong>3:1</strong><span>essential non-text contrast target</span></p><p><strong>24 × 24</strong><span>minimum target size in CSS pixels, subject to WCAG exceptions</span></p></div>
+					<p class="annotation">These are design targets, not a certification of either application. Test real components and states in context.</p>
+				</section>
+
+				<section class="section closing" id="workflow" aria-labelledby="workflow-title">
+					<p class="eyebrow">09 / WORKFLOW</p><h2 id="workflow-title">Built to evolve together.</h2><p>Start with the shared guide and semantic tokens, review both products, then propagate a verified snapshot to Cloud. Existing literal styles remain migration work.</p><div class="hero-actions"><a class="button primary" href="./README.md">Open the guide <span aria-hidden="true">→</span></a><a class="button secondary" href="../../web/carbon-panel/src/lib/design-system/tokens.css">View the tokens <span aria-hidden="true">↗</span></a></div>
+				</section>
+				<footer><span>CARBON / DESIGN SYSTEM</span><span>Panel + Cloud · Shared foundations</span></footer>
+			</main>
+		</div>
+	</body>
+</html>

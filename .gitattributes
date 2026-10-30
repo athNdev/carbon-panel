@@ -1,3 +1,4 @@
 knowledge/** text eol=lf
 knowledge/**/index.md merge=union
 *.sh text eol=lf
+web/carbon-panel/src/lib/design-system/tokens.css text eol=lf

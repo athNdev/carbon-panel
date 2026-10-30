@@ -9,6 +9,8 @@ code_refs:
   - .github/workflows/docs.yml
   - docs/website-source.json
   - docs/carbon-panel
+  - docs/design-system
+  - web/carbon-panel/src/lib/design-system/tokens.css
   - scripts/build_website.py
   - scripts/check_website.py
 sources:
@@ -23,6 +25,8 @@ sources:
 - Application prose, imported examples and API schema come from the same full
   commit in `docs/website-source.json`. Never substitute the current checkout or
   a floating branch if that commit is unavailable.
+- The standalone shared design system is published with the homepage from the
+  current branch, including its canonical tokens. It is not application content.
 - The website theme and docs navigation can evolve independently of the source
   pin. Display the pin on every documentation page.
 - A development commit must be labelled as a development snapshot. Do not infer

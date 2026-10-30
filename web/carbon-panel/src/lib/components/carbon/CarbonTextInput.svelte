@@ -47,7 +47,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <div class="flex flex-col space-y-1 rounded-none font-sans {className}">
 	{#if label}
-		<label for={id} class="text-xs font-normal tracking-[0.32px] text-[#c6c6c6]">
+		<label for={id} class="text-xs font-normal tracking-[0.32px] text-foreground">
 			{label}
 		</label>
 	{/if}
@@ -60,8 +60,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			bind:value
 			onkeyup={type === 'password' ? trackCaps : undefined}
 			onkeydown={type === 'password' ? trackCaps : undefined}
-			class="h-10 w-full rounded-none border-b border-[#8d8d8d] bg-[#262626] px-4 text-sm text-[#f4f4f4] placeholder-[#6f6f6f] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] focus:outline-none disabled:border-[#393939] disabled:bg-[#161616] disabled:text-[#a8a8a8] {error
-				? '!border-b-2 !border-[#da1e28]'
+			class="focus-ring h-[var(--carbon-control-md)] w-full rounded-none border-b border-input bg-card px-4 text-sm text-foreground transition-[color,background-color,border-color] placeholder:text-muted-foreground focus:border-b-2 focus:border-ring focus:bg-accent disabled:border-border disabled:bg-background disabled:text-muted-foreground {error
+				? '!border-b-2 !border-destructive'
 				: ''} {revealable && type === 'password' ? 'pr-10' : ''}"
 			{...restProps}
 		/>
@@ -71,7 +71,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 				onclick={() => (revealed = !revealed)}
 				aria-label={revealed ? 'Hide password' : 'Show password'}
 				aria-pressed={revealed}
-				class="absolute top-1/2 right-2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center text-[#8d8d8d] transition-colors hover:text-white"
+				class="focus-ring absolute top-1/2 right-2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
 			>
 				{#if revealed}
 					<svg
@@ -116,12 +116,12 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		<span
 			id={describedById}
 			role="alert"
-			class="motion-rise-in mt-0.5 font-sans text-xs text-[#ff8389]">{error}</span
+			class="motion-rise-in mt-0.5 font-sans text-xs text-destructive-text">{error}</span
 		>
 	{:else if capsOn && type === 'password'}
-		<span class="mt-0.5 font-sans text-xs text-[#f1c21b]">Caps Lock is on</span>
+		<span class="mt-0.5 font-sans text-xs text-warning-text">Caps Lock is on</span>
 	{:else if helperText}
-		<span id={describedById} class="motion-rise-in mt-0.5 font-sans text-xs text-[#a8a8a8]"
+		<span id={describedById} class="motion-rise-in mt-0.5 font-sans text-xs text-muted-foreground"
 			>{helperText}</span
 		>
 	{/if}

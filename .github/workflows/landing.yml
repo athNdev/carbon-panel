@@ -15,6 +15,8 @@ on:
     paths:
       - 'landing/**'
       - 'docs/carbon-panel/**'
+      - 'docs/design-system/**'
+      - 'web/carbon-panel/src/lib/design-system/tokens.css'
       - 'docs/website-source.json'
       - 'scripts/build_website.py'
       - 'scripts/check_website.py'

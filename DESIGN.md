@@ -8,6 +8,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # Carbon Panel System Architecture & Design Specification
 
+The shared UI design contract and token source for Panel and Cloud are in
+[docs/design-system](docs/design-system/README.md). Existing pages are being
+migrated; this architecture overview does not imply complete adoption.
+
 ---
 
 ## 1. Executive Summary & Design Principles

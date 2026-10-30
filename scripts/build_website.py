@@ -36,6 +36,25 @@ def scoped_links(text, docs_base, revision):
         lambda m: m[1] + revision + "/", text)
 
 
+
+def publish_design_system(root, output):
+    """Publish the current design-system guide and its canonical tokens."""
+    source = root / "docs/design-system"
+    destination = output / "design-system"
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in ("site.css", "site.js"):
+        shutil.copy2(source / name, destination / name)
+    tokens = "web/carbon-panel/src/lib/design-system/tokens.css"
+    shutil.copy2(root / tokens, destination / "tokens.css")
+    page = (source / "index.html").read_text(encoding="utf-8")
+    source_link = "../../" + tokens
+    if page.count(source_link) != 2 or page.count("./README.md") != 2:
+        raise ValueError("Design-system publication links no longer match the source page.")
+    page = page.replace(source_link, "./tokens.css").replace(
+        "./README.md", "https://github.com/athNdev/carbonpanel/blob/main/docs/design-system/README.md")
+    (destination / "index.html").write_text(page, encoding="utf-8")
+
+
 def build(root, base, site):
     if not base.startswith("/") or not base.endswith("/") or ".." in base:
         raise ValueError("The website base must be an absolute path ending in /.")
@@ -88,6 +107,7 @@ def build(root, base, site):
             shutil.rmtree(output)
         shutil.copytree(root / "landing", output, ignore=shutil.ignore_patterns("qa-*.html"))
         shutil.copytree(project / "dist", output / "docs")
+        publish_design_system(root, output)
     namespace = "http://www.sitemaps.org/schemas/sitemap/0.9"
     ET.register_namespace("", namespace)
     sitemap = ET.Element(f"{{{namespace}}}urlset")

@@ -11,7 +11,7 @@ sources:
     resource: ../../docs/adr
 ---
 
-# Accepted decisions
+# Decision records
 
 | ADR | Decision | Governs |
 | --- | --- | --- |
@@ -21,6 +21,7 @@ sources:
 | [0006](../../docs/adr/0006-idle-modes-are-data.md) | Idle modes are data, not strategies | [Deep sleep](../operations/deep-sleep.md) |
 | [0007](../../docs/adr/0007-panel-sqlite-snapshots.md) | Daily SQLite snapshots and an explicit restore | [Persistence](../architecture/persistence.md) |
 | [0008](../../docs/adr/0008-carbon-panel-brand-identity.md) | Use the approved lower-cut block and technical-capitals wordmark | [Brand assets](../../assets/branding/README.md) |
+| [0009](../../docs/adr/0009-shared-design-system.md) | Proposed shared design-system source and Cloud snapshot | [Frontend change](../workflows/frontend-change.md) |
 
 # Rule
 

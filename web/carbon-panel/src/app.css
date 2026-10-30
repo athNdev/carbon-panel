@@ -9,6 +9,7 @@ one at https://mozilla.org/MPL/2.0/.
 */
 
 @import 'tailwindcss';
+@import './lib/design-system/tokens.css';
 @import 'tw-animate-css';
 
 /*
@@ -31,90 +32,6 @@ one at https://mozilla.org/MPL/2.0/.
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-	--radius: 0px;
-	--background: #ffffff;
-	--foreground: #161616;
-	--card: #f4f4f4;
-	--card-foreground: #161616;
-	--popover: #ffffff;
-	--popover-foreground: #161616;
-	--primary: #0f62fe;
-	--primary-foreground: #ffffff;
-	--secondary: #e0e0e0;
-	--secondary-foreground: #161616;
-	--muted: #f4f4f4;
-	--muted-foreground: #525252;
-	--accent: #e8e8e8;
-	--accent-foreground: #161616;
-	--destructive: #da1e28;
-	--border: #e0e0e0;
-	--input: #e0e0e0;
-	--ring: #0f62fe;
-	/*
-		Accent colour for TEXT/links. #0f62fe (IBM Blue 60) reaches 4.63:1 on
-		the white --background, which clears WCAG AA for body text, so it is
-		correct here and is left alone in the light theme.
-	*/
-	--accent-text: #0f62fe;
-	--chart-1: #0f62fe;
-	--chart-2: #198038;
-	--chart-3: #b28600;
-	--chart-4: #8a3ffc;
-	--chart-5: #ff832b;
-	--sidebar: #f4f4f4;
-	--sidebar-foreground: #161616;
-	--sidebar-primary: #0f62fe;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #e8e8e8;
-	--sidebar-accent-foreground: #161616;
-	--sidebar-border: #e0e0e0;
-	--sidebar-ring: #0f62fe;
-}
-
-.dark {
-	/* IBM Carbon Gray 100 Theme Foundations */
-	--background: #161616;
-	--foreground: #f4f4f4;
-	--card: #262626; /* Carbon Layer 01 */
-	--card-foreground: #f4f4f4;
-	--popover: #393939; /* Carbon Layer 02 */
-	--popover-foreground: #f4f4f4;
-	--primary: #0f62fe; /* IBM Blue 60 */
-	--primary-foreground: #ffffff;
-	--secondary: #393939; /* Carbon Layer 02 / Secondary Button */
-	--secondary-foreground: #f4f4f4;
-	--muted: #262626;
-	--muted-foreground: #a8a8a8;
-	--accent: #353535;
-	--accent-foreground: #ffffff;
-	--destructive: #da1e28; /* Carbon Red 60 */
-	--border: #393939; /* Carbon subtle border */
-	--input: #393939;
-	--ring: #0f62fe; /* Carbon focus border */
-	/*
-		#0f62fe is only 3.62:1 against the dark --background and 3.03:1 against
-		--card, so it FAILS WCAG AA as text here. Carbon's dark-theme link
-		colour is #78a9ff (inverse link-01), which measures 7.68:1 on
-		--background and 6.43:1 on --card. Using --accent-text keeps every
-		accent-coloured label and link legible in both themes.
-	*/
-	--accent-text: #78a9ff;
-	--chart-1: #4589ff;
-	--chart-2: #42be65;
-	--chart-3: #f1c21b;
-	--chart-4: #be95ff;
-	--chart-5: #ff832b;
-	--sidebar: #161616;
-	--sidebar-foreground: #f4f4f4;
-	--sidebar-primary: #0f62fe;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #262626;
-	--sidebar-accent-foreground: #f4f4f4;
-	--sidebar-border: #393939;
-	--sidebar-ring: #0f62fe;
-}
-
 @theme inline {
 	/*
 		Without these, `font-sans` and `font-mono` resolved to Tailwind's default
@@ -127,10 +44,8 @@ one at https://mozilla.org/MPL/2.0/.
 		silently falls back to the system stack. Both names are listed, variable
 		first. Mono has no variable release, so 'IBM Plex Mono' is correct as-is.
 	*/
-	--font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont,
-		'Segoe UI', Helvetica, Arial, sans-serif;
-	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
-		'Liberation Mono', 'Courier New', monospace;
+	--font-sans: var(--carbon-font-sans);
+	--font-mono: var(--carbon-font-mono);
 	--radius-sm: 0px;
 	--radius-md: 0px;
 	--radius-lg: 0px;
@@ -150,6 +65,11 @@ one at https://mozilla.org/MPL/2.0/.
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
+	--color-destructive-text: var(--destructive-text);
+	--color-success: var(--success);
+	--color-success-text: var(--success-text);
+	--color-warning: var(--warning);
+	--color-warning-text: var(--warning-text);
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
@@ -214,14 +134,14 @@ one at https://mozilla.org/MPL/2.0/.
 		border-radius: 0px !important;
 	}
 	.cds-tile {
-		background-color: #262626;
-		border: 1px solid #393939;
+		background-color: var(--card);
+		border: 1px solid var(--border);
 		border-radius: 0px !important;
 		padding: 1rem;
 	}
 	.cds-tile-elevated {
-		background-color: #393939;
-		border: 1px solid #525252;
+		background-color: var(--popover);
+		border: 1px solid var(--input);
 		border-radius: 0px !important;
 		padding: 1rem;
 	}
@@ -258,30 +178,6 @@ one at https://mozilla.org/MPL/2.0/.
  * mechanical and fast to match Carbon's utilitarian character: no bounce,
  * no elastic, transform/opacity first.
  * ------------------------------------------------------------------ */
-:root {
-	--motion-instant: 100ms;
-	--motion-fast: 150ms;
-	--motion-base: 200ms;
-	--motion-slow: 300ms;
-	--motion-surface: 500ms;
-
-	--ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-	--ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-	--ease-in-out-standard: cubic-bezier(0.65, 0, 0.35, 1);
-	--ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
-
-	--motion-stagger-step: 40ms;
-
-	--skeleton-from: #e0e0e0;
-	--skeleton-to: #f4f4f4;
-}
-
-.dark {
-	--skeleton-from: #262626;
-	--skeleton-to: #353535;
-}
-
 @keyframes carbon-fade-in {
 	from {
 		opacity: 0;
@@ -361,11 +257,11 @@ one at https://mozilla.org/MPL/2.0/.
 
 @layer utilities {
 	.motion-fade-in {
-		animation: carbon-fade-in var(--motion-base) var(--ease-out-quart) both;
+		animation: var(--carbon-animation-fade-in);
 	}
 
 	.motion-rise-in {
-		animation: carbon-rise-in var(--motion-base) var(--ease-out-quart) both;
+		animation: var(--carbon-animation-rise-in);
 	}
 
 	.motion-scale-in {
@@ -378,14 +274,14 @@ one at https://mozilla.org/MPL/2.0/.
 	}
 
 	.motion-pulse {
-		animation: carbon-status-pulse 1.6s var(--ease-in-out-standard) infinite;
+		animation: var(--carbon-animation-pulse);
 	}
 
 	.motion-press {
-		transition: transform var(--motion-instant) var(--ease-out-quart);
+		transition: var(--carbon-transition-press);
 	}
 	.motion-press:active {
-		transform: scale(0.96);
+		transform: scale(var(--carbon-motion-press-scale));
 	}
 
 	.scrollbar-stable {
@@ -400,13 +296,13 @@ one at https://mozilla.org/MPL/2.0/.
 			var(--skeleton-from) 100%
 		);
 		background-size: 200% 100%;
-		animation: carbon-shimmer 1.4s linear infinite;
+		animation: var(--carbon-animation-shimmer);
 	}
 
 	/* Sequenced entrance for small groups (nav items, KPI tiles, rows).
 	   Cap the chain so the last child never arrives late. */
 	.motion-stagger > * {
-		animation: carbon-rise-in var(--motion-base) var(--ease-out-quart) both;
+		animation: var(--carbon-animation-rise-in);
 	}
 	.motion-stagger > *:nth-child(1) {
 		animation-delay: 0ms;
