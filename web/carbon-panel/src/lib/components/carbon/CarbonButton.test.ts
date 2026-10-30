@@ -26,6 +26,12 @@ for (const state of ['disabled', 'loading'] as const) {
 		assert.match(anchor, /aria-disabled="true"/);
 		assert.match(anchor, /role="link"/);
 		assert.match(anchor, /tabindex="-1"/);
+		assert.ok(
+			anchor
+				.match(/class="([^"]*)"/)?.[1]
+				.split(/\s+/)
+				.includes('opacity-50')
+		);
 	});
 }
 

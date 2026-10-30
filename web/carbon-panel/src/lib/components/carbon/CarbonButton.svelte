@@ -71,7 +71,9 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		aria-busy={loading ? 'true' : undefined}
 		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly
 			? '!h-[var(--carbon-control-md)] !w-[var(--carbon-control-md)] !justify-center !p-2'
-			: ''} {loading ? 'pointer-events-none opacity-60' : ''} {className}"
+			: ''} {disabled || loading
+			? 'pointer-events-none cursor-not-allowed opacity-50'
+			: ''} {className}"
 		onclick={(event) => {
 			if (disabled || loading) {
 				event.preventDefault();
