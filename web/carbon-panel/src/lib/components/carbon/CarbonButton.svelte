@@ -29,6 +29,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		iconOnly = false,
 		disabled = false,
 		loading = false,
+		onclick = undefined,
 		href = undefined,
 		class: className = '',
 		children,
@@ -36,38 +37,50 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	}: Props = $props();
 
 	const baseClasses =
-		'inline-flex items-center justify-between font-sans text-sm font-normal tracking-[0.16px] transition-[color,background-color,border-color,transform] motion-press focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#161616] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none';
+		'inline-flex items-center justify-between font-sans text-sm font-normal tracking-[0.16px] transition-[color,background-color,border-color,transform] motion-press focus-ring cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none';
 
 	const sizeClasses = {
-		sm: 'h-8 px-3 text-xs',
-		md: 'h-10 px-4 text-sm',
-		lg: 'h-12 px-4 text-sm',
-		xl: 'h-16 px-4 text-base'
+		sm: 'h-[var(--carbon-control-sm)] px-3 text-xs',
+		md: 'h-[var(--carbon-control-md)] px-4 text-sm',
+		lg: 'h-[var(--carbon-control-lg)] px-4 text-sm',
+		xl: 'h-[var(--carbon-control-xl)] px-4 text-base'
 	};
 
 	const kindClasses = {
 		primary:
-			'bg-[#0f62fe] text-white hover:bg-[#0353e9] active:bg-[#002d9c] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]',
+			'bg-primary text-primary-foreground hover:bg-[var(--button-primary-hover)] active:bg-[var(--button-primary-active)] border border-transparent',
 		secondary:
-			'bg-[#393939] text-white hover:bg-[#4c4c4c] active:bg-[#6f6f6f] border border-transparent disabled:bg-[#262626] disabled:text-[#8d8d8d]',
+			'bg-secondary text-secondary-foreground hover:bg-[var(--button-secondary-hover)] active:bg-[var(--button-secondary-active)] border border-transparent',
 		tertiary:
-			'bg-transparent text-white hover:bg-[#393939] active:bg-[#525252] border border-[#f4f4f4] hover:border-transparent disabled:border-[#6f6f6f] disabled:text-[#8d8d8d]',
+			'bg-transparent text-foreground hover:bg-accent active:bg-[var(--button-secondary-active)] border border-foreground',
 		ghost:
-			'bg-transparent text-accent-text hover:bg-[#353535] active:bg-[#525252] border border-transparent disabled:text-[#8d8d8d] disabled:hover:bg-transparent',
+			'bg-transparent text-accent-text hover:bg-accent hover:text-foreground active:bg-[var(--button-secondary-active)] active:text-foreground border border-transparent disabled:hover:bg-transparent',
 		danger:
-			'bg-[#da1e28] text-white hover:bg-[#ba1b23] active:bg-[#750e13] border border-transparent disabled:bg-[#393939] disabled:text-[#8d8d8d]'
+			'bg-destructive text-white hover:bg-[var(--button-danger-hover)] active:bg-[var(--button-danger-active)] border border-transparent'
 	};
 </script>
 
 {#if href}
 	<!-- eslint-disable svelte/no-navigation-without-resolve -- href is caller-provided; callers pass resolve()d paths -->
 	<a
-		{href}
+		{...restProps as HTMLAnchorAttributes}
+		href={disabled || loading ? undefined : href}
+		role={disabled || loading ? 'link' : undefined}
+		aria-disabled={disabled || loading ? 'true' : undefined}
+		tabindex={disabled || loading ? -1 : undefined}
 		aria-busy={loading ? 'true' : undefined}
 		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly
-			? '!h-10 !w-10 !justify-center !p-2'
-			: ''} {loading ? 'pointer-events-none opacity-60' : ''} {className}"
-		{...restProps as HTMLAnchorAttributes}
+			? '!h-[var(--carbon-control-md)] !w-[var(--carbon-control-md)] !justify-center !p-2'
+			: ''} {disabled || loading
+			? 'pointer-events-none cursor-not-allowed opacity-50'
+			: ''} {className}"
+		onclick={(event) => {
+			if (disabled || loading) {
+				event.preventDefault();
+				return;
+			}
+			(onclick as HTMLAnchorAttributes['onclick'])?.(event);
+		}}
 	>
 		{#if loading}
 			<span
@@ -84,9 +97,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		disabled={disabled || loading}
 		aria-busy={loading ? 'true' : undefined}
 		class="{baseClasses} {sizeClasses[size]} {kindClasses[kind]} {iconOnly
-			? '!h-10 !w-10 !justify-center !p-2'
+			? '!h-[var(--carbon-control-md)] !w-[var(--carbon-control-md)] !justify-center !p-2'
 			: ''} {className}"
 		{...restProps as HTMLButtonAttributes}
+		onclick={onclick as HTMLButtonAttributes['onclick']}
 	>
 		{#if loading}
 			<span

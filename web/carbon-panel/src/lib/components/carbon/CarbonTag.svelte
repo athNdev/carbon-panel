@@ -40,17 +40,19 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 	}: Props = $props();
 
 	const typeClasses = {
-		blue: 'bg-[#0043ce]/30 text-[#78a9ff] border border-[#0043ce]/60',
-		green: 'bg-[#198038]/30 text-[#6fdc8c] border border-[#198038]/60',
-		red: 'bg-[#da1e28]/30 text-[#ff8389] border border-[#da1e28]/60',
-		purple: 'bg-[#8a3ffc]/30 text-[#d4bbff] border border-[#8a3ffc]/60',
-		cyan: 'bg-[#00539a]/30 text-[#33b1ff] border border-[#00539a]/60',
-		teal: 'bg-[#005d5d]/30 text-[#08bdba] border border-[#005d5d]/60',
-		magenta: 'bg-[#9f1853]/30 text-[#ff7eb6] border border-[#9f1853]/60',
-		yellow: 'bg-[#f1c21b]/15 text-[#f1c21b] border border-[#f1c21b]/50',
-		gray: 'bg-[#525252]/40 text-[#c6c6c6] border border-[#6f6f6f]/50',
-		'warm-gray': 'bg-[#57534e]/40 text-[#d6d3d1] border border-[#78716c]/50',
-		'cool-gray': 'bg-[#475569]/40 text-[#cbd5e1] border border-[#64748b]/50'
+		blue: 'bg-[var(--tag-blue-bg)] text-[var(--tag-blue-text)] border border-current/30',
+		green: 'bg-[var(--tag-green-bg)] text-[var(--tag-green-text)] border border-current/30',
+		red: 'bg-[var(--tag-red-bg)] text-[var(--tag-red-text)] border border-current/30',
+		purple: 'bg-[var(--tag-purple-bg)] text-[var(--tag-purple-text)] border border-current/30',
+		cyan: 'bg-[var(--tag-cyan-bg)] text-[var(--tag-cyan-text)] border border-current/30',
+		teal: 'bg-[var(--tag-teal-bg)] text-[var(--tag-teal-text)] border border-current/30',
+		magenta: 'bg-[var(--tag-magenta-bg)] text-[var(--tag-magenta-text)] border border-current/30',
+		yellow: 'bg-[var(--tag-yellow-bg)] text-[var(--tag-yellow-text)] border border-current/30',
+		gray: 'bg-[var(--tag-gray-bg)] text-[var(--tag-gray-text)] border border-current/30',
+		'warm-gray':
+			'bg-[var(--tag-warm-gray-bg)] text-[var(--tag-warm-gray-text)] border border-current/30',
+		'cool-gray':
+			'bg-[var(--tag-cool-gray-bg)] text-[var(--tag-cool-gray-text)] border border-current/30'
 	};
 
 	const sizeClasses = {

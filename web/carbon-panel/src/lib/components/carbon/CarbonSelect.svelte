@@ -37,7 +37,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 <div class="flex flex-col space-y-1 rounded-none font-sans {className}">
 	{#if label}
-		<label for={id} class="text-xs font-normal tracking-[0.32px] text-[#c6c6c6]">
+		<label for={id} class="text-xs font-normal tracking-[0.32px] text-foreground">
 			{label}
 		</label>
 	{/if}
@@ -47,15 +47,15 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			aria-describedby={hasDescription ? describedById : undefined}
 			aria-invalid={error ? 'true' : undefined}
 			bind:value
-			class="h-10 w-full cursor-pointer appearance-none rounded-none border-b border-[#8d8d8d] bg-[#262626] pr-10 pl-4 text-sm text-[#f4f4f4] transition-all focus:border-b-2 focus:border-[#0f62fe] focus:bg-[#353535] focus:outline-none disabled:border-[#393939] disabled:bg-[#161616] disabled:text-[#a8a8a8] {error
-				? '!border-b-2 !border-[#da1e28]'
+			class="focus-ring h-[var(--carbon-control-md)] w-full cursor-pointer appearance-none rounded-none border-b border-input bg-card pr-10 pl-4 text-sm text-foreground transition-[color,background-color,border-color] focus:border-b-2 focus:border-ring focus:bg-accent disabled:border-border disabled:bg-background disabled:text-muted-foreground {error
+				? '!border-b-2 !border-destructive'
 				: ''}"
 			{...restProps}
 		>
 			{@render children?.()}
 		</select>
 		<div
-			class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#c6c6c6]"
+			class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-foreground"
 		>
 			<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
 				<path
@@ -70,10 +70,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 		<span
 			id={describedById}
 			role="alert"
-			class="motion-rise-in mt-0.5 font-sans text-xs text-[#ff8389]">{error}</span
+			class="motion-rise-in mt-0.5 font-sans text-xs text-destructive-text">{error}</span
 		>
 	{:else if helperText}
-		<span id={describedById} class="motion-rise-in mt-0.5 font-sans text-xs text-[#a8a8a8]"
+		<span id={describedById} class="motion-rise-in mt-0.5 font-sans text-xs text-muted-foreground"
 			>{helperText}</span
 		>
 	{/if}

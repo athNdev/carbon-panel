@@ -168,7 +168,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 			tabindex="-1"
 			class="w-full {sizeClasses[
 				size
-			]} flex max-h-[90vh] flex-col rounded-none border border-[#393939] bg-[#161616] shadow-2xl outline-none select-text focus:outline-none"
+			]} flex max-h-[90vh] flex-col rounded-none border border-[#393939] bg-[#161616] shadow-[var(--carbon-shadow-overlay)] outline-none select-text focus:outline-none"
 			in:scale={{ start: 0.97, opacity: 0, duration: 200, easing: cubicOut }}
 			out:scale={{ start: 0.97, opacity: 0, duration: 150, easing: cubicIn }}
 		>

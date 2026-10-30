@@ -2,7 +2,8 @@
 # Website and pinned documentation
 
 The Pages deployment contains the marketing homepage at `/carbonpanel/` and
-Starlight documentation at `/carbonpanel/docs/`. Only
+Starlight documentation at `/carbonpanel/docs/`, and the standalone shared
+design system at `/carbonpanel/design-system/`. Only
 `.github/workflows/landing.yml` publishes Pages. The docs workflow validates the
 combined site on pull requests; it cannot replace the homepage.
 
@@ -38,7 +39,9 @@ python3 scripts/check_website.py
 
 Generated output stays in ignored `.website-build/site/`. The builder excludes
 landing QA pages. The link check validates local page and asset paths, including
-the API iframe and schema, under the deployment base.
+the API iframe, schema and design-system assets, under the deployment base.
+The design-system page and tokens come from the current branch, independently
+of the application documentation pin. Its source remains usable from a checkout.
 
 For a local preview rooted at the server's root:
 

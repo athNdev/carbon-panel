@@ -44,3 +44,13 @@ bun run test
 
 - [RPC contract](../architecture/rpc-contract.md)
 - [Verification](../testing/verification.md)
+
+# Shared design system
+
+Use [the shared guide](../../docs/design-system/README.md) and canonical CSS
+tokens for new UI. Cloud carries a content-pinned snapshot; changes need review
+and verification in both products. The standalone design-system homepage lives
+in docs/design-system and is not a Panel application route. Literal colors in older views remain migration debt, so a token
+change alone does not establish application-wide propagation.
+
+See [ADR 0009](../../docs/adr/0009-shared-design-system.md).

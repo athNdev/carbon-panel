@@ -1,0 +1,238 @@
+/* SPDX-License-Identifier: MPL-2.0
+ * Carbon design system source. Cloud consumes a content-pinned snapshot.
+ * See docs/design-system/README.md before changing these contracts.
+ */
+
+:root,
+[data-carbon-theme='light'] {
+	color-scheme: light;
+	--background: #ffffff;
+	--foreground: #161616;
+	--card: #f4f4f4;
+	--card-foreground: #161616;
+	--popover: #ffffff;
+	--popover-foreground: #161616;
+	--primary: #0f62fe;
+	--primary-foreground: #ffffff;
+	--primary-text: #0f62fe;
+	--accent-text: #0f62fe;
+	--secondary: #e0e0e0;
+	--secondary-foreground: #161616;
+	--muted: #f4f4f4;
+	--muted-foreground: #525252;
+	--accent: #e8e8e8;
+	--accent-foreground: #161616;
+	--destructive: #da1e28;
+	--destructive-text: #a2191f;
+	--success: #198038;
+	--success-text: #0e6027;
+	--warning: #b28600;
+	--warning-text: #6f5200;
+	--border: #e0e0e0;
+	--input: #737373;
+	--ring: #0f62fe;
+	--button-primary-hover: #0353e9;
+	--button-primary-active: #002d9c;
+	--button-secondary-hover: #c6c6c6;
+	--button-secondary-active: #a8a8a8;
+	--button-danger-hover: #ba1b23;
+	--button-danger-active: #750e13;
+	--chart-1: #0f62fe;
+	--chart-2: #198038;
+	--chart-3: #b28600;
+	--chart-4: #8a3ffc;
+	--chart-5: #ff832b;
+	--sidebar: #f4f4f4;
+	--sidebar-foreground: #161616;
+	--sidebar-primary: #0f62fe;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #e8e8e8;
+	--sidebar-accent-foreground: #161616;
+	--sidebar-border: #e0e0e0;
+	--sidebar-ring: #0f62fe;
+	--skeleton-from: #e0e0e0;
+	--skeleton-to: #f4f4f4;
+	--carbon-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 12px rgb(0 0 0 / 0.08);
+	--carbon-shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.2), 0 2px 8px rgb(0 0 0 / 0.12);
+	--tag-blue-bg: #d0e2ff;
+	--tag-blue-text: #0043ce;
+	--tag-green-bg: #defbe6;
+	--tag-green-text: #0e6027;
+	--tag-red-bg: #fff1f1;
+	--tag-red-text: #a2191f;
+	--tag-yellow-bg: #fcf4d6;
+	--tag-yellow-text: #6f5200;
+	--tag-purple-bg: #e8daff;
+	--tag-purple-text: #491d8b;
+	--tag-cyan-bg: #bae6ff;
+	--tag-cyan-text: #004a7e;
+	--tag-teal-bg: #9ef0f0;
+	--tag-teal-text: #005d5d;
+	--tag-magenta-bg: #ffd6e8;
+	--tag-magenta-text: #9f1853;
+	--tag-gray-bg: #e0e0e0;
+	--tag-gray-text: #393939;
+	--tag-warm-gray-bg: #e7e5e4;
+	--tag-warm-gray-text: #44403c;
+	--tag-cool-gray-bg: #e2e8f0;
+	--tag-cool-gray-text: #334155;
+}
+
+.dark,
+[data-carbon-theme='dark'] {
+	color-scheme: dark;
+	--background: #161616;
+	--foreground: #f4f4f4;
+	--card: #262626;
+	--card-foreground: #f4f4f4;
+	--popover: #393939;
+	--popover-foreground: #f4f4f4;
+	--primary: #0f62fe;
+	--primary-foreground: #ffffff;
+	--primary-text: #78a9ff;
+	--accent-text: #78a9ff;
+	--secondary: #393939;
+	--secondary-foreground: #f4f4f4;
+	--muted: #262626;
+	--muted-foreground: #a8a8a8;
+	--accent: #353535;
+	--accent-foreground: #ffffff;
+	--destructive: #da1e28;
+	--destructive-text: #ff8389;
+	--success: #24a148;
+	--success-text: #6fdc8c;
+	--warning: #f1c21b;
+	--warning-text: #f1c21b;
+	--border: #393939;
+	--input: #7d7d7d;
+	--ring: #ffffff;
+	--button-primary-hover: #0353e9;
+	--button-primary-active: #002d9c;
+	--button-secondary-hover: #4c4c4c;
+	--button-secondary-active: #6f6f6f;
+	--button-danger-hover: #ba1b23;
+	--button-danger-active: #750e13;
+	--chart-1: #4589ff;
+	--chart-2: #42be65;
+	--chart-3: #f1c21b;
+	--chart-4: #be95ff;
+	--chart-5: #ff832b;
+	--sidebar: #161616;
+	--sidebar-foreground: #f4f4f4;
+	--sidebar-primary: #0f62fe;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #262626;
+	--sidebar-accent-foreground: #f4f4f4;
+	--sidebar-border: #393939;
+	--sidebar-ring: #ffffff;
+	--skeleton-from: #262626;
+	--skeleton-to: #353535;
+	--carbon-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.32), 0 4px 12px rgb(0 0 0 / 0.24);
+	--carbon-shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.3);
+	--tag-blue-bg: #102a56;
+	--tag-blue-text: #a6c8ff;
+	--tag-green-bg: #163b22;
+	--tag-green-text: #6fdc8c;
+	--tag-red-bg: #4d2326;
+	--tag-red-text: #ff8389;
+	--tag-yellow-bg: #423a1b;
+	--tag-yellow-text: #f1c21b;
+	--tag-purple-bg: #382952;
+	--tag-purple-text: #d4bbff;
+	--tag-cyan-bg: #18374e;
+	--tag-cyan-text: #78c8ff;
+	--tag-teal-bg: #173c3c;
+	--tag-teal-text: #3ddbd9;
+	--tag-magenta-bg: #4a2636;
+	--tag-magenta-text: #ff7eb6;
+	--tag-gray-bg: #383838;
+	--tag-gray-text: #c6c6c6;
+	--tag-warm-gray-bg: #3d3935;
+	--tag-warm-gray-text: #d6d3d1;
+	--tag-cool-gray-bg: #303a48;
+	--tag-cool-gray-text: #cbd5e1;
+}
+
+:root {
+	--radius: 0px;
+	--carbon-space-1: 0.25rem;
+	--carbon-space-2: 0.5rem;
+	--carbon-space-3: 0.75rem;
+	--carbon-space-4: 1rem;
+	--carbon-space-5: 1.5rem;
+	--carbon-space-6: 2rem;
+	--carbon-space-7: 3rem;
+	--carbon-control-sm: 2rem;
+	--carbon-control-md: 2.5rem;
+	--carbon-control-lg: 3rem;
+	--carbon-control-xl: 4rem;
+	--carbon-font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont,
+		'Segoe UI', Helvetica, Arial, sans-serif;
+	--carbon-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	--motion-instant: 100ms;
+	--motion-page: 140ms;
+	--motion-fast: 150ms;
+	--motion-base: 200ms;
+	--motion-slow: 300ms;
+	--motion-surface: 500ms;
+	--motion-stagger-step: 40ms;
+	--ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+	--ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out-standard: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+	--carbon-shadow-none: none;
+	--carbon-motion-distance: 6px;
+	--carbon-motion-press-scale: 0.96;
+	--carbon-motion-pulse-duration: 1600ms;
+	--carbon-motion-shimmer-duration: 1400ms;
+	--carbon-transition-color: color var(--motion-instant) var(--ease-out-quart),
+		background-color var(--motion-instant) var(--ease-out-quart),
+		border-color var(--motion-instant) var(--ease-out-quart);
+	--carbon-transition-press: transform var(--motion-instant) var(--ease-out-quart);
+	--carbon-animation-fade-in: carbon-ds-fade-in var(--motion-base) var(--ease-out-quart) both;
+	--carbon-animation-rise-in: carbon-ds-rise-in var(--motion-base) var(--ease-out-quart) both;
+	--carbon-animation-pulse: carbon-ds-pulse var(--carbon-motion-pulse-duration)
+		var(--ease-in-out-standard) infinite;
+	--carbon-animation-shimmer: carbon-ds-shimmer var(--carbon-motion-shimmer-duration) linear
+		infinite;
+}
+
+@keyframes carbon-ds-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes carbon-ds-rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(var(--carbon-motion-distance));
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes carbon-ds-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
+@keyframes carbon-ds-shimmer {
+	from {
+		background-position: -180% 0;
+	}
+	to {
+		background-position: 180% 0;
+	}
+}
